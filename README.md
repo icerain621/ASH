@@ -1,4 +1,4 @@
-# ASH Monorepo
+# ASH
 
 <img width="100%" height="100%" alt="image" src="https://github.com/user-attachments/assets/de87f7be-5510-4288-9066-8a4c03b56785" />
 
