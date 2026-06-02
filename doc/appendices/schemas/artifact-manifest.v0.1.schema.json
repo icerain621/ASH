@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ash.artifacts.manifest/v0.1",
+  "title": "ASH artifact manifest v0.1",
+  "type": "object",
+  "required": ["runId", "scenario", "createdAt", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "scenario": {
+      "type": "object",
+      "required": ["name", "scenarioVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "scenarioVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "createdAt": { "type": "number", "minimum": 0 },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/artifact" }
+    }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "required": ["id", "type", "uri", "digest", "contentType", "sizeBytes", "producer"],
+      "additionalProperties": false,
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": {
+          "type": "string",
+          "enum": ["diff", "test_report", "release_notes", "rollback_plan", "adr", "scan_report", "incident_postmortem"]
+        },
+        "name": { "type": "string" },
+        "uri": { "type": "string", "minLength": 1 },
+        "digest": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" },
+        "contentType": { "type": "string", "minLength": 1 },
+        "sizeBytes": { "type": "number", "minimum": 0 },
+        "createdAt": { "type": "number", "minimum": 0 },
+        "producer": {
+          "type": "object",
+          "required": ["stepId", "role", "by"],
+          "additionalProperties": false,
+          "properties": {
+            "stepId": { "type": "string", "minLength": 1 },
+            "role": { "type": "string", "minLength": 1 },
+            "by": { "type": "string", "minLength": 1 }
+          }
+        },
+        "meta": {}
+      }
+    }
+  }
+}
+

@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ASH Console (M0)</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="header">
+    <div class="brand">ASH <span class="muted">Console</span></div>
+    <nav class="tabs" role="tablist">
+      <button class="tab active" data-tab="runs">Runs</button>
+      <button class="tab" data-tab="memory">Memory</button>
+      <button class="tab" data-tab="doctor">Doctor</button>
+    </nav>
+    <div class="status" id="conn-status">API: /api/v1</div>
+  </header>
+
+  <main>
+    <section id="panel-runs" class="panel active">
+      <div class="toolbar">
+        <button id="btn-refresh-runs" class="btn">刷新</button>
+        <button id="btn-new-run" class="btn primary">新建 Run (feature_delivery)</button>
+      </div>
+      <div class="split">
+        <div class="pane">
+          <h2>Runs</h2>
+          <table class="table" id="runs-table">
+            <thead><tr><th>Run ID</th><th>Status</th><th>Scenario</th><th>Started</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pane">
+          <h2>Run 详情 <span id="run-detail-id" class="muted"></span></h2>
+          <pre id="run-summary" class="code-block">选择一条 Run</pre>
+          <h3>事件流 (SSE)</h3>
+          <div id="event-log" class="event-log"></div>
+          <h3>Artifacts</h3>
+          <pre id="run-artifacts" class="code-block">—</pre>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-memory" class="panel">
+      <div class="toolbar">
+        <button id="btn-refresh-memory" class="btn">刷新候选</button>
+      </div>
+      <div class="split">
+        <div class="pane">
+          <h2>候选列表</h2>
+          <table class="table" id="memory-table">
+            <thead><tr><th>ID</th><th>Layer</th><th>Title</th><th>Status</th><th></th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <div class="pane">
+          <h2>新建候选</h2>
+          <form id="memory-form" class="form">
+            <label>Run ID <span class="muted">(可选，挂 SSE)</span>
+              <input name="runId" placeholder="run_..." />
+            </label>
+            <label>Layer
+              <select name="layer"><option>L0</option><option selected>L1</option><option>L2</option></select>
+            </label>
+            <label>Title <input name="title" required value="M0 rule" /></label>
+            <label>Body <textarea name="body" rows="3" required>Always run tests before merge.</textarea></label>
+            <label>Evidence ref (L1+) <input name="evidenceRef" value="doc/README.md" /></label>
+            <button type="submit" class="btn primary">提交候选</button>
+          </form>
+        </div>
+      </div>
+    </section>
+
+    <section id="panel-doctor" class="panel">
+      <div class="toolbar">
+        <button id="btn-run-doctor" class="btn primary">运行 TR0</button>
+      </div>
+      <pre id="doctor-report" class="code-block tall">点击「运行 TR0」</pre>
+    </section>
+  </main>
+
+  <script src="app.js" type="module"></script>
+</body>
+</html>

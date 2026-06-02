@@ -1,0 +1,584 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "description": "Delivery-oriented coding robot worker API (M0). See docs/appendices/G-OpenAPI-端点清单(M0).md.",
+    "title": "ASH Worker API",
+    "contact": {
+      "name": "ASH"
+    },
+    "license": {
+      "name": "Proprietary"
+    },
+    "version": "0.1"
+  },
+  "host": "localhost:8080",
+  "basePath": "/",
+  "paths": {
+    "/healthz": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["health"],
+        "summary": "Liveness probe",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.HealthResponse"
+            }
+          }
+        }
+      }
+    },
+    "/readyz": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["health"],
+        "summary": "Readiness probe",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.HealthResponse"
+            }
+          },
+          "503": {
+            "description": "Not ready",
+            "schema": {
+              "$ref": "#/definitions/api.HealthResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["runs"],
+        "summary": "List runs",
+        "parameters": [
+          {
+            "type": "integer",
+            "default": 50,
+            "description": "max items",
+            "name": "limit",
+            "in": "query"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.RunListResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      },
+      "post": {
+        "description": "Validates scenario inputs and executes steps (M0 stub emits events).",
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["runs"],
+        "summary": "Create and start a run",
+        "parameters": [
+          {
+            "description": "run request",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/runs.CreateRequest"
+            }
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "Created",
+            "schema": {
+              "$ref": "#/definitions/runs.CreateResponse"
+            },
+            "headers": {
+              "X-Run-Id": {
+                "type": "string",
+                "description": "created run id"
+              },
+              "X-Trace-Id": {
+                "type": "string",
+                "description": "trace id"
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["runs"],
+        "summary": "Get run summary",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "run id",
+            "name": "runId",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/runs.Summary"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/runs/{runId}/stream": {
+      "get": {
+        "description": "Server-Sent Events; supports Last-Event-ID for resume.",
+        "produces": ["text/event-stream"],
+        "tags": ["runs"],
+        "summary": "Stream run events (SSE)",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "run id",
+            "name": "runId",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "last received event id",
+            "name": "Last-Event-ID",
+            "in": "header"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "SSE stream",
+            "schema": {
+              "type": "string"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          },
+          "500": {
+            "description": "Internal Server Error",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["scenarios"],
+        "summary": "List loaded scenarios",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.ScenarioListResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/{name}/{version}": {
+      "get": {
+        "produces": ["application/json"],
+        "tags": ["scenarios"],
+        "summary": "Get scenario by name and version",
+        "parameters": [
+          {
+            "type": "string",
+            "description": "scenario name",
+            "name": "name",
+            "in": "path",
+            "required": true
+          },
+          {
+            "type": "string",
+            "description": "scenario version",
+            "name": "version",
+            "in": "path",
+            "required": true
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.ScenarioDetailResponse"
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/validate": {
+      "post": {
+        "consumes": ["application/json"],
+        "produces": ["application/json"],
+        "tags": ["scenarios"],
+        "summary": "Validate scenario DSL (JSON body)",
+        "parameters": [
+          {
+            "description": "YAML text",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "$ref": "#/definitions/api.ValidateScenarioRequest"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.ValidationResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    },
+    "/api/v1/scenarios/validate/raw": {
+      "post": {
+        "consumes": ["application/x-yaml", "text/plain"],
+        "produces": ["application/json"],
+        "tags": ["scenarios"],
+        "summary": "Validate scenario DSL (raw YAML body)",
+        "parameters": [
+          {
+            "description": "YAML document",
+            "name": "body",
+            "in": "body",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "schema": {
+              "$ref": "#/definitions/api.ValidationResponse"
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "schema": {
+              "$ref": "#/definitions/api.APIErrorResponse"
+            }
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "api.APIError": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string",
+          "example": "INVALID_REQUEST"
+        },
+        "message": {
+          "type": "string",
+          "example": "validation failed"
+        }
+      }
+    },
+    "api.APIErrorResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "$ref": "#/definitions/api.APIError"
+        }
+      }
+    },
+    "api.HealthResponse": {
+      "type": "object",
+      "properties": {
+        "error": {
+          "type": "string"
+        },
+        "status": {
+          "type": "string",
+          "example": "ok"
+        }
+      }
+    },
+    "api.RunListResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/runs.Summary"
+          }
+        }
+      }
+    },
+    "api.ScenarioDetailResponse": {
+      "type": "object",
+      "properties": {
+        "hooks": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/rules.Hook"
+          }
+        },
+        "scenario": {
+          "$ref": "#/definitions/rules.Scenario"
+        },
+        "valid": {
+          "type": "boolean"
+        },
+        "version": {
+          "type": "string",
+          "example": "ash.rules/v0.1"
+        },
+        "yaml": {
+          "type": "string"
+        }
+      }
+    },
+    "api.ScenarioListResponse": {
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/rules.ScenarioSummary"
+          }
+        }
+      }
+    },
+    "api.ValidateScenarioRequest": {
+      "type": "object",
+      "required": ["yaml"],
+      "properties": {
+        "yaml": {
+          "type": "string",
+          "example": "version: ash.rules/v0.1"
+        }
+      }
+    },
+    "api.ValidationResponse": {
+      "type": "object",
+      "properties": {
+        "issues": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/rules.ValidationIssue"
+          }
+        },
+        "ok": {
+          "type": "boolean",
+          "example": true
+        }
+      }
+    },
+    "rules.Hook": {
+      "type": "object",
+      "description": "Policy hook (DSL appendix B)",
+      "properties": {
+        "id": { "type": "string" },
+        "on": { "type": "string" },
+        "policy": { "type": "string" }
+      }
+    },
+    "rules.Scenario": {
+      "type": "object",
+      "description": "Scenario definition (DSL appendix B)",
+      "properties": {
+        "name": { "type": "string" },
+        "scenarioVersion": { "type": "string" },
+        "description": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": { "type": "object" }
+        }
+      }
+    },
+    "rules.ScenarioSummary": {
+      "type": "object",
+      "properties": {
+        "description": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "scenarioVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "rules.ValidationIssue": {
+      "type": "object",
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        }
+      }
+    },
+    "runs.CreateRequest": {
+      "type": "object",
+      "required": ["scenario", "inputs"],
+      "properties": {
+        "inputs": {
+          "type": "object",
+          "additionalProperties": true
+        },
+        "policyProfile": {
+          "type": "string"
+        },
+        "repo": {
+          "$ref": "#/definitions/runs.RepoRef"
+        },
+        "scenario": {
+          "$ref": "#/definitions/runs.ScenarioRef"
+        }
+      }
+    },
+    "runs.CreateResponse": {
+      "type": "object",
+      "properties": {
+        "runId": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      }
+    },
+    "runs.RepoRef": {
+      "type": "object",
+      "properties": {
+        "branch": {
+          "type": "string"
+        },
+        "revision": {
+          "type": "string"
+        },
+        "root": {
+          "type": "string"
+        }
+      }
+    },
+    "runs.ScenarioRef": {
+      "type": "object",
+      "required": ["name", "scenarioVersion"],
+      "properties": {
+        "name": {
+          "type": "string"
+        },
+        "scenarioVersion": {
+          "type": "string"
+        }
+      }
+    },
+    "runs.Summary": {
+      "type": "object",
+      "properties": {
+        "finishedAt": {
+          "type": "integer"
+        },
+        "inputsDigest": {
+          "type": "string"
+        },
+        "policyProfile": {
+          "type": "string"
+        },
+        "recovered": {
+          "type": "boolean"
+        },
+        "repo": {
+          "$ref": "#/definitions/runs.RepoRef"
+        },
+        "runId": {
+          "type": "string"
+        },
+        "scenario": {
+          "$ref": "#/definitions/runs.ScenarioRef"
+        },
+        "startedAt": {
+          "type": "integer"
+        },
+        "status": {
+          "type": "string"
+        },
+        "traceId": {
+          "type": "string"
+        }
+      }
+    }
+  },
+  "tags": [
+    {
+      "description": "Health and readiness probes",
+      "name": "health"
+    },
+    {
+      "description": "Run lifecycle and event stream",
+      "name": "runs"
+    },
+    {
+      "description": "Rules / scenario DSL",
+      "name": "scenarios"
+    }
+  ]
+}

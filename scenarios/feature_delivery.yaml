@@ -1,0 +1,80 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "feature_delivery"
+  scenarioVersion: "1.0.0"
+  description: "Feature 从需求到交付的标准流程（M0）"
+  policyProfile: "default"
+  checkpoint:
+    strategy: "per_step"
+    retain: 50
+
+  roles:
+    PM:        { maxParallel: 1 }
+    Architect: { maxParallel: 1 }
+    Coder:     { maxParallel: 1 }
+    Reviewer:  { maxParallel: 1 }
+    Shipper:   { maxParallel: 1 }
+
+  inputs:
+    required: [issueOrSpec, repoRoot]
+    optional: [constraints, targetBranch]
+
+  artifacts:
+    required:
+      - { type: "diff" }
+      - { type: "test_report" }
+      - { type: "release_notes" }
+      - { type: "rollback_plan" }
+
+  gates:
+    - id: "gate.repo.clean"
+      when: "before.step.code.implement"
+      blocking: true
+      check:
+        tool: "git.status"
+        expect: { clean: true }
+      onFail:
+        message: "工作区不干净，请提交或 stash"
+        remediation:
+          - { tool: "git.diff" }
+
+  steps:
+    - id: "pm.clarify"
+      role: "PM"
+      kind: "llm"
+      promptRef: "prompts/pm_clarify.md"
+
+    - id: "arch.design"
+      role: "Architect"
+      kind: "llm"
+      promptRef: "prompts/arch_design.md"
+      rag:
+        sources: ["code", "docs", "memory:L1"]
+        requireCitations: true
+
+    - id: "code.implement"
+      role: "Coder"
+      kind: "tool_chain"
+      chain:
+        - { tool: "git.checkout", args: { newBranchFrom: "main" } }
+        - { tool: "apply_patch" }
+        - { tool: "test.run", args: { scope: "changed" } }
+
+    - id: "review.quality"
+      role: "Reviewer"
+      kind: "llm"
+      promptRef: "prompts/review_quality.md"
+
+    - id: "ship.release"
+      role: "Shipper"
+      kind: "llm"
+      promptRef: "prompts/release_pack.md"
+
+hooks:
+  - id: "hook.pre_tool"
+    on: "tool.called"
+    policy: "enforce"
+    rules:
+      - match: { tool: "shell.exec", risk: "danger" }
+        action: { deny: true, reason: "危险命令需人工批准或提升策略档" }

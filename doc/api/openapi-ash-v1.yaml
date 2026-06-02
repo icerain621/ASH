@@ -1,0 +1,355 @@
+openapi: 3.0.3
+info:
+  title: ASH API
+  version: 1.0.0
+  description: ASH AI Platform MVP APIs
+servers:
+  - url: https://api.ash.local
+tags:
+  - name: Tasks
+  - name: AgentRuns
+  - name: Memories
+  - name: CI
+  - name: Spaces
+  - name: Feedback
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ApiResponse:
+      type: object
+      properties:
+        code: { type: integer, example: 0 }
+        message: { type: string, example: ok }
+        data: { type: object, nullable: true }
+    CreateTaskRequest:
+      type: object
+      required: [title, goal, projectId, mode]
+      properties:
+        title: { type: string, maxLength: 256 }
+        goal: { type: string }
+        projectId: { type: string, maxLength: 64 }
+        spaceId: { type: integer, format: int64, nullable: true }
+        priority: { type: string, enum: [low, medium, high], default: medium }
+        mode: { type: string, enum: [assist, auto] }
+    CreateTaskResponseData:
+      type: object
+      properties:
+        taskId: { type: integer, format: int64 }
+        status: { type: string, example: CREATED }
+        createdAt: { type: string, format: date-time }
+    StartTaskRequest:
+      type: object
+      properties:
+        riskLevel: { type: string, enum: [low, medium, high], default: low }
+        toolPolicy:
+          type: object
+          properties:
+            allow:
+              type: array
+              items: { type: string }
+            requireApprovalFor:
+              type: array
+              items: { type: string }
+    StartTaskResponseData:
+      type: object
+      properties:
+        runId: { type: integer, format: int64 }
+        state: { type: string, example: PLANNING }
+    AgentRun:
+      type: object
+      properties:
+        runId: { type: integer, format: int64 }
+        taskId: { type: integer, format: int64 }
+        state:
+          type: string
+          enum: [PLANNING, EXECUTING, REVIEWING, DONE, BLOCKED, NEED_HUMAN, ERROR]
+        plan:
+          type: object
+          nullable: true
+        riskFlags:
+          type: array
+          items: { type: string }
+    CreateMemoryRequest:
+      type: object
+      required: [scope, content, source]
+      properties:
+        scope: { type: string, enum: [user, project, session] }
+        ownerUserId: { type: integer, format: int64, nullable: true }
+        projectId: { type: string, nullable: true }
+        sessionId: { type: string, nullable: true }
+        content: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        source: { type: string, enum: [manual, agent, feedback, import] }
+        confidence: { type: number, format: float, minimum: 0, maximum: 1, default: 0.7 }
+    MemorySearchRequest:
+      type: object
+      required: [query, topK]
+      properties:
+        query: { type: string }
+        scope:
+          type: array
+          items: { type: string, enum: [user, project, session] }
+        projectId: { type: string, nullable: true }
+        topK: { type: integer, minimum: 1, maximum: 50, default: 5 }
+    DiagnoseCiFailureRequest:
+      type: object
+      required: [pipelineId, repoRef]
+      properties:
+        pipelineId: { type: string }
+        repoRef: { type: string }
+        logRange:
+          type: object
+          properties:
+            from: { type: integer }
+            to: { type: integer }
+    SubmitFeedbackRequest:
+      type: object
+      required: [targetType, targetId, rating, category]
+      properties:
+        targetType: { type: string, enum: [copilot, agent_run, memory_hit] }
+        targetId: { type: string }
+        rating: { type: integer, minimum: 1, maximum: 5 }
+        category: { type: string, enum: [accuracy, timeliness, executability, other] }
+        comment: { type: string, maxLength: 1024 }
+security:
+  - bearerAuth: []
+paths:
+  /v1/tasks:
+    post:
+      tags: [Tasks]
+      summary: Create task
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateTaskRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/CreateTaskResponseData" }
+  /v1/tasks/{taskId}:
+    get:
+      tags: [Tasks]
+      summary: Get task detail
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/tasks/{taskId}/start:
+    post:
+      tags: [Tasks]
+      summary: Start task
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StartTaskRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/StartTaskResponseData" }
+  /v1/tasks/{taskId}/cancel:
+    post:
+      tags: [Tasks]
+      summary: Cancel task
+      parameters:
+        - in: path
+          name: taskId
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/agent-runs/{runId}:
+    get:
+      tags: [AgentRuns]
+      summary: Get agent run detail
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: "#/components/schemas/ApiResponse"
+                  - type: object
+                    properties:
+                      data: { $ref: "#/components/schemas/AgentRun" }
+  /v1/runs/{runId}/stream:
+    get:
+      tags: [AgentRuns]
+      summary: Stream run logs (SSE)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: text/event-stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+  /v1/memories:
+    post:
+      tags: [Memories]
+      summary: Create memory
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMemoryRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/memories/search:
+    post:
+      tags: [Memories]
+      summary: Search memories
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemorySearchRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/ci/failures/diagnose:
+    post:
+      tags: [CI]
+      summary: Diagnose CI failure
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiagnoseCiFailureRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/spaces:
+    post:
+      tags: [Spaces]
+      summary: Create space
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, maxLength: 128 }
+                description: { type: string, maxLength: 512 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/spaces/{spaceId}/members:
+    post:
+      tags: [Spaces]
+      summary: Add space member
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: integer, format: int64 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userId, role]
+              properties:
+                userId: { type: integer, format: int64 }
+                role: { type: string, enum: [owner, developer, viewer] }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/feedback:
+    post:
+      tags: [Feedback]
+      summary: Submit feedback
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SubmitFeedbackRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /v1/metrics/overview:
+    get:
+      tags: [Feedback]
+      summary: Get dashboard metrics
+      parameters:
+        - in: query
+          name: projectId
+          schema: { type: string }
+        - in: query
+          name: spaceId
+          schema: { type: integer, format: int64 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }

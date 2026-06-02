@@ -1,0 +1,83 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ash.run.summary/v0.1",
+  "title": "ASH run summary (run.json) v0.1",
+  "type": "object",
+  "required": ["runId", "traceId", "scenario", "policyProfile", "startedAt", "status", "artifacts"],
+  "additionalProperties": false,
+  "properties": {
+    "runId": { "type": "string", "minLength": 1 },
+    "traceId": { "type": "string", "minLength": 1 },
+    "scenario": {
+      "type": "object",
+      "required": ["name", "scenarioVersion"],
+      "additionalProperties": false,
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "scenarioVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "policyProfile": { "type": "string", "minLength": 1 },
+    "repo": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "root": { "type": "string", "minLength": 1 },
+        "revision": { "type": "string" },
+        "branch": { "type": "string" }
+      }
+    },
+    "inputsDigest": { "type": "string" },
+    "startedAt": { "type": "number", "minimum": 0 },
+    "finishedAt": { "type": "number", "minimum": 0 },
+    "status": { "type": "string", "enum": ["finished", "failed", "paused"] },
+    "recovered": { "type": "boolean" },
+    "artifacts": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "required": ["type", "id", "digest"],
+        "additionalProperties": false,
+        "properties": {
+          "type": { "type": "string" },
+          "id": { "type": "string", "minLength": 1 },
+          "digest": { "type": "string", "pattern": "^sha256:[0-9a-fA-F]{64}$" }
+        }
+      }
+    },
+    "memory": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "schemaVersion": { "type": "number", "minimum": 0 },
+        "usedRecordIds": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "metrics": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": { "type": "number", "minimum": 0 },
+        "toolFailures": { "type": "number", "minimum": 0 },
+        "citationMissing": { "type": "number", "minimum": 0 },
+        "tokenIn": { "type": "number", "minimum": 0 },
+        "tokenOut": { "type": "number", "minimum": 0 },
+        "costEstimated": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string" }
+      }
+    },
+    "error": {
+      "type": "object",
+      "required": ["code", "message"],
+      "additionalProperties": false,
+      "properties": {
+        "code": { "type": "string", "minLength": 1 },
+        "message": { "type": "string", "minLength": 1 },
+        "recoverable": { "type": "boolean" },
+        "lastCheckpointId": { "type": "string" }
+      }
+    }
+  }
+}
+

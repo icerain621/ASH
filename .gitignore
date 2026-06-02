@@ -1,0 +1,14 @@
+bin/
+backend/.ash/
+backend/bin/
+.ash/
+*.db
+*.exe
+*.test
+vendor/
+frontend/node_modules/
+frontend/dist/
+git-init-report.txt
+shell-test*.txt
+doctor-tr0.md
+*.log
