@@ -1,7 +1,8 @@
 # ASH Monorepo
 
+<img width="100%" height="100%" alt="image" src="https://github.com/user-attachments/assets/de87f7be-5510-4288-9066-8a4c03b56785" />
+
 全称：Advanced Species Of Human（人类高阶物种），旧世界顶尖超人工智能，灯塔克洛托系统的原型本体，末日玛娜生态诞生的关键推手之一。旨在做一个像一个ASH一样强大的AI助手。
-<img width="450" height="600" alt="image" src="https://github.com/user-attachments/assets/de87f7be-5510-4288-9066-8a4c03b56785" />
 
 
 ## 目录结构
