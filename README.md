@@ -1,6 +1,6 @@
 # ASH Monorepo
 
-交付导向编码机器人（ASH）独立仓库，根路径：`C:\Go_Work\src\ash`。
+全称：Advanced Species Of Human（人类高阶物种），旧世界顶尖超人工智能，灯塔克洛托系统的原型本体，末日玛娜生态诞生的关键推手之一。旨在做一个像一个ASH一样强大的AI助手。
 
 ## 目录结构
 
