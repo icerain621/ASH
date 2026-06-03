@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 )
@@ -32,12 +33,31 @@ func registerWebUI(r *gin.Engine, webDir string) {
 			webDir = filepath.Join(wd, webDir)
 		}
 	}
+	webDir = filepath.Clean(webDir)
 	if st, err := os.Stat(webDir); err != nil || !st.IsDir() {
 		return
 	}
-	fs := http.Dir(webDir)
+	indexPath := filepath.Join(webDir, "index.html")
+	if st, err := os.Stat(indexPath); err != nil || st.IsDir() {
+		return
+	}
 	r.GET("/", func(c *gin.Context) {
 		c.Redirect(http.StatusFound, "/ui/")
 	})
-	r.StaticFS("/ui", fs)
+	r.GET("/ui", func(c *gin.Context) {
+		c.Redirect(http.StatusFound, "/ui/")
+	})
+	r.GET("/ui/*filepath", func(c *gin.Context) {
+		rel := strings.TrimPrefix(c.Param("filepath"), "/")
+		if rel != "" {
+			target := filepath.Join(webDir, filepath.Clean(rel))
+			if relToWeb, err := filepath.Rel(webDir, target); err == nil && relToWeb != ".." && !strings.HasPrefix(relToWeb, ".."+string(filepath.Separator)) {
+				if st, err := os.Stat(target); err == nil && !st.IsDir() {
+					http.ServeFile(c.Writer, c.Request, target)
+					return
+				}
+			}
+		}
+		http.ServeFile(c.Writer, c.Request, indexPath)
+	})
 }

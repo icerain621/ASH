@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package ash.v1;
+
+import "ash/v1/common.proto";
+
+option go_package = "github.com/ash-repwiki/ash/proto/ash/v1;ashv1";
+
+service PluginRegistryService {
+  rpc Register(RegisterRequest) returns (RegisterResponse);
+  rpc Heartbeat(HeartbeatRequest) returns (HeartbeatResponse);
+  rpc GetStatus(GetStatusRequest) returns (GetStatusResponse);
+}
+
+message RegisterRequest {
+  string id = 1;
+  string name = 2;
+  string version = 3;
+  string protocol = 4;
+  string abi = 5;
+  string endpoint = 6;
+  repeated string capabilities = 7;
+  repeated string supported_events = 8;
+  TraceContext context = 9;
+}
+
+message RegisterResponse {
+  bool accepted = 1;
+  bool compatible = 2;
+  string plugin_id = 3;
+  Status status = 4;
+}
+
+message HeartbeatRequest {
+  string plugin_id = 1;
+  TraceContext context = 2;
+}
+
+message HeartbeatResponse {
+  bool ok = 1;
+  Status status = 2;
+}
+
+message GetStatusRequest {
+  string plugin_id = 1;
+  TraceContext context = 2;
+}
+
+message GetStatusResponse {
+  string plugin_id = 1;
+  string state = 2;
+  bool compatible = 3;
+  Status status = 4;
+}
