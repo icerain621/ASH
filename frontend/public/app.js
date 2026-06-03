@@ -111,6 +111,7 @@ function streamRun(runId) {
   sseSource.addEventListener("run.checkpoint_saved", (ev) => append(ev.type, ev.data));
   sseSource.addEventListener("policy.denied", (ev) => append(ev.type, ev.data));
   sseSource.addEventListener("memory.deprecated", (ev) => append(ev.type, ev.data));
+  sseSource.onerror = () => {
     append("sse", "connection closed or error");
   };
 }

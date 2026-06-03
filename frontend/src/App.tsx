@@ -1,10 +1,6 @@
-import { BrowserRouter } from "react-router-dom";
-import { AppRouter } from "./app/router";
+import { RouterProvider } from "@tanstack/react-router";
+import { router } from "./app/router";
 
 export function App() {
-  return (
-    <BrowserRouter basename="/ui">
-      <AppRouter />
-    </BrowserRouter>
-  );
+  return <RouterProvider router={router} />;
 }
