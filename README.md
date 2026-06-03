@@ -92,6 +92,32 @@ make doctor
 go run ./cmd/cli doctor --suite TR0 --format md --out doctor-tr0.md
 ```
 
+## ExecGo / Codex Agent 执行面
+
+ASH M0 默认使用 `execgo_codex` 执行器：ASH 负责编排、事件、证据、审计、门禁和产物，真实 coding step 通过 ExecGo 提交给 Codex CLI。首次使用前先显式安装并检查执行面：
+
+```bash
+# 克隆并构建 github.com/iammm0/execgo 与 execgo-runtime 到 .ash/execgo
+make execgo-bootstrap
+
+# 在运行 ASH 的 shell 中加入 bootstrap 输出的环境变量后，启动 ExecGo / execgo-runtime
+# 然后检查桥接可用性
+make execgo-health
+```
+
+常用配置：
+
+| 变量 | 默认值 | 说明 |
+|---|---|---|
+| `ASH_AGENT_EXECUTOR` | `execgo_codex` | Run 的 agent 执行器，测试/本地演示可临时设为 `static` |
+| `ASH_CODEX_BIN` | `codex` | Codex CLI 可执行文件 |
+| `ASH_CODEX_BYPASS_SANDBOX` | `0` | 设为 `1` 才会向 Codex CLI 传递危险的 bypass 参数；默认不绕过 Codex 审批/沙箱 |
+| `EXECGO_EXECGOCLI` | `execgocli` | `execgocli` 路径；bootstrap 会打印 `.ash/execgo/execgo/bin/execgocli` |
+| `EXECGO_URL` | `http://127.0.0.1:8080` | ExecGo 控制面地址 |
+| `EXECGO_RUNTIME_URL` | `http://127.0.0.1:18080` | execgo-runtime 数据面地址 |
+
+如果 `execgocli health` 或 `execgocli tools` 失败，`ash run --agent execgo_codex` 会进入失败态并返回 `AGENT_BRIDGE_UNAVAILABLE`，不会静默降级为 stub。
+
 ## M0 新增 API
 
 - `POST /api/v1/runs/:runId/resume` — 恢复 failed run
@@ -114,5 +140,6 @@ go run ./cmd/cli doctor --suite TR0 --format md --out doctor-tr0.md
 
 ## 文档索引
 
+- 变更记录：`CHANGELOG.md`
 - 产品/MVP：`doc/product/README.md`（见 `doc/README.md`）
 - 实现设计 v0.1：`doc/design/`（含 `appendices/`）
