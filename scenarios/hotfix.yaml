@@ -1,0 +1,56 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "hotfix"
+  scenarioVersion: "1.0.0"
+  description: "故障热修复流程（M1）"
+  policyProfile: "hotfix"
+  checkpoint:
+    strategy: "per_step"
+    retain: 50
+
+  roles:
+    SRE:      { maxParallel: 1 }
+    Coder:    { maxParallel: 1 }
+    QA:       { maxParallel: 1 }
+    Shipper:  { maxParallel: 1 }
+
+  inputs:
+    required: [issueOrSpec, repoRoot]
+    optional: [logs, recentChanges, targetBranch]
+
+  artifacts:
+    required:
+      - { type: "diff" }
+      - { type: "test_report" }
+      - { type: "release_notes" }
+      - { type: "rollback_plan" }
+
+  steps:
+    - id: "sre.triage"
+      role: "SRE"
+      kind: "llm"
+      promptRef: "prompts/hotfix_triage.md"
+      rag:
+        sources: ["code", "docs", "memory:L1"]
+        requireCitations: true
+
+    - id: "code.fix"
+      role: "Coder"
+      kind: "agent"
+      timeoutMs: 120000
+      agent:
+        adapter: "codex"
+        capabilities: ["code.modify", "test.run", "artifact.diff"]
+        prompt: "Implement the smallest safe hotfix. Prefer targeted changes and preserve rollback safety."
+
+    - id: "qa.verify"
+      role: "QA"
+      kind: "tool_chain"
+      chain:
+        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
+
+    - id: "ship.release"
+      role: "Shipper"
+      kind: "llm"
+      promptRef: "prompts/hotfix_release.md"
