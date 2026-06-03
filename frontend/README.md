@@ -1,23 +1,26 @@
-# ASH Web Console (M0)
+# ASH 控制台前端
 
-零构建静态控制台，由 Worker 挂载在 `/ui/`。
+Vite + React + TypeScript 前端控制台，路由 basepath 为 `/ui/`。
 
-## 功能
+## 技术栈
 
-- **Runs**：列表、创建 feature_delivery run、SSE 事件流、artifacts
-- **Memory**：候选列表、approve/reject、新建候选（可绑 runId 推 SSE）
-- **Doctor**：一键 TR0
+- TanStack Router：页面路由与 `/ui/` basepath
+- TanStack Query：服务端状态与接口缓存
+- TanStack Table：运行表格渲染
+- lucide-react：操作图标
+
+- **运行**：列表、创建 feature_delivery 运行、SSE 事件流、产物
+- **记忆**：候选列表、通过/拒绝、新建候选（可绑定运行 ID 推送 SSE）
+- **诊断**：一键 TR0
 
 ## 启动
 
 ```bash
-# 仓库根目录
-make run
-# 打开 http://localhost:8080/ui/
+cd frontend
+npm install
+npm run dev
 ```
 
-环境变量 `ASH_WEB_DIR` 默认 `frontend/public`。
+打开 `http://127.0.0.1:5173/ui/`。
 
-## 后续
-
-可迁移至 Vite + React（见 `doc/08-frontend-architecture.md`）。
+后端 API 通过 Vite proxy 转发到 `http://localhost:8080`。

@@ -8,6 +8,7 @@ backend/bin/
 vendor/
 frontend/node_modules/
 frontend/dist/
+frontend/*.tsbuildinfo
 git-init-report.txt
 shell-test*.txt
 doctor-tr0.md
