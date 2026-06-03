@@ -8,11 +8,13 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
-	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/rules"
+	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -23,6 +25,12 @@ func main() {
 		os.Exit(2)
 	}
 	switch os.Args[1] {
+	case "run":
+		runScenario(os.Args[2:])
+	case "replay":
+		runReplay(os.Args[2:])
+	case "cancel":
+		runCancel(os.Args[2:])
 	case "doctor":
 		runDoctor(os.Args[2:])
 	default:
@@ -32,14 +40,79 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  doctor --suite TR0 [--format json|md] [--out path]\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|ALL [--format json|md] [--out path] [--agent execgo_codex|static]\n")
+}
+
+func runScenario(args []string) {
+	fs := flag.NewFlagSet("run", flag.ExitOnError)
+	scenario := fs.String("scenario", "feature_delivery", "scenario name")
+	version := fs.String("version", "1.0.0", "scenario version")
+	issue := fs.String("issue", "", "issue/spec text")
+	repo := fs.String("repo", ".", "repository root")
+	policy := fs.String("policy", "", "policy profile")
+	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
+	format := fs.String("format", "json", "output format: json|md")
+	_ = fs.Parse(args)
+	if *issue == "" {
+		log.Fatal("--issue is required")
+	}
+
+	runsSvc := buildRunsService(*agent)
+	resp, err := runsSvc.Create(runs.CreateRequest{
+		Scenario:      runs.ScenarioRef{Name: *scenario, ScenarioVersion: *version},
+		PolicyProfile: *policy,
+		Repo:          &runs.RepoRef{Root: *repo},
+		Inputs: map[string]any{
+			"issueOrSpec": *issue,
+			"repoRoot":    *repo,
+		},
+	})
+	if err != nil {
+		log.Fatalf("run failed: %v", err)
+	}
+	emitRunResult(runsSvc, resp.RunID, resp.TraceID, *format)
+}
+
+func runReplay(args []string) {
+	fs := flag.NewFlagSet("replay", flag.ExitOnError)
+	mode := fs.String("mode", "exact", "replay mode: exact|latest_memory")
+	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
+	format := fs.String("format", "json", "output format: json|md")
+	_ = fs.Parse(args)
+	if fs.NArg() < 1 {
+		log.Fatal("replay requires <runId>")
+	}
+	sourceRunID := fs.Arg(0)
+	runsSvc := buildRunsService(*agent)
+	resp, err := runsSvc.Replay(sourceRunID, runs.ReplayRequest{Mode: *mode})
+	if err != nil {
+		log.Fatalf("replay failed: %v", err)
+	}
+	emitRunResult(runsSvc, resp.RunID, resp.TraceID, *format)
+}
+
+func runCancel(args []string) {
+	fs := flag.NewFlagSet("cancel", flag.ExitOnError)
+	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
+	_ = fs.Parse(args)
+	if fs.NArg() < 1 {
+		log.Fatal("cancel requires <runId>")
+	}
+	runsSvc := buildRunsService(*agent)
+	resp, err := runsSvc.Cancel(fs.Arg(0))
+	if err != nil {
+		log.Fatalf("cancel failed: %v", err)
+	}
+	b, _ := json.MarshalIndent(resp, "", "  ")
+	fmt.Println(string(b))
 }
 
 func runDoctor(args []string) {
 	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
-	suite := fs.String("suite", "TR0", "validation suite: TR0|ALL")
+	suite := fs.String("suite", "TR0", "validation suite: TR0|TR1|TR2|ALL")
 	format := fs.String("format", "json", "output format: json|md")
 	out := fs.String("out", "", "write report to file")
+	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
 	_ = fs.Parse(args)
 
 	cfg := config.Load()
@@ -56,6 +129,9 @@ func runDoctor(args []string) {
 
 	ev := events.NewService(db)
 	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus())
+	if *agent == "static" {
+		runsSvc.WithAgentExecutor(agentexec.StaticExecutor{})
+	}
 	doc := doctor.NewService(runsSvc, ev, loader, db.DataDir())
 
 	rep, err := doc.RunSuite(*suite)
@@ -85,6 +161,135 @@ func runDoctor(args []string) {
 	if rep.Summary.Fail > 0 {
 		os.Exit(1)
 	}
+}
+
+func buildRunsService(agentName string) *runs.Service {
+	cfg := config.Load()
+	db, err := store.Open(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	scenariosDir := resolveScenariosDir(cfg.ScenariosDir)
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		log.Fatalf("load scenarios: %v", err)
+	}
+	ev := events.NewService(db)
+	svc := runs.NewService(db, ev, loader, toolbus.DefaultBus())
+	if agentName == "static" {
+		svc.WithAgentExecutor(agentexec.StaticExecutor{})
+	}
+	return svc
+}
+
+func emitRunResult(runsSvc *runs.Service, runID, traceID, format string) {
+	manifest, _ := runsSvc.Artifacts(runID)
+	timeline, _ := runsSvc.Events().ListAfter(runID, 0, 500)
+	artifacts := artifactResults(runsSvc, runID, manifest)
+	checkpoints := checkpointResults(runsSvc, runID)
+	if format == "md" {
+		fmt.Printf("# ASH Run\n\n- runId: `%s`\n- traceId: `%s`\n", runID, traceID)
+		if len(artifacts) > 0 {
+			fmt.Println("\n## Artifacts")
+			for _, a := range artifacts {
+				fmt.Printf("- `%s`: %s (%s)\n", a.Type, a.URI, a.Digest)
+				if a.AccessURL != "" {
+					fmt.Printf("  - access: %s\n", a.AccessURL)
+				}
+			}
+		}
+		if len(checkpoints) > 0 {
+			fmt.Println("\n## Checkpoints")
+			for _, c := range checkpoints {
+				fmt.Printf("- `%s`: %s (%s)\n", c.ID, c.URI, c.SnapshotDigest)
+				if c.AccessURL != "" {
+					fmt.Printf("  - access: %s\n", c.AccessURL)
+				}
+			}
+		}
+		if len(timeline) > 0 {
+			fmt.Println("\n## Events")
+			for _, ev := range timeline {
+				fmt.Printf("- #%d `%s` %s\n", ev.Seq, ev.Type, ev.Severity)
+			}
+		}
+		return
+	}
+	payload := map[string]any{
+		"runId": runID, "traceId": traceID,
+		"artifacts":   artifacts,
+		"checkpoints": checkpoints,
+		"events":      timeline,
+	}
+	b, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		log.Fatalf("marshal result: %v", err)
+	}
+	fmt.Println(string(b))
+}
+
+type cliArtifact struct {
+	Type        string `json:"type"`
+	Name        string `json:"name"`
+	URI         string `json:"uri"`
+	AccessURL   string `json:"accessUrl,omitempty"`
+	Digest      string `json:"digest"`
+	ContentType string `json:"contentType,omitempty"`
+	SizeBytes   int64  `json:"sizeBytes,omitempty"`
+}
+
+type cliCheckpoint struct {
+	ID             string `json:"id"`
+	StepID         string `json:"stepId"`
+	URI            string `json:"uri"`
+	AccessURL      string `json:"accessUrl,omitempty"`
+	SnapshotDigest string `json:"snapshotDigest"`
+	ContentType    string `json:"contentType,omitempty"`
+	SizeBytes      int64  `json:"sizeBytes,omitempty"`
+	Strategy       string `json:"strategy,omitempty"`
+}
+
+func artifactResults(runsSvc *runs.Service, runID string, manifest *artifacts.Manifest) []cliArtifact {
+	if manifest == nil {
+		return nil
+	}
+	out := make([]cliArtifact, 0, len(manifest.Artifacts))
+	for _, a := range manifest.Artifacts {
+		item := cliArtifact{
+			Type: a.Type, Name: a.Name, URI: a.URI, Digest: a.Digest,
+			ContentType: a.ContentType, SizeBytes: a.SizeBytes,
+		}
+		if access, err := runsSvc.ArtifactAccess(runID, a.Name, 0); err == nil && access != nil {
+			item.AccessURL = access.SignedURL
+			if access.URI != "" {
+				item.URI = access.URI
+			}
+		}
+		out = append(out, item)
+	}
+	return out
+}
+
+func checkpointResults(runsSvc *runs.Service, runID string) []cliCheckpoint {
+	rows, err := runsSvc.Checkpoints(runID)
+	if err != nil || len(rows) == 0 {
+		return nil
+	}
+	out := make([]cliCheckpoint, 0, len(rows))
+	for _, c := range rows {
+		item := cliCheckpoint{
+			ID: c.ID, StepID: c.StepID, URI: c.URI, SnapshotDigest: c.SnapshotDigest,
+			ContentType: c.ContentType, SizeBytes: c.SizeBytes, Strategy: c.Strategy,
+		}
+		if access, err := runsSvc.CheckpointAccess(runID, c.ID, 0); err == nil && access != nil {
+			item.AccessURL = access.SignedURL
+			if access.URI != "" {
+				item.URI = access.URI
+			}
+		}
+		out = append(out, item)
+	}
+	return out
 }
 
 func resolveScenariosDir(dir string) string {
