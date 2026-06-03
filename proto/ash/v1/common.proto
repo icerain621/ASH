@@ -1,0 +1,16 @@
+syntax = "proto3";
+
+package ash.v1;
+
+option go_package = "github.com/ash-repwiki/ash/proto/ash/v1;ashv1";
+
+message TraceContext {
+  string trace_id = 1;
+  string run_id = 2;
+  string space_id = 3;
+}
+
+message Status {
+  string code = 1;
+  string message = 2;
+}

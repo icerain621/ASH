@@ -22,6 +22,9 @@ import (
 // @Router /api/v1/runs/{runId}/resume [post]
 func (h *Handler) resumeRun(c *gin.Context) {
 	runID := c.Param("runId")
+	if !h.requireRunAccess(c, runID) {
+		return
+	}
 	resp, err := h.runs.Resume(runID)
 	if err != nil {
 		writeRunControlError(c, err)
@@ -49,6 +52,9 @@ func (h *Handler) resumeRun(c *gin.Context) {
 // @Router /api/v1/runs/{runId}/replay [post]
 func (h *Handler) replayRun(c *gin.Context) {
 	runID := c.Param("runId")
+	if !h.requireRunAccess(c, runID) {
+		return
+	}
 	var req runs.ReplayRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
@@ -62,6 +68,57 @@ func (h *Handler) replayRun(c *gin.Context) {
 	c.Header("X-Run-Id", resp.RunID)
 	c.Header("X-Trace-Id", resp.TraceID)
 	c.JSON(http.StatusCreated, resp)
+}
+
+// CancelRun godoc
+// @Summary Cancel a running run
+// @Tags runs
+// @Produce json
+// @Param runId path string true "run id"
+// @Success 200 {object} runs.CancelResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/runs/{runId}/cancel [post]
+func (h *Handler) cancelRun(c *gin.Context) {
+	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permRunCancel) {
+		return
+	}
+	resp, err := h.runs.Cancel(runID)
+	if err != nil {
+		writeRunControlError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// ApproveRun godoc
+// @Summary Approve a waiting run gate
+// @Tags runs
+// @Accept json
+// @Produce json
+// @Param runId path string true "run id"
+// @Param body body runs.ApproveRequest true "approval request"
+// @Success 200 {object} runs.ApproveResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/runs/{runId}/approve [post]
+func (h *Handler) approveRun(c *gin.Context) {
+	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permRunApprove) {
+		return
+	}
+	var req runs.ApproveRequest
+	_ = c.ShouldBindJSON(&req)
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
+	}
+	resp, err := h.runs.Approve(runID, req)
+	if err != nil {
+		writeRunControlError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
 }
 
 func writeRunControlError(c *gin.Context, err error) {

@@ -5,12 +5,15 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
+	"strconv"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 
 	"github.com/ash-repwiki/ash/internal/doctor"
+	"github.com/ash-repwiki/ash/internal/runs"
 )
 
 type doctorRunRequest struct {
@@ -113,6 +116,9 @@ func (h *Handler) getDoctorReport(c *gin.Context) {
 // @Router /api/v1/runs/{runId}/artifacts [get]
 func (h *Handler) listRunArtifacts(c *gin.Context) {
 	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permArtifactRead) {
+		return
+	}
 	manifest, err := h.runs.Artifacts(runID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("ARTIFACTS_NOT_FOUND", err.Error()))
@@ -121,10 +127,93 @@ func (h *Handler) listRunArtifacts(c *gin.Context) {
 	c.JSON(http.StatusOK, artifactsManifestResponse{Manifest: manifest, Artifacts: manifest.Artifacts})
 }
 
+// ListRunCheckpoints godoc
+// @Summary List run checkpoints
+// @Tags runs
+// @Produce json
+// @Param runId path string true "run id"
+// @Success 200 {object} CheckpointListResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/runs/{runId}/checkpoints [get]
+func (h *Handler) listRunCheckpoints(c *gin.Context) {
+	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permArtifactRead) {
+		return
+	}
+	items, err := h.runs.Checkpoints(runID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("CHECKPOINT_LIST_NOT_FOUND", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, CheckpointListResponse{Items: items})
+}
+
+// GetRunArtifactAccess godoc
+// @Summary Get a signed artifact access URL
+// @Tags runs
+// @Produce json
+// @Param runId path string true "run id"
+// @Param artifactName path string true "artifact name"
+// @Param ttlSeconds query int false "signed URL ttl seconds" default(900)
+// @Success 200 {object} ArtifactAccessResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/runs/{runId}/artifacts/{artifactName}/access [get]
+func (h *Handler) getRunArtifactAccess(c *gin.Context) {
+	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permArtifactRead) {
+		return
+	}
+	ttl := 15 * time.Minute
+	if raw := c.Query("ttlSeconds"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			ttl = time.Duration(seconds) * time.Second
+		}
+	}
+	resp, err := h.runs.ArtifactAccess(runID, c.Param("artifactName"), ttl)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("ARTIFACT_ACCESS_NOT_FOUND", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// GetRunCheckpointAccess godoc
+// @Summary Get a signed checkpoint access URL
+// @Tags runs
+// @Produce json
+// @Param runId path string true "run id"
+// @Param checkpointId path string true "checkpoint id"
+// @Param ttlSeconds query int false "signed URL ttl seconds" default(900)
+// @Success 200 {object} CheckpointAccessResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/runs/{runId}/checkpoints/{checkpointId}/access [get]
+func (h *Handler) getRunCheckpointAccess(c *gin.Context) {
+	runID := c.Param("runId")
+	if !h.requireRunPermission(c, runID, permArtifactRead) {
+		return
+	}
+	ttl := 15 * time.Minute
+	if raw := c.Query("ttlSeconds"); raw != "" {
+		if seconds, err := strconv.Atoi(raw); err == nil && seconds > 0 {
+			ttl = time.Duration(seconds) * time.Second
+		}
+	}
+	resp, err := h.runs.CheckpointAccess(runID, c.Param("checkpointId"), ttl)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("CHECKPOINT_ACCESS_NOT_FOUND", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 type artifactsManifestResponse struct {
 	Manifest  any `json:"manifest"`
 	Artifacts any `json:"artifacts"`
 }
+
+type ArtifactAccessResponse = runs.ArtifactAccessResponse
+type CheckpointAccessResponse = runs.CheckpointAccessResponse
 
 func writeReportMD(dataDir, id string, rep *doctor.Report) error {
 	dir := filepath.Join(dataDir, "doctor")
