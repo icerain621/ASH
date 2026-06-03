@@ -3,6 +3,7 @@ package rules
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -17,6 +18,32 @@ func TestParseAndValidate_featureDelivery(t *testing.T) {
 	}
 	if res.Doc.Scenario.Name != "feature_delivery" {
 		t.Fatalf("unexpected name: %s", res.Doc.Scenario.Name)
+	}
+}
+
+func TestParseAndValidate_bundledScenarios(t *testing.T) {
+	dir := filepath.Join("..", "..", "scenarios")
+	entries, err := os.ReadDir(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, entry := range entries {
+		if entry.IsDir() || !strings.HasSuffix(entry.Name(), ".yaml") {
+			continue
+		}
+		t.Run(entry.Name(), func(t *testing.T) {
+			raw, err := os.ReadFile(filepath.Join(dir, entry.Name()))
+			if err != nil {
+				t.Fatal(err)
+			}
+			res := ParseAndValidate(raw)
+			if !res.OK {
+				t.Fatalf("expected valid DSL, issues: %+v", res.Issues)
+			}
+			if res.Doc == nil || res.Doc.Scenario.Name == "" {
+				t.Fatalf("missing scenario in %s", entry.Name())
+			}
+		})
 	}
 }
 

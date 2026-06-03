@@ -14,6 +14,7 @@ scenario:
     Architect: { maxParallel: 1 }
     Coder:     { maxParallel: 1 }
     Reviewer:  { maxParallel: 1 }
+    QA:        { maxParallel: 1 }
     Shipper:   { maxParallel: 1 }
 
   inputs:
@@ -55,11 +56,18 @@ scenario:
 
     - id: "code.implement"
       role: "Coder"
+      kind: "agent"
+      timeoutMs: 120000
+      agent:
+        adapter: "codex"
+        capabilities: ["code.modify", "test.run", "artifact.diff"]
+        prompt: "Implement the requested feature or fix with the smallest safe change. Run relevant tests and leave the working tree with the intended diff."
+
+    - id: "qa.verify"
+      role: "QA"
       kind: "tool_chain"
       chain:
-        - { tool: "git.checkout", args: { newBranchFrom: "main" } }
-        - { tool: "apply_patch" }
-        - { tool: "test.run", args: { scope: "changed" } }
+        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000, retry: { maxAttempts: 1 } }
 
     - id: "review.quality"
       role: "Reviewer"

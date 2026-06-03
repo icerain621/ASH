@@ -4,24 +4,127 @@ import "time"
 
 // RunRecord indexes a delivery run for listing and replay.
 type RunRecord struct {
-	ID               string     `gorm:"primaryKey;size:64"`
-	TraceID          string     `gorm:"index;size:64;not null"`
-	ScenarioName     string     `gorm:"size:128;not null"`
-	ScenarioVersion  string     `gorm:"size:64;not null"`
-	PolicyProfile    string     `gorm:"size:64;not null;default:default"`
-	Status           string     `gorm:"size:32;not null;index"`
-	InputsDigest     string     `gorm:"size:128"`
-	RepoRoot         string     `gorm:"size:512"`
-	StartedAt        time.Time  `gorm:"not null"`
-	FinishedAt       *time.Time `gorm:"index"`
-	Recovered        bool       `gorm:"not null;default:false"`
-	ErrorCode        string     `gorm:"size:64"`
-	ErrorMessage     string     `gorm:"size:1024"`
-	CreatedAt        time.Time
-	UpdatedAt        time.Time
+	ID              string     `gorm:"primaryKey;size:64"`
+	TraceID         string     `gorm:"index;size:64;not null"`
+	ScenarioName    string     `gorm:"size:128;not null"`
+	ScenarioVersion string     `gorm:"size:64;not null"`
+	PolicyProfile   string     `gorm:"size:64;not null;default:default"`
+	Status          string     `gorm:"size:32;not null;index"`
+	SpaceID         string     `gorm:"size:64;not null;default:local;index"`
+	InputsDigest    string     `gorm:"size:128"`
+	RepoRoot        string     `gorm:"size:512"`
+	StartedAt       time.Time  `gorm:"not null"`
+	FinishedAt      *time.Time `gorm:"index"`
+	Recovered       bool       `gorm:"not null;default:false"`
+	ErrorCode       string     `gorm:"size:64"`
+	ErrorMessage    string     `gorm:"size:1024"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
 }
 
 func (RunRecord) TableName() string { return "runs" }
+
+// RunStep persists step-level state for timeline, resume, and gate rendering.
+type RunStep struct {
+	ID           string     `gorm:"primaryKey;size:64"`
+	RunID        string     `gorm:"index:idx_run_steps_run_order,priority:1;size:64;not null"`
+	StepID       string     `gorm:"size:128;not null"`
+	StepOrder    int        `gorm:"index:idx_run_steps_run_order,priority:2;not null"`
+	Role         string     `gorm:"size:64"`
+	Kind         string     `gorm:"size:64;not null"`
+	Status       string     `gorm:"size:32;not null;index"`
+	StartedAt    *time.Time `gorm:"index"`
+	FinishedAt   *time.Time `gorm:"index"`
+	DurationMs   int64
+	ErrorCode    string `gorm:"size:64"`
+	ErrorMessage string `gorm:"size:1024"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (RunStep) TableName() string { return "run_steps" }
+
+// ToolCall persists native ToolBus calls with audit-friendly metadata.
+type ToolCall struct {
+	ID          string `gorm:"primaryKey;size:64"`
+	RunID       string `gorm:"index;size:64;not null"`
+	TraceID     string `gorm:"index;size:64"`
+	StepID      string `gorm:"index;size:128"`
+	Tool        string `gorm:"size:128;not null;index"`
+	Risk        string `gorm:"size:32;not null"`
+	Status      string `gorm:"size:32;not null;index"`
+	ArgsDigest  string `gorm:"size:128"`
+	OutputJSON  string `gorm:"type:text;not null;default:'{}'"`
+	Error       string `gorm:"type:text"`
+	DurationMs  int64
+	Attempt     int `gorm:"not null;default:1"`
+	TimeoutMs   int64
+	CreatedAt   time.Time
+	CompletedAt *time.Time
+}
+
+func (ToolCall) TableName() string { return "tool_calls" }
+
+// AgentTask tracks external agent execution through ExecGo/Codex.
+type AgentTask struct {
+	ID            string `gorm:"primaryKey;size:64"`
+	RunID         string `gorm:"index;size:64;not null"`
+	TraceID       string `gorm:"index;size:64"`
+	StepID        string `gorm:"index;size:128"`
+	Adapter       string `gorm:"size:64;not null"`
+	AgentID       string `gorm:"size:128"`
+	SessionID     string `gorm:"size:128"`
+	ActionID      string `gorm:"size:128;index"`
+	ExecGoTaskID  string `gorm:"size:128;index"`
+	Status        string `gorm:"size:32;not null;index"`
+	PromptDigest  string `gorm:"size:128"`
+	StdoutSummary string `gorm:"type:text"`
+	StderrSummary string `gorm:"type:text"`
+	ExitCode      *int
+	ErrorCode     string `gorm:"size:64"`
+	ErrorMessage  string `gorm:"type:text"`
+	DurationMs    int64
+	TimeoutMs     int64
+	CreatedAt     time.Time
+	StartedAt     *time.Time
+	CompletedAt   *time.Time
+}
+
+func (AgentTask) TableName() string { return "agent_tasks" }
+
+// ArtifactIndex makes artifact discovery queryable without reading every manifest.
+type ArtifactIndex struct {
+	ID          string `gorm:"primaryKey;size:64"`
+	RunID       string `gorm:"index;size:64;not null"`
+	StepID      string `gorm:"index;size:128"`
+	Type        string `gorm:"size:64;not null;index"`
+	Name        string `gorm:"size:256"`
+	URI         string `gorm:"size:1024;not null"`
+	StoreKey    string `gorm:"size:1024"`
+	Digest      string `gorm:"size:128;not null;index"`
+	ContentType string `gorm:"size:128"`
+	SizeBytes   int64
+	EventRange  string `gorm:"size:128"`
+	CreatedAt   time.Time
+}
+
+func (ArtifactIndex) TableName() string { return "artifact_index" }
+
+// Checkpoint stores recoverable per-step snapshots.
+type Checkpoint struct {
+	ID             string `gorm:"primaryKey;size:64"`
+	RunID          string `gorm:"index;size:64;not null"`
+	StepID         string `gorm:"index;size:128;not null"`
+	SnapshotDigest string `gorm:"size:128;not null"`
+	URI            string `gorm:"size:1024"`
+	StoreKey       string `gorm:"size:1024"`
+	ContentType    string `gorm:"size:128"`
+	SizeBytes      int64
+	Strategy       string `gorm:"size:64"`
+	CreatedAt      time.Time
+}
+
+func (Checkpoint) TableName() string { return "checkpoints" }
 
 // RunEvent persists the event stream (source of truth for SSE/replay).
 type RunEvent struct {
@@ -42,6 +145,7 @@ type MemoryRecord struct {
 	ID            string `gorm:"primaryKey;size:64"`
 	Layer         string `gorm:"size:8;not null;index:idx_memory_layer_status,priority:1"`
 	Status        string `gorm:"size:32;not null;index:idx_memory_layer_status,priority:2"`
+	SpaceID       string `gorm:"size:64;not null;default:local;index"`
 	SchemaVersion int    `gorm:"not null;default:1"`
 	Title         string `gorm:"size:512;not null"`
 	Body          string `gorm:"type:text;not null"`
@@ -49,8 +153,9 @@ type MemoryRecord struct {
 	ScopeTeam     string `gorm:"size:128"`
 	TagsJSON      string `gorm:"type:text;not null;default:'[]'"`
 	TTLDays       *int
-	Sensitivity   string `gorm:"size:32;not null;default:normal"`
-	DedupeKey     string `gorm:"size:128;index"`
+	Sensitivity   string  `gorm:"size:32;not null;default:normal"`
+	DedupeKey     string  `gorm:"size:128;index"`
+	Confidence    float64 `gorm:"not null;default:0"`
 	CreatedAt     time.Time
 	UpdatedAt     time.Time
 }
@@ -81,8 +186,131 @@ type MemoryReview struct {
 
 func (MemoryReview) TableName() string { return "memory_reviews" }
 
+// MemoryEdge describes governance relationships between memory records.
+type MemoryEdge struct {
+	ID         string  `gorm:"primaryKey;size:64"`
+	SpaceID    string  `gorm:"size:64;not null;default:local;index"`
+	FromID     string  `gorm:"index;size:64;not null"`
+	ToID       string  `gorm:"index;size:64;not null"`
+	Kind       string  `gorm:"size:32;not null;index"` // duplicate|conflict|replaces|supports
+	Confidence float64 `gorm:"not null;default:0"`
+	Reason     string  `gorm:"type:text"`
+	CreatedAt  time.Time
+}
+
+func (MemoryEdge) TableName() string { return "memory_edges" }
+
+// RAGDocument indexes a repo file for FTS/BM25-style retrieval.
+type RAGDocument struct {
+	ID        string `gorm:"primaryKey;size:64"`
+	SpaceID   string `gorm:"size:64;not null;default:local;index"`
+	RepoRoot  string `gorm:"size:512;not null;index"`
+	Path      string `gorm:"size:1024;not null;index"`
+	Digest    string `gorm:"size:128;not null;index"`
+	SizeBytes int64
+	UpdatedAt time.Time
+	CreatedAt time.Time
+}
+
+func (RAGDocument) TableName() string { return "rag_documents" }
+
+// RAGChunk stores small file chunks with line ranges and citation refs.
+type RAGChunk struct {
+	ID         string `gorm:"primaryKey;size:64"`
+	DocumentID string `gorm:"index;size:64;not null"`
+	SpaceID    string `gorm:"size:64;not null;default:local;index"`
+	RepoRoot   string `gorm:"size:512;not null;index"`
+	Path       string `gorm:"size:1024;not null;index"`
+	Symbol     string `gorm:"size:256;index"`
+	StartLine  int
+	EndLine    int
+	Text       string `gorm:"type:text;not null"`
+	Digest     string `gorm:"size:128;not null;index"`
+	CreatedAt  time.Time
+}
+
+func (RAGChunk) TableName() string { return "rag_chunks" }
+
+// ModelUsage is the M1 cost/accounting ledger for non-coding model calls.
+type ModelUsage struct {
+	ID           string `gorm:"primaryKey;size:64"`
+	RunID        string `gorm:"index;size:64"`
+	StepID       string `gorm:"index;size:128"`
+	Provider     string `gorm:"size:64;not null"`
+	Model        string `gorm:"size:128;not null"`
+	InputTokens  int64
+	OutputTokens int64
+	CostMicros   int64
+	Status       string `gorm:"size:32;not null;index"`
+	CreatedAt    time.Time
+}
+
+func (ModelUsage) TableName() string { return "model_usage" }
+
+// QualityMetric records M1 quality baseline values.
+type QualityMetric struct {
+	ID        string `gorm:"primaryKey;size:64"`
+	RunID     string `gorm:"index;size:64"`
+	SpaceID   string `gorm:"size:64;not null;default:local;index"`
+	Name      string `gorm:"size:128;not null;index"`
+	Value     float64
+	Unit      string `gorm:"size:32"`
+	CreatedAt time.Time
+}
+
+func (QualityMetric) TableName() string { return "quality_metrics" }
+
+// MCPTool tracks registered MCP tools and isolation state.
+type MCPTool struct {
+	ID         string `gorm:"primaryKey;size:64"`
+	SpaceID    string `gorm:"size:64;not null;default:local;index"`
+	Name       string `gorm:"size:128;not null;index"`
+	Server     string `gorm:"size:256;not null"`
+	SchemaJSON string `gorm:"type:text;not null;default:'{}'"`
+	Risk       string `gorm:"size:32;not null"`
+	Status     string `gorm:"size:32;not null;index"`
+	LastError  string `gorm:"type:text"`
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+}
+
+func (MCPTool) TableName() string { return "mcp_tools" }
+
+// Feedback records user feedback over runs, artifacts, and memory hits.
+type Feedback struct {
+	ID         string `gorm:"primaryKey;size:64"`
+	SpaceID    string `gorm:"size:64;not null;default:local;index"`
+	TargetType string `gorm:"size:64;not null;index"`
+	TargetID   string `gorm:"size:128;not null;index"`
+	Rating     int
+	Comment    string `gorm:"type:text"`
+	ActorID    string `gorm:"size:128"`
+	CreatedAt  time.Time
+}
+
+func (Feedback) TableName() string { return "feedback" }
+
+type SecretRecord struct {
+	ID              string `gorm:"primaryKey;size:64"`
+	SpaceID         string `gorm:"size:64;not null;default:local;uniqueIndex:uniq_secret_space_name,priority:1"`
+	Name            string `gorm:"size:128;not null;uniqueIndex:uniq_secret_space_name,priority:2"`
+	Description     string `gorm:"size:512"`
+	Status          string `gorm:"size:32;not null;default:active;index"`
+	ScopeJSON       string `gorm:"type:text;not null;default:'{}'"`
+	ValueCiphertext string `gorm:"type:text;not null"`
+	ValueDigest     string `gorm:"size:128;not null;index"`
+	CreatedBy       string `gorm:"size:128"`
+	UpdatedBy       string `gorm:"size:128"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+	LastUsedAt      *time.Time
+}
+
+func (SecretRecord) TableName() string { return "secret_records" }
+
 type AuditLog struct {
 	ID          string `gorm:"primaryKey;size:64"`
+	SpaceID     string `gorm:"size:64;not null;default:local;index"`
 	TraceID     string `gorm:"index;size:64"`
 	RunID       string `gorm:"index;size:64"`
 	ActorID     string `gorm:"size:128"`
@@ -92,6 +320,141 @@ type AuditLog struct {
 }
 
 func (AuditLog) TableName() string { return "audit_log" }
+
+type ApprovalRequest struct {
+	ID             string `gorm:"primaryKey;size:64"`
+	SpaceID        string `gorm:"size:64;not null;default:local;index"`
+	RunID          string `gorm:"index;size:64;not null"`
+	TraceID        string `gorm:"index;size:64"`
+	StepID         string `gorm:"index;size:128;not null"`
+	Gate           string `gorm:"size:64;not null;index"`
+	Risk           string `gorm:"size:32"`
+	Reason         string `gorm:"type:text;not null"`
+	Status         string `gorm:"size:32;not null;default:pending;index"`
+	RequestedBy    string `gorm:"size:128"`
+	DecidedBy      string `gorm:"size:128"`
+	DecisionReason string `gorm:"type:text"`
+	EvidenceJSON   string `gorm:"type:text;not null;default:'{}'"`
+	CreatedAt      time.Time
+	UpdatedAt      time.Time
+	DecidedAt      *time.Time
+}
+
+func (ApprovalRequest) TableName() string { return "approval_requests" }
+
+type User struct {
+	ID           string `gorm:"primaryKey;size:64"`
+	Email        string `gorm:"size:256;uniqueIndex"`
+	DisplayName  string `gorm:"size:256"`
+	PasswordHash string `gorm:"size:256"`
+	Status       string `gorm:"size:32;not null;default:active;index"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (User) TableName() string { return "users" }
+
+type Org struct {
+	ID        string `gorm:"primaryKey;size:64"`
+	Name      string `gorm:"size:256;not null"`
+	Slug      string `gorm:"size:128;uniqueIndex"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (Org) TableName() string { return "orgs" }
+
+type Space struct {
+	ID        string `gorm:"primaryKey;size:64"`
+	OrgID     string `gorm:"index;size:64;not null"`
+	Name      string `gorm:"size:256;not null"`
+	Slug      string `gorm:"size:128;index"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (Space) TableName() string { return "spaces" }
+
+type Member struct {
+	ID        string `gorm:"primaryKey;size:64"`
+	OrgID     string `gorm:"index;size:64;not null"`
+	SpaceID   string `gorm:"index;size:64"`
+	UserID    string `gorm:"index;size:64;not null"`
+	RoleID    string `gorm:"index;size:64;not null"`
+	Status    string `gorm:"size:32;not null;default:active;index"`
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+func (Member) TableName() string { return "members" }
+
+type Role struct {
+	ID          string `gorm:"primaryKey;size:64"`
+	OrgID       string `gorm:"index;size:64"`
+	Name        string `gorm:"size:128;not null;index"`
+	Permissions string `gorm:"type:text;not null;default:'[]'"`
+	CreatedAt   time.Time
+	UpdatedAt   time.Time
+}
+
+func (Role) TableName() string { return "roles" }
+
+type ResourceScope struct {
+	ID           string `gorm:"primaryKey;size:64"`
+	SpaceID      string `gorm:"index;size:64;not null"`
+	ResourceType string `gorm:"size:64;not null;index"`
+	ResourceID   string `gorm:"size:128;not null;index"`
+	PolicyJSON   string `gorm:"type:text;not null;default:'{}'"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (ResourceScope) TableName() string { return "resource_scopes" }
+
+type AuditExport struct {
+	ID          string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID     string     `json:"spaceId" gorm:"index;size:64;not null"`
+	Status      string     `json:"status" gorm:"size:32;not null;index"`
+	URI         string     `json:"uri" gorm:"size:1024"`
+	StoreKey    string     `json:"storeKey" gorm:"size:1024"`
+	Digest      string     `json:"digest" gorm:"size:128;index"`
+	ContentType string     `json:"contentType" gorm:"size:128"`
+	SizeBytes   int64      `json:"sizeBytes"`
+	RequestedBy string     `json:"requestedBy" gorm:"size:128"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
+}
+
+func (AuditExport) TableName() string { return "audit_exports" }
+
+type AuditPolicy struct {
+	SpaceID       string `gorm:"primaryKey;size:64"`
+	RetentionDays int    `gorm:"not null;default:365"`
+	RedactPayload bool   `gorm:"not null;default:false"`
+	Locked        bool   `gorm:"not null;default:false"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
+}
+
+func (AuditPolicy) TableName() string { return "audit_policies" }
+
+type PluginRegistry struct {
+	ID           string `gorm:"primaryKey;size:64"`
+	SpaceID      string `gorm:"index;size:64;not null;default:local"`
+	Name         string `gorm:"size:128;not null;index"`
+	Version      string `gorm:"size:64;not null"`
+	Protocol     string `gorm:"size:32;not null;default:grpc;index"`
+	ABI          string `gorm:"size:64;not null;default:ash.plugin.v1;index"`
+	Endpoint     string `gorm:"size:512"`
+	Capabilities string `gorm:"type:text;not null;default:'[]'"`
+	Compatible   bool   `gorm:"not null;default:false"`
+	Status       string `gorm:"size:32;not null;index"`
+	LastError    string `gorm:"type:text"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
+}
+
+func (PluginRegistry) TableName() string { return "plugin_registry" }
 
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`

@@ -5,18 +5,38 @@ import (
 )
 
 type Config struct {
-	HTTPAddr     string
-	DataDir      string
-	ScenariosDir string
-	WebDir       string
+	HTTPAddr       string
+	DataDir        string
+	ScenariosDir   string
+	WebDir         string
+	AgentExecutor  string
+	CodexBin       string
+	ExecGoURL      string
+	RuntimeURL     string
+	PluginGRPCAddr string
+	AuthMode       string
+	JWTSecret      string
+	SecretKey      string
+	DatabaseURL    string
+	ArtifactStore  string
 }
 
 func Load() Config {
 	cfg := Config{
-		HTTPAddr:     envOr("ASH_HTTP_ADDR", ":8080"),
-		DataDir:      envOr("ASH_DATA_DIR", ".ash"),
-		ScenariosDir: envOr("ASH_SCENARIOS_DIR", resolveScenariosDir()),
-		WebDir:       envOr("ASH_WEB_DIR", resolveWebDir()),
+		HTTPAddr:       envOr("ASH_HTTP_ADDR", ":8080"),
+		DataDir:        envOr("ASH_DATA_DIR", ".ash"),
+		ScenariosDir:   envOr("ASH_SCENARIOS_DIR", resolveScenariosDir()),
+		WebDir:         envOr("ASH_WEB_DIR", resolveWebDir()),
+		AgentExecutor:  envOr("ASH_AGENT_EXECUTOR", "execgo_codex"),
+		CodexBin:       envOr("ASH_CODEX_BIN", "codex"),
+		ExecGoURL:      envOr("EXECGO_URL", "http://127.0.0.1:8080"),
+		RuntimeURL:     envOr("EXECGO_RUNTIME_URL", "http://127.0.0.1:18080"),
+		PluginGRPCAddr: envOr("ASH_PLUGIN_GRPC_ADDR", ""),
+		AuthMode:       envOr("ASH_AUTH_MODE", "dev"),
+		JWTSecret:      envOr("ASH_JWT_SECRET", "dev-secret-change-me"),
+		SecretKey:      envOr("ASH_SECRET_KEY", envOr("ASH_JWT_SECRET", "dev-secret-change-me")),
+		DatabaseURL:    envOr("ASH_DATABASE_URL", ""),
+		ArtifactStore:  envOr("ASH_ARTIFACT_STORE", "fs"),
 	}
 	return cfg
 }

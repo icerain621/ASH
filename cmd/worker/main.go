@@ -29,6 +29,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/api"
 	_ "github.com/ash-repwiki/ash/internal/api/docs" // swag OpenAPI
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -64,12 +65,29 @@ func main() {
 	h := api.NewHandler(db, loader)
 	h.Register(r, cfg.WebDir)
 
+	if cfg.PluginGRPCAddr != "" {
+		startPluginGRPC(cfg.PluginGRPCAddr, db)
+	}
+
 	log.Printf("ASH worker listening on %s (data dir: %s)", cfg.HTTPAddr, cfg.DataDir)
 	log.Printf("Swagger UI: http://%s/docs", trimLeadingColon(cfg.HTTPAddr))
 	log.Printf("Web console: http://%s/ui/", trimLeadingColon(cfg.HTTPAddr))
 	if err := http.ListenAndServe(cfg.HTTPAddr, r); err != nil {
 		log.Fatalf("server: %v", err)
 	}
+}
+
+func startPluginGRPC(addr string, db *store.DB) {
+	rt, err := pluginabi.StartRegistryServer(addr, db)
+	if err != nil {
+		log.Fatalf("plugin grpc listen %s: %v", addr, err)
+	}
+	go func() {
+		if err := <-rt.Done(); err != nil {
+			log.Fatalf("plugin grpc server: %v", err)
+		}
+	}()
+	log.Printf("Plugin registry gRPC listening on %s", rt.Addr)
 }
 
 func trimLeadingColon(addr string) string {
