@@ -92,6 +92,17 @@ func (s *Service) emitHitUsed(runID, traceID string, recordIDs []string) error {
 	})
 }
 
+func (s *Service) emitGovernanceEdge(runID, traceID string, edge store.MemoryEdge) error {
+	return s.emitRunEvent(runID, traceID, "memory.edge_created", map[string]any{
+		"edgeId":     edge.ID,
+		"fromId":     edge.FromID,
+		"toId":       edge.ToID,
+		"kind":       edge.Kind,
+		"confidence": edge.Confidence,
+		"reason":     edge.Reason,
+	})
+}
+
 func (s *Service) validateRunRef(runID, traceID string) (string, error) {
 	resolved, err := s.requireRunIfSet(runID)
 	if err != nil {

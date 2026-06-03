@@ -34,6 +34,7 @@ type CreateCandidateRequest struct {
 	RunID       string          `json:"runId,omitempty"`
 	TraceID     string          `json:"traceId,omitempty"`
 	ActorID     string          `json:"actorId,omitempty"`
+	SpaceID     string          `json:"spaceId,omitempty"`
 }
 
 // CreateCandidateResponse returns the new candidate id.
@@ -47,6 +48,16 @@ type EvidenceView struct {
 	Kind   string `json:"kind"`
 	Ref    string `json:"ref"`
 	Digest string `json:"digest,omitempty"`
+}
+
+type EdgeView struct {
+	ID         string  `json:"id"`
+	FromID     string  `json:"fromId"`
+	ToID       string  `json:"toId"`
+	Kind       string  `json:"kind"`
+	Confidence float64 `json:"confidence"`
+	Reason     string  `json:"reason,omitempty"`
+	CreatedAt  int64   `json:"createdAt"`
 }
 
 // RecordView is a memory record with optional evidence.
@@ -63,9 +74,11 @@ type RecordView struct {
 	TTLDays       *int           `json:"ttlDays,omitempty"`
 	Sensitivity   string         `json:"sensitivity"`
 	DedupeKey     string         `json:"dedupeKey,omitempty"`
+	Confidence    float64        `json:"confidence"`
 	CreatedAt     int64          `json:"createdAt"`
 	UpdatedAt     int64          `json:"updatedAt"`
 	Evidence      []EvidenceView `json:"evidence,omitempty"`
+	Edges         []EdgeView     `json:"edges,omitempty"`
 }
 
 // ListCandidatesResponse paginates candidates.
@@ -78,13 +91,17 @@ type ListCandidatesResponse struct {
 
 // ReviewRequest records a review decision.
 type ReviewRequest struct {
-	Decision      string `json:"decision" binding:"required"`
-	Reason        string `json:"reason" binding:"required"`
-	PolicyProfile string `json:"policyProfile" binding:"required"`
-	ReviewerID    string `json:"reviewerId,omitempty"`
-	ActorID       string `json:"actorId,omitempty"`
-	RunID         string `json:"runId,omitempty"`
-	TraceID       string `json:"traceId,omitempty"`
+	Decision      string   `json:"decision" binding:"required"`
+	Reason        string   `json:"reason" binding:"required"`
+	PolicyProfile string   `json:"policyProfile" binding:"required"`
+	ReviewerID    string   `json:"reviewerId,omitempty"`
+	ActorID       string   `json:"actorId,omitempty"`
+	RunID         string   `json:"runId,omitempty"`
+	TraceID       string   `json:"traceId,omitempty"`
+	Confidence    *float64 `json:"confidence,omitempty"`
+	DuplicateOf   string   `json:"duplicateOf,omitempty"`
+	Replaces      []string `json:"replaces,omitempty"`
+	ConflictsWith []string `json:"conflictsWith,omitempty"`
 }
 
 // ReviewResponse confirms review applied.
