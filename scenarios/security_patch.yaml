@@ -1,0 +1,56 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "security_patch"
+  scenarioVersion: "1.0.0"
+  description: "安全补丁与依赖升级流程（M1）"
+  policyProfile: "security"
+  checkpoint:
+    strategy: "per_step"
+    retain: 50
+
+  roles:
+    Security: { maxParallel: 1 }
+    Coder:    { maxParallel: 1 }
+    QA:       { maxParallel: 1 }
+    Shipper:  { maxParallel: 1 }
+
+  inputs:
+    required: [issueOrSpec, repoRoot]
+    optional: [vulnerabilityEvidence, lockfiles, compatibilityDocs, targetBranch]
+
+  artifacts:
+    required:
+      - { type: "diff" }
+      - { type: "test_report" }
+      - { type: "release_notes" }
+      - { type: "rollback_plan" }
+
+  steps:
+    - id: "security.assess"
+      role: "Security"
+      kind: "llm"
+      promptRef: "prompts/security_assess.md"
+      rag:
+        sources: ["code", "docs", "memory:L1"]
+        requireCitations: true
+
+    - id: "code.patch"
+      role: "Coder"
+      kind: "agent"
+      timeoutMs: 120000
+      agent:
+        adapter: "codex"
+        capabilities: ["code.modify", "dependency.upgrade", "test.run", "artifact.diff"]
+        prompt: "Apply the security patch or dependency upgrade with minimal compatibility risk. Preserve evidence for changed lockfiles."
+
+    - id: "qa.regression"
+      role: "QA"
+      kind: "tool_chain"
+      chain:
+        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
+
+    - id: "ship.advisory"
+      role: "Shipper"
+      kind: "llm"
+      promptRef: "prompts/security_advisory.md"
