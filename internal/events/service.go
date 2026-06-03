@@ -33,7 +33,7 @@ func NewService(db *store.DB) *Service {
 func (s *Service) Append(runID, traceID, eventType, severity string, payload any) (*Envelope, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
-		return nil fmt.Errorf("marshal payload: %w", err)
+		return nil, fmt.Errorf("marshal payload: %w", err)
 	}
 
 	var env Envelope

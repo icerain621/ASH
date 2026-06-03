@@ -22,6 +22,9 @@ func gitStatus(ctx Context, _ map[string]any) (map[string]any, error) {
 	if root == "" {
 		return map[string]any{"clean": true, "skipped": true}, nil
 	}
+	if !isGitWorkTree(root) {
+		return map[string]any{"clean": true, "skipped": true, "reason": "not a git work tree"}, nil
+	}
 	out, err := exec.Command("git", "-C", root, "status", "--porcelain").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("git status: %w (%s)", err, strings.TrimSpace(string(out)))
@@ -35,6 +38,9 @@ func gitDiff(ctx Context, _ map[string]any) (map[string]any, error) {
 	if root == "" {
 		return map[string]any{"diff": ""}, nil
 	}
+	if !isGitWorkTree(root) {
+		return map[string]any{"diff": "", "skipped": true, "reason": "not a git work tree"}, nil
+	}
 	out, err := exec.Command("git", "-C", root, "diff", "HEAD").CombinedOutput()
 	if err != nil {
 		return nil, fmt.Errorf("git diff: %w", err)
@@ -46,6 +52,9 @@ func gitCheckout(ctx Context, args map[string]any) (map[string]any, error) {
 	root := ctx.RepoRoot
 	if root == "" {
 		return map[string]any{"ok": true, "skipped": true}, nil
+	}
+	if !isGitWorkTree(root) {
+		return map[string]any{"ok": true, "skipped": true, "reason": "not a git work tree"}, nil
 	}
 	branch, _ := args["branch"].(string)
 	if branch == "" {
@@ -71,4 +80,9 @@ func gitCheckout(ctx Context, args map[string]any) (map[string]any, error) {
 		return nil, fmt.Errorf("git checkout: %w (%s)", err, strings.TrimSpace(string(out)))
 	}
 	return map[string]any{"branch": branch}, nil
+}
+
+func isGitWorkTree(root string) bool {
+	out, err := exec.Command("git", "-C", root, "rev-parse", "--is-inside-work-tree").CombinedOutput()
+	return err == nil && strings.TrimSpace(string(out)) == "true"
 }

@@ -29,11 +29,12 @@ type CallRequest struct {
 
 // Result is the outcome of a tool call.
 type Result struct {
-	Tool       string         `json:"tool"`
-	OK         bool           `json:"ok"`
-	Output     map[string]any `json:"output,omitempty"`
-	Error      string         `json:"error,omitempty"`
-	DurationMs int64          `json:"durationMs"`
+	Tool         string         `json:"tool"`
+	OK           bool           `json:"ok"`
+	Output       map[string]any `json:"output,omitempty"`
+	Error        string         `json:"error,omitempty"`
+	FailureClass string         `json:"failureClass,omitempty"`
+	DurationMs   int64          `json:"durationMs"`
 }
 
 // ToolFunc executes a named tool.
@@ -108,6 +109,9 @@ func (b *Bus) Call(ctx Context, req CallRequest) Result {
 	}
 	if err != nil {
 		res.Error = err.Error()
+		if classified, ok := err.(interface{ FailureClass() string }); ok {
+			res.FailureClass = classified.FailureClass()
+		}
 	}
 	return res
 }

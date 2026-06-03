@@ -13,7 +13,7 @@ var (
 		"per_step": {}, "per_tool": {}, "manual": {},
 	}
 	validStepKinds = map[string]struct{}{
-		"llm": {}, "tool_chain": {}, "human": {},
+		"llm": {}, "agent": {}, "tool_chain": {}, "human": {},
 	}
 	validHookPolicies = map[string]struct{}{
 		"enforce": {}, "observe": {},
@@ -22,6 +22,9 @@ var (
 		"tool.called": {}, "tool.result": {}, "run.before_finish": {},
 		"run.started": {}, "step.started": {}, "step.finished": {},
 		"policy.denied": {}, "memory.candidate_created": {},
+	}
+	validMissingCitationActions = map[string]struct{}{
+		"block": {}, "human_confirm": {},
 	}
 )
 
@@ -82,12 +85,16 @@ func Validate(doc *Document) ValidationResult {
 			res = fail(res, p+".role", "REQUIRED", "step role is required")
 		}
 		if _, ok := validStepKinds[st.Kind]; !ok {
-			res = fail(res, p+".kind", "INVALID_ENUM", fmt.Sprintf("step kind must be llm|tool_chain|human, got %q", st.Kind))
+			res = fail(res, p+".kind", "INVALID_ENUM", fmt.Sprintf("step kind must be llm|agent|tool_chain|human, got %q", st.Kind))
 		} else {
 			switch st.Kind {
 			case "llm":
 				if st.PromptRef == "" {
 					res = fail(res, p+".promptRef", "REQUIRED", "llm step requires promptRef")
+				}
+			case "agent":
+				if st.Agent == nil || st.Agent.Adapter == "" {
+					res = fail(res, p+".agent.adapter", "REQUIRED", "agent step requires agent.adapter")
 				}
 			case "tool_chain":
 				if len(st.Chain) == 0 {
@@ -98,6 +105,11 @@ func Validate(doc *Document) ValidationResult {
 						res = fail(res, fmt.Sprintf("%s.chain[%d].tool", p, j), "REQUIRED", "tool name required")
 					}
 				}
+			}
+		}
+		if st.RAG != nil && st.RAG.OnMissingCitations != "" {
+			if _, ok := validMissingCitationActions[st.RAG.OnMissingCitations]; !ok {
+				res = fail(res, p+".rag.onMissingCitations", "INVALID_ENUM", "onMissingCitations must be block|human_confirm")
 			}
 		}
 		if sc.Roles != nil && st.Role != "" {

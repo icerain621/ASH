@@ -46,11 +46,12 @@ type ArtifactRef struct {
 }
 
 type Gate struct {
-	ID       string      `yaml:"id" json:"id"`
-	When     string      `yaml:"when" json:"when"`
-	Blocking bool        `yaml:"blocking" json:"blocking"`
-	Check    GateCheck   `yaml:"check" json:"check"`
-	OnFail   *GateOnFail `yaml:"onFail,omitempty" json:"onFail,omitempty"`
+	ID       string        `yaml:"id" json:"id"`
+	When     string        `yaml:"when" json:"when"`
+	Blocking bool          `yaml:"blocking" json:"blocking"`
+	Check    GateCheck     `yaml:"check" json:"check"`
+	OnFail   *GateOnFail   `yaml:"onFail,omitempty" json:"onFail,omitempty"`
+	Approval *ApprovalSpec `yaml:"approval,omitempty" json:"approval,omitempty"`
 }
 
 type GateCheck struct {
@@ -65,42 +66,66 @@ type GateOnFail struct {
 }
 
 type Step struct {
-	ID       string          `yaml:"id" json:"id"`
-	Role     string          `yaml:"role" json:"role"`
-	Kind     string          `yaml:"kind" json:"kind"`
-	PromptRef string         `yaml:"promptRef,omitempty" json:"promptRef,omitempty"`
-	RAG      *RAGSpec        `yaml:"rag,omitempty" json:"rag,omitempty"`
-	Chain    []ToolChainItem `yaml:"chain,omitempty" json:"chain,omitempty"`
-	Gates    []string        `yaml:"gates,omitempty" json:"gates,omitempty"`
-	Outputs  *StepOutputs    `yaml:"outputs,omitempty" json:"outputs,omitempty"`
+	ID        string          `yaml:"id" json:"id"`
+	Role      string          `yaml:"role" json:"role"`
+	Kind      string          `yaml:"kind" json:"kind"`
+	PromptRef string          `yaml:"promptRef,omitempty" json:"promptRef,omitempty"`
+	RAG       *RAGSpec        `yaml:"rag,omitempty" json:"rag,omitempty"`
+	Agent     *AgentSpec      `yaml:"agent,omitempty" json:"agent,omitempty"`
+	Chain     []ToolChainItem `yaml:"chain,omitempty" json:"chain,omitempty"`
+	Gates     []string        `yaml:"gates,omitempty" json:"gates,omitempty"`
+	Outputs   *StepOutputs    `yaml:"outputs,omitempty" json:"outputs,omitempty"`
+	TimeoutMs int64           `yaml:"timeoutMs,omitempty" json:"timeoutMs,omitempty"`
+	Retry     *RetrySpec      `yaml:"retry,omitempty" json:"retry,omitempty"`
 }
 
 type RAGSpec struct {
 	Sources            []string `yaml:"sources" json:"sources"`
 	RequireCitations   bool     `yaml:"requireCitations" json:"requireCitations"`
+	OnMissingCitations string   `yaml:"onMissingCitations,omitempty" json:"onMissingCitations,omitempty"` // block|human_confirm
 }
 
 type ToolChainItem struct {
-	Tool string         `yaml:"tool" json:"tool"`
-	Args map[string]any `yaml:"args,omitempty" json:"args,omitempty"`
+	Tool      string         `yaml:"tool" json:"tool"`
+	Args      map[string]any `yaml:"args,omitempty" json:"args,omitempty"`
+	TimeoutMs int64          `yaml:"timeoutMs,omitempty" json:"timeoutMs,omitempty"`
+	Retry     *RetrySpec     `yaml:"retry,omitempty" json:"retry,omitempty"`
+	Policy    string         `yaml:"policy,omitempty" json:"policy,omitempty"`
+}
+
+type AgentSpec struct {
+	Adapter      string   `yaml:"adapter,omitempty" json:"adapter,omitempty"`
+	Capabilities []string `yaml:"capabilities,omitempty" json:"capabilities,omitempty"`
+	Prompt       string   `yaml:"prompt,omitempty" json:"prompt,omitempty"`
+}
+
+type RetrySpec struct {
+	MaxAttempts int `yaml:"maxAttempts,omitempty" json:"maxAttempts,omitempty"`
+	BackoffMs   int `yaml:"backoffMs,omitempty" json:"backoffMs,omitempty"`
+}
+
+type ApprovalSpec struct {
+	Required bool     `yaml:"required,omitempty" json:"required,omitempty"`
+	Roles    []string `yaml:"roles,omitempty" json:"roles,omitempty"`
+	Reason   string   `yaml:"reason,omitempty" json:"reason,omitempty"`
 }
 
 type StepOutputs struct {
-	Artifacts         []ArtifactRef     `yaml:"artifacts,omitempty" json:"artifacts,omitempty"`
-	MemoryCandidates  []MemoryCandidate `yaml:"memoryCandidates,omitempty" json:"memoryCandidates,omitempty"`
+	Artifacts        []ArtifactRef     `yaml:"artifacts,omitempty" json:"artifacts,omitempty"`
+	MemoryCandidates []MemoryCandidate `yaml:"memoryCandidates,omitempty" json:"memoryCandidates,omitempty"`
 }
 
 type MemoryCandidate struct {
-	Layer         string   `yaml:"layer" json:"layer"`
-	Title         string   `yaml:"title,omitempty" json:"title,omitempty"`
-	EvidenceFrom  []string `yaml:"evidenceFrom,omitempty" json:"evidenceFrom,omitempty"`
+	Layer        string   `yaml:"layer" json:"layer"`
+	Title        string   `yaml:"title,omitempty" json:"title,omitempty"`
+	EvidenceFrom []string `yaml:"evidenceFrom,omitempty" json:"evidenceFrom,omitempty"`
 }
 
 type Hook struct {
-	ID     string      `yaml:"id" json:"id"`
-	On     string      `yaml:"on" json:"on"`
-	Policy string      `yaml:"policy" json:"policy"`
-	Rules  []HookRule  `yaml:"rules" json:"rules"`
+	ID     string     `yaml:"id" json:"id"`
+	On     string     `yaml:"on" json:"on"`
+	Policy string     `yaml:"policy" json:"policy"`
+	Rules  []HookRule `yaml:"rules" json:"rules"`
 }
 
 type HookRule struct {
@@ -122,7 +147,7 @@ type ValidationIssue struct {
 
 type ValidationResult struct {
 	OK     bool              `json:"ok"`
-	Issues []ValidationIssue   `json:"issues,omitempty"`
+	Issues []ValidationIssue `json:"issues,omitempty"`
 	Doc    *Document         `json:"-"`
 }
 

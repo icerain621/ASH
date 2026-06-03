@@ -12,6 +12,8 @@ import (
 
 func registerBuiltinTools(r *Registry) {
 	registerGitTools(r)
+	registerMCPTools(r)
+	registerRuntimeTools(r)
 	r.Register("apply_patch", RiskMedium, applyPatch)
 	r.Register("test.run", RiskSafe, testRun)
 }
