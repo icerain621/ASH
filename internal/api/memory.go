@@ -6,8 +6,10 @@ import (
 	"strconv"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/memory"
+	"github.com/ash-repwiki/ash/internal/store"
 )
 
 // CreateMemoryCandidate godoc
@@ -24,6 +26,25 @@ func (h *Handler) createMemoryCandidate(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
+	}
+	spaceID := currentSpace(c)
+	if req.RunID != "" {
+		if !h.requireRunAccess(c, req.RunID) {
+			return
+		}
+		var err error
+		spaceID, err = h.runSpaceID(req.RunID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody("RUN_SCOPE_CHECK_FAILED", err.Error()))
+			return
+		}
+	}
+	if !h.requirePermission(c, permMemoryCreate, spaceID) {
+		return
+	}
+	req.SpaceID = spaceID
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
 	}
 	resp, err := h.memory.CreateCandidate(req)
 	if err != nil {
@@ -50,9 +71,13 @@ func (h *Handler) createMemoryCandidate(c *gin.Context) {
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/memory/candidates [get]
 func (h *Handler) listMemoryCandidates(c *gin.Context) {
+	if !h.requirePermission(c, permMemoryRead) {
+		return
+	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	resp, err := h.memory.ListCandidates(
+	resp, err := h.memory.ListCandidatesForSpace(
+		currentSpace(c),
 		c.Query("layer"),
 		c.Query("status"),
 		c.Query("repo"),
@@ -83,6 +108,24 @@ func (h *Handler) reviewMemoryCandidate(c *gin.Context) {
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
+	}
+	spaceID, err := h.memoryRecordSpace(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorBody("MEMORY_NOT_FOUND", memory.ErrNotFound.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_SCOPE_CHECK_FAILED", err.Error()))
+		return
+	}
+	if !h.requirePermission(c, permMemoryReview, spaceID) {
+		return
+	}
+	if req.ReviewerID == "" {
+		req.ReviewerID = currentActor(c)
+	}
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
 	}
 	resp, err := h.memory.Review(id, req)
 	if err != nil {
@@ -115,7 +158,10 @@ func (h *Handler) queryMemory(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	resp, err := h.memory.Query(req)
+	if !h.requirePermission(c, permMemoryQuery) {
+		return
+	}
+	resp, err := h.memory.QueryForSpace(currentSpace(c), req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("MEMORY_QUERY_FAILED", err.Error()))
 		return
@@ -138,6 +184,27 @@ func (h *Handler) memoryHitUsed(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
+	if !h.requireRunAccess(c, req.RunID) {
+		return
+	}
+	spaceID, err := h.runSpaceID(req.RunID)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("RUN_SCOPE_CHECK_FAILED", err.Error()))
+		return
+	}
+	if !h.requirePermission(c, permMemoryUse, spaceID) {
+		return
+	}
+	if ok, err := h.memoryRecordsInSpace(req.RecordIDs, spaceID); err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_SCOPE_CHECK_FAILED", err.Error()))
+		return
+	} else if !ok {
+		c.JSON(http.StatusNotFound, errorBody("MEMORY_NOT_FOUND", "memory records not found in run space"))
+		return
+	}
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
+	}
 	resp, err := h.memory.HitUsed(req)
 	if err != nil {
 		if errors.Is(err, memory.ErrRunNotFound) {
@@ -159,10 +226,44 @@ func (h *Handler) memoryHitUsed(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/memory/records/{recordId} [get]
 func (h *Handler) getMemoryRecord(c *gin.Context) {
-	rec, err := h.memory.Get(c.Param("recordId"))
+	id := c.Param("recordId")
+	spaceID, err := h.memoryRecordSpace(id)
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			c.JSON(http.StatusNotFound, errorBody("MEMORY_NOT_FOUND", memory.ErrNotFound.Error()))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_SCOPE_CHECK_FAILED", err.Error()))
+		return
+	}
+	if !h.requirePermission(c, permMemoryRead, spaceID) {
+		return
+	}
+	rec, err := h.memory.GetForSpace(spaceID, id)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("MEMORY_NOT_FOUND", err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, rec)
+}
+
+func (h *Handler) memoryRecordSpace(id string) (string, error) {
+	var row store.MemoryRecord
+	if err := h.db.Select("space_id").First(&row, "id = ?", id).Error; err != nil {
+		return "", err
+	}
+	return firstNonEmptyAPI(row.SpaceID, "local"), nil
+}
+
+func (h *Handler) memoryRecordsInSpace(ids []string, spaceID string) (bool, error) {
+	if len(ids) == 0 {
+		return false, nil
+	}
+	var count int64
+	if err := h.db.Model(&store.MemoryRecord{}).
+		Where("id IN ? AND space_id = ?", ids, firstNonEmptyAPI(spaceID, "local")).
+		Count(&count).Error; err != nil {
+		return false, err
+	}
+	return count == int64(len(ids)), nil
 }
