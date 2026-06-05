@@ -88,7 +88,7 @@
 | M2 权限矩阵 | ✅ 基础 | `internal/authz` + API/UI + 场景工具 enforcement + Doctor M2-01 |
 | M2 场景策略 API | ✅ | `PUT /spaces/:id/resource-scopes/:scopeId` + 审计；M2-02/03；ALL 27 项 |
 | M2 运行期 enforcement | ✅ | `m2_policy_enforce` 场景 + `POLICY_DENIED` + `policy.denied` 事件 |
-| M3 多租户 / Postgres | ✅ 展望 | Doctor M3-01..04；`docker-compose.postgres.yml`；`make postgres-e2e`；`ash migrate` CLI |
+| M3 多租户 / Postgres | ✅ 展望 | Doctor M3-01..04；`make postgres-e2e` 覆盖 plan/copy/verify、M3-04 live verify、Postgres `/readyz` 与 ALL 静态回归；`ash migrate` CLI |
 | SQLite 纯 Go 驱动 | ✅ | `glebarez/sqlite`，Windows 无需 CGO |
 | 本地验证脚本 | ✅ | `bash scripts/verify-local.sh`（Git Bash / Linux） |
 

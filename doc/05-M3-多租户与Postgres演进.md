@@ -31,11 +31,15 @@
 unset ASH_DATABASE_URL
 # 数据目录下 ash.db（glebarez/sqlite，无需 CGO）
 
+# 迁移验证目标（仅供 Doctor M3-04 / e2e 使用）
+export ASH_MIGRATE_POSTGRES_URL='postgres://ash:ash@127.0.0.1:5432/ash?sslmode=disable'
+
 # 生产
 export ASH_DATABASE_URL='postgres://ash:secret@db.example.com:5432/ash?sslmode=require'
 ```
 
 支持 URL 形式：`postgres://`、`postgresql://`、libpq 关键字 DSN（`host=... dbname=...`）。
+`ASH_MIGRATE_POSTGRES_URL` 表示 SQLite→Postgres 迁移验证目标；`ASH_DATABASE_URL` 表示当前 ASH 主库，切换生产主库时才设置。
 
 ### 3.2 迁移步骤（建议）
 
@@ -72,7 +76,7 @@ export ASH_DATABASE_URL='postgres://ash:secret@db.example.com:5432/ash?sslmode=r
    ```
    状态文件：`.ash/migration/dual-write.json`；Worker 优先读 `ASH_DUAL_WRITE_POSTGRES_URL`，否则读已启用的配置文件。
 6. **切换**：设置 `ASH_DATABASE_URL`，重启 Worker；`go run ./cmd/cli doctor --suite M3` 确认 `M3-02` 通过。
-7. **回归**：`doctor --suite ALL`；TR0 回放一致性不得回退。
+7. **回归**：`doctor --suite ALL --agent static`；TR0 回放一致性不得回退。若 ExecGo 执行面已就绪，可追加默认 agent 的 ALL 套件。
 
 ### 3.3 触发迁移的信号（摘自架构文档）
 
@@ -89,13 +93,13 @@ export ASH_DATABASE_URL='postgres://ash:secret@db.example.com:5432/ash?sslmode=r
 - `postgresConfigured`：是否通过 `ASH_DATABASE_URL` 使用 Postgres
 - `migrationReady`：当前方言是否纳入支持矩阵
 
-Doctor **M3-02** 校验 Postgres URL 解析与当前方言一致性；**M3-03** 校验 `ash migrate` 表目录与当前 schema 一致；**M3-04** 在 `ASH_MIGRATE_E2E=1` 时对 live Postgres 执行 `migrate verify`（默认跳过）。
+Doctor **M3-02** 校验 Postgres URL 解析与当前方言一致性；**M3-03** 校验 `ash migrate` 表目录与当前 schema 一致；**M3-04** 在 `ASH_MIGRATE_E2E=1` 且 `ASH_MIGRATE_POSTGRES_URL` 指向 live Postgres 时执行 `migrate verify`（默认跳过）。
 
 ### 3.0 本地 Postgres（Docker）
 
 ```bash
-make postgres-up          # 启动 postgres:16，导出 ASH_DATABASE_URL
-make postgres-e2e         # 完整 sqlite→postgres plan/copy/verify + doctor M3
+make postgres-up          # 启动 postgres:16，并打印可复制的 ASH_DATABASE_URL
+make postgres-e2e         # 重置 disposable postgres，执行 plan/copy/verify + Doctor M3-04 + readyz + ALL 回归
 make postgres-down        # 停止并清理卷
 ```
 
