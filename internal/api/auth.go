@@ -13,6 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -265,7 +266,7 @@ func authMiddleware(cfg config.Config) gin.HandlerFunc {
 		}
 		token := bearerToken(c.GetHeader("Authorization"))
 		if token == "" && cfg.AuthMode == "dev" {
-			setIdentity(c, "dev-user", "local", "admin")
+			setIdentity(c, "dev-user", devSpaceOverride(c), "admin")
 			c.Next()
 			return
 		}
@@ -276,7 +277,7 @@ func authMiddleware(cfg config.Config) gin.HandlerFunc {
 		claims, err := verifyToken(token, cfg.JWTSecret)
 		if err != nil {
 			if cfg.AuthMode == "dev" && token == "dev-token" {
-				setIdentity(c, "dev-user", "local", "admin")
+				setIdentity(c, "dev-user", devSpaceOverride(c), "admin")
 				c.Next()
 				return
 			}
@@ -356,6 +357,13 @@ func setIdentity(c *gin.Context, actorID, spaceID, role string) {
 	c.Set(ctxActorID, actorID)
 	c.Set(ctxSpaceID, spaceID)
 	c.Set(ctxRole, role)
+}
+
+func devSpaceOverride(c *gin.Context) string {
+	if spaceID := strings.TrimSpace(c.GetHeader("X-ASH-Space-ID")); spaceID != "" {
+		return spaceID
+	}
+	return "local"
 }
 
 func currentActor(c *gin.Context) string {
@@ -482,26 +490,13 @@ func currentRole(c *gin.Context) string {
 }
 
 func roleAllowsPermission(role, permission string) bool {
+	if authz.RoleAllows(role, permission) {
+		return true
+	}
+	// Legacy JWT role aliases
 	switch role {
 	case "admin":
 		return true
-	case "maintainer":
-		return permissionMatches("mcp:*", permission) ||
-			permissionMatches("run:*", permission) ||
-			permissionMatches("memory:*", permission) ||
-			permissionMatches("rag:*", permission) ||
-			permissionMatches(permModelRoute, permission) ||
-			permissionMatches("plugin:*", permission) ||
-			permissionMatches(permFeedbackWrite, permission) ||
-			permissionMatches(permArtifactRead, permission) ||
-			permissionMatches(permStorageRead, permission)
-	case "auditor":
-		return permissionMatches(permAuditExport, permission)
-	case "reviewer":
-		return permissionMatches(permMemoryReview, permission) ||
-			permissionMatches(permRunApprove, permission)
-	case "operator":
-		return permissionMatches("run:*", permission)
 	default:
 		return false
 	}
@@ -623,8 +618,8 @@ func (h *Handler) requireRunAccess(c *gin.Context, runID string) bool {
 		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", "run not found"))
 		return false
 	}
-	if sum.SpaceID != "" && sum.SpaceID != currentSpace(c) {
-		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", "run not found"))
+	if err := store.EnforceSpaceAccess(sum.SpaceID, currentSpace(c)); err != nil {
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody("SPACE_ACCESS_DENIED", err.Error()))
 		return false
 	}
 	return true

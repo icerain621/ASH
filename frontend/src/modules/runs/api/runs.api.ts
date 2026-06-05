@@ -9,6 +9,7 @@ export type RunSummary = {
   policyProfile: string;
   status: string;
   spaceId?: string;
+  actorRole?: string;
   startedAt: number;
   finishedAt?: number;
   recovered?: boolean;
@@ -18,7 +19,16 @@ export type CreateRunRequest = {
   scenario: ScenarioRef;
   inputs: Record<string, unknown>;
   policyProfile?: string;
+  actorRole?: string;
+  spaceId?: string;
   repo?: { root?: string; revision?: string; branch?: string };
+};
+
+export type CreateRunResponse = {
+  runId: string;
+  traceId: string;
+  status?: string;
+  executionError?: string;
 };
 
 export type ReplayRequest = {
@@ -244,7 +254,7 @@ export function getRun(runId: string) {
 }
 
 export function createRun(body: CreateRunRequest) {
-  return api<{ runId: string; traceId: string }>("/runs", {
+  return api<CreateRunResponse>("/runs", {
     method: "POST",
     body: JSON.stringify(body),
   });
@@ -324,4 +334,49 @@ export function getRunQualityMetrics(runId: string) {
 
 export function getRunWaterfall(runId: string) {
   return api<RunWaterfall>(`/observability/waterfall/${runId}`);
+}
+
+export type ProvenanceLink = {
+  kind: string;
+  ref: string;
+};
+
+export type RunProvenance = {
+  runId: string;
+  traceId: string;
+  scenario: ScenarioRef;
+  status: string;
+  toolCalls: number;
+  agentTasks: number;
+  artifacts: number;
+  events: number;
+  modelUsage: number;
+  links: ProvenanceLink[];
+};
+
+function normalizeProvenance(raw: RawRecord): RunProvenance {
+  const scenario = (raw.scenario ?? raw.Scenario) as RawRecord | undefined;
+  const linksRaw = itemsFrom(raw.links ?? raw.Links);
+  return {
+    runId: str(raw, "runId", "RunID"),
+    traceId: str(raw, "traceId", "TraceID"),
+    scenario: {
+      name: str(scenario ?? {}, "name", "Name"),
+      scenarioVersion: str(scenario ?? {}, "scenarioVersion", "ScenarioVersion"),
+    },
+    status: str(raw, "status", "Status"),
+    toolCalls: num(raw, "toolCalls", "ToolCalls"),
+    agentTasks: num(raw, "agentTasks", "AgentTasks"),
+    artifacts: num(raw, "artifacts", "Artifacts"),
+    events: num(raw, "events", "Events"),
+    modelUsage: num(raw, "modelUsage", "ModelUsage"),
+    links: linksRaw.map((item) => ({
+      kind: str(item, "kind", "Kind"),
+      ref: str(item, "ref", "Ref"),
+    })),
+  };
+}
+
+export function getRunProvenance(runId: string) {
+  return api<RawRecord>(`/runs/${runId}/provenance`).then(normalizeProvenance);
 }

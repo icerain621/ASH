@@ -16,7 +16,9 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/artifactstore"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
@@ -209,6 +211,9 @@ func (h *Handler) registerMCPTool(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permMCPWrite, space) {
 		return
 	}
@@ -250,6 +255,9 @@ func (h *Handler) createFeedback(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permFeedbackWrite, space) {
 		return
 	}
@@ -425,6 +433,9 @@ func (h *Handler) createSpace(c *gin.Context) {
 		}).Error; err != nil {
 			return err
 		}
+		if err := authz.SeedScenarioScopesTx(tx, space.ID, now); err != nil {
+			return err
+		}
 		return tx.Create(auditRow(space.ID, currentActor(c), "space.created", map[string]any{
 			"orgId": org.ID, "spaceId": space.ID, "name": space.Name, "slug": space.Slug,
 		})).Error
@@ -537,6 +548,111 @@ func (h *Handler) listSpaceMembers(c *gin.Context) {
 	c.JSON(http.StatusOK, MemberListResponse{Items: rows})
 }
 
+// ListSpaceResourceScopes godoc
+// @Summary List resource scopes for a space
+// @Tags spaces
+// @Produce json
+// @Param spaceId path string true "space id"
+// @Success 200 {object} ResourceScopeListResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/spaces/{spaceId}/resource-scopes [get]
+func (h *Handler) listSpaceResourceScopes(c *gin.Context) {
+	space, ok := h.spaceForParam(c)
+	if !ok {
+		return
+	}
+	if !h.requirePermission(c, permMemberRead, space.ID) {
+		return
+	}
+	var rows []store.ResourceScope
+	if err := h.db.Where("space_id = ?", space.ID).Order("created_at asc").Find(&rows).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("RESOURCE_SCOPE_LIST_FAILED", err.Error()))
+		return
+	}
+	items := make([]ResourceScopeView, 0, len(rows))
+	for _, row := range rows {
+		items = append(items, ResourceScopeView{
+			ID: row.ID, SpaceID: row.SpaceID, ResourceType: row.ResourceType,
+			ResourceID: row.ResourceID, PolicyJSON: row.PolicyJSON,
+			CreatedAt: row.CreatedAt.UTC().UnixMilli(), UpdatedAt: row.UpdatedAt.UTC().UnixMilli(),
+		})
+	}
+	c.JSON(http.StatusOK, ResourceScopeListResponse{Items: items})
+}
+
+type updateResourceScopeRequest struct {
+	PolicyJSON string `json:"policyJson" binding:"required"`
+}
+
+// UpdateSpaceResourceScope godoc
+// @Summary Update a space resource scope policy (scenario tool matrix)
+// @Tags spaces
+// @Accept json
+// @Produce json
+// @Param spaceId path string true "space id"
+// @Param scopeId path string true "resource scope id"
+// @Param body body updateResourceScopeRequest true "policy"
+// @Success 200 {object} ResourceScopeView
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/spaces/{spaceId}/resource-scopes/{scopeId} [put]
+func (h *Handler) updateSpaceResourceScope(c *gin.Context) {
+	space, ok := h.spaceForParam(c)
+	if !ok {
+		return
+	}
+	if !h.requirePermission(c, permRoleWrite, space.ID) {
+		return
+	}
+	scopeID := strings.TrimSpace(c.Param("scopeId"))
+	if scopeID == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "scopeId is required"))
+		return
+	}
+	var req updateResourceScopeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	if _, err := authz.ParseScenarioToolPolicy(req.PolicyJSON); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_POLICY", err.Error()))
+		return
+	}
+	var row store.ResourceScope
+	if err := h.db.First(&row, "id = ? AND space_id = ?", scopeID, space.ID).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("RESOURCE_SCOPE_NOT_FOUND", "resource scope not found"))
+		return
+	}
+	if row.ResourceType != "scenario" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_RESOURCE_TYPE", "only scenario scopes support policy updates"))
+		return
+	}
+	previousPolicy := row.PolicyJSON
+	now := time.Now().UTC()
+	row.PolicyJSON = req.PolicyJSON
+	row.UpdatedAt = now
+	if err := h.db.Save(&row).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("RESOURCE_SCOPE_UPDATE_FAILED", err.Error()))
+		return
+	}
+	_ = h.db.Create(auditRow(space.ID, currentActor(c), "scope.policy_updated", map[string]any{
+		"scopeId":        row.ID,
+		"resourceType":   row.ResourceType,
+		"resourceId":     row.ResourceID,
+		"previousDigest": sha256Digest([]byte(previousPolicy)),
+		"policyDigest":   sha256Digest([]byte(req.PolicyJSON)),
+	})).Error
+	c.JSON(http.StatusOK, ResourceScopeView{
+		ID: row.ID, SpaceID: row.SpaceID, ResourceType: row.ResourceType,
+		ResourceID: row.ResourceID, PolicyJSON: row.PolicyJSON,
+		CreatedAt: row.CreatedAt.UTC().UnixMilli(), UpdatedAt: row.UpdatedAt.UTC().UnixMilli(),
+	})
+}
+
 // CreateSpaceMember godoc
 // @Summary Add a member to a space
 // @Tags spaces
@@ -644,6 +760,9 @@ func (h *Handler) createAuditExport(c *gin.Context) {
 	}
 	_ = c.ShouldBindJSON(&req)
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permAuditExport, space) {
 		return
 	}
@@ -730,8 +849,11 @@ func (h *Handler) getAuditExportAccess(c *gin.Context) {
 		return
 	}
 	var row store.AuditExport
-	if err := h.db.First(&row, "id = ? AND space_id = ?", c.Param("exportId"), space).Error; err != nil {
+	if err := h.db.First(&row, "id = ?", c.Param("exportId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("AUDIT_EXPORT_NOT_FOUND", "audit export not found"))
+		return
+	}
+	if !h.requireRequestSpace(c, row.SpaceID) {
 		return
 	}
 	if row.Status != "completed" || row.StoreKey == "" {
@@ -793,6 +915,12 @@ func (h *Handler) listAuditLogs(c *gin.Context) {
 	if err := q.Order("created_at desc").Limit(limit).Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_LOG_LIST_FAILED", err.Error()))
 		return
+	}
+	var policy store.AuditPolicy
+	if err := h.db.First(&policy, "space_id = ?", space).Error; err == nil && policy.RedactPayload {
+		for i := range rows {
+			rows[i].PayloadJSON = security.RedactJSON(rows[i].PayloadJSON)
+		}
 	}
 	c.JSON(http.StatusOK, AuditLogListResponse{Items: rows})
 }
@@ -949,6 +1077,9 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permPluginWrite, space) {
 		return
 	}
@@ -991,8 +1122,11 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 // @Router /api/v1/plugins/{pluginId}/verify [post]
 func (h *Handler) verifyPlugin(c *gin.Context) {
 	var row store.PluginRegistry
-	if err := h.db.First(&row, "id = ? AND space_id = ?", c.Param("pluginId"), currentSpace(c)).Error; err != nil {
+	if err := h.db.First(&row, "id = ?", c.Param("pluginId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("PLUGIN_NOT_FOUND", "plugin not found"))
+		return
+	}
+	if !h.requireRequestSpace(c, row.SpaceID) {
 		return
 	}
 	if !h.requirePermission(c, permPluginWrite, row.SpaceID) {
@@ -1051,6 +1185,9 @@ func (h *Handler) spaceForParam(c *gin.Context) (store.Space, bool) {
 	var space store.Space
 	if err := h.db.First(&space, "id = ?", spaceID).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("SPACE_NOT_FOUND", "space not found"))
+		return store.Space{}, false
+	}
+	if !h.requireRequestSpace(c, space.ID) {
 		return store.Space{}, false
 	}
 	return space, true

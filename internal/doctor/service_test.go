@@ -96,13 +96,14 @@ func TestTR1Suite(t *testing.T) {
 		}
 		t.Fatalf("TR1 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 4 {
-		t.Fatalf("TR1 pass=%d want 4", rep.Summary.Pass)
+	if rep.Summary.Pass != 5 {
+		t.Fatalf("TR1 pass=%d want 5", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR1-01", "modelRouter")
 	assertCaseEvidence(t, rep, "TR1-02", "waterfallSpan")
 	assertCaseEvidence(t, rep, "TR1-03", "memoryEdge")
 	assertCaseEvidence(t, rep, "TR1-04", "mcpIsolation")
+	assertCaseEvidence(t, rep, "TR1-05", "rulesValidation")
 }
 
 func TestTR2Suite(t *testing.T) {
@@ -120,22 +121,107 @@ func TestTR2Suite(t *testing.T) {
 		}
 		t.Fatalf("TR2 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 4 {
-		t.Fatalf("TR2 pass=%d want 4", rep.Summary.Pass)
+	if rep.Summary.Pass != 5 {
+		t.Fatalf("TR2 pass=%d want 5", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR2-01", "identityModel")
 	assertCaseEvidence(t, rep, "TR2-02", "runScope")
 	assertCaseEvidence(t, rep, "TR2-03", "storageProfile")
 	assertCaseEvidence(t, rep, "TR2-04", "pluginABI")
+	assertCaseEvidence(t, rep, "TR2-05", "secretScan")
+}
+
+func TestTR3Suite(t *testing.T) {
+	svc := newTestDoctor(t)
+
+	rep, err := svc.RunSuite("TR3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Fail > 0 {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
+	}
+	if rep.Summary.Pass != 4 {
+		t.Fatalf("TR3 pass=%d want 4", rep.Summary.Pass)
+	}
+	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
+	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
+	assertCaseEvidence(t, rep, "TR3-03", "sloMetric")
+	assertCaseEvidence(t, rep, "TR3-04", "trace")
+}
+
+func TestM2Suite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M2")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Pass != 3 {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("M2 pass=%d fail=%d want pass=3", rep.Summary.Pass, rep.Summary.Fail)
+	}
+	assertCaseEvidence(t, rep, "M2-01", "scenarioMatrix")
+	assertCaseEvidence(t, rep, "M2-02", "scenarioPolicy")
+	assertCaseEvidence(t, rep, "M2-03", "policyDenied")
+}
+
+func TestM3Suite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Pass != 4 {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("M3 pass=%d fail=%d want pass=4", rep.Summary.Pass, rep.Summary.Fail)
+	}
+	assertCaseEvidence(t, rep, "M3-01", "tenantScope")
+	assertCaseEvidence(t, rep, "M3-02", "databaseDialect")
+	assertCaseEvidence(t, rep, "M3-03", "migrationCatalog")
+	assertCaseEvidence(t, rep, "M3-04", "skipped")
+}
+
+func TestALLSuite(t *testing.T) {
+	if testing.Short() {
+		t.Skip("ALL suite is slow; run without -short")
+	}
+	svc := newTestDoctor(t)
+
+	rep, err := svc.RunSuite("ALL")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 29
+	if rep.Summary.Pass != want {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("ALL pass=%d fail=%d want pass=%d", rep.Summary.Pass, rep.Summary.Fail, want)
+	}
+	if len(rep.Results) != want {
+		t.Fatalf("results=%d want %d", len(rep.Results), want)
+	}
 }
 
 func newTestDoctor(t *testing.T) *Service {
 	t.Helper()
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join("..", "..", "scenarios")
 	if _, err := os.Stat(scenariosDir); err != nil {
 		scenariosDir = filepath.Join("scenarios")

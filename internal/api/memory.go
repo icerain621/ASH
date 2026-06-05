@@ -118,6 +118,9 @@ func (h *Handler) reviewMemoryCandidate(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_SCOPE_CHECK_FAILED", err.Error()))
 		return
 	}
+	if !h.requireRequestSpace(c, spaceID) {
+		return
+	}
 	if !h.requirePermission(c, permMemoryReview, spaceID) {
 		return
 	}
@@ -234,6 +237,10 @@ func (h *Handler) getMemoryRecord(c *gin.Context) {
 			return
 		}
 		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_SCOPE_CHECK_FAILED", err.Error()))
+		return
+	}
+	if err := store.EnforceSpaceAccess(spaceID, currentSpace(c)); err != nil {
+		c.JSON(http.StatusForbidden, errorBody("SPACE_ACCESS_DENIED", err.Error()))
 		return
 	}
 	if !h.requirePermission(c, permMemoryRead, spaceID) {

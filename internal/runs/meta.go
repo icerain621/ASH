@@ -13,6 +13,7 @@ type RunMeta struct {
 	Scenario        ScenarioRef    `json:"scenario"`
 	Inputs          map[string]any `json:"inputs"`
 	PolicyProfile   string         `json:"policyProfile,omitempty"`
+	ActorRole       string         `json:"actorRole,omitempty"`
 	Repo            *RepoRef       `json:"repo,omitempty"`
 	SourceRunID     string         `json:"sourceRunId,omitempty"`
 	ReplayMode      string         `json:"replayMode,omitempty"`

@@ -11,6 +11,7 @@ type RunRecord struct {
 	PolicyProfile   string     `gorm:"size:64;not null;default:default"`
 	Status          string     `gorm:"size:32;not null;index"`
 	SpaceID         string     `gorm:"size:64;not null;default:local;index"`
+	ActorRole       string     `gorm:"size:64;not null;default:maintainer"`
 	InputsDigest    string     `gorm:"size:128"`
 	RepoRoot        string     `gorm:"size:512"`
 	StartedAt       time.Time  `gorm:"not null"`
@@ -455,6 +456,25 @@ type PluginRegistry struct {
 }
 
 func (PluginRegistry) TableName() string { return "plugin_registry" }
+
+// ImproveProposal tracks self-iteration experiments (M1).
+type ImproveProposal struct {
+	ID              string `gorm:"primaryKey;size:64"`
+	SpaceID         string `gorm:"index;size:64;not null;default:local"`
+	Title           string `gorm:"size:256;not null"`
+	Description     string `gorm:"type:text"`
+	BaselineRunID   string `gorm:"index;size:64"`
+	ExperimentRunID string `gorm:"index;size:64"`
+	Status          string `gorm:"size:32;not null;index"` // draft|experimenting|canary|promoted|rolled_back
+	ChangeSummary   string `gorm:"type:text"`
+	CanaryPercent   int    `gorm:"not null;default:0"`
+	CompareJSON     string `gorm:"type:text;not null;default:'{}'"`
+	ActorID         string `gorm:"size:128"`
+	CreatedAt       time.Time
+	UpdatedAt       time.Time
+}
+
+func (ImproveProposal) TableName() string { return "improve_proposals" }
 
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`

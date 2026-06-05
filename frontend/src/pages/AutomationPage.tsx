@@ -36,6 +36,7 @@ import {
   updateAuditPolicy,
   verifyPlugin,
 } from "@/modules/platform/api/platform.api";
+import { ImproveProposalsPane } from "@/components/ImproveProposalsPane";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
 
@@ -734,6 +735,9 @@ export function AutomationPage() {
             </tbody>
           </table>
         </div>
+      </div>
+      <div className="split governance-grid">
+        <ImproveProposalsPane />
       </div>
     </section>
   );

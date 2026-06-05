@@ -34,6 +34,7 @@ type CreateRequest struct {
 	PolicyProfile string         `json:"policyProfile"`
 	Repo          *RepoRef       `json:"repo"`
 	SpaceID       string         `json:"spaceId,omitempty"`
+	ActorRole     string         `json:"actorRole,omitempty"`
 }
 
 type RepoRef struct {
@@ -82,6 +83,7 @@ type Summary struct {
 	InputsDigest  string      `json:"inputsDigest,omitempty"`
 	Repo          *RepoRef    `json:"repo,omitempty"`
 	SpaceID       string      `json:"spaceId,omitempty"`
+	ActorRole     string      `json:"actorRole,omitempty"`
 }
 
 type TimelineResponse struct {
@@ -500,7 +502,7 @@ func recordToSummary(rec store.RunRecord) *Summary {
 		Scenario:      ScenarioRef{Name: rec.ScenarioName, ScenarioVersion: rec.ScenarioVersion},
 		PolicyProfile: rec.PolicyProfile, Status: rec.Status,
 		StartedAt: rec.StartedAt.UnixMilli(), Recovered: rec.Recovered, InputsDigest: rec.InputsDigest,
-		SpaceID: rec.SpaceID,
+		SpaceID: rec.SpaceID, ActorRole: rec.ActorRole,
 	}
 	if rec.FinishedAt != nil {
 		ms := rec.FinishedAt.UnixMilli()

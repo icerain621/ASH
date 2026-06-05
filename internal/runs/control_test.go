@@ -1111,6 +1111,74 @@ scenario:
 	}
 }
 
+func TestScenarioMatrixDeniesToolAtRuntime(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join("..", "..", "scenarios")
+	if _, err := os.Stat(scenariosDir); err != nil {
+		scenariosDir = "scenarios"
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	ev := events.NewService(db)
+	svc := NewService(db, ev, loader, toolbus.DefaultBus()).WithAgentExecutor(agentexec.StaticExecutor{})
+
+	now := time.Now().UTC()
+	spaceID := "space_runtime_policy"
+	scope := store.ResourceScope{
+		ID: "scope_runtime_policy", SpaceID: spaceID,
+		ResourceType: "scenario", ResourceID: "m2_policy_enforce@1.0.0",
+		PolicyJSON:   `{"toolMatrix":{"reviewer":{"allow":["git.status"],"deny":["apply_patch"],"denyMode":"block"}}}`,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&scope).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	created, err := svc.Create(CreateRequest{
+		Scenario:  ScenarioRef{Name: "m2_policy_enforce", ScenarioVersion: "1.0.0"},
+		Inputs:    map[string]any{"issueOrSpec": "runtime policy deny"},
+		SpaceID:   spaceID,
+		ActorRole: "reviewer",
+	})
+	if created == nil || created.RunID == "" {
+		t.Fatal(err)
+	}
+	if err == nil || !strings.Contains(err.Error(), "POLICY_DENIED") {
+		t.Fatalf("err=%v want POLICY_DENIED", err)
+	}
+	sum, err := svc.Get(created.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Status != "failed" {
+		t.Fatalf("status=%q want failed", sum.Status)
+	}
+	var step store.RunStep
+	if err := db.Where("run_id = ?", created.RunID).Order("created_at asc").First(&step).Error; err != nil {
+		t.Fatal(err)
+	}
+	if step.ErrorCode != "POLICY_DENIED" {
+		t.Fatalf("errorCode=%q want POLICY_DENIED", step.ErrorCode)
+	}
+	evs, err := ev.ListAfter(created.RunID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range evs {
+		if item.Type == "policy.denied" && strings.Contains(string(item.Payload), "apply_patch") {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected policy.denied for apply_patch")
+	}
+}
+
 func writeFakeRunsExecGoCLI(t *testing.T, body string) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "execgocli")

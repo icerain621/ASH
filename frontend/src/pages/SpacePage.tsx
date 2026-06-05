@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link } from "@tanstack/react-router";
 import { Building2, KeyRound, Plus, ShieldCheck, UsersRound } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import {
@@ -10,8 +11,11 @@ import {
   getAuthMe,
   listOrgs,
   listRoles,
+  getPermissionMatrix,
   listSpaceMembers,
+  listSpaceResourceScopes,
   listSpaces,
+  updateSpaceResourceScope,
 } from "@/modules/platform/api/platform.api";
 import { getAuthToken, getCurrentSpaceId, setAuthSession } from "@/services/http/client";
 
@@ -45,6 +49,17 @@ export function SpacePage() {
     queryFn: getAuthMe,
     enabled: Boolean(getAuthToken()),
   });
+  const matrixQuery = useQuery({
+    queryKey: ["permissions-matrix", activeSpaceId],
+    queryFn: () => getPermissionMatrix(activeSpaceId !== "local" ? activeSpaceId : undefined),
+    enabled: Boolean(getAuthToken()),
+  });
+  const scopesQuery = useQuery({
+    queryKey: ["resource-scopes", activeSpaceId],
+    queryFn: () => listSpaceResourceScopes(activeSpaceId),
+    enabled: canManageActiveSpace,
+  });
+  const [policyDrafts, setPolicyDrafts] = useState<Record<string, string>>({});
   const loginMut = useMutation({
     mutationFn: (spaceId?: string) => devLogin(spaceId),
     onSuccess: async (data) => {
@@ -64,6 +79,14 @@ export function SpacePage() {
     onSuccess: async (space) => {
       await qc.invalidateQueries({ queryKey: ["spaces"] });
       loginMut.mutate(space.id);
+    },
+  });
+  const updateScopeMut = useMutation({
+    mutationFn: (body: { scopeId: string; policyJson: string }) =>
+      updateSpaceResourceScope(activeSpaceId, body.scopeId, body.policyJson),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["resource-scopes", activeSpaceId] });
+      await qc.invalidateQueries({ queryKey: ["permissions-matrix", activeSpaceId] });
     },
   });
   const createRoleMut = useMutation({
@@ -153,7 +176,13 @@ export function SpacePage() {
       <div className="page-heading">
         <div>
           <h1>空间</h1>
-          <p>查看当前控制台可见的空间范围和开发身份。</p>
+          <p>
+            查看当前控制台可见的空间范围和开发身份。TR2 合规检查见{" "}
+            <Link to="/compliance" className="inline-link">
+              合规控制台
+            </Link>
+            。
+          </p>
         </div>
         <div className="toolbar">
           <button className="btn icon-btn" onClick={() => loginMut.mutate(activeSpaceId)} disabled={loginMut.isPending}>
@@ -420,6 +449,98 @@ export function SpacePage() {
             </button>
           </form>
         </div>
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>权限矩阵 (M2)</h2>
+          <span>{matrixQuery.data?.builtinRoles.length ?? 0} 内置角色</span>
+        </div>
+        <p className="muted-line">
+          内置 RBAC 与场景 × 角色工具策略。运行创建时会记录 <code>actorRole</code>，工具链执行前按场景矩阵校验。
+        </p>
+        {matrixQuery.isError && (
+          <p className="error-text">{(matrixQuery.error as Error).message}</p>
+        )}
+        <div className="split tr2-grid">
+          <div>
+            <div className="pane-title subhead">
+              <h3>内置角色</h3>
+            </div>
+            <table className="table compact">
+              <thead>
+                <tr>
+                  <th>角色</th>
+                  <th>权限</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(matrixQuery.data?.builtinRoles ?? []).map((role) => (
+                  <tr key={role.name}>
+                    <td title={role.name}>
+                      {role.label} <code>{role.name}</code>
+                    </td>
+                    <td>
+                      <code className="evidence-snippet">{role.permissions.join(", ")}</code>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div>
+            <div className="pane-title subhead">
+              <h3>场景工具策略</h3>
+            </div>
+            {(matrixQuery.data?.scenarioTools ?? []).map((row) => (
+              <details key={row.scenarioKey} className="raw-report">
+                <summary>
+                  {row.scenario}@{row.version}
+                </summary>
+                <pre className="code-block compact">{JSON.stringify(row.toolMatrix, null, 2)}</pre>
+              </details>
+            ))}
+            {!matrixQuery.data?.scenarioTools.length && (
+              <p className="muted-line">暂无场景策略（创建空间后会自动种子三场景）。</p>
+            )}
+          </div>
+        </div>
+        <div className="pane-title subhead">
+          <h3>场景策略编辑</h3>
+          <span>{scopesQuery.data?.items.filter((s) => s.resourceType === "scenario").length ?? 0} 条</span>
+        </div>
+        {(scopesQuery.data?.items ?? [])
+          .filter((scope) => scope.resourceType === "scenario")
+          .map((scope) => {
+            const draft = policyDrafts[scope.id] ?? scope.policyJson;
+            return (
+              <details key={scope.id} className="raw-report">
+                <summary>{scope.resourceId}</summary>
+                <textarea
+                  className="code-block editable"
+                  rows={8}
+                  value={draft}
+                  onChange={(event) =>
+                    setPolicyDrafts((prev) => ({ ...prev, [scope.id]: event.target.value }))
+                  }
+                />
+                <button
+                  className="btn icon-btn"
+                  type="button"
+                  disabled={updateScopeMut.isPending || draft === scope.policyJson}
+                  onClick={() => updateScopeMut.mutate({ scopeId: scope.id, policyJson: draft })}
+                >
+                  保存策略
+                </button>
+              </details>
+            );
+          })}
+        {!canManageActiveSpace && (
+          <p className="muted-line">选择非 local 空间后可编辑场景工具策略。</p>
+        )}
+        <Link to="/compliance" className="inline-link">
+          在合规控制台查看资源作用域 →
+        </Link>
       </div>
     </section>
   );

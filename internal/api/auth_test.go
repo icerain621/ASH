@@ -23,10 +23,7 @@ func newAuthTestRouter(t *testing.T) *gin.Engine {
 
 func newAuthTestRouterWithDB(t *testing.T) (*gin.Engine, *store.DB) {
 	t.Helper()
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	scenariosDir := filepath.Join("..", "..", "scenarios")
 	loader := rules.NewLoader(scenariosDir)
 	if err := loader.LoadDir(); err != nil {

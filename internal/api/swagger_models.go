@@ -60,6 +60,14 @@ type RunListResponse struct {
 	Items []runs.Summary `json:"items"`
 }
 
+// RunCreateResponse is returned when a run is created (execution may still fail in-body).
+type RunCreateResponse struct {
+	RunID          string `json:"runId"`
+	TraceID        string `json:"traceId"`
+	Status         string `json:"status,omitempty"`
+	ExecutionError string `json:"executionError,omitempty"`
+}
+
 type TimelineAPIResponse struct {
 	Items []runs.TimelineItem `json:"items"`
 }
@@ -129,6 +137,20 @@ type RoleListResponse struct {
 
 type MemberListResponse struct {
 	Items []store.Member `json:"items"`
+}
+
+type ResourceScopeView struct {
+	ID           string `json:"id"`
+	SpaceID      string `json:"spaceId"`
+	ResourceType string `json:"resourceType"`
+	ResourceID   string `json:"resourceId"`
+	PolicyJSON   string `json:"policyJson"`
+	CreatedAt    int64  `json:"createdAt"`
+	UpdatedAt    int64  `json:"updatedAt"`
+}
+
+type ResourceScopeListResponse struct {
+	Items []ResourceScopeView `json:"items"`
 }
 
 type PluginABIProfileResponse struct {

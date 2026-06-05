@@ -33,6 +33,8 @@ func main() {
 		runCancel(os.Args[2:])
 	case "doctor":
 		runDoctor(os.Args[2:])
+	case "migrate":
+		runMigrate(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
@@ -40,7 +42,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|ALL [--format json|md] [--out path] [--agent execgo_codex|static]\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n")
 }
 
 func runScenario(args []string) {
@@ -109,7 +111,7 @@ func runCancel(args []string) {
 
 func runDoctor(args []string) {
 	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
-	suite := fs.String("suite", "TR0", "validation suite: TR0|TR1|TR2|ALL")
+	suite := fs.String("suite", "TR0", "validation suite: TR0|TR1|TR2|TR3|M2|ALL")
 	format := fs.String("format", "json", "output format: json|md")
 	out := fs.String("out", "", "write report to file")
 	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")

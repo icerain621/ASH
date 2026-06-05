@@ -7,10 +7,7 @@ import (
 
 func TestOpenDefaultsToSQLite(t *testing.T) {
 	t.Setenv("ASH_DATABASE_URL", "")
-	db, err := Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := OpenTest(t, t.TempDir())
 	if db.Dialect() != "sqlite" {
 		t.Fatalf("dialect=%q want sqlite", db.Dialect())
 	}
@@ -18,6 +15,7 @@ func TestOpenDefaultsToSQLite(t *testing.T) {
 
 func TestResolveDatabaseTargetProfiles(t *testing.T) {
 	dir := t.TempDir()
+	absSQLite := filepath.Join(dir, "ash-profile.db")
 	tests := []struct {
 		name    string
 		raw     string
@@ -33,9 +31,9 @@ func TestResolveDatabaseTargetProfiles(t *testing.T) {
 		},
 		{
 			name:    "sqlite absolute url",
-			raw:     "sqlite:///tmp/ash-profile.db",
+			raw:     "sqlite:///" + filepath.ToSlash(absSQLite),
 			dialect: "sqlite",
-			dsn:     "/tmp/ash-profile.db",
+			dsn:     absSQLite,
 		},
 		{
 			name:    "sqlite relative url",
@@ -90,7 +88,7 @@ func TestResolveDatabaseTargetProfiles(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if target.dialect != tt.dialect || target.dsn != tt.dsn {
+			if target.dialect != tt.dialect || filepath.Clean(target.dsn) != filepath.Clean(tt.dsn) {
 				t.Fatalf("target=%+v want dialect=%q dsn=%q", target, tt.dialect, tt.dsn)
 			}
 		})

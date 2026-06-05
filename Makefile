@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli execgo-bootstrap execgo-health web web-build web-dev
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan postgres-up postgres-down postgres-e2e test-integration execgo-bootstrap execgo-health web web-build web-dev verify
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -17,11 +17,7 @@ test:
 	cd $(BACKEND_DIR) && go test ./...
 
 swagger:
-	cd $(BACKEND_DIR) && go run github.com/swaggo/swag/cmd/swag@latest init \
-		-g cmd/worker/main.go \
-		-o internal/api/docs \
-		--parseDependency \
-		--parseInternal
+	bash scripts/regenerate-swagger.sh
 
 openapi-check:
 	cd $(BACKEND_DIR) && tmp=$$(mktemp -d) && \
@@ -63,6 +59,24 @@ execgo-health:
 
 doctor:
 	cd $(BACKEND_DIR) && go run ./cmd/cli doctor --suite TR0 --format md
+
+migrate-plan:
+	cd $(BACKEND_DIR) && go run ./cmd/cli migrate plan --postgres "$${ASH_DATABASE_URL}"
+
+postgres-up:
+	bash scripts/postgres-up.sh
+
+postgres-down:
+	bash scripts/postgres-down.sh
+
+postgres-e2e:
+	bash scripts/postgres-e2e-migrate.sh
+
+test-integration:
+	cd $(BACKEND_DIR) && ASH_MIGRATE_E2E=1 go test -tags=integration ./internal/store/ -run TestMigratorSQLiteToPostgresE2E -count=1
+
+verify:
+	bash scripts/verify-local.sh
 
 web-build:
 	cd frontend && npm install && npm run build

@@ -33,6 +33,16 @@ export type Member = {
   updatedAt?: string;
 };
 
+export type ResourceScope = {
+  id: string;
+  spaceId: string;
+  resourceType: string;
+  resourceId: string;
+  policyJson: string;
+  createdAt: number;
+  updatedAt: number;
+};
+
 export type ModelProvider = {
   id: string;
   provider: string;
@@ -419,6 +429,33 @@ export function listSpaceMembers(spaceId: string) {
   }));
 }
 
+function normalizeResourceScope(raw: RawRecord): ResourceScope {
+  return {
+    id: str(raw, "id", "ID"),
+    spaceId: str(raw, "spaceId", "SpaceID"),
+    resourceType: str(raw, "resourceType", "ResourceType"),
+    resourceId: str(raw, "resourceId", "ResourceID"),
+    policyJson: str(raw, "policyJson", "PolicyJSON"),
+    createdAt: num(raw, "createdAt", "CreatedAt"),
+    updatedAt: num(raw, "updatedAt", "UpdatedAt"),
+  };
+}
+
+export function listSpaceResourceScopes(spaceId: string) {
+  return api<{ items?: RawRecord[]; Items?: RawRecord[] }>(`/spaces/${spaceId}/resource-scopes`).then(
+    (res) => ({
+      items: itemsFrom(res).map(normalizeResourceScope),
+    }),
+  );
+}
+
+export function updateSpaceResourceScope(spaceId: string, scopeId: string, policyJson: string) {
+  return api<RawRecord>(`/spaces/${spaceId}/resource-scopes/${scopeId}`, {
+    method: "PUT",
+    body: JSON.stringify({ policyJson }),
+  }).then(normalizeResourceScope);
+}
+
 export function createSpaceMember(
   spaceId: string,
   body: { userId?: string; email?: string; displayName?: string; password?: string; roleId: string; status?: string },
@@ -558,6 +595,32 @@ export function applyAuditRetention(body: { dryRun?: boolean }) {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export type PermissionDef = { key: string; group: string; label: string };
+export type BuiltinRole = { name: string; label: string; permissions: string[] };
+export type ToolRule = { allow?: string[]; deny?: string[]; denyMode?: string };
+export type ScenarioMatrixRow = {
+  scenarioKey: string;
+  scenario: string;
+  version: string;
+  toolMatrix: Record<string, ToolRule>;
+};
+export type PermissionMatrix = {
+  spaceId: string;
+  catalog: PermissionDef[];
+  builtinRoles: BuiltinRole[];
+  orgRoles?: { id: string; name: string; permissions: string[] }[];
+  scenarioTools: ScenarioMatrixRow[];
+  currentRole?: string;
+  currentActor?: string;
+};
+
+export function getPermissionMatrix(spaceId?: string) {
+  const path = spaceId
+    ? `/spaces/${encodeURIComponent(spaceId)}/permissions/matrix`
+    : "/permissions/matrix";
+  return api<PermissionMatrix>(path);
 }
 
 export function createFeedback(body: {

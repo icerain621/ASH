@@ -31,7 +31,7 @@ func Load() Config {
 		CodexBin:       envOr("ASH_CODEX_BIN", "codex"),
 		ExecGoURL:      envOr("EXECGO_URL", "http://127.0.0.1:8080"),
 		RuntimeURL:     envOr("EXECGO_RUNTIME_URL", "http://127.0.0.1:18080"),
-		PluginGRPCAddr: envOr("ASH_PLUGIN_GRPC_ADDR", ""),
+		PluginGRPCAddr: envOr("ASH_PLUGIN_GRPC_ADDR", defaultPluginGRPCAddr()),
 		AuthMode:       envOr("ASH_AUTH_MODE", "dev"),
 		JWTSecret:      envOr("ASH_JWT_SECRET", "dev-secret-change-me"),
 		SecretKey:      envOr("ASH_SECRET_KEY", envOr("ASH_JWT_SECRET", "dev-secret-change-me")),
@@ -46,6 +46,13 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+func defaultPluginGRPCAddr() string {
+	if envOr("ASH_AUTH_MODE", "dev") != "dev" {
+		return ""
+	}
+	return "127.0.0.1:19091"
 }
 
 func resolveScenariosDir() string {

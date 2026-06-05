@@ -117,10 +117,7 @@ func createCLITestRun(t *testing.T) (*runs.Service, *runs.CreateResponse) {
 		t.Fatal(err)
 	}
 
-	db, err := store.Open(filepath.Join(dir, "data"))
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, filepath.Join(dir, "data"))
 	loader := rules.NewLoader(filepath.Join("..", "..", "scenarios"))
 	if err := loader.LoadDir(); err != nil {
 		t.Fatal(err)

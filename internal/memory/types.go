@@ -37,9 +37,25 @@ type CreateCandidateRequest struct {
 	SpaceID     string          `json:"spaceId,omitempty"`
 }
 
+// GovernanceHint summarizes a related memory record detected before review.
+type GovernanceHint struct {
+	MemoryID string `json:"memoryId"`
+	Kind     string `json:"kind"` // duplicate|conflict|pending_duplicate
+	Title    string `json:"title,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Reason   string `json:"reason,omitempty"`
+}
+
+// GovernanceHints are non-blocking warnings at candidate creation time.
+type GovernanceHints struct {
+	Duplicates []GovernanceHint `json:"duplicates,omitempty"`
+	Conflicts  []GovernanceHint `json:"conflicts,omitempty"`
+}
+
 // CreateCandidateResponse returns the new candidate id.
 type CreateCandidateResponse struct {
-	CandidateID string `json:"candidateId"`
+	CandidateID string           `json:"candidateId"`
+	Governance  *GovernanceHints `json:"governance,omitempty"`
 }
 
 // EvidenceView is stored evidence returned in API responses.
