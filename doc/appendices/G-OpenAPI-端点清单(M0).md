@@ -90,8 +90,36 @@
 
 ## 7. Doctor（验证）
 - `POST /doctor/run`
-  - body：`{ suite: "TR0"|"TR1"|"TR2"|"ALL", format: "json"|"md" }`
+  - body：`{ suite: "TR0"|"TR1"|"TR2"|"TR3"|"ALL", format: "json"|"md" }`
   - resp：`{ reportId }`
 - `GET /doctor/reports/{reportId}`
   - resp：报告内容（json/md）
+
+## 8. M1 / TR2 / TR3（已实现，需 `make swagger` 同步 OpenAPI）
+
+### 8.1 自我迭代（M1）
+- `POST /improve/proposals`、`GET /improve/proposals`、`GET /improve/proposals/{id}`
+- `POST .../experiment`、`POST .../canary`、`POST .../promote`、`POST .../rollback`
+
+### 8.2 合规（TR2）
+- `GET /compliance/secret-scan` — 审计/事件载荷 secret 模式扫描
+- `POST /compliance/export` — 审计包（含 Doctor 报告 + `secretScan` 摘要）
+
+### 8.3 规模化（TR3）
+- `GET /scale/readiness` — 记忆/RAG/成本/审计就绪快照
+- `GET /runs/{runId}/provenance` — 交付溯源链（trace/事件/工具/产物）
+
+### 8.4 平台（补充）
+- `GET /spaces/{spaceId}/resource-scopes` — 资源作用域列表
+- `PUT /spaces/{spaceId}/resource-scopes/{scopeId}` — 更新场景工具策略（`policyJson`）
+
+### 8.5 M2 权限矩阵
+- `GET /permissions/matrix` — 当前空间的 RBAC + 场景工具矩阵
+- `GET /spaces/{spaceId}/permissions/matrix` — 指定空间矩阵
+- 创建空间时自动种子 `scenario` 资源作用域（三场景 × 角色工具 allow/deny）
+- 创建 Run 时写入 `actorRole`；工具链执行前按场景矩阵校验并发出 `policy.denied`
+- 更新场景策略写入 `scope.policy_updated` 审计
+
+### 8.6 M3 规模化 / 数据库
+- `GET /scale/readiness` 含 `databaseDialect`、`postgresConfigured`、`migrationReady`
 

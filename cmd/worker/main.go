@@ -16,6 +16,10 @@
 // @tag.name runs description Run lifecycle and event stream
 // @tag.name scenarios description Rules / scenario DSL
 // @tag.name memory description Memory governance (candidate/review/query)
+// @tag.name compliance description TR2 compliance scan and audit export
+// @tag.name scale description TR3 scale readiness
+// @tag.name improve description M1 self-improvement proposals
+// @tag.name permissions description M2 RBAC and scenario tool matrix
 package main
 
 import (
@@ -40,6 +44,11 @@ func main() {
 	db, err := store.Open(cfg.DataDir)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
+	}
+	if db.Dialect() == "sqlite" {
+		if shadowURL, source := store.ResolveDualWritePostgresURL(cfg.DataDir); shadowURL != "" {
+			log.Printf("dual-write active (source=%s, target=postgres)", source)
+		}
 	}
 
 	scenariosDir := cfg.ScenariosDir

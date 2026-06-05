@@ -5,7 +5,7 @@ import {
   useReactTable,
   type ColumnDef,
 } from "@tanstack/react-table";
-import { CheckCircle, Download, ExternalLink, GitBranch, Play, RefreshCw, RotateCcw, Square, Terminal } from "lucide-react";
+import { CheckCircle, Download, ExternalLink, GitBranch, Link2, Play, RefreshCw, RotateCcw, Square, Terminal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import {
   approveRun,
@@ -20,6 +20,7 @@ import {
   getRunQualityMetrics,
   getRunTimeline,
   getRunToolCalls,
+  getRunProvenance,
   getRunWaterfall,
   listRuns,
   replayRun,
@@ -35,6 +36,7 @@ import {
   type ToolCall,
   type WaterfallSpan,
 } from "@/modules/runs/api/runs.api";
+import { listScenarios, type ScenarioSummary } from "@/modules/scenarios/api/scenarios.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { useRunStream } from "@/services/sse/runStream";
 import { fmtTime, shortId } from "@/shared/utils/format";
@@ -64,6 +66,11 @@ const runColumns: ColumnDef<RunSummary>[] = [
     accessorKey: "spaceId",
     header: "空间",
     cell: ({ row }) => row.original.spaceId || "local",
+  },
+  {
+    accessorKey: "actorRole",
+    header: "角色",
+    cell: ({ row }) => row.original.actorRole || "maintainer",
   },
   {
     accessorKey: "startedAt",
@@ -201,6 +208,18 @@ function payloadRecord(payload: unknown) {
     : null;
 }
 
+const ACTOR_ROLES = ["maintainer", "operator", "reviewer", "auditor", "viewer", "admin"] as const;
+
+function scenarioKey(item: ScenarioSummary) {
+  return `${item.name}@${item.scenarioVersion}`;
+}
+
+function parseScenarioKey(key: string): { name: string; scenarioVersion: string } {
+  const at = key.lastIndexOf("@");
+  if (at <= 0) return { name: "feature_delivery", scenarioVersion: "1.0.0" };
+  return { name: key.slice(0, at), scenarioVersion: key.slice(at + 1) };
+}
+
 function waitingGate(items: TimelineItem[] | undefined) {
   const item = [...(items ?? [])].reverse().find((entry) => entry.type === "gate.waiting_approval");
   const payload = payloadRecord(item?.payload);
@@ -220,6 +239,13 @@ export function RunsPage() {
   const [checkpointAccess, setCheckpointAccess] = useState<CheckpointAccessResponse | null>(null);
   const [replayMode, setReplayMode] = useState<"exact" | "latest_memory">("exact");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [scenarioKeyValue, setScenarioKeyValue] = useState("feature_delivery@1.0.0");
+  const [actorRole, setActorRole] = useState<(typeof ACTOR_ROLES)[number]>("maintainer");
+
+  const scenariosQuery = useQuery({
+    queryKey: ["scenarios"],
+    queryFn: listScenarios,
+  });
 
   const runsQuery = useQuery({
     queryKey: ["runs", activeSpaceId],
@@ -274,9 +300,24 @@ export function RunsPage() {
     enabled: !!selectedId,
   });
 
+  const provenanceQuery = useQuery({
+    queryKey: ["runs", selectedId, "provenance"],
+    queryFn: () => getRunProvenance(selectedId!),
+    enabled: !!selectedId,
+  });
+
   const streamLines = useRunStream(selectedId);
   const artifacts = useMemo(() => artifactItems(artifactsQuery.data), [artifactsQuery.data]);
   const checkpoints = checkpointsQuery.data?.items ?? [];
+  const scenarioOptions = scenariosQuery.data?.items ?? [];
+
+  useEffect(() => {
+    if (!scenarioOptions.length) return;
+    const keys = scenarioOptions.map(scenarioKey);
+    if (!keys.includes(scenarioKeyValue)) {
+      setScenarioKeyValue(keys[0]);
+    }
+  }, [scenarioOptions, scenarioKeyValue]);
 
   useEffect(() => {
     setArtifactAccess(null);
@@ -296,21 +337,29 @@ export function RunsPage() {
       qc.invalidateQueries({ queryKey: ["runs", runId, "agent-tasks"] }),
       qc.invalidateQueries({ queryKey: ["runs", runId, "quality-metrics"] }),
       qc.invalidateQueries({ queryKey: ["runs", runId, "waterfall"] }),
+      qc.invalidateQueries({ queryKey: ["runs", runId, "provenance"] }),
     ]);
   };
 
   const createMut = useMutation({
-    mutationFn: () =>
-      createRun({
-        scenario: { name: "feature_delivery", scenarioVersion: "1.0.0" },
+    mutationFn: () => {
+      const scenario = parseScenarioKey(scenarioKeyValue);
+      return createRun({
+        scenario,
+        actorRole,
+        spaceId: activeSpaceId !== "local" ? activeSpaceId : undefined,
         inputs: {
-          issueOrSpec: "UI demo run " + new Date().toISOString(),
+          issueOrSpec: `UI demo run (${scenario.name}) ` + new Date().toISOString(),
           repoRoot: ".",
         },
-      }),
+      });
+    },
     onSuccess: async (res) => {
       await qc.invalidateQueries({ queryKey: ["runs"] });
       setSelectedId(res.runId);
+      if (res.executionError) {
+        setActionMessage(res.executionError);
+      }
     },
   });
 
@@ -401,11 +450,47 @@ export function RunsPage() {
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar">
+          <label className="scenario-picker">
+            场景
+            <select
+              value={scenarioKeyValue}
+              disabled={!scenarioOptions.length || createMut.isPending}
+              onChange={(event) => setScenarioKeyValue(event.target.value)}
+            >
+              {scenarioOptions.map((item) => (
+                <option key={scenarioKey(item)} value={scenarioKey(item)} title={item.description}>
+                  {item.name} ({item.scenarioVersion})
+                </option>
+              ))}
+              {!scenarioOptions.length && (
+                <option value="feature_delivery@1.0.0">feature_delivery (1.0.0)</option>
+              )}
+            </select>
+          </label>
+          <label className="scenario-picker">
+            执行角色
+            <select
+              value={actorRole}
+              disabled={createMut.isPending}
+              onChange={(event) => setActorRole(event.target.value as (typeof ACTOR_ROLES)[number])}
+              title="M2 场景工具矩阵按 actorRole 校验"
+            >
+              {ACTOR_ROLES.map((role) => (
+                <option key={role} value={role}>
+                  {role}
+                </option>
+              ))}
+            </select>
+          </label>
           <button className="btn icon-btn" onClick={() => runsQuery.refetch()} disabled={runsQuery.isFetching}>
             <RefreshCw size={16} strokeWidth={1.8} />
             刷新
           </button>
-          <button className="btn primary icon-btn" onClick={() => createMut.mutate()} disabled={createMut.isPending}>
+          <button
+            className="btn primary icon-btn"
+            onClick={() => createMut.mutate()}
+            disabled={createMut.isPending || scenariosQuery.isLoading}
+          >
             <Play size={16} strokeWidth={1.8} />
             新建运行
           </button>
@@ -550,6 +635,48 @@ export function RunsPage() {
               )}
             </tbody>
           </table>
+          <div className="pane-title subhead">
+            <h3>
+              <Link2 size={14} strokeWidth={1.8} style={{ display: "inline", marginRight: 6 }} />
+              审计溯源 (TR3-04)
+            </h3>
+            <span>{provenanceQuery.isFetching ? "加载中" : provenanceQuery.data ? "就绪" : "-"}</span>
+          </div>
+          {provenanceQuery.data && (
+            <>
+              <p className="muted-line">
+                trace <code title={provenanceQuery.data.traceId}>{shortId(provenanceQuery.data.traceId)}</code>
+                {" · "}
+                事件 {provenanceQuery.data.events} · 工具 {provenanceQuery.data.toolCalls} · Agent{" "}
+                {provenanceQuery.data.agentTasks} · 产物 {provenanceQuery.data.artifacts} · 模型用量{" "}
+                {provenanceQuery.data.modelUsage}
+              </p>
+              <table className="table compact">
+                <thead>
+                  <tr>
+                    <th>链路</th>
+                    <th>引用</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {provenanceQuery.data.links.map((link) => (
+                    <tr key={`${link.kind}-${link.ref}`}>
+                      <td>{link.kind}</td>
+                      <td>
+                        <code title={link.ref}>{link.ref}</code>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
+          {selectedId && provenanceQuery.isError && (
+            <p className="error-text">{(provenanceQuery.error as Error).message}</p>
+          )}
+          {selectedId && !provenanceQuery.data && !provenanceQuery.isFetching && !provenanceQuery.isError && (
+            <p className="muted-line">暂无溯源数据。</p>
+          )}
           <div className="pane-title subhead">
             <h3>事件流 (SSE)</h3>
             <span>{streamLines.length} 条事件</span>

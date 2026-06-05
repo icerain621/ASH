@@ -25,6 +25,9 @@ func (h *Handler) indexRAG(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permRAGIndex, space) {
 		return
 	}
@@ -54,6 +57,9 @@ func (h *Handler) queryRAG(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permRAGQuery, space) {
 		return
 	}

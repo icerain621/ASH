@@ -38,6 +38,7 @@ func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateR
 	now := time.Now().UTC()
 	id := "mem_" + uuid.NewString()
 	spaceID := firstNonEmpty(req.SpaceID, "local")
+	governance, _ := s.previewGovernance(spaceID, req, dedupe)
 
 	var out *CreateCandidateResponse
 	err = s.db.Transaction(func(tx *gorm.DB) error {
@@ -101,7 +102,7 @@ func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateR
 		if err := tx.Create(&audit).Error; err != nil {
 			return err
 		}
-		out = &CreateCandidateResponse{CandidateID: id}
+		out = &CreateCandidateResponse{CandidateID: id, Governance: governance}
 		return nil
 	})
 	if err != nil {
@@ -659,6 +660,60 @@ func decisionToStatus(decision, current string) (string, error) {
 		return "deprecated", nil
 	default:
 		return "", fmt.Errorf("unknown decision %q", decision)
+	}
+}
+
+func (s *Service) previewGovernance(spaceID string, req CreateCandidateRequest, dedupe string) (*GovernanceHints, error) {
+	hints := &GovernanceHints{}
+	rec := store.MemoryRecord{
+		ID:        "preview",
+		SpaceID:   spaceID,
+		Title:     req.Title,
+		Body:      req.Body,
+		ScopeRepo: req.ScopeRepo,
+		DedupeKey: dedupe,
+	}
+	tx := s.db.DB
+	dupIDs, err := s.findApprovedDuplicates(tx, rec)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range dupIDs {
+		hints.Duplicates = append(hints.Duplicates, hintFromRecord(tx, id, "duplicate", "dedupe key matched approved memory"))
+	}
+	conflictIDs, err := s.findApprovedTitleConflicts(tx, rec)
+	if err != nil {
+		return nil, err
+	}
+	for _, id := range conflictIDs {
+		hints.Conflicts = append(hints.Conflicts, hintFromRecord(tx, id, "conflict", "title matched approved memory with different body"))
+	}
+	if dedupe != "" {
+		var pending []store.MemoryRecord
+		if err := tx.Where("status = ? AND space_id = ? AND dedupe_key = ?", "candidate", spaceID, dedupe).
+			Order("updated_at desc").Limit(5).Find(&pending).Error; err != nil {
+			return nil, err
+		}
+		for _, row := range pending {
+			hints.Duplicates = append(hints.Duplicates, GovernanceHint{
+				MemoryID: row.ID, Kind: "pending_duplicate", Title: row.Title, Status: row.Status,
+				Reason: "same dedupe key already pending review",
+			})
+		}
+	}
+	if len(hints.Duplicates) == 0 && len(hints.Conflicts) == 0 {
+		return nil, nil
+	}
+	return hints, nil
+}
+
+func hintFromRecord(tx *gorm.DB, id, kind, reason string) GovernanceHint {
+	var row store.MemoryRecord
+	if err := tx.Select("id", "title", "status").First(&row, "id = ?", id).Error; err != nil {
+		return GovernanceHint{MemoryID: id, Kind: kind, Reason: reason}
+	}
+	return GovernanceHint{
+		MemoryID: row.ID, Kind: kind, Title: row.Title, Status: row.Status, Reason: reason,
 	}
 }
 

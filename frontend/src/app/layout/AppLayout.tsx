@@ -1,5 +1,15 @@
 import { Link, Outlet } from "@tanstack/react-router";
-import { Activity, Brain, Building2, HeartPulse, MessageSquarePlus, RadioTower, Workflow } from "lucide-react";
+import {
+  Activity,
+  Brain,
+  Building2,
+  Gauge,
+  HeartPulse,
+  MessageSquarePlus,
+  RadioTower,
+  ShieldCheck,
+  Workflow,
+} from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const tabs = [
@@ -8,6 +18,8 @@ const tabs = [
   { to: "/automation", label: "自动化", icon: Workflow },
   { to: "/feedback", label: "反馈", icon: MessageSquarePlus },
   { to: "/space", label: "空间", icon: Building2 },
+  { to: "/compliance", label: "合规", icon: ShieldCheck },
+  { to: "/scale", label: "规模化", icon: Gauge },
   { to: "/doctor", label: "诊断", icon: HeartPulse },
 ];
 

@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -12,6 +13,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
@@ -27,6 +29,7 @@ type Handler struct {
 	doctor        *doctor.Service
 	doctorReports *reportStore
 	memory        *memory.Service
+	improve       *improve.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -39,7 +42,8 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		scenarios: scenarios,
 		runs:      runsSvc,
 		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:    memory.NewService(db, ev),
+		memory:  memory.NewService(db, ev),
+		improve: improve.NewService(db, runsSvc, ev),
 	}
 }
 
@@ -66,6 +70,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/runs/:runId/tool-calls", h.listRunToolCalls)
 		v1.GET("/runs/:runId/agent-tasks", h.listRunAgentTasks)
 		v1.GET("/runs/:runId/quality-metrics", h.listRunQualityMetrics)
+		v1.GET("/runs/:runId/provenance", h.getRunProvenance)
 		v1.POST("/runs/:runId/resume", h.resumeRun)
 		v1.POST("/runs/:runId/replay", h.replayRun)
 		v1.POST("/runs/:runId/cancel", h.cancelRun)
@@ -88,6 +93,14 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/memory/records/:recordId", h.getMemoryRecord)
 		v1.POST("/memory/query", h.queryMemory)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
+
+		v1.POST("/improve/proposals", h.createImproveProposal)
+		v1.GET("/improve/proposals", h.listImproveProposals)
+		v1.GET("/improve/proposals/:proposalId", h.getImproveProposal)
+		v1.POST("/improve/proposals/:proposalId/experiment", h.startImproveExperiment)
+		v1.POST("/improve/proposals/:proposalId/canary", h.startImproveCanary)
+		v1.POST("/improve/proposals/:proposalId/promote", h.promoteImproveProposal)
+		v1.POST("/improve/proposals/:proposalId/rollback", h.rollbackImproveProposal)
 
 		v1.POST("/rag/index", h.indexRAG)
 		v1.POST("/rag/query", h.queryRAG)
@@ -116,6 +129,15 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/spaces", h.createSpace)
 		v1.GET("/spaces/:spaceId/members", h.listSpaceMembers)
 		v1.POST("/spaces/:spaceId/members", h.createSpaceMember)
+		v1.GET("/spaces/:spaceId/resource-scopes", h.listSpaceResourceScopes)
+		v1.PUT("/spaces/:spaceId/resource-scopes/:scopeId", h.updateSpaceResourceScope)
+
+		v1.GET("/compliance/secret-scan", h.complianceSecretScan)
+		v1.POST("/compliance/export", h.complianceExportBundle)
+
+		v1.GET("/scale/readiness", h.scaleReadiness)
+		v1.GET("/permissions/matrix", h.permissionMatrix)
+		v1.GET("/spaces/:spaceId/permissions/matrix", h.spacePermissionMatrix)
 		v1.GET("/audit/logs", h.listAuditLogs)
 		v1.GET("/audit/policy", h.getAuditPolicy)
 		v1.PUT("/audit/policy", h.updateAuditPolicy)
@@ -187,18 +209,32 @@ func (h *Handler) createRun(c *gin.Context) {
 	}
 	if req.SpaceID == "" {
 		req.SpaceID = currentSpace(c)
+	} else if !h.requireRequestSpace(c, req.SpaceID) {
+		return
 	}
 	if !h.requirePermission(c, permRunCreate, req.SpaceID) {
 		return
 	}
+	if strings.TrimSpace(req.ActorRole) == "" {
+		req.ActorRole = currentRole(c)
+	}
 	resp, err := h.runs.Create(req)
-	if err != nil {
+	if resp == nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RUN_CREATE_FAILED", err.Error()))
 		return
 	}
 	c.Header("X-Run-Id", resp.RunID)
 	c.Header("X-Trace-Id", resp.TraceID)
-	c.JSON(http.StatusCreated, resp)
+	out := RunCreateResponse{RunID: resp.RunID, TraceID: resp.TraceID}
+	if err != nil {
+		out.ExecutionError = err.Error()
+		if sum, getErr := h.runs.Get(resp.RunID); getErr == nil {
+			out.Status = sum.Status
+		} else {
+			out.Status = "failed"
+		}
+	}
+	c.JSON(http.StatusCreated, out)
 }
 
 // ListRuns godoc

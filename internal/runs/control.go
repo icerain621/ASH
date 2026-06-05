@@ -25,6 +25,8 @@ func (s *Service) Replay(sourceRunID string, req ReplayRequest) (*ReplayResponse
 	if err != nil {
 		return nil, err
 	}
+	var sourceRec store.RunRecord
+	_ = s.db.Select("space_id", "actor_role").First(&sourceRec, "id = ?", sourceRunID).Error
 
 	inputs := copyMap(meta.Inputs)
 	for k, v := range req.Overrides {
@@ -38,6 +40,8 @@ func (s *Service) Replay(sourceRunID string, req ReplayRequest) (*ReplayResponse
 		Scenario:      meta.Scenario,
 		Inputs:        inputs,
 		PolicyProfile: meta.PolicyProfile,
+		ActorRole:     firstNonEmpty(meta.ActorRole, sourceRec.ActorRole),
+		SpaceID:       sourceRec.SpaceID,
 		Repo:          meta.Repo,
 	}
 	resp, err := s.CreateWithOptions(createReq, createOptions{
@@ -88,6 +92,7 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 		Scenario:      meta.Scenario,
 		Inputs:        meta.Inputs,
 		PolicyProfile: meta.PolicyProfile,
+		ActorRole:     firstNonEmpty(meta.ActorRole, rec.ActorRole),
 		Repo:          meta.Repo,
 	}
 	doc, err := s.scenarios.Get(rec.ScenarioName, rec.ScenarioVersion)

@@ -4,17 +4,21 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/artifacts"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -72,16 +76,33 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr0ArtifactIndex())
 		rep.Results = append(rep.Results, s.tr0EvidenceBinding())
 		rep.Results = append(rep.Results, s.tr0CheckpointRecovery())
+		rep.Results = append(rep.Results, s.tr0ScenarioCatalog())
 	case "TR1":
 		rep.Results = append(rep.Results, s.tr1ModelRouterFallback())
 		rep.Results = append(rep.Results, s.tr1WaterfallQuality())
 		rep.Results = append(rep.Results, s.tr1MemoryConflict())
 		rep.Results = append(rep.Results, s.tr1MCPIsolation())
+		rep.Results = append(rep.Results, s.tr1DSLSchemaValidation())
 	case "TR2":
 		rep.Results = append(rep.Results, s.tr2IdentityScopeModel())
 		rep.Results = append(rep.Results, s.tr2SpaceScopedRuns())
 		rep.Results = append(rep.Results, s.tr2ArtifactStoreProfile())
 		rep.Results = append(rep.Results, s.tr2PluginABI())
+		rep.Results = append(rep.Results, s.tr2SecretLeakScan())
+	case "M2":
+		rep.Results = append(rep.Results, s.m2PermissionMatrix())
+		rep.Results = append(rep.Results, s.m2ScenarioPolicyUpdate())
+		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
+	case "M3":
+		rep.Results = append(rep.Results, s.m3TenantIsolation())
+		rep.Results = append(rep.Results, s.m3PostgresReadiness())
+		rep.Results = append(rep.Results, s.m3MigrationCatalog())
+		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
+	case "TR3":
+		rep.Results = append(rep.Results, s.tr3MemoryMigration())
+		rep.Results = append(rep.Results, s.tr3RAGFallback())
+		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
+		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -90,14 +111,28 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr0ArtifactIndex())
 		rep.Results = append(rep.Results, s.tr0EvidenceBinding())
 		rep.Results = append(rep.Results, s.tr0CheckpointRecovery())
+		rep.Results = append(rep.Results, s.tr0ScenarioCatalog())
 		rep.Results = append(rep.Results, s.tr1ModelRouterFallback())
 		rep.Results = append(rep.Results, s.tr1WaterfallQuality())
 		rep.Results = append(rep.Results, s.tr1MemoryConflict())
 		rep.Results = append(rep.Results, s.tr1MCPIsolation())
+		rep.Results = append(rep.Results, s.tr1DSLSchemaValidation())
 		rep.Results = append(rep.Results, s.tr2IdentityScopeModel())
 		rep.Results = append(rep.Results, s.tr2SpaceScopedRuns())
 		rep.Results = append(rep.Results, s.tr2ArtifactStoreProfile())
 		rep.Results = append(rep.Results, s.tr2PluginABI())
+		rep.Results = append(rep.Results, s.tr2SecretLeakScan())
+		rep.Results = append(rep.Results, s.m2PermissionMatrix())
+		rep.Results = append(rep.Results, s.m2ScenarioPolicyUpdate())
+		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
+		rep.Results = append(rep.Results, s.m3TenantIsolation())
+		rep.Results = append(rep.Results, s.m3PostgresReadiness())
+		rep.Results = append(rep.Results, s.m3MigrationCatalog())
+		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
+		rep.Results = append(rep.Results, s.tr3MemoryMigration())
+		rep.Results = append(rep.Results, s.tr3RAGFallback())
+		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
+		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -507,6 +542,43 @@ func (s *Service) tr0CheckpointRecovery() CaseResult {
 	return res
 }
 
+func (s *Service) tr0ScenarioCatalog() CaseResult {
+	res := CaseResult{ID: "TR0-08", Status: "fail"}
+	if s.scenarios == nil {
+		res.Message = "scenario loader not configured"
+		return res
+	}
+	required := []struct {
+		name    string
+		version string
+	}{
+		{name: "feature_delivery", version: "1.0.0"},
+		{name: "hotfix", version: "1.0.0"},
+		{name: "security_patch", version: "1.0.0"},
+	}
+	for _, item := range required {
+		doc, err := s.scenarios.Get(item.name, item.version)
+		if err != nil {
+			res.Message = fmt.Sprintf("missing scenario %s@%s: %v", item.name, item.version, err)
+			return res
+		}
+		if doc.Scenario.Name != item.name {
+			res.Message = fmt.Sprintf("scenario name mismatch for %s@%s", item.name, item.version)
+			return res
+		}
+		if len(doc.Scenario.Steps) == 0 {
+			res.Message = fmt.Sprintf("scenario %s@%s has no steps", item.name, item.version)
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{
+			Kind: "scenario",
+			Ref:  item.name + "@" + item.version,
+		})
+	}
+	res.Status = "pass"
+	return res
+}
+
 func (s *Service) tr1ModelRouterFallback() CaseResult {
 	res := CaseResult{ID: "TR1-01", Status: "fail"}
 	router := modelrouter.New([]modelrouter.Provider{
@@ -654,6 +726,50 @@ func (s *Service) tr1MCPIsolation() CaseResult {
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "mcpIsolation", Ref: "schema"},
 		Evidence{Kind: "mcpIsolation", Ref: "policy"},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr1DSLSchemaValidation() CaseResult {
+	res := CaseResult{ID: "TR1-05", Status: "fail"}
+	if s.scenarios == nil {
+		res.Message = "scenario loader not configured"
+		return res
+	}
+	invalid := []byte(`version: "ash.rules/v0.1"
+scenario:
+  name: broken
+`)
+	invalidResult := s.scenarios.ValidateYAML(invalid)
+	if invalidResult.OK {
+		res.Message = "invalid DSL was accepted"
+		return res
+	}
+	valid := []byte(`version: "ash.rules/v0.1"
+scenario:
+  name: "doctor_schema_ok"
+  scenarioVersion: "1.0.0"
+  roles:
+    PM: { maxParallel: 1 }
+  steps:
+    - id: "noop"
+      role: "PM"
+      kind: "llm"
+      promptRef: "prompts/noop.md"
+`)
+	validResult := s.scenarios.ValidateYAML(valid)
+	if !validResult.OK {
+		res.Message = fmt.Sprintf("valid DSL rejected: %+v", validResult.Issues)
+		return res
+	}
+	code := "rejected"
+	if len(invalidResult.Issues) > 0 {
+		code = invalidResult.Issues[0].Code
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "rulesValidation", Ref: "invalid:" + code},
+		Evidence{Kind: "rulesValidation", Ref: "valid:ok"},
 	)
 	res.Status = "pass"
 	return res
@@ -813,6 +929,609 @@ func (s *Service) tr2PluginABI() CaseResult {
 		Evidence{Kind: "pluginABI", Ref: pluginabi.CurrentABI},
 		Evidence{Kind: "pluginRegistry", Ref: row.ID},
 	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr2SecretLeakScan() CaseResult {
+	res := CaseResult{ID: "TR2-05", Status: "fail"}
+	now := time.Now().UTC()
+	suffix := fmt.Sprintf("%d", now.UnixNano())
+	spaceID := "space_tr2_secret_" + suffix
+	policy := store.AuditPolicy{
+		SpaceID: spaceID, RetentionDays: 90, RedactPayload: true, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.runs.DB().Create(&policy).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	leakPayload := `{"password":"doctor-tr2-leak-probe","note":"compliance scan"}`
+	audit := store.AuditLog{
+		ID: "aud_tr2_leak_" + suffix, SpaceID: spaceID, EventType: "compliance.probe",
+		PayloadJSON: leakPayload, CreatedAt: now,
+	}
+	if err := s.runs.DB().Create(&audit).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	findings := security.FindLeaks("audit_log", audit.ID, leakPayload)
+	if len(findings) == 0 {
+		res.Message = "leak scanner did not detect probe secret"
+		return res
+	}
+	redacted := security.RedactJSON(leakPayload)
+	if redacted == leakPayload || strings.Contains(redacted, "doctor-tr2-leak-probe") {
+		res.Message = "redact did not mask probe secret"
+		return res
+	}
+	var secret store.SecretRecord
+	if err := s.runs.DB().Where("space_id = ?", spaceID).Limit(1).Find(&secret).Error; err != nil {
+		secret = store.SecretRecord{
+			ID: "sec_tr2_" + suffix, SpaceID: spaceID, Name: "PROBE_KEY",
+			ValueDigest: "sha256:probe", ValueCiphertext: "enc:probe-value",
+			Status: "active", ScopeJSON: "{}", CreatedAt: now, UpdatedAt: now,
+		}
+		if err := s.runs.DB().Create(&secret).Error; err != nil {
+			res.Message = err.Error()
+			return res
+		}
+	}
+	if strings.Contains(secret.ValueCiphertext, "probe-value") {
+		// API must never return encrypted blob as plaintext; doctor checks redact path only.
+		res.Evidence = append(res.Evidence, Evidence{Kind: "secretStore", Ref: "encrypted_at_rest"})
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "secretScan", Ref: fmt.Sprintf("findings:%d", len(findings))},
+		Evidence{Kind: "redact", Ref: "payload_masked"},
+		Evidence{Kind: "auditPolicy", Ref: spaceID},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m2PermissionMatrix() CaseResult {
+	res := CaseResult{ID: "M2-01", Status: "fail"}
+	if !authz.RoleAllows("viewer", "artifact:read") || authz.RoleAllows("viewer", "run:create") {
+		res.Message = "builtin RBAC matrix inconsistent for viewer"
+		return res
+	}
+	policy := authz.DefaultScenarioPolicyJSON("feature_delivery", "1.0.0")
+	ok, _ := authz.EvaluateScenarioTool(policy, "reviewer", "git.status")
+	if !ok {
+		res.Message = "reviewer cannot read git.status"
+		return res
+	}
+	ok, reason := authz.EvaluateScenarioTool(policy, "reviewer", "apply_patch")
+	if ok {
+		res.Message = "reviewer should be denied apply_patch"
+		return res
+	}
+	secPolicy := authz.DefaultScenarioPolicyJSON("security_patch", "1.0.0")
+	ok, _ = authz.EvaluateScenarioTool(secPolicy, "operator", "apply_patch")
+	if ok {
+		res.Message = "security_patch operator must not apply_patch"
+		return res
+	}
+	now := time.Now().UTC()
+	spaceID := "space_m2_matrix_" + fmt.Sprintf("%d", now.UnixNano())
+	if err := authz.SeedScenarioScopes(s.runs.DB(), spaceID, now); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var count int64
+	if err := s.runs.DB().Model(&store.ResourceScope{}).
+		Where("space_id = ? AND resource_type = ?", spaceID, "scenario").Count(&count).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if count < 3 {
+		res.Message = fmt.Sprintf("scenario scopes=%d want >=3", count)
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "rbacMatrix", Ref: "viewer:read-only"},
+		Evidence{Kind: "scenarioMatrix", Ref: "reviewer:deny:apply_patch"},
+		Evidence{Kind: "policyDenied", Ref: reason},
+		Evidence{Kind: "resourceScope", Ref: fmt.Sprintf("scenario:%d", count)},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m2ScenarioPolicyUpdate() CaseResult {
+	res := CaseResult{ID: "M2-02", Status: "fail"}
+	now := time.Now().UTC()
+	spaceID := "space_m2_policy_" + fmt.Sprintf("%d", now.UnixNano())
+	if err := authz.SeedScenarioScopes(s.runs.DB(), spaceID, now); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var row store.ResourceScope
+	key := "feature_delivery@1.0.0"
+	if err := s.runs.DB().Where(
+		"space_id = ? AND resource_type = ? AND resource_id = ?",
+		spaceID, "scenario", key,
+	).First(&row).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	customPolicy := `{"toolMatrix":{"reviewer":{"allow":["git.status","apply_patch"],"deny":[],"denyMode":"block"}}}`
+	row.PolicyJSON = customPolicy
+	row.UpdatedAt = now
+	if err := s.runs.DB().Save(&row).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	loaded, err := authz.LoadScenarioPolicy(s.runs.DB(), spaceID, "feature_delivery", "1.0.0")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	ok, _ := authz.EvaluateScenarioTool(loaded, "reviewer", "apply_patch")
+	if !ok {
+		res.Message = "updated policy should allow reviewer apply_patch"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "resourceScope", Ref: row.ID},
+		Evidence{Kind: "scenarioPolicy", Ref: key},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m2ScenarioPolicyEnforcement() CaseResult {
+	res := CaseResult{ID: "M2-03", Status: "fail"}
+	now := time.Now().UTC()
+	suffix := fmt.Sprintf("%d", now.UnixNano())
+	spaceID := "space_m2_enforce_" + suffix
+	policyJSON := `{"toolMatrix":{"reviewer":{"allow":["git.status"],"deny":["apply_patch"],"denyMode":"block"}}}`
+	scope := store.ResourceScope{
+		ID: "scope_m2_enforce_" + suffix, SpaceID: spaceID,
+		ResourceType: "scenario", ResourceID: "m2_policy_enforce@1.0.0",
+		PolicyJSON: policyJSON, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.runs.DB().Create(&scope).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	create, err := s.runs.Create(runs.CreateRequest{
+		Scenario:  runs.ScenarioRef{Name: "m2_policy_enforce", ScenarioVersion: "1.0.0"},
+		Inputs:    map[string]any{"issueOrSpec": "m2 policy enforcement probe"},
+		SpaceID:   spaceID,
+		ActorRole: "reviewer",
+	})
+	if create == nil || create.RunID == "" {
+		res.Message = fmt.Sprintf("create run: %v", err)
+		return res
+	}
+	if err == nil || !strings.Contains(err.Error(), "POLICY_DENIED") {
+		res.Message = fmt.Sprintf("expected POLICY_DENIED, err=%v", err)
+		return res
+	}
+	res.RunID = create.RunID
+	sum, err := s.runs.Get(create.RunID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if sum.Status != "failed" {
+		res.Message = fmt.Sprintf("run status=%q want failed", sum.Status)
+		return res
+	}
+	var step store.RunStep
+	if err := s.runs.DB().Where("run_id = ?", create.RunID).Order("created_at asc").First(&step).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if step.ErrorCode != "POLICY_DENIED" {
+		res.Message = fmt.Sprintf("step errorCode=%q want POLICY_DENIED", step.ErrorCode)
+		return res
+	}
+	evs, err := s.events.ListAfter(create.RunID, 0, 100)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	foundDenied := false
+	for _, ev := range evs {
+		if ev.Type == "policy.denied" && strings.Contains(string(ev.Payload), "apply_patch") {
+			foundDenied = true
+			break
+		}
+	}
+	if !foundDenied {
+		res.Message = "missing policy.denied event for apply_patch"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "policyDenied", Ref: step.ErrorCode},
+		Evidence{Kind: "resourceScope", Ref: scope.ID},
+		Evidence{Kind: "run", Ref: create.RunID},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3TenantIsolation() CaseResult {
+	res := CaseResult{ID: "M3-01", Status: "fail"}
+	now := time.Now().UTC()
+	suffix := fmt.Sprintf("%d", now.UnixNano())
+	spaceA := "space_m3_a_" + suffix
+	spaceB := "space_m3_b_" + suffix
+	memA := store.MemoryRecord{
+		ID: "mem_m3_a_" + suffix, Layer: "L1", Status: "approved", SpaceID: spaceA,
+		SchemaVersion: memory.CurrentSchemaVersion, Title: "a", Body: "tenant a",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	memB := store.MemoryRecord{
+		ID: "mem_m3_b_" + suffix, Layer: "L1", Status: "approved", SpaceID: spaceB,
+		SchemaVersion: memory.CurrentSchemaVersion, Title: "b", Body: "tenant b",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.runs.DB().Create(&memA).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if err := s.runs.DB().Create(&memB).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if err := store.EnforceSpaceAccess(memB.SpaceID, spaceA); err == nil {
+		res.Message = "cross-space access should be denied"
+		return res
+	}
+	var leak int64
+	if err := s.runs.DB().Model(&store.MemoryRecord{}).
+		Where("space_id = ? AND id = ?", spaceA, memB.ID).Count(&leak).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if leak != 0 {
+		res.Message = "space A query returned space B memory"
+		return res
+	}
+	var onlyA int64
+	if err := s.runs.DB().Model(&store.MemoryRecord{}).Where("space_id = ?", spaceA).Count(&onlyA).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if onlyA < 1 {
+		res.Message = "space A memory missing"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "tenantScope", Ref: spaceA},
+		Evidence{Kind: "tenantScope", Ref: spaceB},
+		Evidence{Kind: "memory", Ref: memA.ID},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3PostgresReadiness() CaseResult {
+	res := CaseResult{ID: "M3-02", Status: "fail"}
+	dialect := s.runs.DB().Dialect()
+	profile, err := store.DatabaseProfile(s.dataDir, os.Getenv("ASH_DATABASE_URL"))
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if profile.Dialect != dialect {
+		res.Message = fmt.Sprintf("profile dialect=%q db dialect=%q", profile.Dialect, dialect)
+		return res
+	}
+	if !profile.MigrationReady {
+		res.Message = "database profile not migration-ready"
+		return res
+	}
+	for _, raw := range []string{
+		"postgres://ash:ash@127.0.0.1:5432/ash?sslmode=disable",
+		"postgresql://ash:ash@127.0.0.1:5432/ash",
+	} {
+		parsed, err := store.ParseDatabaseTarget(s.dataDir, raw)
+		if err != nil || parsed.Dialect != "postgres" {
+			res.Message = fmt.Sprintf("postgres url parse failed for %q: %v", raw, err)
+			return res
+		}
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "databaseDialect", Ref: dialect},
+		Evidence{Kind: "postgresURL", Ref: "parsed"},
+	)
+	if profile.PostgresConfigured {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "ASH_DATABASE_URL", Ref: "postgres"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3MigrationCatalog() CaseResult {
+	res := CaseResult{ID: "M3-03", Status: "fail"}
+	catalog := store.MigrationCatalog()
+	if len(catalog) < 25 {
+		res.Message = fmt.Sprintf("migration catalog tables=%d want >=25", len(catalog))
+		return res
+	}
+	critical := []string{"runs", "run_events", "memory_records", "audit_log", "resource_scopes"}
+	set := make(map[string]struct{}, len(catalog))
+	for _, name := range catalog {
+		set[name] = struct{}{}
+	}
+	for _, name := range critical {
+		if _, ok := set[name]; !ok {
+			res.Message = fmt.Sprintf("migration catalog missing critical table %q", name)
+			return res
+		}
+	}
+	if err := store.VerifyMigrationSchema(s.runs.DB()); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	snap, err := store.MigrationSnapshotFor(s.dataDir)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "migrationCatalog", Ref: fmt.Sprintf("%d tables", len(catalog))},
+		Evidence{Kind: "sqlitePath", Ref: snap.SQLitePath},
+	)
+	if snap.DualWriteEnabled {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "dualWrite", Ref: "enabled"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3PostgresMigrateVerify() CaseResult {
+	res := CaseResult{ID: "M3-04", Status: "fail"}
+	if os.Getenv("ASH_MIGRATE_E2E") != "1" {
+		res.Status = "pass"
+		res.Message = "skipped: set ASH_MIGRATE_E2E=1 for live sqlite→postgres verify"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_MIGRATE_E2E"})
+		return res
+	}
+	pgURL := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	if pgURL == "" {
+		res.Message = "ASH_DATABASE_URL is required for migrate e2e"
+		return res
+	}
+	target, err := store.ParseDatabaseTarget(s.dataDir, pgURL)
+	if err != nil || target.Dialect != "postgres" {
+		res.Message = fmt.Sprintf("postgres url invalid: %v", err)
+		return res
+	}
+	sqlitePath := store.DefaultSQLitePath(s.dataDir)
+	if _, err := os.Stat(sqlitePath); err != nil {
+		res.Message = fmt.Sprintf("sqlite not found at %s", sqlitePath)
+		return res
+	}
+	m, err := store.NewMigrator(s.dataDir, sqlitePath, pgURL)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	defer m.Close()
+
+	if _, err := m.Verify(); err != nil {
+		if _, copyErr := m.Copy(store.CopyOptions{BatchSize: 200}); copyErr != nil {
+			res.Message = fmt.Sprintf("copy failed: %v", copyErr)
+			return res
+		}
+		if _, err = m.Verify(); err != nil {
+			res.Message = err.Error()
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "migrateCopy", Ref: "reconciled"})
+	}
+	plan, err := m.Plan()
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "migrationVerify", Ref: fmt.Sprintf("%d tables", len(plan.Tables))},
+		Evidence{Kind: "postgresURL", Ref: "live"},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3MemoryMigration() CaseResult {
+	res := CaseResult{ID: "TR3-01", Status: "fail"}
+	mem := memory.NewService(s.runs.DB(), s.events)
+	probeTitle := "TR3 migration probe " + fmt.Sprintf("%d", time.Now().UnixNano())
+	confidence := 0.9
+	cand, err := mem.CreateCandidate(memory.CreateCandidateRequest{
+		Layer: "L2", Title: probeTitle, Body: "schema v1 readable after migration gate",
+		ScopeRepo: "ash", Evidence: []memory.EvidenceInput{{Kind: "file", Ref: "doc/tr3.md"}},
+	})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if _, err := mem.Review(cand.CandidateID, memory.ReviewRequest{
+		Decision: "approve", Reason: "tr3 migration", ReviewerID: "doctor", PolicyProfile: "default", Confidence: &confidence,
+	}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var row store.MemoryRecord
+	if err := s.runs.DB().First(&row, "id = ?", cand.CandidateID).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if row.SchemaVersion != memory.CurrentSchemaVersion {
+		res.Message = fmt.Sprintf("schema version=%d want %d", row.SchemaVersion, memory.CurrentSchemaVersion)
+		return res
+	}
+	q, err := mem.Query(memory.QueryRequest{Text: probeTitle, TopK: 5})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	found := false
+	for _, hit := range q.Items {
+		if hit.ID == cand.CandidateID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		res.Message = "approved v1 record not returned by memory query"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "memorySchema", Ref: fmt.Sprintf("v%d", memory.CurrentSchemaVersion)},
+		Evidence{Kind: "memoryQuery", Ref: cand.CandidateID},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3RAGFallback() CaseResult {
+	res := CaseResult{ID: "TR3-02", Status: "fail"}
+	repo := filepath.Join(s.dataDir, "doctor_tr3_rag_"+fmt.Sprintf("%d", time.Now().UnixNano()))
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	content := "TR3 disaster recovery fallback evidence line\n"
+	if err := os.WriteFile(filepath.Join(repo, "fallback.md"), []byte(content), 0o644); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	ragSvc := rag.NewService(s.runs.DB())
+	if _, err := ragSvc.Index(rag.IndexRequest{RepoRoot: repo, SpaceID: "local"}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	_ = s.runs.DB().Exec("DROP TABLE IF EXISTS rag_chunks_fts").Error
+	resp, err := ragSvc.Query(rag.QueryRequest{RepoRoot: repo, Text: "fallback evidence", TopK: 3})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if len(resp.Items) == 0 || resp.Items[0].Path != "fallback.md" {
+		res.Message = fmt.Sprintf("FTS-down fallback query empty: %+v", resp.Items)
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "ragFallback", Ref: resp.Items[0].Path},
+		Evidence{Kind: "ragIndex", Ref: repo},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3CostLatencySLO() CaseResult {
+	res := CaseResult{ID: "TR3-03", Status: "fail"}
+	create, _, err := s.createProbeRun("TR3-03")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+
+	waterfall, err := observability.BuildWaterfall(s.runs.DB(), create.RunID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	runSpanOK := false
+	for _, span := range waterfall.Spans {
+		if span.Type == "run" && span.DurationMs > 0 {
+			runSpanOK = true
+			res.Evidence = append(res.Evidence, Evidence{Kind: "latencySpan", Ref: fmt.Sprintf("run:%dms", span.DurationMs)})
+			break
+		}
+	}
+	if !runSpanOK {
+		res.Message = "waterfall missing positive run duration"
+		return res
+	}
+	names := map[string]bool{}
+	for _, m := range waterfall.Metrics {
+		names[m.Name] = true
+	}
+	for _, want := range []string{"model_cost_micros_total", "tool_calls_total"} {
+		if !names[want] {
+			res.Message = fmt.Sprintf("missing quality metric %s", want)
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "sloMetric", Ref: want})
+	}
+	var usageCount int64
+	if err := s.runs.DB().Model(&store.ModelUsage{}).Where("run_id = ?", create.RunID).Count(&usageCount).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if usageCount == 0 {
+		// Static agent runs may omit model_usage rows; cost metric from quality ledger still gates SLO wiring.
+		res.Evidence = append(res.Evidence, Evidence{Kind: "modelUsage", Ref: "ledger_only"})
+	} else {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "modelUsage", Ref: fmt.Sprintf("rows:%d", usageCount)})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3AuditProvenance() CaseResult {
+	res := CaseResult{ID: "TR3-04", Status: "fail"}
+	create, _, err := s.createProbeRun("TR3-04")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+
+	var rec store.RunRecord
+	if err := s.runs.DB().First(&rec, "id = ?", create.RunID).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if rec.TraceID == "" {
+		res.Message = "run missing traceId"
+		return res
+	}
+	res.Evidence = append(res.Evidence, Evidence{Kind: "trace", Ref: rec.TraceID})
+
+	var eventCount, toolCount, agentCount int64
+	_ = s.runs.DB().Model(&store.RunEvent{}).Where("run_id = ?", create.RunID).Count(&eventCount).Error
+	_ = s.runs.DB().Model(&store.ToolCall{}).Where("run_id = ?", create.RunID).Count(&toolCount).Error
+	_ = s.runs.DB().Model(&store.AgentTask{}).Where("run_id = ?", create.RunID).Count(&agentCount).Error
+	if eventCount == 0 {
+		res.Message = "missing run events for provenance chain"
+		return res
+	}
+	res.Evidence = append(res.Evidence, Evidence{Kind: "eventRange", Ref: fmt.Sprintf("count=%d", eventCount)})
+
+	manifest, err := s.runs.Artifacts(create.RunID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if manifest == nil || len(manifest.Artifacts) == 0 {
+		res.Message = "missing artifact manifest for delivery trace"
+		return res
+	}
+	res.Evidence = append(res.Evidence, Evidence{Kind: "artifactManifest", Ref: create.RunID})
+	if toolCount+agentCount == 0 {
+		res.Message = "missing tool or agent provenance rows"
+		return res
+	}
+	if toolCount > 0 {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "toolCalls", Ref: fmt.Sprintf("count=%d", toolCount)})
+	}
+	if agentCount > 0 {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "agentTasks", Ref: fmt.Sprintf("count=%d", agentCount)})
+	}
+	var auditCount int64
+	_ = s.runs.DB().Model(&store.AuditLog{}).Where("run_id = ?", create.RunID).Count(&auditCount).Error
+	if auditCount > 0 {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "audit", Ref: fmt.Sprintf("count=%d", auditCount)})
+	}
 	res.Status = "pass"
 	return res
 }

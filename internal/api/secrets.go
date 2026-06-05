@@ -73,6 +73,9 @@ func (h *Handler) createSecret(c *gin.Context) {
 		return
 	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
 	if !h.requirePermission(c, permSecretWrite, space) {
 		return
 	}
@@ -200,8 +203,7 @@ func (h *Handler) secretByID(c *gin.Context, id, permission string) (store.Secre
 		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("SECRET_NOT_FOUND", "secret not found"))
 		return row, false
 	}
-	if row.SpaceID != currentSpace(c) {
-		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("SECRET_NOT_FOUND", "secret not found"))
+	if !h.requireRequestSpace(c, row.SpaceID) {
 		return row, false
 	}
 	if !h.requirePermission(c, permission, row.SpaceID) {

@@ -72,9 +72,6 @@ func (h *Handler) runDoctor(c *gin.Context) {
 		return
 	}
 	suite := req.Suite
-	if suite == "ALL" {
-		suite = "TR0"
-	}
 	rep, err := h.doctor.RunSuite(suite)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("DOCTOR_FAILED", err.Error()))

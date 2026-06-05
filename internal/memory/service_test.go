@@ -374,3 +374,30 @@ func TestMemoryEventsOnRunSSE(t *testing.T) {
 		}
 	}
 }
+
+func TestCreateCandidateGovernanceHints(t *testing.T) {
+	svc, _, _ := newTestMemory(t)
+	confidence := 0.9
+	base, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L1", Title: "Governance hint", Body: "Always run doctor before release.",
+		ScopeRepo: "ash", Evidence: []EvidenceInput{{Kind: "file", Ref: "doc/hint.md"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Review(base.CandidateID, ReviewRequest{
+		Decision: "approve", Reason: "baseline", PolicyProfile: "default", Confidence: &confidence,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	dup, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L1", Title: "Governance hint", Body: "Always run doctor before release.",
+		ScopeRepo: "ash", Evidence: []EvidenceInput{{Kind: "file", Ref: "doc/hint.md"}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dup.Governance == nil || len(dup.Governance.Duplicates) == 0 {
+		t.Fatalf("governance=%+v want duplicate hint", dup.Governance)
+	}
+}

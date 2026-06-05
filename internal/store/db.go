@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/glebarez/sqlite"
 	"gorm.io/driver/postgres"
-	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 )
@@ -41,6 +41,9 @@ func OpenWithDatabaseURL(dataDir, databaseURL string) (*DB, error) {
 
 	db := &DB{DB: gdb, dataDir: dataDir, dialect: target.dialect}
 	if err := db.migrate(); err != nil {
+		return nil, err
+	}
+	if err := attachDualWrite(db, dataDir); err != nil {
 		return nil, err
 	}
 	return db, nil
@@ -77,8 +80,8 @@ func resolveDatabaseTarget(dataDir, databaseURL string) (databaseTarget, error) 
 			rest = defaultSQLite
 		} else if strings.HasPrefix(strings.ToLower(rest), "file:") {
 			// Keep SQLite URI filenames intact, e.g. file::memory:?cache=shared.
-		} else if !filepath.IsAbs(rest) {
-			rest = filepath.Join(dataDir, rest)
+		} else {
+			rest = resolveSQLiteFilePath(dataDir, rest)
 		}
 		return databaseTarget{dialect: "sqlite", dsn: rest}, nil
 	case strings.HasPrefix(lower, "sqlite:"):
@@ -100,6 +103,20 @@ func resolveDatabaseTarget(dataDir, databaseURL string) (databaseTarget, error) 
 
 func looksLikePostgresKeywordDSN(lower string) bool {
 	return strings.Contains(lower, "host=") || strings.Contains(lower, "dbname=") || strings.Contains(lower, "sslmode=")
+}
+
+// resolveSQLiteFilePath normalizes sqlite:// paths (incl. sqlite:///C:/ on Windows).
+func resolveSQLiteFilePath(dataDir, rest string) string {
+	path := rest
+	if strings.HasPrefix(path, "/") {
+		if trimmed := strings.TrimPrefix(path, "/"); filepath.IsAbs(trimmed) {
+			path = trimmed
+		}
+	}
+	if filepath.IsAbs(path) {
+		return path
+	}
+	return filepath.Join(dataDir, path)
 }
 
 func (db *DB) migrate() error {
@@ -133,6 +150,7 @@ func (db *DB) migrate() error {
 		&AuditExport{},
 		&AuditPolicy{},
 		&PluginRegistry{},
+		&ImproveProposal{},
 		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate: %w", err)
@@ -162,4 +180,16 @@ func (db *DB) Dialect() string { return db.dialect }
 
 func (db *DB) RunDir(runID string) string {
 	return filepath.Join(db.dataDir, "runs", runID)
+}
+
+// Close releases the underlying database connection (required on Windows before temp dirs are removed).
+func (db *DB) Close() error {
+	if db == nil || db.DB == nil {
+		return nil
+	}
+	sqlDB, err := db.DB.DB()
+	if err != nil {
+		return err
+	}
+	return sqlDB.Close()
 }

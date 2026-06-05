@@ -102,8 +102,8 @@ func TestSecretsAreSpaceScopedEncryptedAndAudited(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer "+otherToken)
 	req.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(w, req)
-	if w.Code != http.StatusNotFound {
-		t.Fatalf("cross-space rotate status=%d want %d body=%s", w.Code, http.StatusNotFound, w.Body.String())
+	if w.Code != http.StatusForbidden {
+		t.Fatalf("cross-space rotate status=%d want %d body=%s", w.Code, http.StatusForbidden, w.Body.String())
 	}
 
 	var audits []store.AuditLog

@@ -1,0 +1,22 @@
+# Local Postgres for ASH migration e2e (dev only).
+# Usage: bash scripts/postgres-up.sh
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ash-postgres-dev
+    environment:
+      POSTGRES_USER: ash
+      POSTGRES_PASSWORD: ash
+      POSTGRES_DB: ash
+    ports:
+      - "${ASH_POSTGRES_PORT:-5432}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ash -d ash"]
+      interval: 2s
+      timeout: 5s
+      retries: 20
+    volumes:
+      - ash_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  ash_postgres_data:

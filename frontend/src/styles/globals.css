@@ -185,6 +185,96 @@ main {
   gap: 0.5rem;
   flex-wrap: wrap;
   justify-content: flex-end;
+  align-items: center;
+}
+
+.scenario-picker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.scenario-picker select {
+  min-width: 11rem;
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 0.2rem 0.55rem;
+}
+
+.muted-line {
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem;
+}
+
+.warn-text {
+  color: var(--warn, #c47a1a);
+  font-size: 0.85rem;
+  margin: 0.35rem 0;
+}
+
+.tr2-grid {
+  grid-template-columns: repeat(auto-fit, minmax(12rem, 1fr));
+}
+
+.tr2-card .tr2-card-title {
+  font-weight: 600;
+  margin: 0.35rem 0 0.2rem;
+}
+
+.doctor-report {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.doctor-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.doctor-case-table .evidence-snippet {
+  display: inline-block;
+  max-width: 18rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: bottom;
+}
+
+.code-block.compact {
+  max-height: 8rem;
+  font-size: 0.78rem;
+}
+
+.raw-report {
+  margin-top: 0.75rem;
+}
+
+.raw-report summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 0.35rem;
+}
+
+.inline-link {
+  display: inline-block;
+  margin-top: 0.65rem;
+  color: var(--accent);
+  font-size: 0.85rem;
+  text-decoration: none;
+}
+
+.inline-link:hover {
+  text-decoration: underline;
 }
 
 .btn {

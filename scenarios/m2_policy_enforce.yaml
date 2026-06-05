@@ -1,0 +1,20 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "m2_policy_enforce"
+  scenarioVersion: "1.0.0"
+  description: "M2 scenario tool matrix enforcement probe"
+  policyProfile: "default"
+
+  roles:
+    Reviewer: { maxParallel: 1 }
+
+  inputs:
+    required: [issueOrSpec]
+
+  steps:
+    - id: "review.patch"
+      role: "Reviewer"
+      kind: "tool_chain"
+      chain:
+        - { tool: "apply_patch", timeoutMs: 30000 }

@@ -19,10 +19,7 @@ import (
 
 func newPlatformTestRouter(t *testing.T) (*gin.Engine, *store.DB) {
 	t.Helper()
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	loader := rules.NewLoader(filepath.Join("..", "..", "scenarios"))
 	if err := loader.LoadDir(); err != nil {
 		t.Fatal(err)
@@ -225,11 +222,11 @@ func TestCreateOrgAndSpaceProvisionGovernanceRows(t *testing.T) {
 	}
 
 	var scopes []store.ResourceScope
-	if err := db.Where("space_id = ? AND resource_type = ? AND resource_id = ?", space.ID, "space", space.ID).Find(&scopes).Error; err != nil {
+	if err := db.Where("space_id = ?", space.ID).Find(&scopes).Error; err != nil {
 		t.Fatal(err)
 	}
-	if len(scopes) != 1 {
-		t.Fatalf("resource scopes=%d want 1", len(scopes))
+	if len(scopes) != 4 {
+		t.Fatalf("resource scopes=%d want 4 (space + 3 scenarios)", len(scopes))
 	}
 	var audits []store.AuditLog
 	if err := db.Where("event_type IN ?", []string{"org.created", "space.created"}).Find(&audits).Error; err != nil {

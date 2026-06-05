@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/rag"
@@ -57,6 +58,7 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		PolicyProfile:   policy,
 		Status:          "running",
 		SpaceID:         firstNonEmpty(req.SpaceID, "local"),
+		ActorRole:       firstNonEmpty(req.ActorRole, "maintainer"),
 		InputsDigest:    inputsDigest,
 		StartedAt:       now,
 		CreatedAt:       now,
@@ -89,6 +91,7 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		Scenario:      req.Scenario,
 		Inputs:        req.Inputs,
 		PolicyProfile: policy,
+		ActorRole:     rec.ActorRole,
 		Repo:          req.Repo,
 		SourceRunID:   opts.sourceRunID,
 		ReplayMode:    opts.replayMode,
@@ -117,10 +120,11 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 	_ = s.writeAudit(runID, traceID, "run.started", startedPayload)
 
 	if err := s.executeSteps(&rec, req, doc, eng, now); err != nil {
+		resp := &CreateResponse{RunID: runID, TraceID: traceID}
 		if errors.Is(err, ErrWaitingApproval) {
-			return &CreateResponse{RunID: runID, TraceID: traceID}, nil
+			return resp, nil
 		}
-		return nil, err
+		return resp, err
 	}
 	return &CreateResponse{RunID: runID, TraceID: traceID}, nil
 }
@@ -213,6 +217,15 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			lastToolStep.id = step.ID
 			lastToolStep.role = step.Role
 			for _, item := range step.Chain {
+				if denied, reason := s.scenarioToolDenied(rec, item.Tool); denied {
+					_, _ = s.events.Append(runID, traceID, "policy.denied", "warn", map[string]any{
+						"target": "tool", "reason": reason, "action": "deny", "ref": item.Tool,
+						"matrix": "scenario", "actorRole": rec.ActorRole,
+					})
+					s.finishStep(stepRow, "failed", stepStart, "POLICY_DENIED", reason)
+					_, ferr := s.failRun(rec, runID, traceID, started, "POLICY_DENIED", reason)
+					return ferr
+				}
 				risk := string(s.tools.ToolRisk(item.Tool))
 				if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
@@ -710,6 +723,15 @@ func toolFailureClass(res toolbus.Result, timeoutMs int64) string {
 		return "unknown_tool"
 	}
 	return "error"
+}
+
+func (s *Service) scenarioToolDenied(rec *store.RunRecord, tool string) (bool, string) {
+	policy, err := authz.LoadScenarioPolicy(s.db, rec.SpaceID, rec.ScenarioName, rec.ScenarioVersion)
+	if err != nil {
+		return false, ""
+	}
+	ok, reason := authz.EvaluateScenarioTool(policy, rec.ActorRole, tool)
+	return !ok, reason
 }
 
 func (s *Service) dangerousToolAllowed(inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {

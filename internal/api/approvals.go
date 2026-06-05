@@ -135,8 +135,11 @@ func (h *Handler) rejectApproval(c *gin.Context) {
 
 func (h *Handler) lookupApproval(c *gin.Context) (*store.ApprovalRequest, bool) {
 	var row store.ApprovalRequest
-	if err := h.db.First(&row, "id = ? AND space_id = ?", c.Param("approvalId"), currentSpace(c)).Error; err != nil {
+	if err := h.db.First(&row, "id = ?", c.Param("approvalId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("APPROVAL_NOT_FOUND", "approval not found"))
+		return nil, false
+	}
+	if !h.requireRequestSpace(c, row.SpaceID) {
 		return nil, false
 	}
 	return &row, true
