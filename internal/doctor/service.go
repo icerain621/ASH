@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/artifacts"
-	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
@@ -1288,18 +1288,22 @@ func (s *Service) m3PostgresMigrateVerify() CaseResult {
 	res := CaseResult{ID: "M3-04", Status: "fail"}
 	if os.Getenv("ASH_MIGRATE_E2E") != "1" {
 		res.Status = "pass"
-		res.Message = "skipped: set ASH_MIGRATE_E2E=1 for live sqlite→postgres verify"
+		res.Message = "skipped: set ASH_MIGRATE_E2E=1 and ASH_MIGRATE_POSTGRES_URL for live sqlite→postgres verify"
 		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_MIGRATE_E2E"})
 		return res
 	}
-	pgURL := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	pgURL := strings.TrimSpace(os.Getenv("ASH_MIGRATE_POSTGRES_URL"))
 	if pgURL == "" {
-		res.Message = "ASH_DATABASE_URL is required for migrate e2e"
+		res.Message = "ASH_MIGRATE_POSTGRES_URL is required for migrate e2e target"
 		return res
 	}
 	target, err := store.ParseDatabaseTarget(s.dataDir, pgURL)
-	if err != nil || target.Dialect != "postgres" {
-		res.Message = fmt.Sprintf("postgres url invalid: %v", err)
+	if err != nil {
+		res.Message = fmt.Sprintf("ASH_MIGRATE_POSTGRES_URL invalid: %v", err)
+		return res
+	}
+	if target.Dialect != "postgres" {
+		res.Message = fmt.Sprintf("ASH_MIGRATE_POSTGRES_URL dialect=%q want postgres", target.Dialect)
 		return res
 	}
 	sqlitePath := store.DefaultSQLitePath(s.dataDir)
@@ -1332,7 +1336,7 @@ func (s *Service) m3PostgresMigrateVerify() CaseResult {
 	}
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "migrationVerify", Ref: fmt.Sprintf("%d tables", len(plan.Tables))},
-		Evidence{Kind: "postgresURL", Ref: "live"},
+		Evidence{Kind: "postgresURL", Ref: "ASH_MIGRATE_POSTGRES_URL"},
 	)
 	res.Status = "pass"
 	return res

@@ -15,6 +15,8 @@ export ASH_POSTGRES_PORT="$PORT"
 
 docker compose -f docker-compose.postgres.yml up -d --wait
 
-export ASH_DATABASE_URL="postgres://ash:ash@127.0.0.1:${PORT}/ash?sslmode=disable"
-echo "ASH_DATABASE_URL=${ASH_DATABASE_URL}"
+POSTGRES_URL="postgres://ash:ash@127.0.0.1:${PORT}/ash?sslmode=disable"
 echo "Postgres ready (container: ash-postgres-dev)"
+echo "Port: ${PORT} (override with ASH_POSTGRES_PORT=<port>)"
+echo "Run this in your shell when you want ASH to use Postgres as the primary database:"
+echo "export ASH_DATABASE_URL='${POSTGRES_URL}'"

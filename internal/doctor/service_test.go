@@ -194,6 +194,33 @@ func TestM3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M3-04", "skipped")
 }
 
+func TestM3SuiteMigrateE2ERequiresPostgresTarget(t *testing.T) {
+	t.Setenv("ASH_MIGRATE_E2E", "1")
+	t.Setenv("ASH_MIGRATE_POSTGRES_URL", "")
+
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Fail != 1 {
+		t.Fatalf("fail=%d want 1 results=%+v", rep.Summary.Fail, rep.Results)
+	}
+	for _, result := range rep.Results {
+		if result.ID != "M3-04" {
+			continue
+		}
+		if result.Status != "fail" {
+			t.Fatalf("M3-04 status=%s want fail", result.Status)
+		}
+		if result.Message != "ASH_MIGRATE_POSTGRES_URL is required for migrate e2e target" {
+			t.Fatalf("M3-04 message=%q", result.Message)
+		}
+		return
+	}
+	t.Fatal("missing M3-04")
+}
+
 func TestALLSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("ALL suite is slow; run without -short")
