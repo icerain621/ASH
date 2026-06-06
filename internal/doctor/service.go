@@ -8,8 +8,8 @@ import (
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/artifacts"
-	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
@@ -98,6 +98,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m3PostgresReadiness())
 		rep.Results = append(rep.Results, s.m3MigrationCatalog())
 		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
+		rep.Results = append(rep.Results, s.m3ExecGoLiveSmoke())
 	case "TR3":
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
@@ -129,6 +130,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m3PostgresReadiness())
 		rep.Results = append(rep.Results, s.m3MigrationCatalog())
 		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
+		rep.Results = append(rep.Results, s.m3ExecGoLiveSmoke())
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
@@ -1335,6 +1337,52 @@ func (s *Service) m3PostgresMigrateVerify() CaseResult {
 		Evidence{Kind: "postgresURL", Ref: "live"},
 	)
 	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3ExecGoLiveSmoke() CaseResult {
+	res := CaseResult{ID: "M3-05", Status: "fail"}
+	if os.Getenv("ASH_EXECGO_E2E") != "1" {
+		res.Status = "pass"
+		res.Message = "skipped: set ASH_EXECGO_E2E=1 for live ExecGo/Codex smoke"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_EXECGO_E2E"})
+		return res
+	}
+	if s.runs.AgentAdapter() == "static" {
+		res.Message = "ASH_EXECGO_E2E=1 requires --agent execgo_codex"
+		return res
+	}
+	create, _, err := s.createProbeRun("M3-05")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+	tasks, err := s.runs.AgentTasks(create.RunID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	for _, task := range tasks {
+		if task.StepID != "code.implement" {
+			continue
+		}
+		if task.Status != "success" {
+			res.Message = fmt.Sprintf("ExecGo task %s status=%s error=%s", task.ID, task.Status, task.ErrorCode)
+			return res
+		}
+		if task.ExecGoTaskID == "" {
+			res.Message = fmt.Sprintf("ExecGo task %s missing execGoTaskId", task.ID)
+			return res
+		}
+		res.Evidence = append(res.Evidence,
+			Evidence{Kind: "execgoTask", Ref: task.ExecGoTaskID},
+			Evidence{Kind: "agentTask", Ref: task.ID, Digest: task.PromptDigest},
+		)
+		res.Status = "pass"
+		return res
+	}
+	res.Message = "missing code.implement ExecGo agent task"
 	return res
 }
 

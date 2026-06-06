@@ -6,6 +6,8 @@ import (
 )
 
 var ErrBridgeUnavailable = errors.New("agent bridge unavailable")
+var ErrAgentTaskFailed = errors.New("agent task failed")
+var ErrAgentOutputInvalid = errors.New("agent output invalid")
 
 // Request describes one external-agent step execution.
 type Request struct {
