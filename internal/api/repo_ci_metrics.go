@@ -38,6 +38,18 @@ type CIRunListResponse struct {
 	Items []store.CIRun `json:"items"`
 }
 
+type CIJobListResponse struct {
+	Items []store.CIJob `json:"items"`
+}
+
+type CIDiagnosisListResponse struct {
+	Items []ci.DiagnosisResponse `json:"items"`
+}
+
+type decideCIDiagnosisRequest struct {
+	Reason string `json:"reason,omitempty"`
+}
+
 // CreateRepoConnection godoc
 // @Summary Create a GitHub repository connection
 // @Tags repo
@@ -139,6 +151,32 @@ func (h *Handler) listCIRuns(c *gin.Context) {
 	c.JSON(http.StatusOK, CIRunListResponse{Items: rows})
 }
 
+// ListCIJobs godoc
+// @Summary List CI workflow jobs
+// @Tags ci
+// @Produce json
+// @Param runId query string false "ci run id"
+// @Param limit query int false "max items" default(50)
+// @Param sync query bool false "sync from GitHub before listing"
+// @Success 200 {object} CIJobListResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/ci/jobs [get]
+func (h *Handler) listCIJobs(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permCIRead, space) {
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	sync := strings.EqualFold(c.Query("sync"), "true") || c.Query("sync") == "1"
+	rows, err := h.ci.ListJobs(c.Request.Context(), space, c.Query("runId"), limit, sync)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("CI_JOB_LIST_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, CIJobListResponse{Items: rows})
+}
+
 // DiagnoseCIFailure godoc
 // @Summary Diagnose a CI failure using deterministic rules
 // @Tags ci
@@ -170,6 +208,88 @@ func (h *Handler) diagnoseCIFailure(c *gin.Context) {
 	_ = h.db.Create(auditRow(space, currentActor(c), "ci.failure_diagnosed", map[string]any{
 		"diagnosisId": resp.ID, "connectionId": resp.ConnectionID, "runId": resp.RunID, "jobId": resp.JobID,
 		"rootCause": resp.RootCause, "confidence": resp.Confidence,
+	}))
+	c.JSON(http.StatusOK, resp)
+}
+
+// ListCIDiagnoses godoc
+// @Summary List CI failure diagnoses
+// @Tags ci
+// @Produce json
+// @Param connectionId query string false "repo connection id"
+// @Param runId query string false "ci run id"
+// @Param jobId query string false "ci job id"
+// @Param decisionStatus query string false "pending|adopted|dismissed"
+// @Param limit query int false "max items" default(50)
+// @Success 200 {object} CIDiagnosisListResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/ci/diagnoses [get]
+func (h *Handler) listCIDiagnoses(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permCIRead, space) {
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	rows, err := h.ci.ListDiagnoses(ci.ListDiagnosesRequest{
+		SpaceID: space, ConnectionID: c.Query("connectionId"), RunID: c.Query("runId"),
+		JobID: c.Query("jobId"), DecisionStatus: c.Query("decisionStatus"), Limit: limit,
+	})
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("CI_DIAGNOSIS_LIST_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, CIDiagnosisListResponse{Items: rows})
+}
+
+// AdoptCIDiagnosis godoc
+// @Summary Mark a CI diagnosis as adopted
+// @Tags ci
+// @Accept json
+// @Produce json
+// @Param diagnosisId path string true "diagnosis id"
+// @Param body body decideCIDiagnosisRequest false "decision reason"
+// @Success 200 {object} ci.DiagnosisResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/ci/diagnoses/{diagnosisId}/adopt [post]
+func (h *Handler) adoptCIDiagnosis(c *gin.Context) {
+	h.decideCIDiagnosis(c, "adopted")
+}
+
+// DismissCIDiagnosis godoc
+// @Summary Mark a CI diagnosis as dismissed
+// @Tags ci
+// @Accept json
+// @Produce json
+// @Param diagnosisId path string true "diagnosis id"
+// @Param body body decideCIDiagnosisRequest false "decision reason"
+// @Success 200 {object} ci.DiagnosisResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/ci/diagnoses/{diagnosisId}/dismiss [post]
+func (h *Handler) dismissCIDiagnosis(c *gin.Context) {
+	h.decideCIDiagnosis(c, "dismissed")
+}
+
+func (h *Handler) decideCIDiagnosis(c *gin.Context, decision string) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permCIDiagnose, space) {
+		return
+	}
+	var req decideCIDiagnosisRequest
+	_ = c.ShouldBindJSON(&req)
+	resp, err := h.ci.DecideDiagnosis(ci.DecideDiagnosisRequest{
+		SpaceID: space, DiagnosisID: c.Param("diagnosisId"), Decision: decision,
+		Reason: req.Reason, ActorID: currentActor(c),
+	})
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("CI_DIAGNOSIS_DECISION_FAILED", err.Error()))
+		return
+	}
+	_ = h.db.Create(auditRow(space, currentActor(c), "ci.diagnosis_decided", map[string]any{
+		"diagnosisId": resp.ID, "decision": decision, "reason": req.Reason,
+		"connectionId": resp.ConnectionID, "runId": resp.RunID, "jobId": resp.JobID,
 	}))
 	c.JSON(http.StatusOK, resp)
 }

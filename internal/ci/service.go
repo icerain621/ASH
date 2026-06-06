@@ -63,8 +63,30 @@ type DiagnosisResponse struct {
 	FixSuggestions []string `json:"fixSuggestions"`
 	EvidenceRefs   []string `json:"evidenceRefs"`
 	Confidence     float64  `json:"confidence"`
+	Adopted        bool     `json:"adopted"`
+	DecisionStatus string   `json:"decisionStatus"`
+	DecisionReason string   `json:"decisionReason,omitempty"`
+	DecidedBy      string   `json:"decidedBy,omitempty"`
+	DecidedAt      string   `json:"decidedAt,omitempty"`
 	LogDigest      string   `json:"logDigest,omitempty"`
 	CreatedAt      string   `json:"createdAt"`
+}
+
+type ListDiagnosesRequest struct {
+	SpaceID        string
+	ConnectionID   string
+	RunID          string
+	JobID          string
+	DecisionStatus string
+	Limit          int
+}
+
+type DecideDiagnosisRequest struct {
+	SpaceID     string
+	DiagnosisID string
+	Decision    string
+	Reason      string
+	ActorID     string
 }
 
 type PatternRule struct {
@@ -153,6 +175,74 @@ func (s *Service) ListRuns(ctx context.Context, spaceID, connectionID string, li
 	return rows, err
 }
 
+func (s *Service) ListJobs(ctx context.Context, spaceID, runID string, limit int, sync bool) ([]store.CIJob, error) {
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	spaceID = firstNonEmpty(spaceID, "local")
+	runID = strings.TrimSpace(runID)
+	if sync {
+		if runID == "" {
+			return nil, fmt.Errorf("runId is required when sync=true")
+		}
+		if err := s.SyncJobs(ctx, spaceID, runID); err != nil {
+			return nil, err
+		}
+	}
+	q := s.db.Where("space_id = ?", spaceID)
+	if runID != "" {
+		q = q.Where("ci_run_id = ?", runID)
+	}
+	var rows []store.CIJob
+	err := q.Order("created_at desc").Limit(limit).Find(&rows).Error
+	return rows, err
+}
+
+func (s *Service) SyncJobs(ctx context.Context, spaceID, runID string) error {
+	spaceID = firstNonEmpty(spaceID, "local")
+	var run store.CIRun
+	if err := s.db.First(&run, "id = ? AND space_id = ?", strings.TrimSpace(runID), spaceID).Error; err != nil {
+		return fmt.Errorf("ci run not found: %w", err)
+	}
+	conn, err := s.connection(spaceID, run.ConnectionID)
+	if err != nil {
+		return err
+	}
+	provider, ok := s.providers[normalizeProvider(conn.Provider)]
+	if !ok || provider == nil {
+		return fmt.Errorf("provider %q is not configured", conn.Provider)
+	}
+	token, err := s.resolveSecret(conn.SpaceID, conn.SecretID)
+	if err != nil {
+		return err
+	}
+	jobs, err := provider.GetRunJobs(ctx, conn, token, run.ProviderRunID)
+	if err != nil {
+		return err
+	}
+	now := time.Now().UTC()
+	for _, row := range jobs {
+		row.SpaceID = conn.SpaceID
+		row.ConnectionID = conn.ID
+		row.CIRunID = run.ID
+		row.UpdatedAt = now
+		if row.CreatedAt.IsZero() {
+			row.CreatedAt = now
+		}
+		if row.Attempt == 0 {
+			row.Attempt = run.Attempt
+		}
+		if row.ID == "" {
+			row.ID = "ci_job_" + uuid.NewString()
+		}
+		if err := s.db.Where("connection_id = ? AND provider_job_id = ?", conn.ID, row.ProviderJobID).
+			Assign(row).FirstOrCreate(&store.CIJob{}).Error; err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func (s *Service) SyncRuns(ctx context.Context, spaceID, connectionID string, limit int) error {
 	conn, err := s.connection(spaceID, connectionID)
 	if err != nil {
@@ -226,6 +316,13 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 			runID = job.CIRunID
 		}
 	}
+	if conn.ID == "" && connID != "" {
+		var err error
+		conn, err = s.connection(spaceID, connID)
+		if err != nil {
+			return DiagnosisResponse{}, err
+		}
+	}
 	if strings.TrimSpace(logText) == "" && job.ProviderJobID != "" && conn.ID != "" {
 		provider, ok := s.providers[normalizeProvider(conn.Provider)]
 		if !ok || provider == nil {
@@ -240,6 +337,11 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 			return DiagnosisResponse{}, err
 		}
 		logText = fetched
+		if digest := digestText(logText); digest != "" && job.ID != "" {
+			_ = s.db.Model(&store.CIJob{}).
+				Where("id = ? AND space_id = ?", job.ID, spaceID).
+				Updates(map[string]any{"log_digest": digest, "updated_at": time.Now().UTC()}).Error
+		}
 	}
 	if strings.TrimSpace(logText) == "" {
 		return DiagnosisResponse{}, fmt.Errorf("logText is required unless a connected job can provide logs")
@@ -257,6 +359,7 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 		FixSuggestionsJSON: mustJSON(out.FixSuggestions),
 		EvidenceRefsJSON:   mustJSON(out.EvidenceRefs),
 		Confidence:         out.Confidence,
+		DecisionStatus:     "pending",
 		LogDigest:          out.LogDigest,
 		CreatedAt:          now,
 		UpdatedAt:          now,
@@ -269,8 +372,93 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 	out.ConnectionID = row.ConnectionID
 	out.RunID = row.CIRunID
 	out.JobID = row.CIJobID
+	out.Adopted = row.Adopted
+	out.DecisionStatus = row.DecisionStatus
+	out.DecisionReason = row.DecisionReason
+	out.DecidedBy = row.DecidedBy
+	if row.DecidedAt != nil {
+		out.DecidedAt = row.DecidedAt.Format(time.RFC3339)
+	}
 	out.CreatedAt = row.CreatedAt.Format(time.RFC3339)
 	return out, nil
+}
+
+func (s *Service) ListDiagnoses(req ListDiagnosesRequest) ([]DiagnosisResponse, error) {
+	spaceID := firstNonEmpty(req.SpaceID, "local")
+	limit := req.Limit
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	q := s.db.Where("space_id = ?", spaceID)
+	if strings.TrimSpace(req.ConnectionID) != "" {
+		q = q.Where("connection_id = ?", strings.TrimSpace(req.ConnectionID))
+	}
+	if strings.TrimSpace(req.RunID) != "" {
+		q = q.Where("ci_run_id = ?", strings.TrimSpace(req.RunID))
+	}
+	if strings.TrimSpace(req.JobID) != "" {
+		q = q.Where("ci_job_id = ?", strings.TrimSpace(req.JobID))
+	}
+	if strings.TrimSpace(req.DecisionStatus) != "" {
+		q = q.Where("decision_status = ?", strings.TrimSpace(req.DecisionStatus))
+	}
+	var rows []store.CIDiagnosis
+	if err := q.Order("created_at desc").Limit(limit).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]DiagnosisResponse, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, diagnosisFromRow(row))
+	}
+	return out, nil
+}
+
+func (s *Service) DecideDiagnosis(req DecideDiagnosisRequest) (DiagnosisResponse, error) {
+	decision := strings.TrimSpace(strings.ToLower(req.Decision))
+	if decision != "adopted" && decision != "dismissed" {
+		return DiagnosisResponse{}, fmt.Errorf("decision must be adopted or dismissed")
+	}
+	spaceID := firstNonEmpty(req.SpaceID, "local")
+	var row store.CIDiagnosis
+	if err := s.db.First(&row, "id = ? AND space_id = ?", strings.TrimSpace(req.DiagnosisID), spaceID).Error; err != nil {
+		return DiagnosisResponse{}, fmt.Errorf("ci diagnosis not found: %w", err)
+	}
+	now := time.Now().UTC()
+	row.DecisionStatus = decision
+	row.Adopted = decision == "adopted"
+	row.DecisionReason = strings.TrimSpace(req.Reason)
+	row.DecidedBy = strings.TrimSpace(req.ActorID)
+	row.DecidedAt = &now
+	row.UpdatedAt = now
+	if err := s.db.Save(&row).Error; err != nil {
+		return DiagnosisResponse{}, err
+	}
+	return diagnosisFromRow(row), nil
+}
+
+func diagnosisFromRow(row store.CIDiagnosis) DiagnosisResponse {
+	out := DiagnosisResponse{
+		ID:             row.ID,
+		SpaceID:        row.SpaceID,
+		ConnectionID:   row.ConnectionID,
+		RunID:          row.CIRunID,
+		JobID:          row.CIJobID,
+		Status:         row.Status,
+		RootCause:      row.RootCause,
+		FixSuggestions: parseJSONArray(row.FixSuggestionsJSON),
+		EvidenceRefs:   parseJSONArray(row.EvidenceRefsJSON),
+		Confidence:     row.Confidence,
+		Adopted:        row.Adopted,
+		DecisionStatus: firstNonEmpty(row.DecisionStatus, "pending"),
+		DecisionReason: row.DecisionReason,
+		DecidedBy:      row.DecidedBy,
+		LogDigest:      row.LogDigest,
+		CreatedAt:      row.CreatedAt.Format(time.RFC3339),
+	}
+	if row.DecidedAt != nil {
+		out.DecidedAt = row.DecidedAt.Format(time.RFC3339)
+	}
+	return out
 }
 
 func DiagnoseLog(logText string) DiagnosisResponse {
@@ -438,6 +626,14 @@ func trimLine(line string) string {
 func mustJSON(values []string) string {
 	raw, _ := json.Marshal(values)
 	return string(raw)
+}
+
+func parseJSONArray(raw string) []string {
+	var values []string
+	if err := json.Unmarshal([]byte(firstNonEmpty(raw, "[]")), &values); err != nil {
+		return []string{}
+	}
+	return values
 }
 
 func firstNonEmpty(values ...string) string {

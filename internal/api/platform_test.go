@@ -1378,6 +1378,65 @@ func TestFeedbackRejectsUnauthorizedTargetSpace(t *testing.T) {
 	}
 }
 
+func TestFeedbackListUpdateAndLowScoreAlert(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+
+	createBody := []byte(`{"targetType":"ci_diagnosis","targetId":"ci_diag_1","rating":1,"category":"ci","comment":"失败定位不准"}`)
+	createResp := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", bytes.NewReader(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createResp, createReq)
+	if createResp.Code != http.StatusCreated {
+		t.Fatalf("create status=%d want 201 body=%s", createResp.Code, createResp.Body.String())
+	}
+	var fb store.Feedback
+	if err := json.Unmarshal(createResp.Body.Bytes(), &fb); err != nil {
+		t.Fatal(err)
+	}
+	if fb.Category != "ci" || fb.Status != "open" || fb.Severity != "warn" {
+		t.Fatalf("feedback=%+v want normalized fields", fb)
+	}
+	var alertsCount int64
+	if err := db.Model(&store.AlertEvent{}).Where("target_id = ?", fb.ID).Count(&alertsCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if alertsCount != 1 {
+		t.Fatalf("alerts=%d want 1", alertsCount)
+	}
+
+	listResp := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/feedback?category=ci&status=open", nil)
+	r.ServeHTTP(listResp, listReq)
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list status=%d want 200 body=%s", listResp.Code, listResp.Body.String())
+	}
+	var list struct {
+		Items []store.Feedback `json:"items"`
+	}
+	if err := json.Unmarshal(listResp.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].ID != fb.ID {
+		t.Fatalf("list=%+v want feedback", list)
+	}
+
+	patchResp := httptest.NewRecorder()
+	patchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/feedback/"+fb.ID, bytes.NewReader([]byte(`{"status":"resolved","severity":"info"}`)))
+	patchReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(patchResp, patchReq)
+	if patchResp.Code != http.StatusOK {
+		t.Fatalf("patch status=%d want 200 body=%s", patchResp.Code, patchResp.Body.String())
+	}
+	var updated store.Feedback
+	if err := json.Unmarshal(patchResp.Body.Bytes(), &updated); err != nil {
+		t.Fatal(err)
+	}
+	if updated.Status != "resolved" || updated.Severity != "info" {
+		t.Fatalf("updated=%+v want resolved/info", updated)
+	}
+}
+
 func TestArtifactAccessUsesRunSpacePermissionAndAudits(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "jwt")
 	t.Setenv("ASH_JWT_SECRET", "test-secret")

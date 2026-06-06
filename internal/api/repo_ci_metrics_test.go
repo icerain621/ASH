@@ -56,13 +56,50 @@ func TestRepoConnectionAndCIDiagnoseAPI(t *testing.T) {
 		t.Fatalf("status=%d want 200 body=%s", diagResp.Code, diagResp.Body.String())
 	}
 	var diag struct {
-		RootCause string `json:"rootCause"`
+		ID             string `json:"id"`
+		RootCause      string `json:"rootCause"`
+		DecisionStatus string `json:"decisionStatus"`
 	}
 	if err := json.Unmarshal(diagResp.Body.Bytes(), &diag); err != nil {
 		t.Fatal(err)
 	}
 	if diag.RootCause != "test_failure" {
 		t.Fatalf("diag=%+v want test_failure", diag)
+	}
+	listResp := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/ci/diagnoses?connectionId="+conn.ID, nil)
+	r.ServeHTTP(listResp, listReq)
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list status=%d want 200 body=%s", listResp.Code, listResp.Body.String())
+	}
+	var list struct {
+		Items []struct {
+			ID             string `json:"id"`
+			DecisionStatus string `json:"decisionStatus"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(listResp.Body.Bytes(), &list); err != nil {
+		t.Fatal(err)
+	}
+	if len(list.Items) != 1 || list.Items[0].DecisionStatus != "pending" {
+		t.Fatalf("list=%+v want pending diagnosis", list)
+	}
+	adoptResp := httptest.NewRecorder()
+	adoptReq := httptest.NewRequest(http.MethodPost, "/api/v1/ci/diagnoses/"+diag.ID+"/adopt", bytes.NewReader([]byte(`{"reason":"fix matched"}`)))
+	adoptReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(adoptResp, adoptReq)
+	if adoptResp.Code != http.StatusOK {
+		t.Fatalf("adopt status=%d want 200 body=%s", adoptResp.Code, adoptResp.Body.String())
+	}
+	var adopted struct {
+		Adopted        bool   `json:"adopted"`
+		DecisionStatus string `json:"decisionStatus"`
+	}
+	if err := json.Unmarshal(adoptResp.Body.Bytes(), &adopted); err != nil {
+		t.Fatal(err)
+	}
+	if !adopted.Adopted || adopted.DecisionStatus != "adopted" {
+		t.Fatalf("adopted=%+v want adopted", adopted)
 	}
 	var count int64
 	if err := db.Model(&store.CIDiagnosis{}).Where("connection_id = ?", conn.ID).Count(&count).Error; err != nil {
