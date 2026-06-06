@@ -4,6 +4,7 @@ import { AutomationPage } from "../pages/AutomationPage";
 import { DoctorPage } from "../pages/DoctorPage";
 import { FeedbackPage } from "../pages/FeedbackPage";
 import { MemoryPage } from "../pages/MemoryPage";
+import { MetricsPage } from "../pages/MetricsPage";
 import { RunsPage } from "../pages/RunsPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
@@ -43,6 +44,12 @@ const feedbackRoute = createRoute({
   component: FeedbackPage,
 });
 
+const metricsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/metrics",
+  component: MetricsPage,
+});
+
 const spaceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/space",
@@ -73,6 +80,7 @@ const routeTree = rootRoute.addChildren([
   memoryRoute,
   automationRoute,
   feedbackRoute,
+  metricsRoute,
   spaceRoute,
   complianceRoute,
   scaleRoute,

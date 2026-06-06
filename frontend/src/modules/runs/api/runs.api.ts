@@ -356,7 +356,8 @@ export type RunProvenance = {
 
 function normalizeProvenance(raw: RawRecord): RunProvenance {
   const scenario = (raw.scenario ?? raw.Scenario) as RawRecord | undefined;
-  const linksRaw = itemsFrom(raw.links ?? raw.Links);
+  const rawLinks = raw.links ?? raw.Links;
+  const linksRaw = Array.isArray(rawLinks) ? rawLinks : [];
   return {
     runId: str(raw, "runId", "RunID"),
     traceId: str(raw, "traceId", "TraceID"),
@@ -370,10 +371,13 @@ function normalizeProvenance(raw: RawRecord): RunProvenance {
     artifacts: num(raw, "artifacts", "Artifacts"),
     events: num(raw, "events", "Events"),
     modelUsage: num(raw, "modelUsage", "ModelUsage"),
-    links: linksRaw.map((item) => ({
-      kind: str(item, "kind", "Kind"),
-      ref: str(item, "ref", "Ref"),
-    })),
+    links: linksRaw.map((item) => {
+      const link = (item ?? {}) as RawRecord;
+      return {
+        kind: str(link, "kind", "Kind"),
+        ref: str(link, "ref", "Ref"),
+      };
+    }),
   };
 }
 

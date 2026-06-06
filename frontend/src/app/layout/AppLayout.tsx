@@ -1,6 +1,7 @@
 import { Link, Outlet } from "@tanstack/react-router";
 import {
   Activity,
+  BarChart3,
   Brain,
   Building2,
   Gauge,
@@ -17,6 +18,7 @@ const tabs = [
   { to: "/memory", label: "记忆", icon: Brain },
   { to: "/automation", label: "自动化", icon: Workflow },
   { to: "/feedback", label: "反馈", icon: MessageSquarePlus },
+  { to: "/metrics", label: "指标", icon: BarChart3 },
   { to: "/space", label: "空间", icon: Building2 },
   { to: "/compliance", label: "合规", icon: ShieldCheck },
   { to: "/scale", label: "规模化", icon: Gauge },

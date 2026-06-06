@@ -10,13 +10,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
+	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/secrets"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -30,20 +33,31 @@ type Handler struct {
 	doctorReports *reportStore
 	memory        *memory.Service
 	improve       *improve.Service
+	ci            *ci.Service
+	metrics       *metricssvc.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	ev := events.NewService(db)
 	tools := toolbus.DefaultBus()
 	runsSvc := runs.NewService(db, ev, scenarios, tools)
+	ciSvc := ci.NewService(db, func(spaceID, secretID string) (string, error) {
+		var row store.SecretRecord
+		if err := db.First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
+			return "", err
+		}
+		return secrets.Open(row.ValueCiphertext, config.Load().SecretKey)
+	})
 	return &Handler{
 		db:        db,
 		events:    ev,
 		scenarios: scenarios,
 		runs:      runsSvc,
 		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:  memory.NewService(db, ev),
-		improve: improve.NewService(db, runsSvc, ev),
+		memory:    memory.NewService(db, ev),
+		improve:   improve.NewService(db, runsSvc, ev),
+		ci:        ciSvc,
+		metrics:   metricssvc.NewService(db),
 	}
 }
 
@@ -112,6 +126,11 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/mcp/tools", h.listMCPTools)
 		v1.POST("/mcp/tools", h.registerMCPTool)
 		v1.POST("/feedback", h.createFeedback)
+		v1.POST("/repo/connections", h.createRepoConnection)
+		v1.GET("/repo/connections", h.listRepoConnections)
+		v1.GET("/ci/runs", h.listCIRuns)
+		v1.POST("/ci/failures/diagnose", h.diagnoseCIFailure)
+		v1.GET("/metrics/overview", h.getMetricsOverview)
 		v1.GET("/secrets", h.listSecrets)
 		v1.POST("/secrets", h.createSecret)
 		v1.POST("/secrets/:secretId/rotate", h.rotateSecret)

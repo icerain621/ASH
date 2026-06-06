@@ -227,6 +227,47 @@ main {
   margin: 0.35rem 0 0.2rem;
 }
 
+.metrics-toolbar {
+  max-width: 100%;
+}
+
+.metric-filter {
+  min-height: 2.25rem;
+  min-width: 13rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 0.2rem 0.6rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12.75rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.metrics-split {
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  min-height: 10.5rem;
+}
+
+.metric-card .pane-title {
+  align-items: flex-start;
+}
+
+.metric-value {
+  font-family: var(--mono);
+  font-size: 1.65rem;
+  line-height: 1.15;
+  font-weight: 720;
+  overflow-wrap: anywhere;
+}
+
 .doctor-report {
   display: flex;
   flex-direction: column;
@@ -926,6 +967,10 @@ main {
     grid-template-columns: 1fr;
   }
 
+  .metrics-split {
+    grid-template-columns: 1fr;
+  }
+
   .run-control {
     grid-template-columns: 1fr;
   }
@@ -970,6 +1015,11 @@ main {
   .tab,
   .btn {
     white-space: nowrap;
+  }
+
+  .metric-filter {
+    width: 100%;
+    min-width: 0;
   }
 
   .page-heading h1 {

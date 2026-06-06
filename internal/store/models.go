@@ -291,6 +291,85 @@ type Feedback struct {
 
 func (Feedback) TableName() string { return "feedback" }
 
+// RepoConnection stores a space-scoped external repository integration.
+type RepoConnection struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	Provider      string     `json:"provider" gorm:"size:32;not null;index"`
+	Owner         string     `json:"owner" gorm:"size:128;not null;index"`
+	Repo          string     `json:"repo" gorm:"size:128;not null;index"`
+	DefaultBranch string     `json:"defaultBranch" gorm:"size:128;not null;default:main"`
+	SecretID      string     `json:"secretId" gorm:"size:64;not null;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;default:active;index"`
+	LastSyncAt    *time.Time `json:"lastSyncAt,omitempty"`
+	CreatedBy     string     `json:"createdBy" gorm:"size:128"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (RepoConnection) TableName() string { return "repo_connections" }
+
+// CIRun stores a GitHub Actions workflow run snapshot for KPI and diagnosis.
+type CIRun struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID  string     `json:"connectionId" gorm:"size:64;not null;index"`
+	ProviderRunID string     `json:"providerRunId" gorm:"size:128;not null;index"`
+	Workflow      string     `json:"workflow" gorm:"size:256;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;index"`
+	Conclusion    string     `json:"conclusion" gorm:"size:32;index"`
+	Attempt       int        `json:"attempt" gorm:"not null;default:1;index"`
+	CommitSHA     string     `json:"commitSha" gorm:"size:64;index"`
+	Branch        string     `json:"branch" gorm:"size:256;index"`
+	RunURL        string     `json:"runUrl" gorm:"size:1024"`
+	StartedAt     *time.Time `json:"startedAt,omitempty" gorm:"index"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty" gorm:"index"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (CIRun) TableName() string { return "ci_runs" }
+
+// CIJob stores a GitHub Actions job snapshot and optional log digest.
+type CIJob struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID  string     `json:"connectionId" gorm:"size:64;not null;index"`
+	CIRunID       string     `json:"ciRunId" gorm:"size:64;not null;index"`
+	ProviderJobID string     `json:"providerJobId" gorm:"size:128;not null;index"`
+	Name          string     `json:"name" gorm:"size:256;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;index"`
+	Conclusion    string     `json:"conclusion" gorm:"size:32;index"`
+	Attempt       int        `json:"attempt" gorm:"not null;default:1;index"`
+	LogDigest     string     `json:"logDigest" gorm:"size:128;index"`
+	StartedAt     *time.Time `json:"startedAt,omitempty" gorm:"index"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty" gorm:"index"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (CIJob) TableName() string { return "ci_jobs" }
+
+// CIDiagnosis records deterministic diagnosis output for a CI failure.
+type CIDiagnosis struct {
+	ID                 string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID            string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID       string    `json:"connectionId" gorm:"size:64;index"`
+	CIRunID            string    `json:"ciRunId" gorm:"size:64;index"`
+	CIJobID            string    `json:"ciJobId" gorm:"size:64;index"`
+	Status             string    `json:"status" gorm:"size:32;not null;index"`
+	RootCause          string    `json:"rootCause" gorm:"size:128;not null;index"`
+	FixSuggestionsJSON string    `json:"fixSuggestionsJson" gorm:"type:text;not null;default:'[]'"`
+	EvidenceRefsJSON   string    `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	Confidence         float64   `json:"confidence"`
+	Adopted            bool      `json:"adopted" gorm:"not null;default:false;index"`
+	LogDigest          string    `json:"logDigest" gorm:"size:128;index"`
+	CreatedAt          time.Time `json:"createdAt"`
+	UpdatedAt          time.Time `json:"updatedAt"`
+}
+
+func (CIDiagnosis) TableName() string { return "ci_diagnoses" }
+
 type SecretRecord struct {
 	ID              string `gorm:"primaryKey;size:64"`
 	SpaceID         string `gorm:"size:64;not null;default:local;uniqueIndex:uniq_secret_space_name,priority:1"`

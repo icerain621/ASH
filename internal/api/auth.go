@@ -27,6 +27,8 @@ const (
 const (
 	permAuditExport   = "audit:export"
 	permArtifactRead  = "artifact:read"
+	permCIRead        = "ci:read"
+	permCIDiagnose    = "ci:diagnose"
 	permFeedbackWrite = "feedback:write"
 	permMemberRead    = "member:read"
 	permMemberWrite   = "member:write"
@@ -42,6 +44,8 @@ const (
 	permPluginWrite   = "plugin:write"
 	permRAGIndex      = "rag:index"
 	permRAGQuery      = "rag:query"
+	permRepoRead      = "repo:read"
+	permRepoWrite     = "repo:write"
 	permRoleRead      = "role:read"
 	permRoleWrite     = "role:write"
 	permRunApprove    = "run:approve"

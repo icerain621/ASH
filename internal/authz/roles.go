@@ -17,25 +17,35 @@ func BuiltinRoles() []BuiltinRole {
 			Permissions: []string{
 				"run:*", "memory:*", "rag:*", "model:route", "plugin:*",
 				"artifact:read", "storage:read", "feedback:write", "mcp:write",
+				"repo:*", "ci:*",
 			},
 		},
 		{
-			Name:  "operator",
-			Label: "操作员",
-			Permissions: []string{"run:create", "run:cancel", "artifact:read", "rag:query"},
+			Name:  "developer",
+			Label: "开发者",
+			Permissions: []string{
+				"run:create", "run:cancel", "artifact:read", "rag:query",
+				"repo:read", "ci:read", "ci:diagnose", "feedback:write",
+			},
 		},
 		{
-			Name:  "reviewer",
-			Label: "评审员",
+			Name:        "operator",
+			Label:       "操作员",
+			Permissions: []string{"run:create", "run:cancel", "artifact:read", "rag:query", "repo:read", "ci:read", "ci:diagnose"},
+		},
+		{
+			Name:        "reviewer",
+			Label:       "评审员",
 			Permissions: []string{"memory:review", "run:approve", "artifact:read"},
 		},
-		{Name: "auditor", Label: "审计员", Permissions: []string{"audit:export", "artifact:read"}},
+		{Name: "auditor", Label: "审计员", Permissions: []string{"audit:export", "artifact:read", "repo:read", "ci:read", "ci:diagnose"}},
 		{
 			Name:  "viewer",
 			Label: "只读",
 			Permissions: []string{
 				"artifact:read", "memory:read", "memory:query", "rag:query",
 				"plugin:read", "storage:read", "role:read", "member:read",
+				"repo:read", "ci:read",
 			},
 		},
 	}
