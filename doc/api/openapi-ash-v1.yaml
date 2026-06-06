@@ -261,15 +261,76 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
-  /v1/ci/failures/diagnose:
+  /api/v1/repo/connections:
     post:
-      tags: [CI]
-      summary: Diagnose CI failure
+      tags: [Repo]
+      summary: Create GitHub repo connection
+      description: Plaintext tokens are rejected; use secretId to reference a stored secret.
       requestBody:
         required: true
         content:
           application/json:
-            schema: { $ref: "#/components/schemas/DiagnoseCiFailureRequest" }
+            schema:
+              type: object
+              required: [owner, repo, secretId]
+              properties:
+                provider: { type: string, enum: [github], default: github }
+                owner: { type: string }
+                repo: { type: string }
+                defaultBranch: { type: string, default: main }
+                secretId: { type: string }
+                spaceId: { type: string }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    get:
+      tags: [Repo]
+      summary: List repo connections
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/runs:
+    get:
+      tags: [CI]
+      summary: List CI workflow run snapshots
+      parameters:
+        - in: query
+          name: connectionId
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+        - in: query
+          name: sync
+          schema: { type: boolean, default: false }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/failures/diagnose:
+    post:
+      tags: [CI]
+      summary: Diagnose CI failure
+      description: Deterministic v1 diagnosis with rootCause, fixSuggestions, evidenceRefs and confidence.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                connectionId: { type: string }
+                runId: { type: string }
+                jobId: { type: string }
+                logText: { type: string }
       responses:
         "200":
           description: ok
@@ -336,17 +397,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
-  /v1/metrics/overview:
+  /api/v1/metrics/overview:
     get:
-      tags: [Feedback]
-      summary: Get dashboard metrics
+      tags: [Metrics]
+      summary: Get KPI dashboard metrics
       parameters:
         - in: query
           name: projectId
           schema: { type: string }
         - in: query
           name: spaceId
-          schema: { type: integer, format: int64 }
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+        - in: query
+          name: period
+          schema: { type: string, enum: [day, week], default: day }
       responses:
         "200":
           description: ok

@@ -82,7 +82,7 @@ make run
 
 Swagger UI：`http://localhost:8080/docs`
 
-**Web 控制台**：`http://localhost:8080/ui/`（Runs + SSE、Memory 评审、Doctor TR0）
+**Web 控制台**：`http://localhost:8080/ui/`（Runs + SSE、Memory 评审、Repo/CI 诊断、KPI 指标、Doctor）
 
 ## 验证（TR0）
 
@@ -116,7 +116,35 @@ make execgo-health
 | `EXECGO_URL` | `http://127.0.0.1:8080` | ExecGo 控制面地址 |
 | `EXECGO_RUNTIME_URL` | `http://127.0.0.1:18080` | execgo-runtime 数据面地址 |
 
-如果 `execgocli health` 或 `execgocli tools` 失败，`ash run --agent execgo_codex` 会进入失败态并返回 `AGENT_BRIDGE_UNAVAILABLE`，不会静默降级为 stub。
+如果 `execgocli health` 或 `execgocli tools` 失败，`make execgo-health` 会区分 CLI 缺失、控制面不可达、runtime/tools 不可用或 JSON 输出异常；`ash run --agent execgo_codex` 会进入失败态并返回 `AGENT_BRIDGE_UNAVAILABLE`，不会静默降级为 stub。显式 live 验证可运行：
+
+```bash
+ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_codex
+```
+
+## CI / Repo 诊断 / KPI
+
+仓库已提供 GitHub Actions 门禁：
+
+- `.github/workflows/ci.yml`：PR 与 `main` push 执行 `go test ./...`、`make test`、Doctor M3/ALL static、`make web-build`。
+- `.github/workflows/postgres-e2e.yml`：手动或 nightly 执行 `make postgres-e2e`。
+
+Repo/CI 诊断使用 GitHub Actions v1 provider。先通过 Secrets 保存 token，再创建 repo connection；token 只允许通过 `secretId` 引用，API 会拒绝明文 token。
+
+```bash
+curl -X POST http://localhost:8080/api/v1/repo/connections \
+  -H "Content-Type: application/json" \
+  -d '{"provider":"github","owner":"iammm0","repo":"ASH","secretId":"sec_xxx"}'
+
+curl -X POST http://localhost:8080/api/v1/ci/failures/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{"connectionId":"repo_conn_xxx","logText":"--- FAIL: TestExample"}'
+```
+
+KPI 看板入口：
+
+- API：`GET /api/v1/metrics/overview?period=day&from=...&to=...`
+- 控制台：`/ui/metrics`
 
 ## M0 新增 API
 
@@ -131,6 +159,10 @@ make execgo-health
 - `GET /api/v1/memory/records/:id` — 单条详情
 - `POST /api/v1/memory/query` — 检索已 approved 记忆
 - `POST /api/v1/memory/hit-used` — 记录 run 命中审计
+- `POST /api/v1/repo/connections` / `GET /api/v1/repo/connections` — GitHub repo connection
+- `GET /api/v1/ci/runs` — CI run 摘要
+- `POST /api/v1/ci/failures/diagnose` — CI 失败确定性诊断
+- `GET /api/v1/metrics/overview` — KPI 看板聚合
 
 带 `runId` 的 memory 操作会追加到该 run 的 **SSE 事件流**（`GET /api/v1/runs/:runId/stream`）：
 
