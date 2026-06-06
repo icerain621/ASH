@@ -75,6 +75,12 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 			rec.RepoRoot = v
 		}
 	}
+	if repoRoot != "" {
+		if abs, err := rag.AbsRepoRoot(repoRoot); err == nil {
+			repoRoot = abs
+			rec.RepoRoot = abs
+		}
+	}
 
 	if err := s.db.Create(&rec).Error; err != nil {
 		return nil, fmt.Errorf("create run: %w", err)

@@ -436,8 +436,13 @@ func (s *Service) tr0EvidenceBinding() CaseResult {
 	}
 	res.RunID = create.RunID
 
+	absRepo, err := rag.AbsRepoRoot(repoRoot)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
 	var chunkCount int64
-	if err := s.runs.DB().Model(&store.RAGChunk{}).Where("repo_root = ?", repoRoot).Count(&chunkCount).Error; err != nil {
+	if err := s.runs.DB().Model(&store.RAGChunk{}).Where("repo_root = ?", absRepo).Count(&chunkCount).Error; err != nil {
 		res.Message = err.Error()
 		return res
 	}
@@ -445,7 +450,7 @@ func (s *Service) tr0EvidenceBinding() CaseResult {
 		res.Message = "missing RAG chunks for probe repo"
 		return res
 	}
-	res.Evidence = append(res.Evidence, Evidence{Kind: "rag", Ref: repoRoot})
+	res.Evidence = append(res.Evidence, Evidence{Kind: "rag", Ref: absRepo})
 
 	evs, err := s.events.ListAfter(create.RunID, 0, 500)
 	if err != nil {

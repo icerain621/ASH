@@ -59,12 +59,17 @@ type QueryResponse struct {
 	Items []Hit `json:"items"`
 }
 
-func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
-	root := strings.TrimSpace(req.RepoRoot)
+// AbsRepoRoot returns the canonical absolute path used when persisting RAG rows.
+func AbsRepoRoot(root string) (string, error) {
+	root = strings.TrimSpace(root)
 	if root == "" {
-		return nil, fmt.Errorf("repoRoot is required")
+		return "", fmt.Errorf("repoRoot is required")
 	}
-	abs, err := filepath.Abs(root)
+	return filepath.Abs(root)
+}
+
+func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
+	abs, err := AbsRepoRoot(req.RepoRoot)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +116,7 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 
 	q := s.db.Where("space_id = ?", space)
 	if req.RepoRoot != "" {
-		if abs, err := filepath.Abs(req.RepoRoot); err == nil {
+		if abs, err := AbsRepoRoot(req.RepoRoot); err == nil {
 			q = q.Where("repo_root = ?", abs)
 		}
 	}

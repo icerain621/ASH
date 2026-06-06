@@ -102,3 +102,46 @@ func TestQueryFallsBackToChunkSearchWhenFTSUnavailable(t *testing.T) {
 		t.Fatalf("hits=%+v want note.md fallback hit", resp.Items)
 	}
 }
+
+func TestIndexPersistsAbsoluteRepoRoot(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "README.md"), []byte("doctor probe evidence\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo}); err != nil {
+		t.Fatal(err)
+	}
+
+	absRepo, err := AbsRepoRoot(repo)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var chunkCount int64
+	if err := db.Model(&store.RAGChunk{}).Where("repo_root = ?", absRepo).Count(&chunkCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if chunkCount == 0 {
+		t.Fatal("expected chunks keyed by absolute repo_root")
+	}
+
+	parent := filepath.Dir(repo)
+	name := filepath.Base(repo)
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.Chdir(parent); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = os.Chdir(wd) }()
+
+	relAbs, err := AbsRepoRoot(name)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if relAbs != absRepo {
+		t.Fatalf("relative abs=%q want %q", relAbs, absRepo)
+	}
+}
