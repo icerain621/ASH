@@ -81,6 +81,9 @@ func (h *Handler) runDoctor(c *gin.Context) {
 	if req.Format == "md" {
 		_ = writeReportMD(h.db.DataDir(), id, rep)
 	}
+	_ = h.db.Create(auditRow(currentSpace(c), currentActor(c), "doctor.suite_completed", map[string]any{
+		"reportId": id, "suite": rep.Suite, "pass": rep.Summary.Pass, "fail": rep.Summary.Fail,
+	}))
 	c.JSON(http.StatusOK, doctorRunResponse{ReportID: id})
 }
 

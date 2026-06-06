@@ -4,10 +4,10 @@ import "fmt"
 
 // migrationEntity describes one table participating in sqlite→postgres copy.
 type migrationEntity struct {
-	table        string
-	model        any
-	pk           string
-	incremental  bool
+	table       string
+	model       any
+	pk          string
+	incremental bool
 }
 
 // MigrationCatalog returns registered migration table names in copy order.
@@ -65,6 +65,17 @@ func migrationEntities() []migrationEntity {
 		{table: "quality_metrics", model: &QualityMetric{}, pk: "id", incremental: true},
 		{table: "mcp_tools", model: &MCPTool{}, pk: "id", incremental: true},
 		{table: "feedback", model: &Feedback{}, pk: "id", incremental: true},
+		{table: "repo_connections", model: &RepoConnection{}, pk: "id", incremental: true},
+		{table: "ci_runs", model: &CIRun{}, pk: "id", incremental: true},
+		{table: "ci_jobs", model: &CIJob{}, pk: "id", incremental: true},
+		{table: "ci_diagnoses", model: &CIDiagnosis{}, pk: "id", incremental: true},
+		{table: "alert_rules", model: &AlertRule{}, pk: "id", incremental: true},
+		{table: "alert_events", model: &AlertEvent{}, pk: "id", incremental: true},
+		{table: "alert_silences", model: &AlertSilence{}, pk: "id", incremental: true},
+		{table: "release_records", model: &ReleaseRecord{}, pk: "id", incremental: true},
+		{table: "release_checklist_items", model: &ReleaseChecklistItem{}, pk: "id", incremental: true},
+		{table: "release_gate_results", model: &ReleaseGateResult{}, pk: "id", incremental: false},
+		{table: "rollback_drills", model: &RollbackDrill{}, pk: "id", incremental: true},
 		{table: "secret_records", model: &SecretRecord{}, pk: "id", incremental: true},
 		{table: "audit_log", model: &AuditLog{}, pk: "id", incremental: false},
 		{table: "approval_requests", model: &ApprovalRequest{}, pk: "id", incremental: true},

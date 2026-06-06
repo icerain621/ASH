@@ -21,6 +21,14 @@ func Catalog() []PermissionDef {
 		{Key: "memory:use", Group: "memory", Label: "记录记忆命中"},
 		{Key: "rag:index", Group: "rag", Label: "RAG 索引"},
 		{Key: "rag:query", Group: "rag", Label: "RAG 查询"},
+		{Key: "repo:read", Group: "repo", Label: "读取仓库连接"},
+		{Key: "repo:write", Group: "repo", Label: "管理仓库连接"},
+		{Key: "ci:read", Group: "ci", Label: "读取 CI 运行"},
+		{Key: "ci:diagnose", Group: "ci", Label: "诊断 CI 失败"},
+		{Key: "observability:read", Group: "observability", Label: "读取观测与告警"},
+		{Key: "observability:write", Group: "observability", Label: "管理告警规则"},
+		{Key: "release:read", Group: "release", Label: "读取发布治理"},
+		{Key: "release:write", Group: "release", Label: "管理发布治理"},
 		{Key: "model:route", Group: "model", Label: "模型路由"},
 		{Key: "mcp:write", Group: "mcp", Label: "注册 MCP 工具"},
 		{Key: "plugin:read", Group: "plugin", Label: "读取插件"},
@@ -35,6 +43,7 @@ func Catalog() []PermissionDef {
 		{Key: "space:write", Group: "org", Label: "管理空间"},
 		{Key: "org:write", Group: "org", Label: "管理组织"},
 		{Key: "storage:read", Group: "platform", Label: "读取存储配置"},
-		{Key: "feedback:write", Group: "platform", Label: "提交反馈"},
+		{Key: "feedback:read", Group: "platform", Label: "读取反馈"},
+		{Key: "feedback:write", Group: "platform", Label: "提交与处理反馈"},
 	}
 }

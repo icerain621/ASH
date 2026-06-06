@@ -13,8 +13,8 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
-	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/artifacts"
+	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
@@ -204,10 +204,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 				agentTaskID = firstNonEmpty(res.ExecGoTaskID, res.TaskID, res.ActionID)
 			}
 			if err != nil {
-				code := "AGENT_EXECUTION_FAILED"
-				if errors.Is(err, agentexec.ErrBridgeUnavailable) {
-					code = "AGENT_BRIDGE_UNAVAILABLE"
-				}
+				code := agentErrorCode(err)
 				s.finishStep(stepRow, "failed", stepStart, code, err.Error())
 				_, ferr := s.failRun(rec, runID, traceID, started, code, err.Error())
 				return ferr
@@ -588,10 +585,7 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 	}
 	if err != nil {
 		task.Status = "failed"
-		task.ErrorCode = "AGENT_EXECUTION_FAILED"
-		if errors.Is(err, agentexec.ErrBridgeUnavailable) {
-			task.ErrorCode = "AGENT_BRIDGE_UNAVAILABLE"
-		}
+		task.ErrorCode = agentErrorCode(err)
 		task.ErrorMessage = err.Error()
 		_ = s.db.Save(&task).Error
 		_, _ = s.events.Append(runID, traceID, "agent.failed", "error", map[string]any{
@@ -608,6 +602,19 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		"status": task.Status, "durationMs": task.DurationMs,
 	})
 	return res, nil
+}
+
+func agentErrorCode(err error) string {
+	switch {
+	case errors.Is(err, agentexec.ErrBridgeUnavailable):
+		return "AGENT_BRIDGE_UNAVAILABLE"
+	case errors.Is(err, agentexec.ErrAgentOutputInvalid):
+		return "AGENT_OUTPUT_INVALID"
+	case errors.Is(err, agentexec.ErrAgentTaskFailed):
+		return "AGENT_TASK_FAILED"
+	default:
+		return "AGENT_EXECUTION_FAILED"
+	}
 }
 
 func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx toolbus.Context, item rules.ToolChainItem) toolbus.Result {

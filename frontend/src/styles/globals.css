@@ -227,6 +227,51 @@ main {
   margin: 0.35rem 0 0.2rem;
 }
 
+.metrics-toolbar {
+  max-width: 100%;
+}
+
+.metric-filter {
+  min-height: 2.25rem;
+  min-width: 13rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface-raised);
+  color: var(--text);
+  padding: 0.2rem 0.6rem;
+}
+
+.metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(12.75rem, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.metrics-split {
+  margin-bottom: 1rem;
+}
+
+.ops-split {
+  margin-bottom: 1rem;
+}
+
+.metric-card {
+  min-height: 10.5rem;
+}
+
+.metric-card .pane-title {
+  align-items: flex-start;
+}
+
+.metric-value {
+  font-family: var(--mono);
+  font-size: 1.65rem;
+  line-height: 1.15;
+  font-weight: 720;
+  overflow-wrap: anywhere;
+}
+
 .doctor-report {
   display: flex;
   flex-direction: column;
@@ -896,6 +941,56 @@ main {
   box-shadow: 0 0 0 3px rgba(15, 159, 110, 0.1);
 }
 
+.form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+  align-items: end;
+}
+
+.form-grid label {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.82rem;
+}
+
+.form-grid input,
+.form-grid select,
+.form-grid textarea,
+.inline-form input,
+.inline-form select {
+  min-width: 0;
+  width: 100%;
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 0.48rem 0.58rem;
+}
+
+.form-grid textarea {
+  resize: vertical;
+}
+
+.wide-field {
+  grid-column: 1 / -1;
+}
+
+.inline-form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.5rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.release-drill-form {
+  grid-template-columns: minmax(12rem, 1.4fr) minmax(8rem, 0.8fr) minmax(8rem, 0.8fr) minmax(12rem, 1fr) auto;
+  margin-bottom: 0;
+}
+
 .error-text {
   color: var(--err);
   font-size: 0.85rem;
@@ -923,6 +1018,11 @@ main {
 
   .split,
   .runs-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-split,
+  .ops-split {
     grid-template-columns: 1fr;
   }
 
@@ -954,6 +1054,16 @@ main {
   .secret-form span {
     grid-column: 1 / -1;
   }
+
+  .release-drill-form {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .release-drill-form input:first-child,
+  .release-drill-form input:last-of-type,
+  .release-drill-form button {
+    grid-column: 1 / -1;
+  }
 }
 
 @media (max-width: 640px) {
@@ -970,6 +1080,17 @@ main {
   .tab,
   .btn {
     white-space: nowrap;
+  }
+
+  .metric-filter {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .form-grid,
+  .inline-form,
+  .release-drill-form {
+    grid-template-columns: 1fr;
   }
 
   .page-heading h1 {

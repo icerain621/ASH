@@ -82,7 +82,7 @@ make run
 
 Swagger UI：`http://localhost:8080/docs`
 
-**Web 控制台**：`http://localhost:8080/ui/`（Runs + SSE、Memory 评审、Doctor TR0）
+**Web 控制台**：`http://localhost:8080/ui/`（Runs + SSE、Memory 评审、Repo/CI 诊断、KPI 指标、Doctor）
 
 ## 验证（TR0）
 
@@ -116,7 +116,42 @@ make execgo-health
 | `EXECGO_URL` | `http://127.0.0.1:8080` | ExecGo 控制面地址 |
 | `EXECGO_RUNTIME_URL` | `http://127.0.0.1:18080` | execgo-runtime 数据面地址 |
 
-如果 `execgocli health` 或 `execgocli tools` 失败，`ash run --agent execgo_codex` 会进入失败态并返回 `AGENT_BRIDGE_UNAVAILABLE`，不会静默降级为 stub。
+如果 `execgocli health` 或 `execgocli tools` 失败，`make execgo-health` 会区分 CLI 缺失、控制面不可达、runtime/tools 不可用或 JSON 输出异常；`ash run --agent execgo_codex` 会进入失败态并返回 `AGENT_BRIDGE_UNAVAILABLE`，不会静默降级为 stub。显式 live 验证可运行：
+
+```bash
+ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_codex
+```
+
+## CI / Repo 诊断 / KPI / 闭环治理
+
+仓库已提供 GitHub Actions 门禁：
+
+- `.github/workflows/ci.yml`：PR 与 `main` push 执行 `go test ./...`、`make test`、Doctor M3/ALL static、`make web-build`。
+- `.github/workflows/postgres-e2e.yml`：手动或 nightly 执行 `make postgres-e2e`。
+
+Repo/CI 诊断使用 GitHub Actions v1 provider。先通过 Secrets 保存 token，再创建 repo connection；token 只允许通过 `secretId` 引用，API 会拒绝明文 token。
+
+```bash
+curl -X POST http://localhost:8080/api/v1/repo/connections \
+  -H "Content-Type: application/json" \
+  -d '{"provider":"github","owner":"iammm0","repo":"ASH","secretId":"sec_xxx"}'
+
+curl -X POST http://localhost:8080/api/v1/ci/failures/diagnose \
+  -H "Content-Type: application/json" \
+  -d '{"connectionId":"repo_conn_xxx","logText":"--- FAIL: TestExample"}'
+```
+
+KPI 看板入口：
+
+- API：`GET /api/v1/metrics/overview?period=day&from=...&to=...`
+- 控制台：`/ui/metrics`
+
+PRD 后四项闭环入口：
+
+- CI 诊断控制台：`/ui/ci`；API 支持 `GET /api/v1/ci/jobs`、`GET /api/v1/ci/diagnoses`、`POST /api/v1/ci/diagnoses/{id}/adopt|dismiss`。
+- 反馈闭环：`/ui/feedback`；API 支持 `GET /api/v1/feedback`、`PATCH /api/v1/feedback/{id}`，低分反馈会写入站内 `AlertEvent`。
+- 可观测与告警：`/ui/observability`；API 支持 alert rules、manual evaluate、trace 查询；`/metrics` 输出 DB 派生 Prometheus 文本。
+- 发布治理：`/ui/releases`；API 支持 release record、MVP checklist、gate 评估和 rollback drill 记录。v1 只记录灰度/回滚策略与证据，不执行真实生产部署；人工模板见 `scripts/release-notes-template.md`、`scripts/rollback-drill-template.md`。
 
 ## M0 新增 API
 
@@ -131,6 +166,22 @@ make execgo-health
 - `GET /api/v1/memory/records/:id` — 单条详情
 - `POST /api/v1/memory/query` — 检索已 approved 记忆
 - `POST /api/v1/memory/hit-used` — 记录 run 命中审计
+- `POST /api/v1/repo/connections` / `GET /api/v1/repo/connections` — GitHub repo connection
+- `GET /api/v1/ci/runs` — CI run 摘要
+- `GET /api/v1/ci/jobs` — CI job 摘要，可 `sync=true`
+- `POST /api/v1/ci/failures/diagnose` — CI 失败确定性诊断
+- `GET /api/v1/ci/diagnoses` — CI 诊断历史
+- `POST /api/v1/ci/diagnoses/:id/adopt|dismiss` — 记录诊断采纳/驳回
+- `GET /api/v1/feedback` / `PATCH /api/v1/feedback/:id` — 反馈列表与处理状态
+- `GET /api/v1/metrics/overview` — KPI 看板聚合
+- `GET /api/v1/observability/alerts` — 告警事件
+- `GET/PUT /api/v1/observability/alert-rules` — 告警规则
+- `POST /api/v1/observability/alerts/evaluate` — 手动评估告警
+- `GET /api/v1/observability/trace/:traceId` — trace 关联查询
+- `POST /api/v1/releases` / `GET /api/v1/releases` — 发布治理记录
+- `GET/PATCH /api/v1/releases/:id/checklist` — MVP 发布清单
+- `POST /api/v1/releases/:id/gate` — 发布门禁评估
+- `POST /api/v1/releases/:id/rollback-drills` — 回滚演练记录
 
 带 `runId` 的 memory 操作会追加到该 run 的 **SSE 事件流**（`GET /api/v1/runs/:runId/stream`）：
 

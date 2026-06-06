@@ -284,12 +284,211 @@ type Feedback struct {
 	TargetType string `gorm:"size:64;not null;index"`
 	TargetID   string `gorm:"size:128;not null;index"`
 	Rating     int
+	Category   string `gorm:"size:64;not null;default:general;index"`
+	Status     string `gorm:"size:32;not null;default:open;index"`
+	Severity   string `gorm:"size:32;not null;default:info;index"`
+	Source     string `gorm:"size:64;not null;default:ui;index"`
 	Comment    string `gorm:"type:text"`
 	ActorID    string `gorm:"size:128"`
 	CreatedAt  time.Time
+	UpdatedAt  time.Time
 }
 
 func (Feedback) TableName() string { return "feedback" }
+
+// RepoConnection stores a space-scoped external repository integration.
+type RepoConnection struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	Provider      string     `json:"provider" gorm:"size:32;not null;index"`
+	Owner         string     `json:"owner" gorm:"size:128;not null;index"`
+	Repo          string     `json:"repo" gorm:"size:128;not null;index"`
+	DefaultBranch string     `json:"defaultBranch" gorm:"size:128;not null;default:main"`
+	SecretID      string     `json:"secretId" gorm:"size:64;not null;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;default:active;index"`
+	LastSyncAt    *time.Time `json:"lastSyncAt,omitempty"`
+	CreatedBy     string     `json:"createdBy" gorm:"size:128"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (RepoConnection) TableName() string { return "repo_connections" }
+
+// CIRun stores a GitHub Actions workflow run snapshot for KPI and diagnosis.
+type CIRun struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID  string     `json:"connectionId" gorm:"size:64;not null;index"`
+	ProviderRunID string     `json:"providerRunId" gorm:"size:128;not null;index"`
+	Workflow      string     `json:"workflow" gorm:"size:256;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;index"`
+	Conclusion    string     `json:"conclusion" gorm:"size:32;index"`
+	Attempt       int        `json:"attempt" gorm:"not null;default:1;index"`
+	CommitSHA     string     `json:"commitSha" gorm:"size:64;index"`
+	Branch        string     `json:"branch" gorm:"size:256;index"`
+	RunURL        string     `json:"runUrl" gorm:"size:1024"`
+	StartedAt     *time.Time `json:"startedAt,omitempty" gorm:"index"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty" gorm:"index"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (CIRun) TableName() string { return "ci_runs" }
+
+// CIJob stores a GitHub Actions job snapshot and optional log digest.
+type CIJob struct {
+	ID            string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID  string     `json:"connectionId" gorm:"size:64;not null;index"`
+	CIRunID       string     `json:"ciRunId" gorm:"size:64;not null;index"`
+	ProviderJobID string     `json:"providerJobId" gorm:"size:128;not null;index"`
+	Name          string     `json:"name" gorm:"size:256;index"`
+	Status        string     `json:"status" gorm:"size:32;not null;index"`
+	Conclusion    string     `json:"conclusion" gorm:"size:32;index"`
+	Attempt       int        `json:"attempt" gorm:"not null;default:1;index"`
+	LogDigest     string     `json:"logDigest" gorm:"size:128;index"`
+	StartedAt     *time.Time `json:"startedAt,omitempty" gorm:"index"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty" gorm:"index"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	UpdatedAt     time.Time  `json:"updatedAt"`
+}
+
+func (CIJob) TableName() string { return "ci_jobs" }
+
+// CIDiagnosis records deterministic diagnosis output for a CI failure.
+type CIDiagnosis struct {
+	ID                 string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID            string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ConnectionID       string     `json:"connectionId" gorm:"size:64;index"`
+	CIRunID            string     `json:"ciRunId" gorm:"size:64;index"`
+	CIJobID            string     `json:"ciJobId" gorm:"size:64;index"`
+	Status             string     `json:"status" gorm:"size:32;not null;index"`
+	RootCause          string     `json:"rootCause" gorm:"size:128;not null;index"`
+	FixSuggestionsJSON string     `json:"fixSuggestionsJson" gorm:"type:text;not null;default:'[]'"`
+	EvidenceRefsJSON   string     `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	Confidence         float64    `json:"confidence"`
+	Adopted            bool       `json:"adopted" gorm:"not null;default:false;index"`
+	DecisionStatus     string     `json:"decisionStatus" gorm:"size:32;not null;default:pending;index"`
+	DecisionReason     string     `json:"decisionReason" gorm:"type:text"`
+	DecidedBy          string     `json:"decidedBy" gorm:"size:128"`
+	DecidedAt          *time.Time `json:"decidedAt,omitempty" gorm:"index"`
+	LogDigest          string     `json:"logDigest" gorm:"size:128;index"`
+	CreatedAt          time.Time  `json:"createdAt"`
+	UpdatedAt          time.Time  `json:"updatedAt"`
+}
+
+func (CIDiagnosis) TableName() string { return "ci_diagnoses" }
+
+type AlertRule struct {
+	ID            string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID       string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	Name          string    `json:"name" gorm:"size:128;not null;index"`
+	Metric        string    `json:"metric" gorm:"size:128;not null;index"`
+	Condition     string    `json:"condition" gorm:"size:16;not null;default:gt"`
+	Threshold     float64   `json:"threshold"`
+	WindowMinutes int       `json:"windowMinutes" gorm:"not null;default:60"`
+	Severity      string    `json:"severity" gorm:"size:32;not null;default:warn;index"`
+	Enabled       bool      `json:"enabled" gorm:"not null;default:true;index"`
+	Description   string    `json:"description" gorm:"size:512"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
+}
+
+func (AlertRule) TableName() string { return "alert_rules" }
+
+type AlertEvent struct {
+	ID               string     `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID          string     `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	RuleID           string     `json:"ruleId" gorm:"size:64;index"`
+	RuleName         string     `json:"ruleName" gorm:"size:128;index"`
+	Severity         string     `json:"severity" gorm:"size:32;not null;index"`
+	Status           string     `json:"status" gorm:"size:32;not null;default:active;index"`
+	TargetType       string     `json:"targetType" gorm:"size:64;index"`
+	TargetID         string     `json:"targetId" gorm:"size:128;index"`
+	Fingerprint      string     `json:"fingerprint" gorm:"size:128;index"`
+	Message          string     `json:"message" gorm:"type:text;not null"`
+	EvidenceRefsJSON string     `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	TriggeredAt      time.Time  `json:"triggeredAt" gorm:"index"`
+	ResolvedAt       *time.Time `json:"resolvedAt,omitempty" gorm:"index"`
+	CreatedAt        time.Time  `json:"createdAt"`
+	UpdatedAt        time.Time  `json:"updatedAt"`
+}
+
+func (AlertEvent) TableName() string { return "alert_events" }
+
+type AlertSilence struct {
+	ID        string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID   string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	RuleID    string    `json:"ruleId" gorm:"size:64;index"`
+	Reason    string    `json:"reason" gorm:"type:text;not null"`
+	CreatedBy string    `json:"createdBy" gorm:"size:128"`
+	StartsAt  time.Time `json:"startsAt" gorm:"index"`
+	EndsAt    time.Time `json:"endsAt" gorm:"index"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
+}
+
+func (AlertSilence) TableName() string { return "alert_silences" }
+
+type ReleaseRecord struct {
+	ID               string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID          string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	Version          string    `json:"version" gorm:"size:128;not null;index"`
+	Title            string    `json:"title" gorm:"size:256;not null"`
+	Status           string    `json:"status" gorm:"size:32;not null;default:draft;index"`
+	CanaryStrategy   string    `json:"canaryStrategy" gorm:"type:text"`
+	GateStatus       string    `json:"gateStatus" gorm:"size:32;not null;default:pending;index"`
+	EvidenceRefsJSON string    `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	CreatedBy        string    `json:"createdBy" gorm:"size:128"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
+func (ReleaseRecord) TableName() string { return "release_records" }
+
+type ReleaseChecklistItem struct {
+	ID          string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID     string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ReleaseID   string    `json:"releaseId" gorm:"size:64;not null;index"`
+	ItemKey     string    `json:"itemKey" gorm:"size:128;not null;index"`
+	Label       string    `json:"label" gorm:"size:512;not null"`
+	Status      string    `json:"status" gorm:"size:32;not null;default:pending;index"`
+	EvidenceRef string    `json:"evidenceRef" gorm:"size:1024"`
+	UpdatedBy   string    `json:"updatedBy" gorm:"size:128"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
+}
+
+func (ReleaseChecklistItem) TableName() string { return "release_checklist_items" }
+
+type ReleaseGateResult struct {
+	ID               string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID          string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ReleaseID        string    `json:"releaseId" gorm:"size:64;not null;index"`
+	GateKey          string    `json:"gateKey" gorm:"size:128;not null;index"`
+	Status           string    `json:"status" gorm:"size:32;not null;index"`
+	Message          string    `json:"message" gorm:"type:text;not null"`
+	EvidenceRefsJSON string    `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	CreatedAt        time.Time `json:"createdAt"`
+}
+
+func (ReleaseGateResult) TableName() string { return "release_gate_results" }
+
+type RollbackDrill struct {
+	ID               string    `json:"id" gorm:"primaryKey;size:64"`
+	SpaceID          string    `json:"spaceId" gorm:"size:64;not null;default:local;index"`
+	ReleaseID        string    `json:"releaseId" gorm:"size:64;not null;index"`
+	Scenario         string    `json:"scenario" gorm:"size:256;not null"`
+	Status           string    `json:"status" gorm:"size:32;not null;index"`
+	DurationMs       int64     `json:"durationMs"`
+	EvidenceRefsJSON string    `json:"evidenceRefsJson" gorm:"type:text;not null;default:'[]'"`
+	Notes            string    `json:"notes" gorm:"type:text"`
+	CreatedBy        string    `json:"createdBy" gorm:"size:128"`
+	CreatedAt        time.Time `json:"createdAt"`
+	UpdatedAt        time.Time `json:"updatedAt"`
+}
+
+func (RollbackDrill) TableName() string { return "rollback_drills" }
 
 type SecretRecord struct {
 	ID              string `gorm:"primaryKey;size:64"`

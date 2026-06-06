@@ -8,15 +8,19 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
 
+	"github.com/ash-repwiki/ash/internal/alerts"
+	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
+	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
+	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/secrets"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -30,20 +34,35 @@ type Handler struct {
 	doctorReports *reportStore
 	memory        *memory.Service
 	improve       *improve.Service
+	ci            *ci.Service
+	metrics       *metricssvc.Service
+	alerts        *alerts.Service
+	releases      *releases.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	ev := events.NewService(db)
 	tools := toolbus.DefaultBus()
 	runsSvc := runs.NewService(db, ev, scenarios, tools)
+	ciSvc := ci.NewService(db, func(spaceID, secretID string) (string, error) {
+		var row store.SecretRecord
+		if err := db.First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
+			return "", err
+		}
+		return secrets.Open(row.ValueCiphertext, config.Load().SecretKey)
+	})
 	return &Handler{
 		db:        db,
 		events:    ev,
 		scenarios: scenarios,
 		runs:      runsSvc,
 		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:  memory.NewService(db, ev),
-		improve: improve.NewService(db, runsSvc, ev),
+		memory:    memory.NewService(db, ev),
+		improve:   improve.NewService(db, runsSvc, ev),
+		ci:        ciSvc,
+		metrics:   metricssvc.NewService(db),
+		alerts:    alerts.NewService(db),
+		releases:  releases.NewService(db),
 	}
 }
 
@@ -52,7 +71,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 	r.Use(corsMiddleware())
 	r.GET("/healthz", h.healthz)
 	r.GET("/readyz", h.readyz)
-	r.GET("/metrics", gin.WrapH(promhttp.Handler()))
+	r.GET("/metrics", h.prometheusMetrics)
 	registerSwagger(r)
 
 	v1 := r.Group("/api/v1")
@@ -109,13 +128,36 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/model-router/route", h.routeModel)
 		v1.GET("/observability/waterfall/:runId", h.getWaterfall)
 		v1.GET("/observability/quality/:runId", h.getQualityMetrics)
+		v1.GET("/observability/alerts", h.listAlerts)
+		v1.GET("/observability/alert-rules", h.listAlertRules)
+		v1.PUT("/observability/alert-rules", h.putAlertRules)
+		v1.POST("/observability/alerts/evaluate", h.evaluateAlerts)
+		v1.GET("/observability/trace/:traceId", h.getTrace)
 		v1.GET("/mcp/tools", h.listMCPTools)
 		v1.POST("/mcp/tools", h.registerMCPTool)
 		v1.POST("/feedback", h.createFeedback)
+		v1.GET("/feedback", h.listFeedback)
+		v1.PATCH("/feedback/:feedbackId", h.updateFeedback)
+		v1.POST("/repo/connections", h.createRepoConnection)
+		v1.GET("/repo/connections", h.listRepoConnections)
+		v1.GET("/ci/runs", h.listCIRuns)
+		v1.GET("/ci/jobs", h.listCIJobs)
+		v1.POST("/ci/failures/diagnose", h.diagnoseCIFailure)
+		v1.GET("/ci/diagnoses", h.listCIDiagnoses)
+		v1.POST("/ci/diagnoses/:diagnosisId/adopt", h.adoptCIDiagnosis)
+		v1.POST("/ci/diagnoses/:diagnosisId/dismiss", h.dismissCIDiagnosis)
+		v1.GET("/metrics/overview", h.getMetricsOverview)
 		v1.GET("/secrets", h.listSecrets)
 		v1.POST("/secrets", h.createSecret)
 		v1.POST("/secrets/:secretId/rotate", h.rotateSecret)
 		v1.DELETE("/secrets/:secretId", h.deleteSecret)
+
+		v1.POST("/releases", h.createRelease)
+		v1.GET("/releases", h.listReleases)
+		v1.GET("/releases/:releaseId/checklist", h.getReleaseChecklist)
+		v1.PATCH("/releases/:releaseId/checklist", h.patchReleaseChecklist)
+		v1.POST("/releases/:releaseId/gate", h.evaluateReleaseGate)
+		v1.POST("/releases/:releaseId/rollback-drills", h.createRollbackDrill)
 
 		v1.POST("/auth/login", h.login)
 		v1.POST("/auth/dev-login", h.devLogin)

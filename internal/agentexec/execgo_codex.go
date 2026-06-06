@@ -102,7 +102,7 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 
 	act, stdout, stderr, err := e.runJSON(ctx, "act", "-file", path)
 	if err != nil {
-		return nil, err
+		return nil, classifyExecGoError(err)
 	}
 	taskID := firstString(act, "task_id")
 	if taskID == "" {
@@ -118,7 +118,7 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 	stdout = joinSummaries(stdout, waitOut)
 	stderr = joinSummaries(stderr, waitErr)
 	if err != nil {
-		return nil, err
+		return nil, classifyExecGoError(err)
 	}
 
 	status := terminalStatus(wait)
@@ -131,7 +131,7 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 			SessionID: req.RunID, ActionID: actionID, Status: status,
 			StdoutSummary: trimSummary(stdout), StderrSummary: trimSummary(stderr),
 			DurationMs: time.Since(start).Milliseconds(), Output: wait,
-		}, fmt.Errorf("agent task %s ended with status %s", taskID, status)
+		}, fmt.Errorf("%w: agent task %s ended with status %s", ErrAgentTaskFailed, taskID, status)
 	}
 
 	return &Result{
@@ -223,6 +223,16 @@ func (e *ExecGoCodexExecutor) runJSON(ctx context.Context, args ...string) (map[
 		envelope.Data = map[string]any{}
 	}
 	return envelope.Data, outText, errText, nil
+}
+
+func classifyExecGoError(err error) error {
+	if err == nil {
+		return nil
+	}
+	if strings.Contains(err.Error(), "parse execgocli JSON") {
+		return fmt.Errorf("%w: %v", ErrAgentOutputInvalid, err)
+	}
+	return fmt.Errorf("%w: %v", ErrAgentTaskFailed, err)
 }
 
 func buildCodexPrompt(req Request) string {

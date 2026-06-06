@@ -1,9 +1,13 @@
 import { createRootRoute, createRoute, createRouter, Navigate } from "@tanstack/react-router";
 import { AppLayout } from "./layout/AppLayout";
 import { AutomationPage } from "../pages/AutomationPage";
+import { CIPage } from "../pages/CIPage";
 import { DoctorPage } from "../pages/DoctorPage";
 import { FeedbackPage } from "../pages/FeedbackPage";
 import { MemoryPage } from "../pages/MemoryPage";
+import { MetricsPage } from "../pages/MetricsPage";
+import { ObservabilityPage } from "../pages/ObservabilityPage";
+import { ReleasesPage } from "../pages/ReleasesPage";
 import { RunsPage } from "../pages/RunsPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
@@ -38,9 +42,33 @@ const automationRoute = createRoute({
 });
 
 const feedbackRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/feedback",
-  component: FeedbackPage,
+	getParentRoute: () => rootRoute,
+	path: "/feedback",
+	component: FeedbackPage,
+});
+
+const ciRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/ci",
+	component: CIPage,
+});
+
+const metricsRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/metrics",
+	component: MetricsPage,
+});
+
+const observabilityRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/observability",
+	component: ObservabilityPage,
+});
+
+const releasesRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/releases",
+	component: ReleasesPage,
 });
 
 const spaceRoute = createRoute({
@@ -71,9 +99,13 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   runsRoute,
   memoryRoute,
-  automationRoute,
-  feedbackRoute,
-  spaceRoute,
+	automationRoute,
+	feedbackRoute,
+	ciRoute,
+	metricsRoute,
+	observabilityRoute,
+	releasesRoute,
+	spaceRoute,
   complianceRoute,
   scaleRoute,
   doctorRoute,

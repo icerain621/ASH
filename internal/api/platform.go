@@ -18,10 +18,10 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
-	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -37,9 +37,24 @@ type createFeedbackRequest struct {
 	TargetType string `json:"targetType" binding:"required"`
 	TargetID   string `json:"targetId" binding:"required"`
 	Rating     int    `json:"rating,omitempty"`
+	Category   string `json:"category,omitempty"`
+	Status     string `json:"status,omitempty"`
+	Severity   string `json:"severity,omitempty"`
+	Source     string `json:"source,omitempty"`
 	Comment    string `json:"comment,omitempty"`
 	ActorID    string `json:"actorId,omitempty"`
 	SpaceID    string `json:"spaceId,omitempty"`
+}
+
+type updateFeedbackRequest struct {
+	Category string `json:"category,omitempty"`
+	Status   string `json:"status,omitempty"`
+	Severity string `json:"severity,omitempty"`
+	Comment  string `json:"comment,omitempty"`
+}
+
+type FeedbackListResponse struct {
+	Items []store.Feedback `json:"items"`
 }
 
 type createOrgRequest struct {
@@ -261,16 +276,129 @@ func (h *Handler) createFeedback(c *gin.Context) {
 	if !h.requirePermission(c, permFeedbackWrite, space) {
 		return
 	}
+	now := time.Now().UTC()
 	row := store.Feedback{
 		ID: "fb_" + uuid.NewString(), SpaceID: space,
 		TargetType: req.TargetType, TargetID: req.TargetID, Rating: req.Rating,
-		Comment: req.Comment, ActorID: firstNonEmptyAPI(req.ActorID, currentActor(c)), CreatedAt: time.Now().UTC(),
+		Category: normalizeFeedbackCategory(req.Category), Status: normalizeFeedbackStatus(req.Status),
+		Severity: normalizeFeedbackSeverity(req.Severity, req.Rating), Source: firstNonEmptyAPI(strings.TrimSpace(req.Source), "ui"),
+		Comment: req.Comment, ActorID: firstNonEmptyAPI(req.ActorID, currentActor(c)),
+		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := h.db.Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_CREATE_FAILED", err.Error()))
 		return
 	}
+	_ = h.db.Create(auditRow(space, currentActor(c), "feedback.created", map[string]any{
+		"feedbackId": row.ID, "targetType": row.TargetType, "targetId": row.TargetID,
+		"rating": row.Rating, "category": row.Category, "severity": row.Severity,
+	}))
+	if row.Rating > 0 && row.Rating <= 2 && h.alerts != nil {
+		if alert, err := h.alerts.RecordLowFeedback(row); err == nil && alert.ID != "" {
+			_ = h.db.Create(auditRow(space, currentActor(c), "alert.feedback_low_score", map[string]any{
+				"feedbackId": row.ID, "alertId": alert.ID, "rating": row.Rating,
+			}))
+		}
+	}
 	c.JSON(http.StatusCreated, row)
+}
+
+// ListFeedback godoc
+// @Summary List feedback
+// @Tags feedback
+// @Produce json
+// @Param targetType query string false "target type"
+// @Param category query string false "category"
+// @Param rating query int false "rating"
+// @Param status query string false "status"
+// @Param severity query string false "severity"
+// @Param limit query int false "max items" default(50)
+// @Success 200 {object} FeedbackListResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/feedback [get]
+func (h *Handler) listFeedback(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permFeedbackRead, space) {
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	if limit <= 0 || limit > 100 {
+		limit = 50
+	}
+	q := h.db.Where("space_id = ?", space)
+	for key, column := range map[string]string{
+		"targetType": "target_type", "category": "category", "status": "status", "severity": "severity",
+	} {
+		if value := strings.TrimSpace(c.Query(key)); value != "" {
+			q = q.Where(column+" = ?", value)
+		}
+	}
+	if ratingText := strings.TrimSpace(c.Query("rating")); ratingText != "" {
+		if rating, err := strconv.Atoi(ratingText); err == nil {
+			q = q.Where("rating = ?", rating)
+		}
+	}
+	var rows []store.Feedback
+	if err := q.Order("created_at desc").Limit(limit).Find(&rows).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_LIST_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, FeedbackListResponse{Items: rows})
+}
+
+// UpdateFeedback godoc
+// @Summary Update feedback handling state
+// @Tags feedback
+// @Accept json
+// @Produce json
+// @Param feedbackId path string true "feedback id"
+// @Param body body updateFeedbackRequest true "feedback patch"
+// @Success 200 {object} store.Feedback
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/feedback/{feedbackId} [patch]
+func (h *Handler) updateFeedback(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permFeedbackWrite, space) {
+		return
+	}
+	var req updateFeedbackRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	var row store.Feedback
+	if err := h.db.First(&row, "id = ? AND space_id = ?", c.Param("feedbackId"), space).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("FEEDBACK_NOT_FOUND", err.Error()))
+		return
+	}
+	updates := map[string]any{"updated_at": time.Now().UTC()}
+	if strings.TrimSpace(req.Category) != "" {
+		updates["category"] = normalizeFeedbackCategory(req.Category)
+	}
+	if strings.TrimSpace(req.Status) != "" {
+		updates["status"] = normalizeFeedbackStatus(req.Status)
+	}
+	if strings.TrimSpace(req.Severity) != "" {
+		updates["severity"] = normalizeFeedbackSeverity(req.Severity, row.Rating)
+	}
+	if req.Comment != "" {
+		updates["comment"] = req.Comment
+	}
+	if err := h.db.Model(&row).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_UPDATE_FAILED", err.Error()))
+		return
+	}
+	if err := h.db.First(&row, "id = ? AND space_id = ?", row.ID, space).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_RELOAD_FAILED", err.Error()))
+		return
+	}
+	_ = h.db.Create(auditRow(space, currentActor(c), "feedback.updated", map[string]any{
+		"feedbackId": row.ID, "status": row.Status, "category": row.Category, "severity": row.Severity,
+	}))
+	c.JSON(http.StatusOK, row)
 }
 
 type devLoginRequest struct {
@@ -1224,6 +1352,44 @@ func slugify(value string) string {
 		return "default"
 	}
 	return strings.Join(fields, "-")
+}
+
+func normalizeFeedbackCategory(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "bug", "quality", "ci", "memory", "ux", "suggestion":
+		return value
+	case "":
+		return "general"
+	default:
+		return value
+	}
+}
+
+func normalizeFeedbackStatus(value string) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	switch value {
+	case "open", "triaged", "in_progress", "resolved", "dismissed":
+		return value
+	case "":
+		return "open"
+	default:
+		return value
+	}
+}
+
+func normalizeFeedbackSeverity(value string, rating int) string {
+	value = strings.ToLower(strings.TrimSpace(value))
+	if value != "" {
+		return value
+	}
+	if rating > 0 && rating <= 2 {
+		return "warn"
+	}
+	if rating >= 4 {
+		return "info"
+	}
+	return "normal"
 }
 
 func auditRow(spaceID, actorID, eventType string, payload any) *store.AuditLog {

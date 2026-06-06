@@ -589,6 +589,406 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/ci/diagnoses": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "List CI failure diagnoses",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "repo connection id",
+                        "name": "connectionId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ci run id",
+                        "name": "runId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ci job id",
+                        "name": "jobId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "pending|adopted|dismissed",
+                        "name": "decisionStatus",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.CIDiagnosisListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ci/diagnoses/{diagnosisId}/adopt": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "Mark a CI diagnosis as adopted",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "diagnosis id",
+                        "name": "diagnosisId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "decision reason",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.decideCIDiagnosisRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ci/diagnoses/{diagnosisId}/dismiss": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "Mark a CI diagnosis as dismissed",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "diagnosis id",
+                        "name": "diagnosisId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "decision reason",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.decideCIDiagnosisRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ci/failures/diagnose": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "Diagnose a CI failure using deterministic rules",
+                "parameters": [
+                    {
+                        "description": "CI failure target or log text",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.diagnoseCIFailureRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ci/jobs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "List CI workflow jobs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ci run id",
+                        "name": "runId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "sync from GitHub before listing",
+                        "name": "sync",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.CIJobListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/ci/runs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "ci"
+                ],
+                "summary": "List CI workflow run snapshots",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "repo connection id",
+                        "name": "connectionId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "sync from GitHub before listing",
+                        "name": "sync",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.CIRunListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/compliance/export": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compliance"
+                ],
+                "summary": "Export audit bundle with doctor report and secret scan summary",
+                "parameters": [
+                    {
+                        "description": "export request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ComplianceExportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ComplianceExportResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/compliance/secret-scan": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compliance"
+                ],
+                "summary": "Scan audit logs and run events for secret patterns",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 200,
+                        "description": "max items per source",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.SecretScanResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/doctor/reports/{reportId}": {
             "get": {
                 "produces": [
@@ -663,6 +1063,74 @@ const docTemplate = `{
             }
         },
         "/api/v1/feedback": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedback"
+                ],
+                "summary": "List feedback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "target type",
+                        "name": "targetType",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "category",
+                        "name": "category",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "rating",
+                        "name": "rating",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "status",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "severity",
+                        "name": "severity",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.FeedbackListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -700,6 +1168,341 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/feedback/{feedbackId}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "feedback"
+                ],
+                "summary": "Update feedback handling state",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "feedback id",
+                        "name": "feedbackId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "feedback patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.updateFeedbackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "List improvement proposals",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ListProposalsResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Create self-improvement proposal",
+                "parameters": [
+                    {
+                        "description": "proposal",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.CreateProposalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ProposalView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals/{proposalId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Get improvement proposal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "proposal id",
+                        "name": "proposalId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ProposalView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals/{proposalId}/canary": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Start canary rollout for proposal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "proposal id",
+                        "name": "proposalId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "canary",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.CanaryRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ProposalView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals/{proposalId}/experiment": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Run experiment replay for proposal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "proposal id",
+                        "name": "proposalId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.StartExperimentResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals/{proposalId}/promote": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Promote proposal after canary",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "proposal id",
+                        "name": "proposalId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/improve/proposals/{proposalId}/rollback": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "improve"
+                ],
+                "summary": "Rollback promoted proposal",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "proposal id",
+                        "name": "proposalId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -1042,6 +1845,75 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/metrics/overview": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get KPI dashboard metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "project/repo connection id",
+                        "name": "projectId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 start time",
+                        "name": "from",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "RFC3339 end time",
+                        "name": "to",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "day|week",
+                        "name": "period",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.Overview"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/model-router/providers": {
             "get": {
                 "produces": [
@@ -1100,6 +1972,163 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/observability/alert-rules": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "List alert rules",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AlertRuleListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Update alert rules",
+                "parameters": [
+                    {
+                        "description": "alert rules",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.putAlertRulesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AlertRuleListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/alerts": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "List alert events",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "active|resolved",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 100,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AlertEventListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/alerts/evaluate": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Evaluate alert rules",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_alerts.EvaluationResult"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/observability/quality/{runId}": {
             "get": {
                 "produces": [
@@ -1127,6 +2156,52 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/trace/{traceId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Get trace-linked records",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "trace id",
+                        "name": "traceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_alerts.TraceView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -1314,6 +2389,31 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/permissions/matrix": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "permissions"
+                ],
+                "summary": "M2 permission matrix for current space",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.MatrixResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -1555,6 +2655,369 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/releases": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "List release governance records",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ReleaseListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "Create a release governance record",
+                "parameters": [
+                    {
+                        "description": "release",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.createReleaseRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseRecord"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/releases/{releaseId}/checklist": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "Get release checklist",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "release id",
+                        "name": "releaseId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ReleaseChecklistResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "Update release checklist items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "release id",
+                        "name": "releaseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "checklist patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.patchReleaseChecklistRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ReleaseChecklistResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/releases/{releaseId}/gate": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "Evaluate release gates",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "release id",
+                        "name": "releaseId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_releases.GateEvaluation"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/releases/{releaseId}/rollback-drills": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "releases"
+                ],
+                "summary": "Record a rollback drill",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "release id",
+                        "name": "releaseId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "rollback drill",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.createRollbackDrillRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.RollbackDrill"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/repo/connections": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repo"
+                ],
+                "summary": "List repository connections for the current space",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.RepoConnectionListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repo"
+                ],
+                "summary": "Create a GitHub repository connection",
+                "parameters": [
+                    {
+                        "description": "repo connection",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.createRepoConnectionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.RepoConnection"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -1986,6 +3449,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/runs/{runId}/provenance": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Delivery provenance chain for a run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ProvenanceResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs/{runId}/quality-metrics": {
             "get": {
                 "produces": [
@@ -2263,6 +3766,31 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scale/readiness": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "scale"
+                ],
+                "summary": "TR3 scale readiness snapshot",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ScaleReadinessResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -2737,6 +4265,163 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/spaces/{spaceId}/permissions/matrix": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "permissions"
+                ],
+                "summary": "M2 permission matrix for a specific space",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.MatrixResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/spaces/{spaceId}/resource-scopes": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "List resource scopes for a space",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ResourceScopeListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/spaces/{spaceId}/resource-scopes/{scopeId}": {
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Update a space resource scope policy (scenario tool matrix)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "resource scope id",
+                        "name": "scopeId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "policy",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.updateResourceScopeRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.ResourceScopeView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/storage/profile": {
             "get": {
                 "produces": [
@@ -2781,6 +4466,25 @@ const docTemplate = `{
                 }
             }
         },
+        "/metrics": {
+            "get": {
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "health"
+                ],
+                "summary": "Get Prometheus metrics",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    }
+                }
+            }
+        },
         "/readyz": {
             "get": {
                 "produces": [
@@ -2808,6 +4512,134 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_ash-repwiki_ash_internal_alerts.EvaluationResult": {
+            "type": "object",
+            "properties": {
+                "evaluatedAt": {
+                    "type": "string"
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AlertEvent"
+                    }
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleEvaluation"
+                    }
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_alerts.RuleEvaluation": {
+            "type": "object",
+            "properties": {
+                "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "metric": {
+                    "type": "string"
+                },
+                "ruleId": {
+                    "type": "string"
+                },
+                "ruleName": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "threshold": {
+                    "type": "number"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_alerts.RuleInput": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metric": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "threshold": {
+                    "type": "number"
+                },
+                "windowMinutes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_alerts.TraceView": {
+            "type": "object",
+            "properties": {
+                "agentTasks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AgentTask"
+                    }
+                },
+                "auditLogs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AuditLog"
+                    }
+                },
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.RunEvent"
+                    }
+                },
+                "runs": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.RunRecord"
+                    }
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "toolCalls": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.ToolCall"
+                    }
+                },
+                "traceId": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_artifactstore.Profile": {
             "type": "object",
             "properties": {
@@ -2827,6 +4659,195 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "uri": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.BuiltinRole": {
+            "type": "object",
+            "properties": {
+                "label": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.MatrixResponse": {
+            "type": "object",
+            "properties": {
+                "builtinRoles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.BuiltinRole"
+                    }
+                },
+                "catalog": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.PermissionDef"
+                    }
+                },
+                "currentActor": {
+                    "type": "string"
+                },
+                "currentRole": {
+                    "type": "string"
+                },
+                "orgRoles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.OrgRoleRow"
+                    }
+                },
+                "scenarioTools": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.ScenarioMatrixRow"
+                    }
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.OrgRoleRow": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.PermissionDef": {
+            "type": "object",
+            "properties": {
+                "group": {
+                    "type": "string"
+                },
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.ScenarioMatrixRow": {
+            "type": "object",
+            "properties": {
+                "scenario": {
+                    "type": "string"
+                },
+                "scenarioKey": {
+                    "type": "string"
+                },
+                "toolMatrix": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_authz.ToolRule"
+                    }
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_authz.ToolRule": {
+            "type": "object",
+            "properties": {
+                "allow": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "deny": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "denyMode": {
+                    "description": "block | skip",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse": {
+            "type": "object",
+            "properties": {
+                "adopted": {
+                    "type": "boolean"
+                },
+                "confidence": {
+                    "type": "number"
+                },
+                "connectionId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "decidedAt": {
+                    "type": "string"
+                },
+                "decidedBy": {
+                    "type": "string"
+                },
+                "decisionReason": {
+                    "type": "string"
+                },
+                "decisionStatus": {
+                    "type": "string"
+                },
+                "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "fixSuggestions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "jobId": {
+                    "type": "string"
+                },
+                "logDigest": {
+                    "type": "string"
+                },
+                "rootCause": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -2899,6 +4920,147 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_improve.ArtifactCompare": {
+            "type": "object",
+            "properties": {
+                "baselineRunId": {
+                    "type": "string"
+                },
+                "byType": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "string"
+                    }
+                },
+                "changed": {
+                    "type": "integer"
+                },
+                "experimentRunId": {
+                    "type": "string"
+                },
+                "matched": {
+                    "type": "integer"
+                },
+                "missing": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.CanaryRequest": {
+            "type": "object",
+            "required": [
+                "percent"
+            ],
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "percent": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.CreateProposalRequest": {
+            "type": "object",
+            "required": [
+                "baselineRunId",
+                "title"
+            ],
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "baselineRunId": {
+                    "type": "string"
+                },
+                "changeSummary": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.ListProposalsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ProposalView"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.ProposalView": {
+            "type": "object",
+            "properties": {
+                "baselineRunId": {
+                    "type": "string"
+                },
+                "canaryPercent": {
+                    "type": "integer"
+                },
+                "changeSummary": {
+                    "type": "string"
+                },
+                "compare": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ArtifactCompare"
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "experimentRunId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.StartExperimentResponse": {
+            "type": "object",
+            "properties": {
+                "compare": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_improve.ArtifactCompare"
+                },
+                "experimentRunId": {
+                    "type": "string"
+                },
+                "proposalId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_improve.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "ok": {
+                    "type": "boolean"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_memory.CreateCandidateRequest": {
             "type": "object",
             "required": [
@@ -2959,6 +5121,9 @@ const docTemplate = `{
             "properties": {
                 "candidateId": {
                     "type": "string"
+                },
+                "governance": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.GovernanceHints"
                 }
             }
         },
@@ -3024,6 +5189,44 @@ const docTemplate = `{
                 },
                 "ref": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.GovernanceHint": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "description": "duplicate|conflict|pending_duplicate",
+                    "type": "string"
+                },
+                "memoryId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.GovernanceHints": {
+            "type": "object",
+            "properties": {
+                "conflicts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.GovernanceHint"
+                    }
+                },
+                "duplicates": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.GovernanceHint"
+                    }
                 }
             }
         },
@@ -3238,6 +5441,158 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.BreakdownItem": {
+            "type": "object",
+            "properties": {
+                "key": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.DataQualityNote": {
+            "type": "object",
+            "properties": {
+                "message": {
+                    "type": "string"
+                },
+                "metricId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.MetricBreakdown": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.BreakdownItem"
+                    }
+                },
+                "label": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.MetricCard": {
+            "type": "object",
+            "properties": {
+                "denominator": {
+                    "type": "integer"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "numerator": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "unit": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.MetricPoint": {
+            "type": "object",
+            "properties": {
+                "periodStart": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "value": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.MetricTrend": {
+            "type": "object",
+            "properties": {
+                "metricId": {
+                    "type": "string"
+                },
+                "points": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.MetricPoint"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_metrics.Overview": {
+            "type": "object",
+            "properties": {
+                "breakdowns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.MetricBreakdown"
+                    }
+                },
+                "dataQuality": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.DataQualityNote"
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "generatedAt": {
+                    "type": "string"
+                },
+                "period": {
+                    "type": "string"
+                },
+                "projectId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.MetricCard"
+                    }
+                },
+                "to": {
+                    "type": "string"
+                },
+                "trends": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_metrics.MetricTrend"
+                    }
                 }
             }
         },
@@ -3506,6 +5861,52 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit"
                     }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate": {
+            "type": "object",
+            "properties": {
+                "evidenceRef": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "itemKey": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_releases.GateEvaluation": {
+            "type": "object",
+            "properties": {
+                "evaluatedAt": {
+                    "type": "string"
+                },
+                "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "overall": {
+                    "type": "string"
+                },
+                "releaseId": {
+                    "type": "string"
+                },
+                "results": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseGateResult"
+                    }
+                },
+                "spaceId": {
+                    "type": "string"
                 }
             }
         },
@@ -3945,6 +6346,9 @@ const docTemplate = `{
                 "scenario"
             ],
             "properties": {
+                "actorRole": {
+                    "type": "string"
+                },
                 "inputs": {
                     "type": "object",
                     "additionalProperties": {}
@@ -4047,6 +6451,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_runs.Summary": {
             "type": "object",
             "properties": {
+                "actorRole": {
+                    "type": "string"
+                },
                 "finishedAt": {
                     "type": "integer"
                 },
@@ -4107,6 +6514,23 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_security.LeakFinding": {
+            "type": "object",
+            "properties": {
+                "pattern": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "string"
+                },
+                "snippet": {
+                    "type": "string"
+                },
+                "source": {
                     "type": "string"
                 }
             }
@@ -4178,6 +6602,97 @@ const docTemplate = `{
                 },
                 "traceID": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.AlertEvent": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "evidenceRefsJson": {
+                    "type": "string"
+                },
+                "fingerprint": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "resolvedAt": {
+                    "type": "string"
+                },
+                "ruleId": {
+                    "type": "string"
+                },
+                "ruleName": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "targetId": {
+                    "type": "string"
+                },
+                "targetType": {
+                    "type": "string"
+                },
+                "triggeredAt": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.AlertRule": {
+            "type": "object",
+            "properties": {
+                "condition": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "metric": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "threshold": {
+                    "type": "number"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "windowMinutes": {
+                    "type": "integer"
                 }
             }
         },
@@ -4324,6 +6839,103 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_store.CIJob": {
+            "type": "object",
+            "properties": {
+                "attempt": {
+                    "type": "integer"
+                },
+                "ciRunId": {
+                    "type": "string"
+                },
+                "completedAt": {
+                    "type": "string"
+                },
+                "conclusion": {
+                    "type": "string"
+                },
+                "connectionId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "logDigest": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "providerJobId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.CIRun": {
+            "type": "object",
+            "properties": {
+                "attempt": {
+                    "type": "integer"
+                },
+                "branch": {
+                    "type": "string"
+                },
+                "commitSha": {
+                    "type": "string"
+                },
+                "completedAt": {
+                    "type": "string"
+                },
+                "conclusion": {
+                    "type": "string"
+                },
+                "connectionId": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "providerRunId": {
+                    "type": "string"
+                },
+                "runUrl": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "workflow": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_store.Checkpoint": {
             "type": "object",
             "properties": {
@@ -4366,6 +6978,9 @@ const docTemplate = `{
                 "actorID": {
                     "type": "string"
                 },
+                "category": {
+                    "type": "string"
+                },
                 "comment": {
                     "type": "string"
                 },
@@ -4378,13 +6993,25 @@ const docTemplate = `{
                 "rating": {
                     "type": "integer"
                 },
+                "severity": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
                 "spaceID": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "targetID": {
                     "type": "string"
                 },
                 "targetType": {
+                    "type": "string"
+                },
+                "updatedAt": {
                     "type": "string"
                 }
             }
@@ -4544,6 +7171,149 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_store.ReleaseChecklistItem": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "evidenceRef": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "itemKey": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "releaseId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.ReleaseGateResult": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "evidenceRefsJson": {
+                    "type": "string"
+                },
+                "gateKey": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "releaseId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.ReleaseRecord": {
+            "type": "object",
+            "properties": {
+                "canaryStrategy": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "evidenceRefsJson": {
+                    "type": "string"
+                },
+                "gateStatus": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.RepoConnection": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "defaultBranch": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lastSyncAt": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "repo": {
+                    "type": "string"
+                },
+                "secretId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_store.Role": {
             "type": "object",
             "properties": {
@@ -4560,6 +7330,129 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "permissions": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.RollbackDrill": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "durationMs": {
+                    "type": "integer"
+                },
+                "evidenceRefsJson": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "releaseId": {
+                    "type": "string"
+                },
+                "scenario": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.RunEvent": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "payloadJSON": {
+                    "type": "string"
+                },
+                "runID": {
+                    "type": "string"
+                },
+                "seq": {
+                    "type": "integer"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "ts": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_store.RunRecord": {
+            "type": "object",
+            "properties": {
+                "actorRole": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "errorCode": {
+                    "type": "string"
+                },
+                "errorMessage": {
+                    "type": "string"
+                },
+                "finishedAt": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inputsDigest": {
+                    "type": "string"
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "recovered": {
+                    "type": "boolean"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "scenarioName": {
+                    "type": "string"
+                },
+                "scenarioVersion": {
+                    "type": "string"
+                },
+                "spaceID": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "traceID": {
                     "type": "string"
                 },
                 "updatedAt": {
@@ -4670,6 +7563,28 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AgentTask"
+                    }
+                }
+            }
+        },
+        "internal_api.AlertEventListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AlertEvent"
+                    }
+                }
+            }
+        },
+        "internal_api.AlertRuleListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AlertRule"
                     }
                 }
             }
@@ -4844,6 +7759,39 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.CIDiagnosisListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse"
+                    }
+                }
+            }
+        },
+        "internal_api.CIJobListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.CIJob"
+                    }
+                }
+            }
+        },
+        "internal_api.CIRunListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.CIRun"
+                    }
+                }
+            }
+        },
         "internal_api.CheckpointAccessResponse": {
             "type": "object",
             "properties": {
@@ -4887,6 +7835,34 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.ComplianceExportRequest": {
+            "type": "object",
+            "properties": {
+                "reportId": {
+                    "type": "string"
+                },
+                "suite": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.ComplianceExportResponse": {
+            "type": "object",
+            "properties": {
+                "exportId": {
+                    "type": "string"
+                },
+                "report": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_doctor.Report"
+                },
+                "reportId": {
+                    "type": "string"
+                },
+                "suite": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.DatabaseProfile": {
             "type": "object",
             "properties": {
@@ -4898,6 +7874,17 @@ const docTemplate = `{
                 },
                 "urlConfigured": {
                     "type": "boolean"
+                }
+            }
+        },
+        "internal_api.FeedbackListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback"
+                    }
                 }
             }
         },
@@ -5020,6 +8007,55 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.ProvenanceLink": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "ref": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.ProvenanceResponse": {
+            "type": "object",
+            "properties": {
+                "agentTasks": {
+                    "type": "integer"
+                },
+                "artifacts": {
+                    "type": "integer"
+                },
+                "events": {
+                    "type": "integer"
+                },
+                "links": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_api.ProvenanceLink"
+                    }
+                },
+                "modelUsage": {
+                    "type": "integer"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "scenario": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.ScenarioRef"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "toolCalls": {
+                    "type": "integer"
+                },
+                "traceId": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.QualityMetricListResponse": {
             "type": "object",
             "properties": {
@@ -5028,6 +8064,76 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.QualityMetric"
                     }
+                }
+            }
+        },
+        "internal_api.ReleaseChecklistResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseChecklistItem"
+                    }
+                }
+            }
+        },
+        "internal_api.ReleaseListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseRecord"
+                    }
+                }
+            }
+        },
+        "internal_api.RepoConnectionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.RepoConnection"
+                    }
+                }
+            }
+        },
+        "internal_api.ResourceScopeListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_api.ResourceScopeView"
+                    }
+                }
+            }
+        },
+        "internal_api.ResourceScopeView": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "policyJson": {
+                    "type": "string"
+                },
+                "resourceId": {
+                    "type": "string"
+                },
+                "resourceType": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
                 }
             }
         },
@@ -5050,6 +8156,65 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.Summary"
                     }
+                }
+            }
+        },
+        "internal_api.ScaleReadinessResponse": {
+            "type": "object",
+            "properties": {
+                "auditLogRows": {
+                    "type": "integer"
+                },
+                "databaseDialect": {
+                    "type": "string"
+                },
+                "dualWriteEnabled": {
+                    "type": "boolean"
+                },
+                "dualWriteRuntime": {
+                    "type": "boolean"
+                },
+                "dualWriteSource": {
+                    "type": "string"
+                },
+                "lastMigrationSyncAtMs": {
+                    "type": "integer"
+                },
+                "memoryApprovedCount": {
+                    "type": "integer"
+                },
+                "memorySchemaVersion": {
+                    "type": "integer"
+                },
+                "migrationReady": {
+                    "type": "boolean"
+                },
+                "migrationTableCount": {
+                    "type": "integer"
+                },
+                "modelCostMicrosTotal": {
+                    "type": "integer"
+                },
+                "modelUsageRows": {
+                    "type": "integer"
+                },
+                "postgresConfigured": {
+                    "type": "boolean"
+                },
+                "qualityMetricRows": {
+                    "type": "integer"
+                },
+                "ragChunkCount": {
+                    "type": "integer"
+                },
+                "ragDocumentCount": {
+                    "type": "integer"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "sqlitePath": {
+                    "type": "string"
                 }
             }
         },
@@ -5140,6 +8305,29 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "valueDigest": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.SecretScanResponse": {
+            "type": "object",
+            "properties": {
+                "findings": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_security.LeakFinding"
+                    }
+                },
+                "leakCount": {
+                    "type": "integer"
+                },
+                "redactEnabled": {
+                    "type": "boolean"
+                },
+                "scanned": {
+                    "type": "integer"
+                },
+                "spaceId": {
                     "type": "string"
                 }
             }
@@ -5244,13 +8432,25 @@ const docTemplate = `{
                 "actorId": {
                     "type": "string"
                 },
+                "category": {
+                    "type": "string"
+                },
                 "comment": {
                     "type": "string"
                 },
                 "rating": {
                     "type": "integer"
                 },
+                "severity": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
                 "spaceId": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 },
                 "targetId": {
@@ -5301,6 +8501,54 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.createReleaseRequest": {
+            "type": "object",
+            "required": [
+                "version"
+            ],
+            "properties": {
+                "canaryStrategy": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.createRepoConnectionRequest": {
+            "type": "object",
+            "required": [
+                "owner",
+                "repo",
+                "secretId"
+            ],
+            "properties": {
+                "defaultBranch": {
+                    "type": "string"
+                },
+                "owner": {
+                    "type": "string"
+                },
+                "provider": {
+                    "type": "string"
+                },
+                "repo": {
+                    "type": "string"
+                },
+                "secretId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.createRoleRequest": {
             "type": "object",
             "required": [
@@ -5315,6 +8563,32 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                }
+            }
+        },
+        "internal_api.createRollbackDrillRequest": {
+            "type": "object",
+            "required": [
+                "scenario"
+            ],
+            "properties": {
+                "durationMs": {
+                    "type": "integer"
+                },
+                "evidenceRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "scenario": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -5361,6 +8635,31 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.decideCIDiagnosisRequest": {
+            "type": "object",
+            "properties": {
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.diagnoseCIFailureRequest": {
+            "type": "object",
+            "properties": {
+                "connectionId": {
+                    "type": "string"
+                },
+                "jobId": {
+                    "type": "string"
+                },
+                "logText": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.doctorRunRequest": {
             "type": "object",
             "required": [
@@ -5398,6 +8697,28 @@ const docTemplate = `{
                 },
                 "spaceId": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.patchReleaseChecklistRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate"
+                    }
+                }
+            }
+        },
+        "internal_api.putAlertRulesRequest": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleInput"
+                    }
                 }
             }
         },
@@ -5495,6 +8816,34 @@ const docTemplate = `{
                     "type": "integer"
                 }
             }
+        },
+        "internal_api.updateFeedbackRequest": {
+            "type": "object",
+            "properties": {
+                "category": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "severity": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.updateResourceScopeRequest": {
+            "type": "object",
+            "required": [
+                "policyJson"
+            ],
+            "properties": {
+                "policyJson": {
+                    "type": "string"
+                }
+            }
         }
     },
     "tags": [
@@ -5509,6 +8858,18 @@ const docTemplate = `{
         },
         {
             "name": "memory description Memory governance (candidate/review/query)"
+        },
+        {
+            "name": "compliance description TR2 compliance scan and audit export"
+        },
+        {
+            "name": "scale description TR3 scale readiness"
+        },
+        {
+            "name": "improve description M1 self-improvement proposals"
+        },
+        {
+            "name": "permissions description M2 RBAC and scenario tool matrix"
         }
     ]
 }`
