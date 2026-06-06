@@ -98,7 +98,7 @@ func (h *Handler) login(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	user, err := h.userByLogin(req.Email)
+	user, err := h.userByLogin(c, req.Email)
 	if err != nil || user.PasswordHash == "" || !checkPasswordHash(req.Password, user.PasswordHash) {
 		c.JSON(http.StatusUnauthorized, errorBody("INVALID_CREDENTIALS", "invalid email or password"))
 		return
@@ -109,7 +109,7 @@ func (h *Handler) login(c *gin.Context) {
 	}
 	spaceID := strings.TrimSpace(req.SpaceID)
 	if spaceID == "" {
-		spaceID, err = h.defaultLoginSpace(user.ID)
+		spaceID, err = h.defaultLoginSpace(c, user.ID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("LOGIN_SCOPE_FAILED", err.Error()))
 			return
@@ -117,7 +117,7 @@ func (h *Handler) login(c *gin.Context) {
 	}
 	spaceID = firstNonEmptyAPI(spaceID, "local")
 	if spaceID != "local" {
-		ok, err := h.userHasSpaceAccess(user.ID, spaceID)
+		ok, err := h.userHasSpaceAccess(c, user.ID, spaceID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("LOGIN_SCOPE_FAILED", err.Error()))
 			return
@@ -139,11 +139,11 @@ func (h *Handler) login(c *gin.Context) {
 	spaceName := "Local"
 	if spaceID != "local" {
 		var space store.Space
-		if err := h.db.First(&space, "id = ?", spaceID).Error; err == nil {
+		if err := h.dbBypass(c).First(&space, "id = ?", spaceID).Error; err == nil {
 			spaceName = space.Name
 		}
 	}
-	_ = h.db.Create(auditRow(spaceID, user.ID, "auth.login", map[string]any{
+	_ = h.dbBypass(c).Create(auditRow(spaceID, user.ID, "auth.login", map[string]any{
 		"userId": user.ID, "email": user.Email, "spaceId": spaceID,
 	})).Error
 	c.JSON(http.StatusOK, AuthSessionResponse{
@@ -206,7 +206,7 @@ func (h *Handler) changePassword(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("PASSWORD_UPDATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(currentSpace(c), user.ID, "auth.password_changed", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(currentSpace(c), user.ID, "auth.password_changed", map[string]any{
 		"userId": user.ID,
 	})).Error
 	c.JSON(http.StatusOK, PasswordChangeResponse{OK: true})
@@ -242,7 +242,7 @@ func (h *Handler) authMe(c *gin.Context) {
 	space := AuthSpace{ID: spaceID, Name: "Local"}
 	if spaceID != "local" {
 		var spaceRow store.Space
-		if err := h.db.First(&spaceRow, "id = ?", spaceID).Error; err != nil {
+		if err := h.dbFor(c).First(&spaceRow, "id = ?", spaceID).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("SPACE_LOOKUP_FAILED", err.Error()))
 			return
 		}
@@ -252,7 +252,7 @@ func (h *Handler) authMe(c *gin.Context) {
 	if roleAllowsPermission(role, "*") || role == "admin" {
 		perms = append(perms, "*")
 	} else {
-		memberPerms, err := h.memberPermissions(actorID, spaceID)
+		memberPerms, err := h.memberPermissions(c, actorID, spaceID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("PERMISSION_LOOKUP_FAILED", err.Error()))
 			return
@@ -307,16 +307,16 @@ func isPublicAuthPath(path string) bool {
 	}
 }
 
-func (h *Handler) userByLogin(login string) (store.User, error) {
+func (h *Handler) userByLogin(c *gin.Context, login string) (store.User, error) {
 	login = strings.TrimSpace(login)
 	var user store.User
-	err := h.db.Where("LOWER(email) = ? OR id = ?", strings.ToLower(login), login).Take(&user).Error
+	err := h.dbBypass(c).Where("LOWER(email) = ? OR id = ?", strings.ToLower(login), login).Take(&user).Error
 	return user, err
 }
 
-func (h *Handler) defaultLoginSpace(userID string) (string, error) {
+func (h *Handler) defaultLoginSpace(c *gin.Context, userID string) (string, error) {
 	var member store.Member
-	err := h.db.Where("user_id = ? AND status = ? AND space_id <> ''", userID, "active").
+	err := h.dbBypass(c).Where("user_id = ? AND status = ? AND space_id <> ''", userID, "active").
 		Order("created_at asc").
 		Take(&member).Error
 	if err == nil && member.SpaceID != "" {
@@ -325,19 +325,19 @@ func (h *Handler) defaultLoginSpace(userID string) (string, error) {
 	return "local", nil
 }
 
-func (h *Handler) userHasSpaceAccess(userID, spaceID string) (bool, error) {
+func (h *Handler) userHasSpaceAccess(c *gin.Context, userID, spaceID string) (bool, error) {
 	if spaceID != "local" {
 		var space store.Space
-		if err := h.db.First(&space, "id = ?", spaceID).Error; err != nil {
+		if err := h.dbBypass(c).First(&space, "id = ?", spaceID).Error; err != nil {
 			return false, err
 		}
 	}
-	targetOrgID, err := h.spaceOrgID(spaceID)
+	targetOrgID, err := h.spaceOrgID(c, spaceID)
 	if err != nil {
 		return false, err
 	}
 	var rows []memberPermissionRow
-	err = h.db.Table("members").
+	err = h.dbBypass(c).Table("members").
 		Select("members.org_id, members.space_id, roles.permissions").
 		Joins("JOIN roles ON roles.id = members.role_id").
 		Where("members.user_id = ? AND members.status = ?", userID, "active").
@@ -428,7 +428,7 @@ func (h *Handler) requireRunPermission(c *gin.Context, runID, permission string)
 	if !h.requireRunAccess(c, runID) {
 		return false
 	}
-	spaceID, err := h.runSpaceID(runID)
+	spaceID, err := h.runSpaceID(c, runID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusInternalServerError, errorBody("RUN_SCOPE_CHECK_FAILED", err.Error()))
 		return false
@@ -457,7 +457,7 @@ func (h *Handler) hasPermission(c *gin.Context, spaceID, permission string) (boo
 	if actor == "" {
 		return false, nil
 	}
-	perms, err := h.memberPermissions(actor, spaceID)
+	perms, err := h.memberPermissions(c, actor, spaceID)
 	if err != nil {
 		return false, err
 	}
@@ -477,7 +477,7 @@ func (h *Handler) hasOrgPermission(c *gin.Context, orgID, permission string) (bo
 	if actor == "" {
 		return false, nil
 	}
-	perms, err := h.orgMemberPermissions(actor, orgID)
+	perms, err := h.orgMemberPermissions(c, actor, orgID)
 	if err != nil {
 		return false, err
 	}
@@ -517,9 +517,9 @@ type memberPermissionRow struct {
 	Permissions string
 }
 
-func (h *Handler) memberPermissions(actorID, targetSpaceID string) ([]string, error) {
+func (h *Handler) memberPermissions(c *gin.Context, actorID, targetSpaceID string) ([]string, error) {
 	var rows []memberPermissionRow
-	err := h.db.Table("members").
+	err := h.dbBypass(c).Table("members").
 		Select("members.org_id, members.space_id, roles.permissions").
 		Joins("JOIN roles ON roles.id = members.role_id").
 		Where("members.user_id = ? AND members.status = ?", actorID, "active").
@@ -527,7 +527,7 @@ func (h *Handler) memberPermissions(actorID, targetSpaceID string) ([]string, er
 	if err != nil {
 		return nil, err
 	}
-	targetOrgID, err := h.spaceOrgID(targetSpaceID)
+	targetOrgID, err := h.spaceOrgID(c, targetSpaceID)
 	if err != nil {
 		return nil, err
 	}
@@ -541,9 +541,9 @@ func (h *Handler) memberPermissions(actorID, targetSpaceID string) ([]string, er
 	return out, nil
 }
 
-func (h *Handler) orgMemberPermissions(actorID, orgID string) ([]string, error) {
+func (h *Handler) orgMemberPermissions(c *gin.Context, actorID, orgID string) ([]string, error) {
 	var rows []memberPermissionRow
-	err := h.db.Table("members").
+	err := h.dbBypass(c).Table("members").
 		Select("members.org_id, members.space_id, roles.permissions").
 		Joins("JOIN roles ON roles.id = members.role_id").
 		Where("members.user_id = ? AND members.status = ? AND members.org_id = ? AND (members.space_id = '' OR members.space_id IS NULL)", actorID, "active", orgID).
@@ -558,24 +558,24 @@ func (h *Handler) orgMemberPermissions(actorID, orgID string) ([]string, error) 
 	return out, nil
 }
 
-func (h *Handler) spaceOrgID(spaceID string) (string, error) {
+func (h *Handler) spaceOrgID(c *gin.Context, spaceID string) (string, error) {
 	if spaceID == "" || spaceID == "local" {
 		return "", nil
 	}
 	var row struct {
 		OrgID string
 	}
-	if err := h.db.Table("spaces").Select("org_id").Where("id = ?", spaceID).Scan(&row).Error; err != nil {
+	if err := h.dbBypass(c).Table("spaces").Select("org_id").Where("id = ?", spaceID).Scan(&row).Error; err != nil {
 		return "", err
 	}
 	return row.OrgID, nil
 }
 
-func (h *Handler) runSpaceID(runID string) (string, error) {
+func (h *Handler) runSpaceID(c *gin.Context, runID string) (string, error) {
 	var row struct {
 		SpaceID string
 	}
-	if err := h.db.Table("runs").Select("space_id").Where("id = ?", runID).Take(&row).Error; err != nil {
+	if err := h.dbBypass(c).Table("runs").Select("space_id").Where("id = ?", runID).Take(&row).Error; err != nil {
 		return "", err
 	}
 	return firstNonEmptyAPI(row.SpaceID, "local"), nil
@@ -622,7 +622,7 @@ func permissionMatches(grant, want string) bool {
 }
 
 func (h *Handler) requireRunAccess(c *gin.Context, runID string) bool {
-	sum, err := h.runs.Get(runID)
+	sum, err := h.runsFor(c).Get(runID)
 	if err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", "run not found"))
 		return false

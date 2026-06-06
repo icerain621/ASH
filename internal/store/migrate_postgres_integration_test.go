@@ -17,6 +17,7 @@ func TestMigratorSQLiteToPostgresE2E(t *testing.T) {
 	if os.Getenv("ASH_MIGRATE_E2E") != "1" {
 		t.Skip("set ASH_MIGRATE_E2E=1 for live postgres migrate test")
 	}
+	resetPostgresForTest(t, pgURL)
 
 	dir := t.TempDir()
 	srcPath := filepath.Join(dir, "source.db")

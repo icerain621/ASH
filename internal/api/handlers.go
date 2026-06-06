@@ -76,6 +76,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 	v1 := r.Group("/api/v1")
 	v1.Use(authMiddleware(cfg))
+	v1.Use(h.rlsMiddleware())
 	{
 		v1.POST("/runs", h.createRun)
 		v1.GET("/runs", h.listRuns)
@@ -147,6 +148,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/ci/diagnoses/:diagnosisId/adopt", h.adoptCIDiagnosis)
 		v1.POST("/ci/diagnoses/:diagnosisId/dismiss", h.dismissCIDiagnosis)
 		v1.GET("/metrics/overview", h.getMetricsOverview)
+		v1.GET("/metrics/prometheus", h.getMetricsPrometheus)
 		v1.GET("/secrets", h.listSecrets)
 		v1.POST("/secrets", h.createSecret)
 		v1.POST("/secrets/:secretId/rotate", h.rotateSecret)
@@ -224,10 +226,10 @@ func (h *Handler) readyz(c *gin.Context) {
 		return
 	}
 	if err := sqlDB.Ping(); err != nil {
-		c.JSON(http.StatusServiceUnavailable, HealthResponse{Status: "not_ready", Error: err.Error()})
+		c.JSON(http.StatusServiceUnavailable, HealthResponse{Status: "not_ready", Dialect: h.db.Dialect(), Error: err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, HealthResponse{Status: "ready"})
+	c.JSON(http.StatusOK, HealthResponse{Status: "ready", Dialect: h.db.Dialect()})
 }
 
 // CreateRun godoc
@@ -260,7 +262,7 @@ func (h *Handler) createRun(c *gin.Context) {
 	if strings.TrimSpace(req.ActorRole) == "" {
 		req.ActorRole = currentRole(c)
 	}
-	resp, err := h.runs.Create(req)
+	resp, err := h.runsFor(c).Create(req)
 	if resp == nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RUN_CREATE_FAILED", err.Error()))
 		return
@@ -270,7 +272,7 @@ func (h *Handler) createRun(c *gin.Context) {
 	out := RunCreateResponse{RunID: resp.RunID, TraceID: resp.TraceID}
 	if err != nil {
 		out.ExecutionError = err.Error()
-		if sum, getErr := h.runs.Get(resp.RunID); getErr == nil {
+		if sum, getErr := h.runsFor(c).Get(resp.RunID); getErr == nil {
 			out.Status = sum.Status
 		} else {
 			out.Status = "failed"
@@ -289,7 +291,7 @@ func (h *Handler) createRun(c *gin.Context) {
 // @Router /api/v1/runs [get]
 func (h *Handler) listRuns(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	items, err := h.runs.ListForSpace(currentSpace(c), limit)
+	items, err := h.runsFor(c).ListForSpace(currentSpace(c), limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RUN_LIST_FAILED", err.Error()))
 		return
@@ -310,7 +312,7 @@ func (h *Handler) getRun(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	sum, err := h.runs.Get(runID)
+	sum, err := h.runsFor(c).Get(runID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", "run not found"))
 		return
@@ -329,6 +331,12 @@ func (h *Handler) getRun(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/runs/{runId}/stream [get]
+func (h *Handler) auditStream(c *gin.Context, runID, eventType string, payload map[string]any) {
+	row := auditRow(currentSpace(c), currentActor(c), eventType, payload)
+	row.RunID = runID
+	_ = h.dbFor(c).Create(row).Error
+}
+
 func (h *Handler) streamRun(c *gin.Context) {
 	runID := c.Param("runId")
 	if !h.requireRunAccess(c, runID) {
@@ -342,13 +350,26 @@ func (h *Handler) streamRun(c *gin.Context) {
 
 	lastSeq := int64(0)
 	if lastID := c.GetHeader("Last-Event-ID"); lastID != "" {
-		if seq, err := h.events.SeqFromEventID(runID, lastID); err == nil {
+		if seq, err := h.eventsFor(c).SeqFromEventID(runID, lastID); err == nil {
 			lastSeq = seq
 		}
 	}
 
+	opened := false
+	defer func() {
+		if opened {
+			h.auditStream(c, runID, "stream.session_closed", map[string]any{
+				"runId":  runID,
+				"reason": "client_disconnect",
+			})
+		}
+	}()
+
 	flusher, ok := c.Writer.(http.Flusher)
 	if !ok {
+		h.auditStream(c, runID, "stream.session_failed", map[string]any{
+			"runId": runID, "reason": "sse_unsupported",
+		})
 		c.JSON(http.StatusInternalServerError, errorBody("SSE_UNSUPPORTED", "streaming not supported"))
 		return
 	}
@@ -365,8 +386,11 @@ func (h *Handler) streamRun(c *gin.Context) {
 		}
 	}
 
-	evs, err := h.events.ListAfter(runID, lastSeq, 500)
+	evs, err := h.eventsFor(c).ListAfter(runID, lastSeq, 500)
 	if err != nil {
+		h.auditStream(c, runID, "stream.session_failed", map[string]any{
+			"runId": runID, "reason": "event_list_failed", "error": err.Error(),
+		})
 		c.JSON(http.StatusInternalServerError, errorBody("EVENT_LIST_FAILED", err.Error()))
 		return
 	}
@@ -374,6 +398,10 @@ func (h *Handler) streamRun(c *gin.Context) {
 	if len(evs) > 0 {
 		lastSeq = evs[len(evs)-1].Seq
 	}
+	opened = true
+	h.auditStream(c, runID, "stream.session_opened", map[string]any{
+		"runId": runID, "resumedFromSeq": lastSeq,
+	})
 
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
@@ -382,7 +410,7 @@ func (h *Handler) streamRun(c *gin.Context) {
 		case <-c.Request.Context().Done():
 			return
 		case <-ticker.C:
-			evs, err := h.events.ListAfter(runID, lastSeq, 100)
+			evs, err := h.eventsFor(c).ListAfter(runID, lastSeq, 100)
 			if err != nil || len(evs) == 0 {
 				continue
 			}

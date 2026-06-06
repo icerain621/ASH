@@ -81,7 +81,7 @@ func (h *Handler) runDoctor(c *gin.Context) {
 	if req.Format == "md" {
 		_ = writeReportMD(h.db.DataDir(), id, rep)
 	}
-	_ = h.db.Create(auditRow(currentSpace(c), currentActor(c), "doctor.suite_completed", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(currentSpace(c), currentActor(c), "doctor.suite_completed", map[string]any{
 		"reportId": id, "suite": rep.Suite, "pass": rep.Summary.Pass, "fail": rep.Summary.Fail,
 	}))
 	c.JSON(http.StatusOK, doctorRunResponse{ReportID: id})
@@ -119,7 +119,7 @@ func (h *Handler) listRunArtifacts(c *gin.Context) {
 	if !h.requireRunPermission(c, runID, permArtifactRead) {
 		return
 	}
-	manifest, err := h.runs.Artifacts(runID)
+	manifest, err := h.runsFor(c).Artifacts(runID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("ARTIFACTS_NOT_FOUND", err.Error()))
 		return
@@ -141,7 +141,7 @@ func (h *Handler) listRunCheckpoints(c *gin.Context) {
 	if !h.requireRunPermission(c, runID, permArtifactRead) {
 		return
 	}
-	items, err := h.runs.Checkpoints(runID)
+	items, err := h.runsFor(c).Checkpoints(runID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("CHECKPOINT_LIST_NOT_FOUND", err.Error()))
 		return
@@ -170,7 +170,7 @@ func (h *Handler) getRunArtifactAccess(c *gin.Context) {
 			ttl = time.Duration(seconds) * time.Second
 		}
 	}
-	resp, err := h.runs.ArtifactAccess(runID, c.Param("artifactName"), ttl)
+	resp, err := h.runsFor(c).ArtifactAccess(runID, c.Param("artifactName"), ttl)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("ARTIFACT_ACCESS_NOT_FOUND", err.Error()))
 		return
@@ -199,7 +199,7 @@ func (h *Handler) getRunCheckpointAccess(c *gin.Context) {
 			ttl = time.Duration(seconds) * time.Second
 		}
 	}
-	resp, err := h.runs.CheckpointAccess(runID, c.Param("checkpointId"), ttl)
+	resp, err := h.runsFor(c).CheckpointAccess(runID, c.Param("checkpointId"), ttl)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("CHECKPOINT_ACCESS_NOT_FOUND", err.Error()))
 		return

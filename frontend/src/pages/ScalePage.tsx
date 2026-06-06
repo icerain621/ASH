@@ -11,6 +11,9 @@ const M3_CHECKS = [
   { id: "M3-02", title: "Postgres 就绪", hint: "ASH_DATABASE_URL 解析与迁移路径" },
   { id: "M3-03", title: "迁移目录", hint: "ash migrate 表清单与 schema 一致性" },
   { id: "M3-04", title: "迁移校验", hint: "ASH_MIGRATE_E2E=1 时 live postgres verify" },
+  { id: "M3-05", title: "ExecGo E2E", hint: "ASH_EXECGO_E2E=1 时真实执行链路（需手动开启）" },
+  { id: "M3-06", title: "Postgres RLS", hint: "ASH_POSTGRES_RLS=1 时租户策略安装与隔离" },
+  { id: "M3-07", title: "ash_app 连接", hint: "ASH_DATABASE_APP_URL 时 Worker 应用角色连通性" },
 ] as const;
 
 const TR3_CHECKS = [
@@ -144,6 +147,10 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>ash_app 连接</td>
+              <td>{r?.postgresAppUrlConfigured ? "ASH_DATABASE_APP_URL" : "—"}</td>
+            </tr>
+            <tr>
               <td>迁移表数量</td>
               <td>{r?.migrationTableCount ?? "-"}</td>
             </tr>
@@ -167,6 +174,22 @@ export function ScalePage() {
               <td>SQLite 路径</td>
               <td>
                 <code>{r?.sqlitePath ?? "-"}</code>
+              </td>
+            </tr>
+            <tr>
+              <td>Postgres RLS</td>
+              <td>
+                {r
+                  ? `${r.postgresRLSEnabled ? "on" : "off"}${r.postgresRLSForce ? " (force)" : ""}`
+                  : "-"}
+              </td>
+            </tr>
+            <tr>
+              <td>RLS 策略数</td>
+              <td>
+                {r?.postgresRLSEnabled
+                  ? `${r.postgresRLSPolicyCount ?? 0} / 34`
+                  : "—"}
               </td>
             </tr>
           </tbody>

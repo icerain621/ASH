@@ -44,7 +44,7 @@ func (h *Handler) getRunProvenance(c *gin.Context) {
 		return
 	}
 	var rec store.RunRecord
-	if err := h.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := h.dbFor(c).First(&rec, "id = ?", runID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", runs.ErrRunNotFound.Error()))
 			return
@@ -53,11 +53,11 @@ func (h *Handler) getRunProvenance(c *gin.Context) {
 		return
 	}
 	var toolCount, agentCount, eventCount, usageCount int64
-	_ = h.db.Model(&store.ToolCall{}).Where("run_id = ?", runID).Count(&toolCount).Error
-	_ = h.db.Model(&store.AgentTask{}).Where("run_id = ?", runID).Count(&agentCount).Error
-	_ = h.db.Model(&store.RunEvent{}).Where("run_id = ?", runID).Count(&eventCount).Error
-	_ = h.db.Model(&store.ModelUsage{}).Where("run_id = ?", runID).Count(&usageCount).Error
-	manifest, _ := h.runs.Artifacts(runID)
+	_ = h.dbFor(c).Model(&store.ToolCall{}).Where("run_id = ?", runID).Count(&toolCount).Error
+	_ = h.dbFor(c).Model(&store.AgentTask{}).Where("run_id = ?", runID).Count(&agentCount).Error
+	_ = h.dbFor(c).Model(&store.RunEvent{}).Where("run_id = ?", runID).Count(&eventCount).Error
+	_ = h.dbFor(c).Model(&store.ModelUsage{}).Where("run_id = ?", runID).Count(&usageCount).Error
+	manifest, _ := h.runsFor(c).Artifacts(runID)
 	artifactCount := 0
 	if manifest != nil {
 		artifactCount = len(manifest.Artifacts)

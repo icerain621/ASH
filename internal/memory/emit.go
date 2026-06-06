@@ -1,6 +1,7 @@
 package memory
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -16,10 +17,29 @@ var ErrRunNotFound = errors.New("run not found")
 type Service struct {
 	db     *store.DB
 	events *events.Service
+	ctx    context.Context
 }
 
 func NewService(db *store.DB, ev *events.Service) *Service {
 	return &Service{db: db, events: ev}
+}
+
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, events: s.events, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
 }
 
 func (s *Service) resolveRun(runID string) (traceID string, err error) {
@@ -27,7 +47,7 @@ func (s *Service) resolveRun(runID string) (traceID string, err error) {
 		return "", nil
 	}
 	var rec store.RunRecord
-	if err := s.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", ErrRunNotFound
 		}

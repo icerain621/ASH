@@ -68,10 +68,20 @@ func TestRecordLowFeedbackAndPrometheusText(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, needle := range []string{"run_total", "ci_diagnoses_total", "feedback_low_score_total 1", "alerts_active 1"} {
+	for _, needle := range []string{"run_total", "ci_diagnoses_total", "feedback_low_score_total 1", "alerts_active 1", "metrics scope: global"} {
 		if !strings.Contains(text, needle) {
 			t.Fatalf("prometheus text missing %q:\n%s", needle, text)
 		}
+	}
+	scoped, err := svc.PrometheusTextWith(PrometheusOptions{SpaceID: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(scoped, `space_id="local"`) {
+		t.Fatalf("scoped prometheus missing space label:\n%s", scoped)
+	}
+	if strings.Contains(scoped, "metrics scope: global") {
+		t.Fatalf("scoped prometheus should not be global:\n%s", scoped)
 	}
 }
 

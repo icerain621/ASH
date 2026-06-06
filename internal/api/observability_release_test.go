@@ -40,8 +40,24 @@ func TestObservabilityAlertsAndMetricsAPI(t *testing.T) {
 	if metricsResp.Code != http.StatusOK {
 		t.Fatalf("metrics status=%d want 200 body=%s", metricsResp.Code, metricsResp.Body.String())
 	}
+	if metricsResp.Header().Get("X-Ash-Metrics-Scope") != "global" {
+		t.Fatalf("metrics scope header=%q want global", metricsResp.Header().Get("X-Ash-Metrics-Scope"))
+	}
 	if !strings.Contains(metricsResp.Body.String(), "feedback_low_score_total 1") {
 		t.Fatalf("metrics=%s want feedback_low_score_total", metricsResp.Body.String())
+	}
+
+	scopedResp := httptest.NewRecorder()
+	scopedReq := httptest.NewRequest(http.MethodGet, "/api/v1/metrics/prometheus?spaceId=local", nil)
+	r.ServeHTTP(scopedResp, scopedReq)
+	if scopedResp.Code != http.StatusOK {
+		t.Fatalf("scoped metrics status=%d want 200 body=%s", scopedResp.Code, scopedResp.Body.String())
+	}
+	if scopedResp.Header().Get("X-Ash-Metrics-Scope") != "space:local" {
+		t.Fatalf("scoped scope header=%q want space:local", scopedResp.Header().Get("X-Ash-Metrics-Scope"))
+	}
+	if !strings.Contains(scopedResp.Body.String(), `space_id="local"`) {
+		t.Fatalf("scoped metrics=%s want space_id label", scopedResp.Body.String())
 	}
 }
 

@@ -308,8 +308,15 @@ export function getTrace(traceId: string) {
   return api<TraceView>(`/observability/trace/${encodeURIComponent(traceId)}`);
 }
 
-export async function getPrometheusText() {
-  const res = await fetch("/metrics");
+export async function getPrometheusText(spaceId?: string) {
+  const { getAuthToken, getCurrentSpaceId } = await import("@/services/http/client");
+  const headers: Record<string, string> = {};
+  const token = getAuthToken();
+  const space = spaceId || getCurrentSpaceId();
+  if (token) headers.Authorization = `Bearer ${token}`;
+  if (space) headers["X-ASH-Space-ID"] = space;
+  const qs = space ? `?spaceId=${encodeURIComponent(space)}` : "";
+  const res = await fetch(`/api/v1/metrics/prometheus${qs}`, { headers });
   if (!res.ok) throw new Error(res.statusText);
   return res.text();
 }

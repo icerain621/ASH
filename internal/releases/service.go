@@ -1,6 +1,7 @@
 package releases
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"strings"
@@ -13,7 +14,8 @@ import (
 )
 
 type Service struct {
-	db *store.DB
+	db  *store.DB
+	ctx context.Context
 }
 
 type CreateRequest struct {
@@ -55,6 +57,24 @@ func NewService(db *store.DB) *Service {
 	return &Service{db: db}
 }
 
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
+}
+
 func (s *Service) Create(req CreateRequest) (store.ReleaseRecord, error) {
 	spaceID := firstNonEmpty(req.SpaceID, "local")
 	version := strings.TrimSpace(req.Version)
@@ -69,7 +89,7 @@ func (s *Service) Create(req CreateRequest) (store.ReleaseRecord, error) {
 		GateStatus: "pending", EvidenceRefsJSON: "[]", CreatedBy: strings.TrimSpace(req.CreatedBy),
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.db.Create(&row).Error; err != nil {
+	if err := s.gdb().Create(&row).Error; err != nil {
 		return store.ReleaseRecord{}, err
 	}
 	if err := s.initializeChecklist(row); err != nil {
@@ -84,7 +104,7 @@ func (s *Service) List(spaceID string, limit int) ([]store.ReleaseRecord, error)
 		limit = 50
 	}
 	var rows []store.ReleaseRecord
-	err := s.db.Where("space_id = ?", spaceID).Order("created_at desc").Limit(limit).Find(&rows).Error
+	err := s.gdb().Where("space_id = ?", spaceID).Order("created_at desc").Limit(limit).Find(&rows).Error
 	return rows, err
 }
 
@@ -93,7 +113,7 @@ func (s *Service) Checklist(spaceID, releaseID string) ([]store.ReleaseChecklist
 		return nil, err
 	}
 	var rows []store.ReleaseChecklistItem
-	err := s.db.Where("space_id = ? AND release_id = ?", firstNonEmpty(spaceID, "local"), releaseID).
+	err := s.gdb().Where("space_id = ? AND release_id = ?", firstNonEmpty(spaceID, "local"), releaseID).
 		Order("item_key asc").Find(&rows).Error
 	return rows, err
 }
@@ -105,7 +125,7 @@ func (s *Service) PatchChecklist(spaceID, releaseID, actor string, updates []Che
 	}
 	now := time.Now().UTC()
 	for _, update := range updates {
-		q := s.db.Model(&store.ReleaseChecklistItem{}).Where("space_id = ? AND release_id = ?", spaceID, releaseID)
+		q := s.gdb().Model(&store.ReleaseChecklistItem{}).Where("space_id = ? AND release_id = ?", spaceID, releaseID)
 		if strings.TrimSpace(update.ID) != "" {
 			q = q.Where("id = ?", strings.TrimSpace(update.ID))
 		} else if strings.TrimSpace(update.ItemKey) != "" {
@@ -158,10 +178,10 @@ func (s *Service) EvaluateGate(spaceID, releaseID string) (GateEvaluation, error
 			EvidenceRefsJSON: mustJSON(check.EvidenceRefs), CreatedAt: now,
 		})
 	}
-	if err := s.db.Create(&results).Error; err != nil {
+	if err := s.gdb().Create(&results).Error; err != nil {
 		return GateEvaluation{}, err
 	}
-	if err := s.db.Model(&store.ReleaseRecord{}).Where("id = ? AND space_id = ?", releaseID, spaceID).
+	if err := s.gdb().Model(&store.ReleaseRecord{}).Where("id = ? AND space_id = ?", releaseID, spaceID).
 		Updates(map[string]any{"gate_status": overall, "evidence_refs_json": mustJSON(evidence), "updated_at": now}).Error; err != nil {
 		return GateEvaluation{}, err
 	}
@@ -187,7 +207,7 @@ func (s *Service) CreateRollbackDrill(req RollbackDrillRequest) (store.RollbackD
 		Notes: strings.TrimSpace(req.Notes), CreatedBy: strings.TrimSpace(req.CreatedBy),
 		CreatedAt: now, UpdatedAt: now,
 	}
-	return row, s.db.Create(&row).Error
+	return row, s.gdb().Create(&row).Error
 }
 
 func (s *Service) initializeChecklist(rel store.ReleaseRecord) error {
@@ -201,7 +221,7 @@ func (s *Service) initializeChecklist(rel store.ReleaseRecord) error {
 			CreatedAt: now, UpdatedAt: now,
 		})
 	}
-	return s.db.Create(&rows).Error
+	return s.gdb().Create(&rows).Error
 }
 
 func defaultChecklistItems() []string {
@@ -231,7 +251,7 @@ type gateCheck struct {
 
 func (s *Service) ciWorkflowGate(spaceID string) gateCheck {
 	var row store.CIRun
-	err := s.db.Where("space_id = ?", spaceID).Order("created_at desc").First(&row).Error
+	err := s.gdb().Where("space_id = ?", spaceID).Order("created_at desc").First(&row).Error
 	if err == gorm.ErrRecordNotFound {
 		return gateCheck{Key: "ci_workflow", Status: "warn", Message: "暂无 CI workflow run 证据", EvidenceRefs: []string{"ci:missing"}}
 	}
@@ -251,7 +271,7 @@ func (s *Service) ciWorkflowGate(spaceID string) gateCheck {
 func (s *Service) doctorGate(spaceID, suite string) gateCheck {
 	var row store.AuditLog
 	pattern := fmt.Sprintf("%%%q:%q%%", "suite", suite)
-	err := s.db.Where("space_id = ? AND event_type = ? AND payload_json LIKE ?", spaceID, "doctor.suite_completed", pattern).
+	err := s.gdb().Where("space_id = ? AND event_type = ? AND payload_json LIKE ?", spaceID, "doctor.suite_completed", pattern).
 		Order("created_at desc").First(&row).Error
 	if err == gorm.ErrRecordNotFound {
 		return gateCheck{Key: "doctor_" + strings.ToLower(suite), Status: "warn", Message: "暂无 Doctor " + suite + " 通过证据", EvidenceRefs: []string{"doctor:" + suite + ":missing"}}
@@ -269,7 +289,7 @@ func (s *Service) doctorGate(spaceID, suite string) gateCheck {
 
 func (s *Service) auditEvidenceGate(spaceID, eventType, key, label string) gateCheck {
 	var row store.AuditLog
-	err := s.db.Where("space_id = ? AND event_type = ?", spaceID, eventType).Order("created_at desc").First(&row).Error
+	err := s.gdb().Where("space_id = ? AND event_type = ?", spaceID, eventType).Order("created_at desc").First(&row).Error
 	if err == gorm.ErrRecordNotFound {
 		return gateCheck{Key: key, Status: "warn", Message: "暂无 " + label + " 证据", EvidenceRefs: []string{key + ":missing"}}
 	}
@@ -287,8 +307,8 @@ func (s *Service) auditEvidenceGate(spaceID, eventType, key, label string) gateC
 
 func (s *Service) activeAlertsGate(spaceID string) gateCheck {
 	var critical, warn int64
-	_ = s.db.Model(&store.AlertEvent{}).Where("space_id = ? AND status = ? AND severity IN ?", spaceID, "active", []string{"critical", "error"}).Count(&critical).Error
-	_ = s.db.Model(&store.AlertEvent{}).Where("space_id = ? AND status = ? AND severity NOT IN ?", spaceID, "active", []string{"critical", "error"}).Count(&warn).Error
+	_ = s.gdb().Model(&store.AlertEvent{}).Where("space_id = ? AND status = ? AND severity IN ?", spaceID, "active", []string{"critical", "error"}).Count(&critical).Error
+	_ = s.gdb().Model(&store.AlertEvent{}).Where("space_id = ? AND status = ? AND severity NOT IN ?", spaceID, "active", []string{"critical", "error"}).Count(&warn).Error
 	if critical > 0 {
 		return gateCheck{Key: "active_alerts", Status: "block", Message: fmt.Sprintf("存在 %d 个 critical/error active alert", critical), EvidenceRefs: []string{"alerts:critical"}}
 	}
@@ -301,8 +321,8 @@ func (s *Service) activeAlertsGate(spaceID string) gateCheck {
 func (s *Service) kpiFeedbackGate(spaceID string) gateCheck {
 	since := time.Now().UTC().AddDate(0, 0, -7)
 	var total, low int64
-	_ = s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ?", spaceID, since).Count(&total).Error
-	_ = s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND rating > 0 AND rating <= 2", spaceID, since).Count(&low).Error
+	_ = s.gdb().Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ?", spaceID, since).Count(&total).Error
+	_ = s.gdb().Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND rating > 0 AND rating <= 2", spaceID, since).Count(&low).Error
 	if total == 0 {
 		return gateCheck{Key: "kpi_feedback", Status: "warn", Message: "最近 7 天暂无反馈 KPI 样本", EvidenceRefs: []string{"kpi:feedback:empty"}}
 	}
@@ -318,7 +338,7 @@ func (s *Service) kpiFeedbackGate(spaceID string) gateCheck {
 
 func (s *Service) requireRelease(spaceID, releaseID string) error {
 	var row store.ReleaseRecord
-	err := s.db.First(&row, "id = ? AND space_id = ?", strings.TrimSpace(releaseID), firstNonEmpty(spaceID, "local")).Error
+	err := s.gdb().First(&row, "id = ? AND space_id = ?", strings.TrimSpace(releaseID), firstNonEmpty(spaceID, "local")).Error
 	if err == gorm.ErrRecordNotFound {
 		return fmt.Errorf("release not found")
 	}

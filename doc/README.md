@@ -16,6 +16,12 @@
 | `04-PLAN-进度与里程碑.md` | 进度与里程碑 |
 | `appendices/` | 事件协议、DSL、Schema、OpenAPI 清单等 |
 
+## checklists/
+
+| 文件 | 说明 |
+|---|---|
+| `checklists/postgres-rds-e2e.md` | 云 RDS Postgres 迁移 / RLS / Doctor 全链路 E2E 验证 |
+
 ## api/ / db/
 
 - `api/openapi-ash-v1.yaml` — OpenAPI 3.0 草稿

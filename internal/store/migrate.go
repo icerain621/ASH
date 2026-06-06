@@ -148,8 +148,12 @@ func (m *Migrator) Plan() (*MigrationPlan, error) {
 		if err != nil {
 			return nil, fmt.Errorf("count source %s: %w", ent.table, err)
 		}
-		dstCount, err := countModel(m.Target.DB, ent.model)
-		if err != nil {
+		var dstCount int64
+		if err := m.Target.WithRLSBypassIfNeeded(func(gdb *gorm.DB) error {
+			var err error
+			dstCount, err = countModel(gdb, ent.model)
+			return err
+		}); err != nil {
 			return nil, fmt.Errorf("count target %s: %w", ent.table, err)
 		}
 		plan.Tables = append(plan.Tables, TableStat{
@@ -196,24 +200,30 @@ func (m *Migrator) copy(opts CopyOptions, since *time.Time) (*CopyReport, error)
 	allow := tableFilter(opts.Tables)
 	started := time.Now().UTC()
 	report := &CopyReport{StartedAt: started, Tables: make([]CopyTableResult, 0, len(migrationEntities()))}
-	for _, ent := range migrationEntities() {
-		if !allow(ent.table) {
-			continue
+	copyTables := func(target *gorm.DB) error {
+		for _, ent := range migrationEntities() {
+			if !allow(ent.table) {
+				continue
+			}
+			var copied int64
+			var err error
+			if opts.DryRun {
+				copied, err = countModelFiltered(m.Source.DB, ent.model, ent.incremental, since)
+			} else {
+				copied, err = copyEntity(m.Source.DB, target, ent, batch, since)
+			}
+			if err != nil {
+				return fmt.Errorf("copy %s: %w", ent.table, err)
+			}
+			report.Tables = append(report.Tables, CopyTableResult{
+				Table: ent.table, Copied: copied, DryRun: opts.DryRun,
+			})
+			report.TotalCopied += copied
 		}
-		var copied int64
-		var err error
-		if opts.DryRun {
-			copied, err = countModelFiltered(m.Source.DB, ent.model, ent.incremental, since)
-		} else {
-			copied, err = copyEntity(m.Source.DB, m.Target.DB, ent, batch, since)
-		}
-		if err != nil {
-			return nil, fmt.Errorf("copy %s: %w", ent.table, err)
-		}
-		report.Tables = append(report.Tables, CopyTableResult{
-			Table: ent.table, Copied: copied, DryRun: opts.DryRun,
-		})
-		report.TotalCopied += copied
+		return nil
+	}
+	if err := m.Target.WithRLSBypassIfNeeded(copyTables); err != nil {
+		return nil, err
 	}
 	report.FinishedAt = time.Now().UTC()
 	return report, nil

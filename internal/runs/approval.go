@@ -28,19 +28,19 @@ func (s *Service) requestApproval(rec *store.RunRecord, step *store.RunStep, gat
 		CreatedAt: now, UpdatedAt: now,
 	}
 	var existing store.ApprovalRequest
-	err := s.db.Where("run_id = ? AND step_id = ? AND status = ?", rec.ID, step.StepID, "pending").First(&existing).Error
+	err := s.gdb().Where("run_id = ? AND step_id = ? AND status = ?", rec.ID, step.StepID, "pending").First(&existing).Error
 	if err == nil {
 		existing.Gate = gate
 		existing.Risk = risk
 		existing.Reason = reason
 		existing.EvidenceJSON = evidenceJSON
 		existing.UpdatedAt = now
-		_ = s.db.Save(&existing).Error
+		_ = s.gdb().Save(&existing).Error
 		row = existing
 	} else {
-		_ = s.db.Create(&row).Error
+		_ = s.gdb().Create(&row).Error
 	}
-	_, _ = s.events.Append(rec.ID, rec.TraceID, "approval.requested", "warn", map[string]any{
+	_, _ = s.eventsFor().Append(rec.ID, rec.TraceID, "approval.requested", "warn", map[string]any{
 		"approvalId": row.ID, "stepId": step.StepID, "gate": gate, "risk": risk, "reason": reason,
 	})
 	_ = s.writeAudit(rec.ID, rec.TraceID, "approval.requested", map[string]any{
@@ -50,7 +50,7 @@ func (s *Service) requestApproval(rec *store.RunRecord, step *store.RunStep, gat
 
 func (s *Service) decidePendingApproval(runID, stepID, status, actorID, reason string) {
 	now := time.Now().UTC()
-	q := s.db.Model(&store.ApprovalRequest{}).Where("run_id = ? AND status = ?", runID, "pending")
+	q := s.gdb().Model(&store.ApprovalRequest{}).Where("run_id = ? AND status = ?", runID, "pending")
 	if stepID != "" {
 		q = q.Where("step_id = ?", stepID)
 	}

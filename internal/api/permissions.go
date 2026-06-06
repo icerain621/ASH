@@ -20,8 +20,8 @@ func (h *Handler) permissionMatrix(c *gin.Context) {
 	if !h.requirePermission(c, permRoleRead, space) {
 		return
 	}
-	orgID, _ := h.spaceOrgID(space)
-	resp, err := authz.BuildMatrix(h.db, space, orgID, currentRole(c), currentActor(c))
+	orgID, _ := h.spaceOrgID(c, space)
+	resp, err := authz.BuildMatrix(h.db.BindContext(c.Request.Context()), space, orgID, currentRole(c), currentActor(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("PERMISSION_MATRIX_FAILED", err.Error()))
 		return
@@ -46,7 +46,7 @@ func (h *Handler) spacePermissionMatrix(c *gin.Context) {
 	if !h.requirePermission(c, permRoleRead, space.ID) {
 		return
 	}
-	resp, err := authz.BuildMatrix(h.db, space.ID, space.OrgID, currentRole(c), currentActor(c))
+	resp, err := authz.BuildMatrix(h.db.BindContext(c.Request.Context()), space.ID, space.OrgID, currentRole(c), currentActor(c))
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("PERMISSION_MATRIX_FAILED", err.Error()))
 		return

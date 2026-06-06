@@ -1,6 +1,7 @@
 package store
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -20,8 +21,16 @@ type DB struct {
 	dialect string
 }
 
+// RuntimeDatabaseURL returns the worker connection URL (prefers ASH_DATABASE_APP_URL).
+func RuntimeDatabaseURL() string {
+	if app := strings.TrimSpace(os.Getenv("ASH_DATABASE_APP_URL")); app != "" {
+		return app
+	}
+	return strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+}
+
 func Open(dataDir string) (*DB, error) {
-	return OpenWithDatabaseURL(dataDir, os.Getenv("ASH_DATABASE_URL"))
+	return OpenWithDatabaseURL(dataDir, RuntimeDatabaseURL())
 }
 
 func OpenWithDatabaseURL(dataDir, databaseURL string) (*DB, error) {
@@ -44,6 +53,10 @@ func OpenWithDatabaseURL(dataDir, databaseURL string) (*DB, error) {
 		return nil, err
 	}
 	if err := attachDualWrite(db, dataDir); err != nil {
+		return nil, err
+	}
+	if err := maybeConfigurePostgresRLS(db, databaseURL); err != nil {
+		_ = db.Close()
 		return nil, err
 	}
 	return db, nil
@@ -191,6 +204,14 @@ func (db *DB) Dialect() string { return db.dialect }
 
 func (db *DB) RunDir(runID string) string {
 	return filepath.Join(db.dataDir, "runs", runID)
+}
+
+// BindContext returns a shallow copy of DB with the GORM handle bound to ctx (for Postgres RLS session vars).
+func (db *DB) BindContext(ctx context.Context) *DB {
+	if db == nil || ctx == nil {
+		return db
+	}
+	return &DB{DB: db.DB.WithContext(ctx), dataDir: db.dataDir, dialect: db.dialect}
 }
 
 // Close releases the underlying database connection (required on Windows before temp dirs are removed).

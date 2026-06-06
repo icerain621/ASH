@@ -1,6 +1,7 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -94,11 +95,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyUpdate())
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
 	case "M3":
-		rep.Results = append(rep.Results, s.m3TenantIsolation())
-		rep.Results = append(rep.Results, s.m3PostgresReadiness())
-		rep.Results = append(rep.Results, s.m3MigrationCatalog())
-		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
-		rep.Results = append(rep.Results, s.m3ExecGoLiveSmoke())
+		rep.Results = append(rep.Results, s.m3SuiteCases()...)
 	case "TR3":
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
@@ -126,11 +123,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m2PermissionMatrix())
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyUpdate())
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
-		rep.Results = append(rep.Results, s.m3TenantIsolation())
-		rep.Results = append(rep.Results, s.m3PostgresReadiness())
-		rep.Results = append(rep.Results, s.m3MigrationCatalog())
-		rep.Results = append(rep.Results, s.m3PostgresMigrateVerify())
-		rep.Results = append(rep.Results, s.m3ExecGoLiveSmoke())
+		rep.Results = append(rep.Results, s.m3SuiteCases()...)
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
@@ -1160,6 +1153,31 @@ func (s *Service) m2ScenarioPolicyEnforcement() CaseResult {
 	return res
 }
 
+// m3SuiteCases runs M3 checks. Live migrate verify (M3-04) runs first when
+// ASH_MIGRATE_E2E=1 so tenant isolation seeding does not skew row counts.
+func (s *Service) m3SuiteCases() []CaseResult {
+	if os.Getenv("ASH_MIGRATE_E2E") == "1" {
+		return []CaseResult{
+			s.m3PostgresMigrateVerify(),
+			s.m3TenantIsolation(),
+			s.m3PostgresReadiness(),
+			s.m3MigrationCatalog(),
+			s.m3PostgresRLSPolicies(),
+			s.m3AppDatabaseRuntime(),
+			s.m3ExecGoLiveSmoke(),
+		}
+	}
+	return []CaseResult{
+		s.m3TenantIsolation(),
+		s.m3PostgresReadiness(),
+		s.m3MigrationCatalog(),
+		s.m3PostgresMigrateVerify(),
+		s.m3PostgresRLSPolicies(),
+		s.m3AppDatabaseRuntime(),
+		s.m3ExecGoLiveSmoke(),
+	}
+}
+
 func (s *Service) m3TenantIsolation() CaseResult {
 	res := CaseResult{ID: "M3-01", Status: "fail"}
 	now := time.Now().UTC()
@@ -1249,6 +1267,54 @@ func (s *Service) m3PostgresReadiness() CaseResult {
 	if profile.PostgresConfigured {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "ASH_DATABASE_URL", Ref: "postgres"})
 	}
+	if profile.PostgresAppURL {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "ASH_DATABASE_APP_URL", Ref: "configured"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3AppDatabaseRuntime() CaseResult {
+	res := CaseResult{ID: "M3-07", Status: "fail"}
+	appURL := strings.TrimSpace(os.Getenv("ASH_DATABASE_APP_URL"))
+	if appURL == "" {
+		res.Status = "pass"
+		res.Message = "skipped: set ASH_DATABASE_APP_URL to verify ash_app worker connection"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_DATABASE_APP_URL"})
+		return res
+	}
+	if s.runs.DB().Dialect() != "postgres" {
+		res.Message = "postgres dialect required for ash_app runtime verify"
+		return res
+	}
+	target, err := store.ParseDatabaseTarget(s.dataDir, appURL)
+	if err != nil || target.Dialect != "postgres" {
+		res.Message = fmt.Sprintf("ASH_DATABASE_APP_URL parse failed: %v", err)
+		return res
+	}
+	probeDir := filepath.Join(s.dataDir, ".doctor-m3-app")
+	appDB, err := store.OpenWithDatabaseURL(probeDir, appURL)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	defer appDB.Close()
+	sqlDB, err := appDB.DB.DB()
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if err := sqlDB.PingContext(ctx); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "appRole", Ref: "ash_app"},
+		Evidence{Kind: "runtimeURL", Ref: store.RuntimeDatabaseURL()},
+		Evidence{Kind: "ping", Ref: "ok"},
+	)
 	res.Status = "pass"
 	return res
 }
@@ -1286,6 +1352,48 @@ func (s *Service) m3MigrationCatalog() CaseResult {
 	)
 	if snap.DualWriteEnabled {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "dualWrite", Ref: "enabled"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3PostgresRLSPolicies() CaseResult {
+	res := CaseResult{ID: "M3-06", Status: "fail"}
+	if !store.PostgresRLSEnabled() {
+		res.Status = "pass"
+		res.Message = "skipped: set ASH_POSTGRES_RLS=1 to verify installed tenant policies"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_POSTGRES_RLS"})
+		return res
+	}
+	if s.runs.DB().Dialect() != "postgres" {
+		res.Message = "postgres dialect required for RLS policy verify"
+		return res
+	}
+	count, err := store.CountPostgresRLSPolicies(s.runs.DB())
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	want := int64(store.PostgresRLSExpectedPolicyCount())
+	if count < want {
+		res.Message = fmt.Sprintf("rls policies=%d want >= %d", count, want)
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "rlsPolicies", Ref: fmt.Sprintf("%d", count)},
+		Evidence{Kind: "rlsForce", Ref: fmt.Sprintf("%v", store.PostgresRLSForce())},
+	)
+	if store.PostgresRLSForce() {
+		ok, err := store.PostgresAppRoleExists(s.runs.DB())
+		if err != nil {
+			res.Message = err.Error()
+			return res
+		}
+		if !ok {
+			res.Message = "ASH_POSTGRES_RLS_FORCE=1 requires ash_app role; run scripts/postgres-ensure-app-role.sh"
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "appRole", Ref: "ash_app"})
 	}
 	res.Status = "pass"
 	return res

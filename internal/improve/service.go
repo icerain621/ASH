@@ -1,6 +1,7 @@
 package improve
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -26,10 +27,31 @@ type Service struct {
 	db     *store.DB
 	runs   *runs.Service
 	events *events.Service
+	ctx    context.Context
 }
 
 func NewService(db *store.DB, runsSvc *runs.Service, ev *events.Service) *Service {
 	return &Service{db: db, runs: runsSvc, events: ev}
+}
+
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{
+		db: s.db, runs: s.runs.WithContext(ctx), events: s.events.WithContext(ctx), ctx: ctx,
+	}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
 }
 
 func (s *Service) Create(req CreateProposalRequest) (*ProposalView, error) {
@@ -37,7 +59,7 @@ func (s *Service) Create(req CreateProposalRequest) (*ProposalView, error) {
 		return nil, ErrBaselineRequired
 	}
 	var baseline store.RunRecord
-	if err := s.db.First(&baseline, "id = ?", req.BaselineRunID).Error; err != nil {
+	if err := s.gdb().First(&baseline, "id = ?", req.BaselineRunID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, runs.ErrRunNotFound
 		}
@@ -61,7 +83,7 @@ func (s *Service) Create(req CreateProposalRequest) (*ProposalView, error) {
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
-	if err := s.db.Create(&row).Error; err != nil {
+	if err := s.gdb().Create(&row).Error; err != nil {
 		return nil, err
 	}
 	s.emitProposalEvent(row, "improve.proposal_created", map[string]any{
@@ -83,7 +105,7 @@ func (s *Service) List(spaceID string, limit int) (*ListProposalsResponse, error
 		limit = 50
 	}
 	var rows []store.ImproveProposal
-	q := s.db.Order("updated_at desc").Limit(limit)
+	q := s.gdb().Order("updated_at desc").Limit(limit)
 	if spaceID != "" {
 		q = q.Where("space_id = ?", spaceID)
 	}
@@ -119,7 +141,7 @@ func (s *Service) StartExperiment(spaceID, id string) (*StartExperimentResponse,
 	row.Status = "experimenting"
 	row.CompareJSON = string(compareJSON)
 	row.UpdatedAt = now
-	if err := s.db.Save(row).Error; err != nil {
+	if err := s.gdb().Save(row).Error; err != nil {
 		return nil, err
 	}
 	s.emitProposalEvent(*row, "improve.experiment_started", map[string]any{
@@ -147,7 +169,7 @@ func (s *Service) StartCanary(spaceID, id string, req CanaryRequest) (*StatusRes
 	row.Status = "canary"
 	row.CanaryPercent = req.Percent
 	row.UpdatedAt = time.Now().UTC()
-	if err := s.db.Save(row).Error; err != nil {
+	if err := s.gdb().Save(row).Error; err != nil {
 		return nil, err
 	}
 	s.emitProposalEvent(*row, "improve.canary_started", map[string]any{
@@ -166,7 +188,7 @@ func (s *Service) Promote(spaceID, id string) (*StatusResponse, error) {
 	}
 	row.Status = "promoted"
 	row.UpdatedAt = time.Now().UTC()
-	if err := s.db.Save(row).Error; err != nil {
+	if err := s.gdb().Save(row).Error; err != nil {
 		return nil, err
 	}
 	s.emitProposalEvent(*row, "improve.promoted", map[string]any{"proposalId": row.ID})
@@ -183,7 +205,7 @@ func (s *Service) Rollback(spaceID, id string) (*StatusResponse, error) {
 	}
 	row.Status = "rolled_back"
 	row.UpdatedAt = time.Now().UTC()
-	if err := s.db.Save(row).Error; err != nil {
+	if err := s.gdb().Save(row).Error; err != nil {
 		return nil, err
 	}
 	s.emitProposalEvent(*row, "improve.rollback", map[string]any{"proposalId": row.ID})
@@ -192,7 +214,7 @@ func (s *Service) Rollback(spaceID, id string) (*StatusResponse, error) {
 
 func (s *Service) load(spaceID, id string) (*store.ImproveProposal, error) {
 	var row store.ImproveProposal
-	q := s.db.Where("id = ?", id)
+	q := s.gdb().Where("id = ?", id)
 	if spaceID != "" {
 		q = q.Where("space_id = ?", spaceID)
 	}
@@ -276,7 +298,7 @@ func (s *Service) emitProposalEvent(row store.ImproveProposal, typ string, paylo
 		return
 	}
 	var rec store.RunRecord
-	if err := s.db.Select("trace_id").First(&rec, "id = ?", row.BaselineRunID).Error; err != nil {
+	if err := s.gdb().Select("trace_id").First(&rec, "id = ?", row.BaselineRunID).Error; err != nil {
 		return
 	}
 	_, _ = s.events.Append(row.BaselineRunID, rec.TraceID, typ, "info", payload)

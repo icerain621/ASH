@@ -86,11 +86,11 @@ func (h *Handler) createRepoConnection(c *gin.Context) {
 	if !h.requirePermission(c, permRepoWrite, space) {
 		return
 	}
-	if err := h.requireSecretReference(space, req.SecretID); err != nil {
+	if err := h.requireSecretReference(c, space, req.SecretID); err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_SECRET_REFERENCE", err.Error()))
 		return
 	}
-	row, err := h.ci.CreateConnection(ci.CreateConnectionRequest{
+	row, err := h.ciFor(c).CreateConnection(ci.CreateConnectionRequest{
 		SpaceID: space, Provider: req.Provider, Owner: req.Owner, Repo: req.Repo,
 		DefaultBranch: req.DefaultBranch, SecretID: req.SecretID, CreatedBy: currentActor(c),
 	})
@@ -98,7 +98,7 @@ func (h *Handler) createRepoConnection(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("REPO_CONNECTION_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "repo.connection_created", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "repo.connection_created", map[string]any{
 		"connectionId": row.ID, "provider": row.Provider, "owner": row.Owner, "repo": row.Repo,
 	}))
 	c.JSON(http.StatusCreated, row)
@@ -117,7 +117,7 @@ func (h *Handler) listRepoConnections(c *gin.Context) {
 	if !h.requirePermission(c, permRepoRead, space) {
 		return
 	}
-	rows, err := h.ci.ListConnections(space)
+	rows, err := h.ciFor(c).ListConnections(space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("REPO_CONNECTION_LIST_FAILED", err.Error()))
 		return
@@ -143,7 +143,7 @@ func (h *Handler) listCIRuns(c *gin.Context) {
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	sync := strings.EqualFold(c.Query("sync"), "true") || c.Query("sync") == "1"
-	rows, err := h.ci.ListRuns(c.Request.Context(), space, c.Query("connectionId"), limit, sync)
+	rows, err := h.ciFor(c).ListRuns(c.Request.Context(), space, c.Query("connectionId"), limit, sync)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("CI_RUN_LIST_FAILED", err.Error()))
 		return
@@ -169,7 +169,7 @@ func (h *Handler) listCIJobs(c *gin.Context) {
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	sync := strings.EqualFold(c.Query("sync"), "true") || c.Query("sync") == "1"
-	rows, err := h.ci.ListJobs(c.Request.Context(), space, c.Query("runId"), limit, sync)
+	rows, err := h.ciFor(c).ListJobs(c.Request.Context(), space, c.Query("runId"), limit, sync)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("CI_JOB_LIST_FAILED", err.Error()))
 		return
@@ -198,14 +198,14 @@ func (h *Handler) diagnoseCIFailure(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	resp, err := h.ci.Diagnose(c.Request.Context(), ci.DiagnoseRequest{
+	resp, err := h.ciFor(c).Diagnose(c.Request.Context(), ci.DiagnoseRequest{
 		SpaceID: space, ConnectionID: req.ConnectionID, RunID: req.RunID, JobID: req.JobID, LogText: req.LogText,
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("CI_DIAGNOSE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "ci.failure_diagnosed", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "ci.failure_diagnosed", map[string]any{
 		"diagnosisId": resp.ID, "connectionId": resp.ConnectionID, "runId": resp.RunID, "jobId": resp.JobID,
 		"rootCause": resp.RootCause, "confidence": resp.Confidence,
 	}))
@@ -231,7 +231,7 @@ func (h *Handler) listCIDiagnoses(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	rows, err := h.ci.ListDiagnoses(ci.ListDiagnosesRequest{
+	rows, err := h.ciFor(c).ListDiagnoses(ci.ListDiagnosesRequest{
 		SpaceID: space, ConnectionID: c.Query("connectionId"), RunID: c.Query("runId"),
 		JobID: c.Query("jobId"), DecisionStatus: c.Query("decisionStatus"), Limit: limit,
 	})
@@ -279,7 +279,7 @@ func (h *Handler) decideCIDiagnosis(c *gin.Context, decision string) {
 	}
 	var req decideCIDiagnosisRequest
 	_ = c.ShouldBindJSON(&req)
-	resp, err := h.ci.DecideDiagnosis(ci.DecideDiagnosisRequest{
+	resp, err := h.ciFor(c).DecideDiagnosis(ci.DecideDiagnosisRequest{
 		SpaceID: space, DiagnosisID: c.Param("diagnosisId"), Decision: decision,
 		Reason: req.Reason, ActorID: currentActor(c),
 	})
@@ -287,7 +287,7 @@ func (h *Handler) decideCIDiagnosis(c *gin.Context, decision string) {
 		c.JSON(http.StatusBadRequest, errorBody("CI_DIAGNOSIS_DECISION_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "ci.diagnosis_decided", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "ci.diagnosis_decided", map[string]any{
 		"diagnosisId": resp.ID, "decision": decision, "reason": req.Reason,
 		"connectionId": resp.ConnectionID, "runId": resp.RunID, "jobId": resp.JobID,
 	}))
@@ -326,7 +326,7 @@ func (h *Handler) getMetricsOverview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_TO", err.Error()))
 		return
 	}
-	resp, err := h.metrics.Overview(metricssvc.OverviewRequest{
+	resp, err := h.metrics.OverviewContext(c.Request.Context(), metricssvc.OverviewRequest{
 		SpaceID: space, ProjectID: c.Query("projectId"), From: from, To: to, Period: c.Query("period"),
 	})
 	if err != nil {
@@ -336,13 +336,13 @@ func (h *Handler) getMetricsOverview(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
-func (h *Handler) requireSecretReference(spaceID, secretID string) error {
+func (h *Handler) requireSecretReference(c *gin.Context, spaceID, secretID string) error {
 	secretID = strings.TrimSpace(secretID)
 	if secretID == "" {
 		return strconv.ErrSyntax
 	}
 	var row store.SecretRecord
-	if err := h.db.First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
 		return err
 	}
 	return nil

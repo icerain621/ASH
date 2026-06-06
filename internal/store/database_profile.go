@@ -15,7 +15,11 @@ type DatabaseTarget struct {
 type DatabaseProfileInfo struct {
 	Dialect            string `json:"dialect"`
 	PostgresConfigured bool   `json:"postgresConfigured"`
+	PostgresAppURL     bool   `json:"postgresAppUrlConfigured,omitempty"`
 	MigrationReady     bool   `json:"migrationReady"`
+	PostgresRLSEnabled bool   `json:"postgresRLSEnabled"`
+	PostgresRLSForce   bool   `json:"postgresRLSForce"`
+	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
 	DSNHint            string `json:"dsnHint,omitempty"`
 }
 
@@ -41,10 +45,13 @@ func DatabaseProfile(dataDir, databaseURL string) (DatabaseProfileInfo, error) {
 	profile := DatabaseProfileInfo{
 		Dialect:            target.Dialect,
 		PostgresConfigured: target.Dialect == "postgres",
+		PostgresAppURL:     strings.TrimSpace(os.Getenv("ASH_DATABASE_APP_URL")) != "",
 		MigrationReady:     target.Dialect == "sqlite" || target.Dialect == "postgres",
 	}
 	if target.Dialect == "postgres" {
 		profile.DSNHint = redactDSN(target.DSN)
+		profile.PostgresRLSEnabled = PostgresRLSEnabled()
+		profile.PostgresRLSForce = PostgresRLSForce()
 	}
 	return profile, nil
 }

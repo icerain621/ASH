@@ -20,7 +20,8 @@
 ## 2. Health / Docs / Metrics
 - `GET /healthz`：存活探针
 - `GET /readyz`：就绪探针（DB/关键依赖检查）
-- `GET /metrics`：Prometheus 指标
+- `GET /metrics`：Prometheus 指标（全局运维 scrape；RLS 开启时 bypass）
+- `GET /api/v1/metrics/prometheus`：租户范围 Prometheus 文本（需 `observability:read`）
 - `GET /docs`：Swagger UI（或 `/swagger/*any`）
 - `GET /openapi.json`：OpenAPI JSON（swag 生成）
 

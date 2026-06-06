@@ -4,8 +4,9 @@
 
 ## 1. Postgres 端到端迁移验证
 
-**状态**：可执行（Docker）  
-**优先级**：P1（切换生产前必做）
+**状态**：本地 E2E 已通过（`make postgres-e2e` / M3-04 live / `migrate verify` / `readyz`）；云 RDS 切换前仍需重复验证  
+**优先级**：P1（切换生产前必做）  
+**清单**：[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md)
 
 本地一键验证（需 Docker）：
 
@@ -30,10 +31,10 @@ make test-integration
 
 - `migrate verify` 全表行数一致
 - Doctor **M3-04** 在 `ASH_MIGRATE_E2E=1` 时通过（默认跳过）
-- 切换 `ASH_DATABASE_URL` 后 Worker `readyz` 通过
+- 切换 `ASH_DATABASE_URL` 后 Worker `readyz` 通过（`TestPostgresReadyzProbe`，返回 `dialect=postgres`）
 - `doctor --suite ALL` 无回退
 
-**备注**：云 RDS / 生产切换前仍需在目标环境重复 `copy` + `verify` + 抽样业务校验。
+**备注**：云 RDS / 生产切换前按 [`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) 执行 `copy` + `verify` + RLS + 抽样业务校验。
 
 ---
 
@@ -59,7 +60,7 @@ make web-build
 - ExecGo live smoke 在 `ASH_EXECGO_E2E=1` 时失败可定位，未启用时 M3-05 明确 skipped
 - Repo connection 只接受 `secretId`，拒绝明文 token
 - `POST /api/v1/ci/failures/diagnose` 可落库并输出 rootCause / fixSuggestions / evidenceRefs
-- `/ui/metrics` 与 `GET /api/v1/metrics/overview` 展示 KPI v1；缺失 SSE 数据源时返回 unavailable，不造假
+- `/ui/metrics` 与 `GET /api/v1/metrics/overview` 展示 KPI v1；KPI-08 由 `stream.session_*` 审计事件聚合，无会话时返回 unavailable
 - `/ui/ci` 可列出诊断历史并记录采纳/驳回；`jobId` 诊断可拉取 provider job logs
 - `/ui/feedback` 可筛选与处理反馈；低分反馈写入站内告警事件
 - `/ui/observability` 可查看 active alerts、规则、trace 查询和 Prometheus 指标快照
@@ -75,8 +76,40 @@ make web-build
 
 ---
 
+## 3. Postgres RLS 全面接线（P2 后续）
+
+**状态**：API 主路径已接线；生产切换需 `ash_app` 连接串  
+**优先级**：P2
+
+剩余工作：
+
+- 生产 Worker 设置 `ASH_DATABASE_APP_URL`（`ash_app` 角色）+ `ASH_POSTGRES_RLS_FORCE=1`
+- 云 RDS 上执行 `bash scripts/postgres-ensure-app-role.sh`（或挂载 `scripts/postgres-init/`）
+- 云 RDS / 生产环境重复 `make postgres-e2e`（含 RLS 阶段）与 `make postgres-rls-e2e`
+
+本地角色脚本：
+
+```bash
+make postgres-up
+make postgres-roles   # 或 bash scripts/postgres-ensure-app-role.sh
+```
+
+---
+
 ## 已完成（近期）
 
+- `/metrics` v1：全局 scrape + RLS bypass；`GET /api/v1/metrics/prometheus` 租户范围 + `space_id` 标签
+- `make postgres-rls-e2e` + e2e 脚本 RLS 阶段；Doctor **M3-07**（`ASH_DATABASE_APP_URL`）；`TestPostgresRLSE2EAfterMigrate`
+- `alerts` / `releases` / `improve` 服务 `WithContext` + `alertsFor`/`releasesFor`/`improveFor` API 接线
+- `runs` / `events` / `ci` 服务 `WithContext` + `runsFor`/`eventsFor`/`ciFor` API 接线
+- `memory` / `rag` 服务 `WithContext` + API 传入请求上下文；`store.Open` 优先 `ASH_DATABASE_APP_URL`
+- `ash_app` / `ash_rls_tester` 角色 DDL + `make postgres-roles`；M3-06 在 `RLS_FORCE` 时校验 `ash_app`
+- org:admin `GET /orgs|/spaces` RLS bypass + `tenant.rls_bypass` 审计；metrics `OverviewContext`
+- Postgres RLS 接线：`dbFor(c)` 覆盖 secrets/compliance/platform/approvals 等；Doctor **M3-06**；`make test-rls`
+- Postgres RLS 骨架：`ASH_POSTGRES_RLS` / `ASH_POSTGRES_RLS_FORCE`；`ash_space_*` 策略；迁移 bypass
+- Postgres E2E 脚本修复：种子阶段 sqlite-only、schema 重置、M3-04 优先执行；`postgres-up` 端口/镜像回退
+- `/readyz` 返回 `dialect`（sqlite/postgres）；集成探针 `TestPostgresReadyzProbe`
+- KPI-08 SSE 稳定率：`/runs/{id}/stream` 写入 `stream.session_opened/closed/failed` 审计；metrics 按空间聚合
 - M3 API 租户隔离：`requireRequestSpace` / `requireTargetSpace` + `spaceForParam` 强制校验
 - Worker 启动自动读取 `.ash/migration/dual-write.json`（`ASH_DUAL_WRITE_POSTGRES_URL` 优先）
 - `docker-compose.postgres.yml` + `scripts/postgres-{up,down,e2e-migrate}.sh`

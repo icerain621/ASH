@@ -1,9 +1,9 @@
 package alerts
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
-	"sort"
 	"strings"
 	"time"
 
@@ -14,7 +14,8 @@ import (
 )
 
 type Service struct {
-	db *store.DB
+	db  *store.DB
+	ctx context.Context
 }
 
 type RuleInput struct {
@@ -61,12 +62,30 @@ func NewService(db *store.DB) *Service {
 	return &Service{db: db}
 }
 
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
+}
+
 func (s *Service) ListEvents(spaceID, status string, limit int) ([]store.AlertEvent, error) {
 	spaceID = firstNonEmpty(spaceID, "local")
 	if limit <= 0 || limit > 200 {
 		limit = 100
 	}
-	q := s.db.Where("space_id = ?", spaceID)
+	q := s.gdb().Where("space_id = ?", spaceID)
 	if strings.TrimSpace(status) != "" {
 		q = q.Where("status = ?", strings.TrimSpace(status))
 	}
@@ -81,7 +100,7 @@ func (s *Service) ListRules(spaceID string) ([]store.AlertRule, error) {
 		return nil, err
 	}
 	var rows []store.AlertRule
-	err := s.db.Where("space_id = ?", spaceID).Order("created_at asc").Find(&rows).Error
+	err := s.gdb().Where("space_id = ?", spaceID).Order("created_at asc").Find(&rows).Error
 	return rows, err
 }
 
@@ -113,7 +132,7 @@ func (s *Service) PutRules(spaceID string, inputs []RuleInput) ([]store.AlertRul
 		}
 		if strings.TrimSpace(input.ID) != "" {
 			row.ID = strings.TrimSpace(input.ID)
-			if err := s.db.Model(&store.AlertRule{}).Where("id = ? AND space_id = ?", row.ID, spaceID).Updates(map[string]any{
+			if err := s.gdb().Model(&store.AlertRule{}).Where("id = ? AND space_id = ?", row.ID, spaceID).Updates(map[string]any{
 				"name": row.Name, "metric": row.Metric, "condition": row.Condition,
 				"threshold": row.Threshold, "window_minutes": row.WindowMinutes,
 				"severity": row.Severity, "enabled": row.Enabled,
@@ -125,7 +144,7 @@ func (s *Service) PutRules(spaceID string, inputs []RuleInput) ([]store.AlertRul
 		}
 		row.ID = "alert_rule_" + uuid.NewString()
 		row.CreatedAt = now
-		if err := s.db.Where("space_id = ? AND metric = ?", spaceID, row.Metric).
+		if err := s.gdb().Where("space_id = ? AND metric = ?", spaceID, row.Metric).
 			Assign(row).FirstOrCreate(&store.AlertRule{}).Error; err != nil {
 			return nil, err
 		}
@@ -179,24 +198,36 @@ func (s *Service) RecordLowFeedback(row store.Feedback) (store.AlertEvent, error
 		EvidenceRefsJSON: mustJSON([]string{"feedback:" + row.ID}),
 		TriggeredAt:      now, CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.db.Create(&event).Error; err != nil {
+	if err := s.gdb().Create(&event).Error; err != nil {
 		return store.AlertEvent{}, err
 	}
 	return event, nil
 }
 
 func (s *Service) PrometheusText() (string, error) {
+	return s.PrometheusTextWith(PrometheusOptions{})
+}
+
+// PrometheusTextWith emits Prometheus text; SpaceID empty = deployment-global aggregate.
+func (s *Service) PrometheusTextWith(opts PrometheusOptions) (string, error) {
+	opts = opts.normalized()
+	lbl := opts.labelSuffix()
 	var b strings.Builder
 	writeHelp := func(name, help, typ string) {
 		b.WriteString("# HELP " + name + " " + help + "\n")
 		b.WriteString("# TYPE " + name + " " + typ + "\n")
 	}
+	if opts.scoped() {
+		b.WriteString("# ASH metrics scope: space_id=" + label(opts.SpaceID) + "\n")
+	} else {
+		b.WriteString("# ASH metrics scope: global (all spaces; Postgres RLS bypass on /metrics scrape)\n")
+	}
 	writeHelp("run_total", "ASH runs by status.", "counter")
-	for _, item := range s.countBy("runs", "status") {
-		b.WriteString(fmt.Sprintf("run_total{status=%q} %d\n", label(item.Key), item.Count))
+	for _, item := range s.countBy("runs", "status", opts) {
+		b.WriteString(fmt.Sprintf("run_total{status=%q%s} %d\n", label(item.Key), lbl, item.Count))
 	}
 	var completed []store.RunRecord
-	_ = s.db.Where("finished_at IS NOT NULL").Find(&completed).Error
+	_ = s.scopedRunsQuery(opts).Where("finished_at IS NOT NULL").Find(&completed).Error
 	var durationCount int64
 	var durationMs int64
 	for _, row := range completed {
@@ -207,38 +238,70 @@ func (s *Service) PrometheusText() (string, error) {
 		durationMs += row.FinishedAt.Sub(row.StartedAt).Milliseconds()
 	}
 	writeHelp("run_duration_seconds", "ASH completed run duration.", "summary")
-	b.WriteString(fmt.Sprintf("run_duration_seconds_count %d\n", durationCount))
-	b.WriteString(fmt.Sprintf("run_duration_seconds_sum %.3f\n", float64(durationMs)/1000))
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("run_duration_seconds{space_id=%q}_count %d\n", label(opts.SpaceID), durationCount))
+		b.WriteString(fmt.Sprintf("run_duration_seconds{space_id=%q}_sum %.3f\n", label(opts.SpaceID), float64(durationMs)/1000))
+	} else {
+		b.WriteString(fmt.Sprintf("run_duration_seconds_count %d\n", durationCount))
+		b.WriteString(fmt.Sprintf("run_duration_seconds_sum %.3f\n", float64(durationMs)/1000))
+	}
 
 	writeHelp("tool_calls_total", "ASH tool calls by status.", "counter")
-	for _, item := range s.countBy("tool_calls", "status") {
-		b.WriteString(fmt.Sprintf("tool_calls_total{status=%q} %d\n", label(item.Key), item.Count))
+	for _, item := range s.countBy("tool_calls", "status", opts) {
+		b.WriteString(fmt.Sprintf("tool_calls_total{status=%q%s} %d\n", label(item.Key), lbl, item.Count))
 	}
+	agentQ := s.gdb().Model(&store.AgentTask{}).Where("status NOT IN ?", []string{"succeeded", "success", "completed", "done"})
+	agentQ = s.applyPrometheusScope(agentQ, "agent_tasks", opts)
 	var agentFailures int64
-	_ = s.db.Model(&store.AgentTask{}).Where("status NOT IN ?", []string{"succeeded", "success", "completed", "done"}).Count(&agentFailures).Error
+	_ = agentQ.Count(&agentFailures).Error
 	writeHelp("agent_failures_total", "ASH agent task failures.", "counter")
-	b.WriteString(fmt.Sprintf("agent_failures_total %d\n", agentFailures))
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("agent_failures_total{space_id=%q} %d\n", label(opts.SpaceID), agentFailures))
+	} else {
+		b.WriteString(fmt.Sprintf("agent_failures_total %d\n", agentFailures))
+	}
 
 	writeHelp("ci_diagnoses_total", "ASH CI diagnoses by root cause and decision.", "counter")
+	diagQ := s.gdb().Model(&store.CIDiagnosis{}).
+		Select("root_cause, decision_status, COUNT(*) as count").
+		Group("root_cause, decision_status")
+	if opts.scoped() {
+		diagQ = diagQ.Where("space_id = ?", opts.SpaceID)
+	}
 	var diagRows []struct {
 		RootCause      string
 		DecisionStatus string
 		Count          int64
 	}
-	_ = s.db.Model(&store.CIDiagnosis{}).
-		Select("root_cause, decision_status, COUNT(*) as count").
-		Group("root_cause, decision_status").Scan(&diagRows).Error
+	_ = diagQ.Scan(&diagRows).Error
 	for _, row := range diagRows {
-		b.WriteString(fmt.Sprintf("ci_diagnoses_total{root_cause=%q,decision_status=%q} %d\n", label(row.RootCause), label(firstNonEmpty(row.DecisionStatus, "pending")), row.Count))
+		b.WriteString(fmt.Sprintf("ci_diagnoses_total{root_cause=%q,decision_status=%q%s} %d\n",
+			label(row.RootCause), label(firstNonEmpty(row.DecisionStatus, "pending")), lbl, row.Count))
+	}
+	feedbackQ := s.gdb().Model(&store.Feedback{}).Where("rating > 0 AND rating <= 2")
+	if opts.scoped() {
+		feedbackQ = feedbackQ.Where("space_id = ?", opts.SpaceID)
 	}
 	var lowFeedback int64
-	_ = s.db.Model(&store.Feedback{}).Where("rating > 0 AND rating <= 2").Count(&lowFeedback).Error
+	_ = feedbackQ.Count(&lowFeedback).Error
 	writeHelp("feedback_low_score_total", "ASH low-score feedback records.", "counter")
-	b.WriteString(fmt.Sprintf("feedback_low_score_total %d\n", lowFeedback))
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("feedback_low_score_total{space_id=%q} %d\n", label(opts.SpaceID), lowFeedback))
+	} else {
+		b.WriteString(fmt.Sprintf("feedback_low_score_total %d\n", lowFeedback))
+	}
+	alertQ := s.gdb().Model(&store.AlertEvent{}).Where("status = ?", "active")
+	if opts.scoped() {
+		alertQ = alertQ.Where("space_id = ?", opts.SpaceID)
+	}
 	var activeAlerts int64
-	_ = s.db.Model(&store.AlertEvent{}).Where("status = ?", "active").Count(&activeAlerts).Error
+	_ = alertQ.Count(&activeAlerts).Error
 	writeHelp("alerts_active", "ASH active alert events.", "gauge")
-	b.WriteString(fmt.Sprintf("alerts_active %d\n", activeAlerts))
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("alerts_active{space_id=%q} %d\n", label(opts.SpaceID), activeAlerts))
+	} else {
+		b.WriteString(fmt.Sprintf("alerts_active %d\n", activeAlerts))
+	}
 	return b.String(), nil
 }
 
@@ -249,7 +312,7 @@ func (s *Service) Trace(spaceID, traceID string) (TraceView, error) {
 		return TraceView{}, fmt.Errorf("traceId is required")
 	}
 	out := TraceView{SpaceID: spaceID, TraceID: traceID}
-	if err := s.db.Where("space_id = ? AND trace_id = ?", spaceID, traceID).Order("created_at asc").Find(&out.Runs).Error; err != nil {
+	if err := s.gdb().Where("space_id = ? AND trace_id = ?", spaceID, traceID).Order("created_at asc").Find(&out.Runs).Error; err != nil {
 		return out, err
 	}
 	runIDs := make([]string, 0, len(out.Runs))
@@ -257,14 +320,14 @@ func (s *Service) Trace(spaceID, traceID string) (TraceView, error) {
 		runIDs = append(runIDs, run.ID)
 	}
 	if len(runIDs) > 0 {
-		_ = s.db.Where("run_id IN ?", runIDs).Order("created_at asc").Find(&out.Events).Error
-		_ = s.db.Where("trace_id = ? OR run_id IN ?", traceID, runIDs).Order("created_at asc").Find(&out.ToolCalls).Error
-		_ = s.db.Where("trace_id = ? OR run_id IN ?", traceID, runIDs).Order("created_at asc").Find(&out.AgentTasks).Error
-		_ = s.db.Where("space_id = ? AND (trace_id = ? OR run_id IN ?)", spaceID, traceID, runIDs).Order("created_at asc").Find(&out.AuditLogs).Error
+		_ = s.gdb().Where("run_id IN ?", runIDs).Order("created_at asc").Find(&out.Events).Error
+		_ = s.gdb().Where("trace_id = ? OR run_id IN ?", traceID, runIDs).Order("created_at asc").Find(&out.ToolCalls).Error
+		_ = s.gdb().Where("trace_id = ? OR run_id IN ?", traceID, runIDs).Order("created_at asc").Find(&out.AgentTasks).Error
+		_ = s.gdb().Where("space_id = ? AND (trace_id = ? OR run_id IN ?)", spaceID, traceID, runIDs).Order("created_at asc").Find(&out.AuditLogs).Error
 	} else {
-		_ = s.db.Where("trace_id = ?", traceID).Order("created_at asc").Find(&out.ToolCalls).Error
-		_ = s.db.Where("trace_id = ?", traceID).Order("created_at asc").Find(&out.AgentTasks).Error
-		_ = s.db.Where("space_id = ? AND trace_id = ?", spaceID, traceID).Order("created_at asc").Find(&out.AuditLogs).Error
+		_ = s.gdb().Where("trace_id = ?", traceID).Order("created_at asc").Find(&out.ToolCalls).Error
+		_ = s.gdb().Where("trace_id = ?", traceID).Order("created_at asc").Find(&out.AgentTasks).Error
+		_ = s.gdb().Where("space_id = ? AND trace_id = ?", spaceID, traceID).Order("created_at asc").Find(&out.AuditLogs).Error
 	}
 	return out, nil
 }
@@ -274,10 +337,10 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 	switch rule.Metric {
 	case "run_failure_rate":
 		var total, failed int64
-		if err := s.db.Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
+		if err := s.gdb().Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
 			return 0, false, nil, "", err
 		}
-		if err := s.db.Model(&store.RunRecord{}).
+		if err := s.gdb().Model(&store.RunRecord{}).
 			Where("space_id = ? AND started_at >= ? AND status IN ?", rule.SpaceID, window, []string{"failed", "error", "canceled"}).
 			Count(&failed).Error; err != nil {
 			return 0, false, nil, "", err
@@ -285,17 +348,17 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 		return ratio(failed, total), total > 0, []string{fmt.Sprintf("runs:failed=%d,total=%d", failed, total)}, "运行失败率超过阈值", nil
 	case "api_error_rate":
 		var total, failed int64
-		if err := s.db.Model(&store.AuditLog{}).Where("space_id = ? AND created_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
+		if err := s.gdb().Model(&store.AuditLog{}).Where("space_id = ? AND created_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
 			return 0, false, nil, "", err
 		}
-		if err := s.db.Model(&store.AuditLog{}).Where("space_id = ? AND created_at >= ? AND event_type LIKE ?", rule.SpaceID, window, "%failed%").Count(&failed).Error; err != nil {
+		if err := s.gdb().Model(&store.AuditLog{}).Where("space_id = ? AND created_at >= ? AND event_type LIKE ?", rule.SpaceID, window, "%failed%").Count(&failed).Error; err != nil {
 			return 0, false, nil, "", err
 		}
 		return ratio(failed, total), total > 0, []string{fmt.Sprintf("audit:failed=%d,total=%d", failed, total)}, "API/平台失败事件率超过阈值", nil
 	case "queue_backlog_minutes":
 		cutoff := now.Add(-time.Duration(rule.Threshold) * time.Minute)
 		var rows []store.RunStep
-		if err := s.db.Where("created_at <= ? AND started_at IS NULL AND status IN ?", cutoff, []string{"pending", "queued", "running"}).Limit(5).Find(&rows).Error; err != nil {
+		if err := s.gdb().Where("created_at <= ? AND started_at IS NULL AND status IN ?", cutoff, []string{"pending", "queued", "running"}).Limit(5).Find(&rows).Error; err != nil {
 			return 0, false, nil, "", err
 		}
 		refs := make([]string, 0, len(rows))
@@ -305,10 +368,10 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 		return float64(len(rows)), true, refs, "存在长时间未开始的运行步骤", nil
 	case "low_feedback_rate":
 		var total, low int64
-		if err := s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
+		if err := s.gdb().Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ?", rule.SpaceID, window).Count(&total).Error; err != nil {
 			return 0, false, nil, "", err
 		}
-		if err := s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND rating > 0 AND rating <= 2", rule.SpaceID, window).Count(&low).Error; err != nil {
+		if err := s.gdb().Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND rating > 0 AND rating <= 2", rule.SpaceID, window).Count(&low).Error; err != nil {
 			return 0, false, nil, "", err
 		}
 		return ratio(low, total), total > 0, []string{fmt.Sprintf("feedback:low=%d,total=%d", low, total)}, "低分反馈率超过阈值", nil
@@ -323,7 +386,7 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 
 func (s *Service) liveGateValue(spaceID string, since time.Time, eventType, missing string) (float64, bool, []string, string, error) {
 	var row store.AuditLog
-	err := s.db.Where("space_id = ? AND event_type = ? AND created_at >= ?", spaceID, eventType, since).
+	err := s.gdb().Where("space_id = ? AND event_type = ? AND created_at >= ?", spaceID, eventType, since).
 		Order("created_at desc").First(&row).Error
 	if err == gorm.ErrRecordNotFound {
 		return 0, false, nil, missing, nil
@@ -340,12 +403,12 @@ func (s *Service) liveGateValue(spaceID string, since time.Time, eventType, miss
 func (s *Service) upsertAlert(rule store.AlertRule, value float64, refs []string, message string, now time.Time) (store.AlertEvent, error) {
 	fingerprint := fmt.Sprintf("%s:%s", rule.SpaceID, rule.Metric)
 	var existing store.AlertEvent
-	err := s.db.First(&existing, "space_id = ? AND fingerprint = ? AND status = ?", rule.SpaceID, fingerprint, "active").Error
+	err := s.gdb().First(&existing, "space_id = ? AND fingerprint = ? AND status = ?", rule.SpaceID, fingerprint, "active").Error
 	if err == nil {
 		existing.Message = fmt.Sprintf("%s value=%.4f threshold=%.4f", message, value, rule.Threshold)
 		existing.EvidenceRefsJSON = mustJSON(refs)
 		existing.UpdatedAt = now
-		return existing, s.db.Save(&existing).Error
+		return existing, s.gdb().Save(&existing).Error
 	}
 	if err != gorm.ErrRecordNotFound {
 		return store.AlertEvent{}, err
@@ -357,13 +420,13 @@ func (s *Service) upsertAlert(rule store.AlertRule, value float64, refs []string
 		Message:          fmt.Sprintf("%s value=%.4f threshold=%.4f", message, value, rule.Threshold),
 		EvidenceRefsJSON: mustJSON(refs), TriggeredAt: now, CreatedAt: now, UpdatedAt: now,
 	}
-	return row, s.db.Create(&row).Error
+	return row, s.gdb().Create(&row).Error
 }
 
 func (s *Service) ensureDefaultRules(spaceID string) error {
 	now := time.Now().UTC()
 	for _, rule := range defaultRules(spaceID, now) {
-		if err := s.db.Where("space_id = ? AND metric = ?", spaceID, rule.Metric).
+		if err := s.gdb().Where("space_id = ? AND metric = ?", spaceID, rule.Metric).
 			Assign(map[string]any{
 				"name": rule.Name, "condition": rule.Condition, "threshold": rule.Threshold,
 				"window_minutes": rule.WindowMinutes, "severity": rule.Severity,
@@ -397,13 +460,6 @@ func rule(spaceID, name, metric string, threshold float64, window int, severity,
 type countRow struct {
 	Key   string
 	Count int64
-}
-
-func (s *Service) countBy(table, column string) []countRow {
-	var rows []countRow
-	_ = s.db.Table(table).Select(column + " as key, COUNT(*) as count").Group(column).Scan(&rows).Error
-	sort.Slice(rows, func(i, j int) bool { return rows[i].Key < rows[j].Key })
-	return rows
 }
 
 func compare(condition string, value, threshold float64) bool {

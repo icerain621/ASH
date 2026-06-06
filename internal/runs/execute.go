@@ -82,7 +82,7 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		}
 	}
 
-	if err := s.db.Create(&rec).Error; err != nil {
+	if err := s.gdb().Create(&rec).Error; err != nil {
 		return nil, fmt.Errorf("create run: %w", err)
 	}
 
@@ -120,7 +120,7 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		startedPayload["replayMode"] = opts.replayMode
 	}
 
-	if _, err := s.events.Append(runID, traceID, "run.started", "info", startedPayload); err != nil {
+	if _, err := s.eventsFor().Append(runID, traceID, "run.started", "info", startedPayload); err != nil {
 		return nil, err
 	}
 	_ = s.writeAudit(runID, traceID, "run.started", startedPayload)
@@ -161,7 +161,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 	for idx, step := range doc.Scenario.Steps {
 		for _, gate := range eng.GatesBeforeStep(step.ID) {
 			if denied, reason := s.evaluateGate(toolCtx, gate); denied {
-				_, _ = s.events.Append(runID, traceID, "policy.denied", "warn", map[string]any{
+				_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 					"target": "gate", "reason": reason, "action": "deny", "ref": gate.ID,
 				})
 				if gate.Blocking {
@@ -173,7 +173,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 
 		stepStart := time.Now().UTC()
 		stepRow := s.startStep(runID, step, idx, stepStart)
-		if _, err := s.events.Append(runID, traceID, "step.started", "info", map[string]any{
+		if _, err := s.eventsFor().Append(runID, traceID, "step.started", "info", map[string]any{
 			"stepId": step.ID, "role": step.Role, "kind": step.Kind,
 		}); err != nil {
 			return err
@@ -184,9 +184,9 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 				if isCitationHumanConfirm(step) {
 					rec.Status = "waiting_approval"
 					rec.UpdatedAt = time.Now().UTC()
-					_ = s.db.Save(rec).Error
+					_ = s.gdb().Save(rec).Error
 					s.finishStep(stepRow, "waiting_approval", stepStart, "GATE_CITATION_MISSING", err.Error())
-					_, _ = s.events.Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
 						"stepId": step.ID, "reason": err.Error(), "gate": "citation",
 					})
 					s.requestApproval(rec, stepRow, "citation", "", err.Error(), map[string]any{
@@ -221,7 +221,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			lastToolStep.role = step.Role
 			for _, item := range step.Chain {
 				if denied, reason := s.scenarioToolDenied(rec, item.Tool); denied {
-					_, _ = s.events.Append(runID, traceID, "policy.denied", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 						"target": "tool", "reason": reason, "action": "deny", "ref": item.Tool,
 						"matrix": "scenario", "actorRole": rec.ActorRole,
 					})
@@ -234,12 +234,12 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
 					rec.Status = "waiting_approval"
 					rec.UpdatedAt = time.Now().UTC()
-					_ = s.db.Save(rec).Error
+					_ = s.gdb().Save(rec).Error
 					s.finishStep(stepRow, "waiting_approval", stepStart, "TOOL_DANGEROUS_APPROVAL_REQUIRED", msg)
-					_, _ = s.events.Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
 						"stepId": step.ID, "gate": "tool_risk", "tool": item.Tool, "risk": risk, "reason": msg,
 					})
-					_, _ = s.events.Append(runID, traceID, "policy.denied", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 						"target": "tool", "reason": msg, "action": "require_approval", "ref": item.Tool,
 					})
 					_ = s.writeAudit(runID, traceID, "tool.approval_required", map[string]any{
@@ -251,13 +251,13 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 					return ErrWaitingApproval
 				}
 				if risk == string(toolbus.RiskDanger) {
-					_, _ = s.events.Append(runID, traceID, "tool.approval_used", "info", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "tool.approval_used", "info", map[string]any{
 						"stepId": step.ID, "tool": item.Tool, "risk": risk, "policy": item.Policy,
 					})
 				}
 				ctx := map[string]any{"tool": item.Tool, "risk": risk}
 				if denied, reason := eng.EvaluateHooks("tool.called", ctx); denied {
-					_, _ = s.events.Append(runID, traceID, "policy.denied", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 						"target": "tool", "reason": reason, "action": "deny", "ref": item.Tool,
 					})
 					continue
@@ -277,8 +277,8 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 				RunID: runID, StepID: step.ID, UseCase: step.Role,
 				InputTokens: decision.InputTokens, OutputTokens: decision.OutputTokens,
 			})
-			_ = s.db.Create(&usage).Error
-			_, _ = s.events.Append(runID, traceID, "model.routed", "info", map[string]any{
+			_ = s.gdb().Create(&usage).Error
+			_, _ = s.eventsFor().Append(runID, traceID, "model.routed", "info", map[string]any{
 				"stepId": step.ID, "provider": decision.Provider.ID, "model": decision.Provider.Model,
 				"status": decision.Status, "fallbackUsed": decision.FallbackUsed,
 				"inputTokens": decision.InputTokens, "outputTokens": decision.OutputTokens,
@@ -289,7 +289,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			}
 		case "human":
 			if approvedStep(req.Inputs, "_approvedHumanSteps", step.ID) {
-				_, _ = s.events.Append(runID, traceID, "gate.approval_used", "info", map[string]any{
+				_, _ = s.eventsFor().Append(runID, traceID, "gate.approval_used", "info", map[string]any{
 					"stepId": step.ID, "kind": "human", "ref": "approval:" + step.ID,
 				})
 				evidenceRefs = appendUnique(evidenceRefs, "approval:"+step.ID)
@@ -297,14 +297,14 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			}
 			rec.Status = "waiting_approval"
 			rec.UpdatedAt = time.Now().UTC()
-			_ = s.db.Save(rec).Error
+			_ = s.gdb().Save(rec).Error
 			s.finishStep(stepRow, "waiting_approval", stepStart, "", "")
-			_, _ = s.events.Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{"stepId": step.ID})
+			_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{"stepId": step.ID})
 			s.requestApproval(rec, stepRow, "human", "", "human approval required", map[string]any{"stepId": step.ID})
 			return ErrWaitingApproval
 		}
 
-		if _, err := s.events.Append(runID, traceID, "step.finished", "info", map[string]any{
+		if _, err := s.eventsFor().Append(runID, traceID, "step.finished", "info", map[string]any{
 			"stepId": step.ID, "ok": true, "durationMs": time.Since(stepStart).Milliseconds(),
 		}); err != nil {
 			return err
@@ -312,7 +312,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 		s.finishStep(stepRow, "finished", stepStart, "", "")
 
 		ckptID, snapshotDigest, checkpointURI := s.saveCheckpoint(runID, traceID, step.ID, runDir, checkpointStrategy(doc))
-		if _, err := s.events.Append(runID, traceID, "run.checkpoint_saved", "info", map[string]any{
+		if _, err := s.eventsFor().Append(runID, traceID, "run.checkpoint_saved", "info", map[string]any{
 			"checkpointId": ckptID, "stepId": step.ID,
 			"snapshotDigest": snapshotDigest, "strategy": checkpointStrategy(doc), "uri": checkpointURI,
 		}); err != nil {
@@ -334,7 +334,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 		return ferr
 	}
 	if err := artifacts.ValidateQuality(runDir, manifest, s.AgentAdapter() != "static"); err != nil {
-		_, _ = s.events.Append(runID, traceID, "artifact.quality_failed", "error", map[string]any{
+		_, _ = s.eventsFor().Append(runID, traceID, "artifact.quality_failed", "error", map[string]any{
 			"error": err.Error(),
 		})
 		s.recordQualityMetric(runID, rec.SpaceID, "artifact_quality_passed", 0, "bool")
@@ -364,7 +364,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 	rec.Status = "finished"
 	rec.FinishedAt = &finished
 	rec.UpdatedAt = finished
-	if err := s.db.Save(rec).Error; err != nil {
+	if err := s.gdb().Save(rec).Error; err != nil {
 		return err
 	}
 
@@ -374,7 +374,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 	}
 	s.recordQualityMetrics(runID, traceID, rec.SpaceID, len(doc.Scenario.Steps), len(manifest.Artifacts), rec.Recovered)
 
-	_, err = s.events.Append(runID, traceID, "run.finished", "info", map[string]any{
+	_, err = s.eventsFor().Append(runID, traceID, "run.finished", "info", map[string]any{
 		"ok": true, "durationMs": finished.Sub(started).Milliseconds(),
 		"artifacts": artifactRefs,
 		"metrics":   map[string]any{"recovered": rec.Recovered, "steps": len(doc.Scenario.Steps)},
@@ -387,11 +387,11 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 	var refs []string
 	if repoRoot != "" {
 		if resp, err := s.rag.Index(ragIndexRequest(spaceID, repoRoot)); err == nil {
-			_, _ = s.events.Append(runID, traceID, "rag.indexed", "info", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "rag.indexed", "info", map[string]any{
 				"repoRoot": repoRoot, "documents": resp.Documents, "chunks": resp.Chunks,
 			})
 		} else {
-			_, _ = s.events.Append(runID, traceID, "rag.index_failed", "warn", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "rag.index_failed", "warn", map[string]any{
 				"repoRoot": repoRoot, "error": err.Error(),
 			})
 		}
@@ -399,7 +399,7 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 			for _, hit := range hits.Items {
 				refs = append(refs, hit.Ref)
 			}
-			_, _ = s.events.Append(runID, traceID, "rag.retrieved", "info", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "rag.retrieved", "info", map[string]any{
 				"query": issue, "hits": len(hits.Items), "refs": refs,
 			})
 		}
@@ -407,7 +407,7 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 	if strings.TrimSpace(issue) != "" {
 		memories, err := s.queryExecutionMemory(spaceID, repoRoot, issue, 5)
 		if err != nil {
-			_, _ = s.events.Append(runID, traceID, "memory.query_failed", "warn", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "memory.query_failed", "warn", map[string]any{
 				"error": err.Error(),
 			})
 			return refs
@@ -420,10 +420,10 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 				memoryRefs = append(memoryRefs, "memory:"+mem.ID)
 			}
 			refs = appendUnique(refs, memoryRefs...)
-			_, _ = s.events.Append(runID, traceID, "memory.injected", "info", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "memory.injected", "info", map[string]any{
 				"count": len(recordIDs), "recordIds": recordIDs,
 			})
-			_, _ = s.events.Append(runID, traceID, "memory.hit_used", "info", map[string]any{
+			_, _ = s.eventsFor().Append(runID, traceID, "memory.hit_used", "info", map[string]any{
 				"recordIds": recordIDs, "count": len(recordIDs),
 			})
 			_ = s.writeAudit(runID, traceID, "memory.hit_used", map[string]any{
@@ -439,7 +439,7 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 		limit = 5
 	}
 	like := "%" + strings.ToLower(strings.TrimSpace(issue)) + "%"
-	q := s.db.Where("status = ? AND layer = ? AND space_id = ?", "approved", "L1", firstNonEmpty(spaceID, "local")).
+	q := s.gdb().Where("status = ? AND layer = ? AND space_id = ?", "approved", "L1", firstNonEmpty(spaceID, "local")).
 		Where("LOWER(title) LIKE ? OR LOWER(body) LIKE ?", like, like)
 	if repoRoot != "" {
 		q = q.Where("scope_repo = ? OR scope_repo = ?", repoRoot, "")
@@ -454,7 +454,7 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 		for _, row := range rows {
 			ids = append(ids, row.ID)
 		}
-		if err := s.db.Where("from_id IN ? AND kind = ?", ids, "duplicate").Find(&edges).Error; err != nil {
+		if err := s.gdb().Where("from_id IN ? AND kind = ?", ids, "duplicate").Find(&edges).Error; err != nil {
 			return nil, err
 		}
 	}
@@ -489,7 +489,7 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 	}
 	if approvedStep(inputs, "_approvedCitationSteps", step.ID) {
 		ref := "approval:" + step.ID
-		_, _ = s.events.Append(runID, traceID, "citation.approved_without_evidence", "warn", map[string]any{
+		_, _ = s.eventsFor().Append(runID, traceID, "citation.approved_without_evidence", "warn", map[string]any{
 			"stepId": step.ID, "ref": ref,
 		})
 		return []string{ref}, nil
@@ -497,7 +497,7 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 	if repoRoot == "" {
 		if step.RAG.RequireCitations {
 			msg := fmt.Sprintf("step %s requires citations but repoRoot is empty", step.ID)
-			_, _ = s.events.Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
+			_, _ = s.eventsFor().Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
 			return nil, errors.New(msg)
 		}
 		return nil, nil
@@ -506,7 +506,7 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 	if err != nil {
 		if step.RAG.RequireCitations {
 			msg := fmt.Sprintf("step %s citation query failed: %v", step.ID, err)
-			_, _ = s.events.Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
+			_, _ = s.eventsFor().Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
 			return nil, errors.New(msg)
 		}
 		return nil, nil
@@ -517,10 +517,10 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 	}
 	if len(refs) == 0 && step.RAG.RequireCitations {
 		msg := fmt.Sprintf("step %s requires citations but no repo evidence matched", step.ID)
-		_, _ = s.events.Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
+		_, _ = s.eventsFor().Append(runID, traceID, "citation.missing", "warn", map[string]any{"stepId": step.ID, "reason": msg})
 		return nil, errors.New(msg)
 	}
-	_, _ = s.events.Append(runID, traceID, "citation.bound", "info", map[string]any{
+	_, _ = s.eventsFor().Append(runID, traceID, "citation.bound", "info", map[string]any{
 		"stepId": step.ID, "required": step.RAG.RequireCitations, "refs": refs,
 	})
 	return refs, nil
@@ -532,7 +532,7 @@ func (s *Service) startStep(runID string, step rules.Step, order int, started ti
 		Role: step.Role, Kind: step.Kind, Status: "running", StartedAt: &started,
 		CreatedAt: started, UpdatedAt: started,
 	}
-	_ = s.db.Create(row).Error
+	_ = s.gdb().Create(row).Error
 	return row
 }
 
@@ -547,7 +547,7 @@ func (s *Service) finishStep(row *store.RunStep, status string, started time.Tim
 	row.ErrorCode = code
 	row.ErrorMessage = msg
 	row.UpdatedAt = now
-	_ = s.db.Save(row).Error
+	_ = s.gdb().Save(row).Error
 }
 
 func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any) (*agentexec.Result, error) {
@@ -571,8 +571,8 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		Status: "running", PromptDigest: digestString(issue + "\n" + prompt),
 		TimeoutMs: timeout, CreatedAt: now, StartedAt: &now,
 	}
-	_ = s.db.Create(&task).Error
-	_, _ = s.events.Append(runID, traceID, "agent.called", "info", map[string]any{
+	_ = s.gdb().Create(&task).Error
+	_, _ = s.eventsFor().Append(runID, traceID, "agent.called", "info", map[string]any{
 		"stepId": step.ID, "adapter": "codex", "timeoutMs": timeout,
 	})
 	res, err := s.agent.Execute(context.Background(), req)
@@ -593,8 +593,8 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		task.Status = "failed"
 		task.ErrorCode = agentErrorCode(err)
 		task.ErrorMessage = err.Error()
-		_ = s.db.Save(&task).Error
-		_, _ = s.events.Append(runID, traceID, "agent.failed", "error", map[string]any{
+		_ = s.gdb().Save(&task).Error
+		_, _ = s.eventsFor().Append(runID, traceID, "agent.failed", "error", map[string]any{
 			"stepId": step.ID, "taskId": task.ExecGoTaskID, "error": err.Error(),
 		})
 		return res, err
@@ -602,8 +602,8 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 	if task.Status == "" {
 		task.Status = "success"
 	}
-	_ = s.db.Save(&task).Error
-	_, _ = s.events.Append(runID, traceID, "agent.finished", "info", map[string]any{
+	_ = s.gdb().Save(&task).Error
+	_, _ = s.eventsFor().Append(runID, traceID, "agent.finished", "info", map[string]any{
 		"stepId": step.ID, "taskId": firstNonEmpty(task.ExecGoTaskID, task.ActionID, task.ID),
 		"status": task.Status, "durationMs": task.DurationMs,
 	})
@@ -629,7 +629,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 	var last toolbus.Result
 	for attempt := 1; attempt <= attempts; attempt++ {
 		timeout := toolTimeoutMs(item)
-		_, _ = s.events.Append(runID, traceID, "tool.called", "info", map[string]any{
+		_, _ = s.eventsFor().Append(runID, traceID, "tool.called", "info", map[string]any{
 			"tool": item.Tool, "risk": risk, "timeoutMs": timeout,
 			"attempt": attempt, "maxAttempts": attempts,
 			"argsDigest": digestString(fmt.Sprintf("%v", item.Args)),
@@ -640,7 +640,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 		if !last.OK {
 			severity = "warn"
 		}
-		_, _ = s.events.Append(runID, traceID, "tool.result", severity, map[string]any{
+		_, _ = s.eventsFor().Append(runID, traceID, "tool.result", severity, map[string]any{
 			"tool": item.Tool, "ok": last.OK, "durationMs": last.DurationMs,
 			"attempt": attempt, "maxAttempts": attempts, "failureClass": failureClass,
 			"output": last.Output, "error": last.Error,
@@ -648,7 +648,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 		if last.OK || attempt == attempts {
 			return last
 		}
-		_, _ = s.events.Append(runID, traceID, "tool.retry_scheduled", "warn", map[string]any{
+		_, _ = s.eventsFor().Append(runID, traceID, "tool.retry_scheduled", "warn", map[string]any{
 			"tool": item.Tool, "attempt": attempt + 1, "maxAttempts": attempts,
 			"backoffMs": backoff, "failureClass": failureClass,
 		})
@@ -672,7 +672,7 @@ func (s *Service) callTool(runID, traceID, stepID string, ctx toolbus.Context, i
 		ArgsDigest: digestString(fmt.Sprintf("%v", item.Args)), TimeoutMs: timeout,
 		Attempt: attempt, CreatedAt: start,
 	}
-	_ = s.db.Create(&row).Error
+	_ = s.gdb().Create(&row).Error
 	res := s.tools.Call(ctx, toolbus.CallRequest{Tool: item.Tool, Args: item.Args})
 	if timeout > 0 && res.DurationMs > timeout {
 		res.OK = false
@@ -690,7 +690,7 @@ func (s *Service) callTool(runID, traceID, stepID string, ctx toolbus.Context, i
 	if b, err := json.Marshal(res.Output); err == nil {
 		row.OutputJSON = string(b)
 	}
-	_ = s.db.Save(&row).Error
+	_ = s.gdb().Save(&row).Error
 	_ = s.writeAudit(runID, traceID, "tool."+row.Status, row)
 	return res
 }
@@ -780,7 +780,7 @@ func (s *Service) captureDiffEvidence(runID, traceID, runDir, repoRoot string) [
 	path := filepath.Join(artDir, "diff.patch")
 	_ = os.WriteFile(path, []byte(strings.ReplaceAll(diff, "\r\n", "\n")), 0o644)
 	ref := "artifact:diff.patch"
-	_, _ = s.events.Append(runID, traceID, "artifact.captured", "info", map[string]any{"type": "diff", "ref": ref})
+	_, _ = s.eventsFor().Append(runID, traceID, "artifact.captured", "info", map[string]any{"type": "diff", "ref": ref})
 	return []string{ref}
 }
 
@@ -826,17 +826,17 @@ func (s *Service) saveCheckpoint(runID, traceID, stepID, runDir, strategy string
 				uri = ref.URI
 				storeKey = ref.Key
 				sizeBytes = ref.SizeBytes
-				_, _ = s.events.Append(runID, traceID, "checkpoint.stored", "info", map[string]any{
+				_, _ = s.eventsFor().Append(runID, traceID, "checkpoint.stored", "info", map[string]any{
 					"checkpointId": ckptID, "stepId": stepID, "uri": uri, "sizeBytes": sizeBytes,
 				})
 			} else if putErr != nil {
-				_, _ = s.events.Append(runID, traceID, "checkpoint.store_failed", "warn", map[string]any{
+				_, _ = s.eventsFor().Append(runID, traceID, "checkpoint.store_failed", "warn", map[string]any{
 					"checkpointId": ckptID, "stepId": stepID, "error": putErr.Error(),
 				})
 			}
 		}
 	}
-	_ = s.db.Create(&store.Checkpoint{
+	_ = s.gdb().Create(&store.Checkpoint{
 		ID: ckptID, RunID: runID, StepID: stepID, SnapshotDigest: snapshotDigest,
 		URI: uri, StoreKey: storeKey, ContentType: contentType, SizeBytes: sizeBytes,
 		Strategy: strategy, CreatedAt: time.Now().UTC(),
@@ -866,11 +866,11 @@ func (s *Service) indexArtifacts(runID, stepID, runDir string, manifest *artifac
 					if ref.SizeBytes > 0 {
 						a.SizeBytes = ref.SizeBytes
 					}
-					_, _ = s.events.Append(runID, "", "artifact.stored", "info", map[string]any{
+					_, _ = s.eventsFor().Append(runID, "", "artifact.stored", "info", map[string]any{
 						"name": a.Name, "type": a.Type, "uri": uri, "storeKey": storeKey, "sizeBytes": a.SizeBytes,
 					})
 				} else if putErr != nil {
-					_, _ = s.events.Append(runID, "", "artifact.store_failed", "warn", map[string]any{
+					_, _ = s.eventsFor().Append(runID, "", "artifact.store_failed", "warn", map[string]any{
 						"name": a.Name, "type": a.Type, "error": putErr.Error(),
 					})
 				}
@@ -886,14 +886,14 @@ func (s *Service) indexArtifacts(runID, stepID, runDir string, manifest *artifac
 				row.EventRange = v
 			}
 		}
-		_ = s.db.Create(&row).Error
+		_ = s.gdb().Create(&row).Error
 	}
 	return artifacts.SaveManifest(runDir, manifest)
 }
 
 func (s *Service) lastEventSeq(runID string) int64 {
 	var ev store.RunEvent
-	if err := s.db.Where("run_id = ?", runID).Order("seq desc").First(&ev).Error; err != nil {
+	if err := s.gdb().Where("run_id = ?", runID).Order("seq desc").First(&ev).Error; err != nil {
 		return 0
 	}
 	return ev.Seq
@@ -903,13 +903,13 @@ func (s *Service) writeAudit(runID, traceID, eventType string, payload any) erro
 	spaceID := "local"
 	if runID != "" {
 		var rec store.RunRecord
-		if err := s.db.Select("space_id", "trace_id").First(&rec, "id = ?", runID).Error; err == nil {
+		if err := s.gdb().Select("space_id", "trace_id").First(&rec, "id = ?", runID).Error; err == nil {
 			spaceID = firstNonEmpty(rec.SpaceID, "local")
 			traceID = firstNonEmpty(traceID, rec.TraceID)
 		}
 	}
 	b, _ := json.Marshal(payload)
-	return s.db.Create(&store.AuditLog{
+	return s.gdb().Create(&store.AuditLog{
 		ID: "aud_" + uuid.NewString(), SpaceID: spaceID, RunID: runID, TraceID: traceID,
 		EventType: eventType, PayloadJSON: string(b), CreatedAt: time.Now().UTC(),
 	}).Error
@@ -931,8 +931,8 @@ func (s *Service) recordQualityMetrics(runID, traceID, spaceID string, scenarioS
 	}
 
 	var toolTotal, toolFailed int64
-	_ = s.db.Model(&store.ToolCall{}).Where("run_id = ?", runID).Count(&toolTotal).Error
-	_ = s.db.Model(&store.ToolCall{}).Where("run_id = ? AND status = ?", runID, "failed").Count(&toolFailed).Error
+	_ = s.gdb().Model(&store.ToolCall{}).Where("run_id = ?", runID).Count(&toolTotal).Error
+	_ = s.gdb().Model(&store.ToolCall{}).Where("run_id = ? AND status = ?", runID, "failed").Count(&toolFailed).Error
 	metrics = append(metrics,
 		store.QualityMetric{ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID, Name: "tool_calls_total", Value: float64(toolTotal), Unit: "count", CreatedAt: now},
 		store.QualityMetric{
@@ -942,8 +942,8 @@ func (s *Service) recordQualityMetrics(runID, traceID, spaceID string, scenarioS
 	)
 
 	var agentTotal, agentFailed int64
-	_ = s.db.Model(&store.AgentTask{}).Where("run_id = ?", runID).Count(&agentTotal).Error
-	_ = s.db.Model(&store.AgentTask{}).Where("run_id = ? AND status = ?", runID, "failed").Count(&agentFailed).Error
+	_ = s.gdb().Model(&store.AgentTask{}).Where("run_id = ?", runID).Count(&agentTotal).Error
+	_ = s.gdb().Model(&store.AgentTask{}).Where("run_id = ? AND status = ?", runID, "failed").Count(&agentFailed).Error
 	metrics = append(metrics,
 		store.QualityMetric{ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID, Name: "agent_tasks_total", Value: float64(agentTotal), Unit: "count", CreatedAt: now},
 		store.QualityMetric{
@@ -953,15 +953,15 @@ func (s *Service) recordQualityMetrics(runID, traceID, spaceID string, scenarioS
 	)
 
 	var modelCostMicros int64
-	_ = s.db.Model(&store.ModelUsage{}).Where("run_id = ?", runID).Select("COALESCE(SUM(cost_micros), 0)").Scan(&modelCostMicros).Error
+	_ = s.gdb().Model(&store.ModelUsage{}).Where("run_id = ?", runID).Select("COALESCE(SUM(cost_micros), 0)").Scan(&modelCostMicros).Error
 	metrics = append(metrics, store.QualityMetric{
 		ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID, Name: "model_cost_micros_total",
 		Value: float64(modelCostMicros), Unit: "micros", CreatedAt: now,
 	})
 
 	var citationBound, citationMissing int64
-	_ = s.db.Model(&store.RunEvent{}).Where("run_id = ? AND type = ?", runID, "citation.bound").Count(&citationBound).Error
-	_ = s.db.Model(&store.RunEvent{}).Where("run_id = ? AND type = ?", runID, "citation.missing").Count(&citationMissing).Error
+	_ = s.gdb().Model(&store.RunEvent{}).Where("run_id = ? AND type = ?", runID, "citation.bound").Count(&citationBound).Error
+	_ = s.gdb().Model(&store.RunEvent{}).Where("run_id = ? AND type = ?", runID, "citation.missing").Count(&citationMissing).Error
 	metrics = append(metrics,
 		store.QualityMetric{ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID, Name: "citation_bound_total", Value: float64(citationBound), Unit: "count", CreatedAt: now},
 		store.QualityMetric{ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID, Name: "citation_missing_total", Value: float64(citationMissing), Unit: "count", CreatedAt: now},
@@ -972,9 +972,9 @@ func (s *Service) recordQualityMetrics(runID, traceID, spaceID string, scenarioS
 	)
 
 	for _, metric := range metrics {
-		_ = s.db.Create(&metric).Error
+		_ = s.gdb().Create(&metric).Error
 	}
-	_, _ = s.events.Append(runID, traceID, "quality.metrics_recorded", "info", map[string]any{
+	_, _ = s.eventsFor().Append(runID, traceID, "quality.metrics_recorded", "info", map[string]any{
 		"count": len(metrics),
 		"names": metricNames(metrics),
 	})
@@ -982,7 +982,7 @@ func (s *Service) recordQualityMetrics(runID, traceID, spaceID string, scenarioS
 
 func (s *Service) recordQualityMetric(runID, spaceID, name string, value float64, unit string) {
 	spaceID = firstNonEmpty(spaceID, "local")
-	_ = s.db.Create(&store.QualityMetric{
+	_ = s.gdb().Create(&store.QualityMetric{
 		ID: "qm_" + uuid.NewString(), RunID: runID, SpaceID: spaceID,
 		Name: name, Value: value, Unit: unit, CreatedAt: time.Now().UTC(),
 	}).Error

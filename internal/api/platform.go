@@ -129,7 +129,7 @@ func (h *Handler) routeModel(c *gin.Context) {
 			return
 		}
 		var err error
-		spaceID, err = h.runSpaceID(req.RunID)
+		spaceID, err = h.runSpaceID(c, req.RunID)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("RUN_SCOPE_CHECK_FAILED", err.Error()))
 			return
@@ -141,7 +141,7 @@ func (h *Handler) routeModel(c *gin.Context) {
 	decision := modelrouter.NewFromEnv().Route(req)
 	if req.RunID != "" || req.StepID != "" {
 		row := modelrouter.UsageRow(decision, req)
-		if err := h.db.Create(&row).Error; err != nil {
+		if err := h.dbFor(c).Create(&row).Error; err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("MODEL_USAGE_RECORD_FAILED", err.Error()))
 			return
 		}
@@ -162,7 +162,7 @@ func (h *Handler) getWaterfall(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	waterfall, err := observability.BuildWaterfall(h.db, runID)
+	waterfall, err := observability.BuildWaterfall(h.db.BindContext(c.Request.Context()), runID)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("WATERFALL_NOT_FOUND", err.Error()))
 		return
@@ -184,7 +184,7 @@ func (h *Handler) getQualityMetrics(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	items, err := h.runs.QualityMetrics(runID)
+	items, err := h.runsFor(c).QualityMetrics(runID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("QUALITY_METRIC_LIST_FAILED", err.Error()))
 		return
@@ -201,7 +201,7 @@ func (h *Handler) getQualityMetrics(c *gin.Context) {
 // @Router /api/v1/mcp/tools [get]
 func (h *Handler) listMCPTools(c *gin.Context) {
 	var rows []store.MCPTool
-	if err := h.db.Where("space_id = ?", currentSpace(c)).Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", currentSpace(c)).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("MCP_TOOL_LIST_FAILED", err.Error()))
 		return
 	}
@@ -246,7 +246,7 @@ func (h *Handler) registerMCPTool(c *gin.Context) {
 		ID: "mcp_" + uuid.NewString(), SpaceID: space, Name: req.Name, Server: req.Server,
 		SchemaJSON: schema, Risk: risk, Status: "registered", CreatedAt: now, UpdatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("MCP_TOOL_CREATE_FAILED", err.Error()))
 		return
 	}
@@ -285,17 +285,17 @@ func (h *Handler) createFeedback(c *gin.Context) {
 		Comment: req.Comment, ActorID: firstNonEmptyAPI(req.ActorID, currentActor(c)),
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "feedback.created", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "feedback.created", map[string]any{
 		"feedbackId": row.ID, "targetType": row.TargetType, "targetId": row.TargetID,
 		"rating": row.Rating, "category": row.Category, "severity": row.Severity,
 	}))
 	if row.Rating > 0 && row.Rating <= 2 && h.alerts != nil {
-		if alert, err := h.alerts.RecordLowFeedback(row); err == nil && alert.ID != "" {
-			_ = h.db.Create(auditRow(space, currentActor(c), "alert.feedback_low_score", map[string]any{
+		if alert, err := h.alertsFor(c).RecordLowFeedback(row); err == nil && alert.ID != "" {
+			_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "alert.feedback_low_score", map[string]any{
 				"feedbackId": row.ID, "alertId": alert.ID, "rating": row.Rating,
 			}))
 		}
@@ -326,7 +326,7 @@ func (h *Handler) listFeedback(c *gin.Context) {
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	q := h.db.Where("space_id = ?", space)
+	q := h.dbFor(c).Where("space_id = ?", space)
 	for key, column := range map[string]string{
 		"targetType": "target_type", "category": "category", "status": "status", "severity": "severity",
 	} {
@@ -370,7 +370,7 @@ func (h *Handler) updateFeedback(c *gin.Context) {
 		return
 	}
 	var row store.Feedback
-	if err := h.db.First(&row, "id = ? AND space_id = ?", c.Param("feedbackId"), space).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ? AND space_id = ?", c.Param("feedbackId"), space).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("FEEDBACK_NOT_FOUND", err.Error()))
 		return
 	}
@@ -387,15 +387,15 @@ func (h *Handler) updateFeedback(c *gin.Context) {
 	if req.Comment != "" {
 		updates["comment"] = req.Comment
 	}
-	if err := h.db.Model(&row).Updates(updates).Error; err != nil {
+	if err := h.dbFor(c).Model(&row).Updates(updates).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_UPDATE_FAILED", err.Error()))
 		return
 	}
-	if err := h.db.First(&row, "id = ? AND space_id = ?", row.ID, space).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ? AND space_id = ?", row.ID, space).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_RELOAD_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "feedback.updated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "feedback.updated", map[string]any{
 		"feedbackId": row.ID, "status": row.Status, "category": row.Category, "severity": row.Severity,
 	}))
 	c.JSON(http.StatusOK, row)
@@ -412,7 +412,7 @@ func (h *Handler) devLogin(c *gin.Context) {
 	spaceName := "Local"
 	if spaceID != "local" {
 		var space store.Space
-		if err := h.db.First(&space, "id = ?", spaceID).Error; err == nil {
+		if err := h.dbFor(c).First(&space, "id = ?", spaceID).Error; err == nil {
 			spaceName = space.Name
 		}
 	}
@@ -434,7 +434,7 @@ func (h *Handler) devLogin(c *gin.Context) {
 
 func (h *Handler) listOrgs(c *gin.Context) {
 	var rows []store.Org
-	if err := h.db.Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ORG_LIST_FAILED", err.Error()))
 		return
 	}
@@ -470,7 +470,7 @@ func (h *Handler) createOrg(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "name is required"))
 		return
 	}
-	if err := h.db.Transaction(func(tx *gorm.DB) error {
+	if err := h.dbFor(c).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&org).Error; err != nil {
 			return err
 		}
@@ -505,7 +505,7 @@ func (h *Handler) createOrg(c *gin.Context) {
 
 func (h *Handler) listSpaces(c *gin.Context) {
 	var rows []store.Space
-	if err := h.db.Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SPACE_LIST_FAILED", err.Error()))
 		return
 	}
@@ -534,7 +534,7 @@ func (h *Handler) createSpace(c *gin.Context) {
 		return
 	}
 	var org store.Org
-	if err := h.db.First(&org, "id = ?", req.OrgID).Error; err != nil {
+	if err := h.dbFor(c).First(&org, "id = ?", req.OrgID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("ORG_NOT_FOUND", "org not found"))
 		return
 	}
@@ -550,7 +550,7 @@ func (h *Handler) createSpace(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "name is required"))
 		return
 	}
-	if err := h.db.Transaction(func(tx *gorm.DB) error {
+	if err := h.dbFor(c).Transaction(func(tx *gorm.DB) error {
 		if err := tx.Create(&space).Error; err != nil {
 			return err
 		}
@@ -586,7 +586,7 @@ func (h *Handler) createSpace(c *gin.Context) {
 func (h *Handler) listRoles(c *gin.Context) {
 	orgID := strings.TrimSpace(c.Param("orgId"))
 	var org store.Org
-	if err := h.db.First(&org, "id = ?", orgID).Error; err != nil {
+	if err := h.dbFor(c).First(&org, "id = ?", orgID).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("ORG_NOT_FOUND", "org not found"))
 		return
 	}
@@ -594,7 +594,7 @@ func (h *Handler) listRoles(c *gin.Context) {
 		return
 	}
 	var rows []store.Role
-	if err := h.db.Where("org_id = ?", orgID).Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("org_id = ?", orgID).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ROLE_LIST_FAILED", err.Error()))
 		return
 	}
@@ -616,7 +616,7 @@ func (h *Handler) listRoles(c *gin.Context) {
 func (h *Handler) createRole(c *gin.Context) {
 	orgID := strings.TrimSpace(c.Param("orgId"))
 	var org store.Org
-	if err := h.db.First(&org, "id = ?", orgID).Error; err != nil {
+	if err := h.dbFor(c).First(&org, "id = ?", orgID).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("ORG_NOT_FOUND", "org not found"))
 		return
 	}
@@ -640,11 +640,11 @@ func (h *Handler) createRole(c *gin.Context) {
 		ID: "role_" + uuid.NewString(), OrgID: orgID, Name: name,
 		Permissions: string(rawPerms), CreatedAt: now, UpdatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ROLE_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(currentSpace(c), currentActor(c), "role.created", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(currentSpace(c), currentActor(c), "role.created", map[string]any{
 		"orgId": orgID, "roleId": row.ID, "name": row.Name, "permissions": perms,
 	})).Error
 	c.JSON(http.StatusCreated, row)
@@ -669,7 +669,7 @@ func (h *Handler) listSpaceMembers(c *gin.Context) {
 		return
 	}
 	var rows []store.Member
-	if err := h.db.Where("space_id = ?", space.ID).Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", space.ID).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("MEMBER_LIST_FAILED", err.Error()))
 		return
 	}
@@ -695,7 +695,7 @@ func (h *Handler) listSpaceResourceScopes(c *gin.Context) {
 		return
 	}
 	var rows []store.ResourceScope
-	if err := h.db.Where("space_id = ?", space.ID).Order("created_at asc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", space.ID).Order("created_at asc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RESOURCE_SCOPE_LIST_FAILED", err.Error()))
 		return
 	}
@@ -751,7 +751,7 @@ func (h *Handler) updateSpaceResourceScope(c *gin.Context) {
 		return
 	}
 	var row store.ResourceScope
-	if err := h.db.First(&row, "id = ? AND space_id = ?", scopeID, space.ID).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ? AND space_id = ?", scopeID, space.ID).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("RESOURCE_SCOPE_NOT_FOUND", "resource scope not found"))
 		return
 	}
@@ -763,11 +763,11 @@ func (h *Handler) updateSpaceResourceScope(c *gin.Context) {
 	now := time.Now().UTC()
 	row.PolicyJSON = req.PolicyJSON
 	row.UpdatedAt = now
-	if err := h.db.Save(&row).Error; err != nil {
+	if err := h.dbFor(c).Save(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RESOURCE_SCOPE_UPDATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space.ID, currentActor(c), "scope.policy_updated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space.ID, currentActor(c), "scope.policy_updated", map[string]any{
 		"scopeId":        row.ID,
 		"resourceType":   row.ResourceType,
 		"resourceId":     row.ResourceID,
@@ -818,7 +818,7 @@ func (h *Handler) createSpaceMember(c *gin.Context) {
 		return
 	}
 	var role store.Role
-	if err := h.db.First(&role, "id = ?", req.RoleID).Error; err != nil {
+	if err := h.dbFor(c).First(&role, "id = ?", req.RoleID).Error; err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("ROLE_NOT_FOUND", "role not found"))
 		return
 	}
@@ -842,7 +842,7 @@ func (h *Handler) createSpaceMember(c *gin.Context) {
 	}
 	now := time.Now().UTC()
 	var member store.Member
-	if err := h.db.Transaction(func(tx *gorm.DB) error {
+	if err := h.dbFor(c).Transaction(func(tx *gorm.DB) error {
 		user := store.User{
 			ID: userID, Email: email, DisplayName: firstNonEmptyAPI(displayName, userID),
 			PasswordHash: passwordHash, Status: "active", CreatedAt: now, UpdatedAt: now,
@@ -899,14 +899,14 @@ func (h *Handler) createAuditExport(c *gin.Context) {
 		ID: "audexp_" + uuid.NewString(), SpaceID: space,
 		Status: "running", RequestedBy: firstNonEmptyAPI(req.RequestedBy, currentActor(c)), CreatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_CREATE_FAILED", err.Error()))
 		return
 	}
 	var logs []store.AuditLog
-	if err := h.db.Where("space_id = ?", space).Order("created_at asc").Find(&logs).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", space).Order("created_at asc").Find(&logs).Error; err != nil {
 		row.Status = "failed"
-		_ = h.db.Save(&row).Error
+		_ = h.dbFor(c).Save(&row).Error
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_FAILED", err.Error()))
 		return
 	}
@@ -920,7 +920,7 @@ func (h *Handler) createAuditExport(c *gin.Context) {
 	ref, err := artifactStore.Put(context.Background(), storeKey, bytes.NewReader(b), "application/json")
 	if err != nil {
 		row.Status = "failed"
-		_ = h.db.Save(&row).Error
+		_ = h.dbFor(c).Save(&row).Error
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_FAILED", err.Error()))
 		return
 	}
@@ -932,8 +932,8 @@ func (h *Handler) createAuditExport(c *gin.Context) {
 	row.ContentType = ref.ContentType
 	row.SizeBytes = ref.SizeBytes
 	row.CompletedAt = &done
-	_ = h.db.Save(&row).Error
-	_ = h.db.Create(auditRow(space, currentActor(c), "audit.export_completed", map[string]any{
+	_ = h.dbFor(c).Save(&row).Error
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "audit.export_completed", map[string]any{
 		"exportId": row.ID, "uri": row.URI, "digest": row.Digest, "sizeBytes": row.SizeBytes,
 	})).Error
 	c.JSON(http.StatusAccepted, row)
@@ -953,7 +953,7 @@ func (h *Handler) listAuditExports(c *gin.Context) {
 		return
 	}
 	var rows []store.AuditExport
-	if err := h.db.Where("space_id = ?", space).Order("created_at desc").Limit(100).Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", space).Order("created_at desc").Limit(100).Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_LIST_FAILED", err.Error()))
 		return
 	}
@@ -977,7 +977,7 @@ func (h *Handler) getAuditExportAccess(c *gin.Context) {
 		return
 	}
 	var row store.AuditExport
-	if err := h.db.First(&row, "id = ?", c.Param("exportId")).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("exportId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("AUDIT_EXPORT_NOT_FOUND", "audit export not found"))
 		return
 	}
@@ -999,7 +999,7 @@ func (h *Handler) getAuditExportAccess(c *gin.Context) {
 		return
 	}
 	expires := time.Now().UTC().Add(ttl)
-	_ = h.db.Create(auditRow(space, currentActor(c), "audit.export_access_issued", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "audit.export_access_issued", map[string]any{
 		"exportId": row.ID, "digest": row.Digest, "ttlSeconds": ttlSeconds,
 	})).Error
 	c.JSON(http.StatusOK, AuditExportAccessResponse{
@@ -1028,7 +1028,7 @@ func (h *Handler) listAuditLogs(c *gin.Context) {
 	if limit <= 0 || limit > 500 {
 		limit = 100
 	}
-	q := h.db.Where("space_id = ?", space)
+	q := h.dbFor(c).Where("space_id = ?", space)
 	if eventType := strings.TrimSpace(c.Query("eventType")); eventType != "" {
 		q = q.Where("event_type = ?", eventType)
 	}
@@ -1045,7 +1045,7 @@ func (h *Handler) listAuditLogs(c *gin.Context) {
 		return
 	}
 	var policy store.AuditPolicy
-	if err := h.db.First(&policy, "space_id = ?", space).Error; err == nil && policy.RedactPayload {
+	if err := h.dbFor(c).First(&policy, "space_id = ?", space).Error; err == nil && policy.RedactPayload {
 		for i := range rows {
 			rows[i].PayloadJSON = security.RedactJSON(rows[i].PayloadJSON)
 		}
@@ -1066,7 +1066,7 @@ func (h *Handler) getAuditPolicy(c *gin.Context) {
 	if !h.requirePermission(c, permAuditExport, space) {
 		return
 	}
-	policy, err := h.auditPolicy(space)
+	policy, err := h.auditPolicy(c, space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_POLICY_GET_FAILED", err.Error()))
 		return
@@ -1099,7 +1099,7 @@ func (h *Handler) updateAuditPolicy(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_AUDIT_POLICY", "retentionDays must be 1..3650"))
 		return
 	}
-	policy, err := h.auditPolicy(space)
+	policy, err := h.auditPolicy(c, space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_POLICY_GET_FAILED", err.Error()))
 		return
@@ -1111,11 +1111,11 @@ func (h *Handler) updateAuditPolicy(c *gin.Context) {
 	policy.RetentionDays = req.RetentionDays
 	policy.RedactPayload = req.RedactPayload
 	policy.UpdatedAt = time.Now().UTC()
-	if err := h.db.Save(policy).Error; err != nil {
+	if err := h.dbFor(c).Save(policy).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_POLICY_UPDATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "audit.policy_updated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "audit.policy_updated", map[string]any{
 		"retentionDays": policy.RetentionDays, "redactPayload": policy.RedactPayload,
 	})).Error
 	c.JSON(http.StatusOK, policy)
@@ -1138,13 +1138,13 @@ func (h *Handler) applyAuditRetention(c *gin.Context) {
 	}
 	var req applyAuditRetentionRequest
 	_ = c.ShouldBindJSON(&req)
-	policy, err := h.auditPolicy(space)
+	policy, err := h.auditPolicy(c, space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_POLICY_GET_FAILED", err.Error()))
 		return
 	}
 	cutoff := time.Now().UTC().AddDate(0, 0, -policy.RetentionDays)
-	q := h.db.Model(&store.AuditLog{}).Where("space_id = ? AND created_at < ?", space, cutoff)
+	q := h.dbFor(c).Model(&store.AuditLog{}).Where("space_id = ? AND created_at < ?", space, cutoff)
 	var matched int64
 	if err := q.Count(&matched).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_RETENTION_COUNT_FAILED", err.Error()))
@@ -1152,7 +1152,7 @@ func (h *Handler) applyAuditRetention(c *gin.Context) {
 	}
 	deleted := int64(0)
 	if !req.DryRun && matched > 0 {
-		res := h.db.Where("space_id = ? AND created_at < ?", space, cutoff).Delete(&store.AuditLog{})
+		res := h.dbFor(c).Where("space_id = ? AND created_at < ?", space, cutoff).Delete(&store.AuditLog{})
 		if res.Error != nil {
 			c.JSON(http.StatusInternalServerError, errorBody("AUDIT_RETENTION_APPLY_FAILED", res.Error.Error()))
 			return
@@ -1163,7 +1163,7 @@ func (h *Handler) applyAuditRetention(c *gin.Context) {
 		SpaceID: space, RetentionDays: policy.RetentionDays, Cutoff: cutoff,
 		Matched: matched, Deleted: deleted, DryRun: req.DryRun,
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "audit.retention_applied", resp)).Error
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "audit.retention_applied", resp)).Error
 	c.JSON(http.StatusOK, resp)
 }
 
@@ -1180,7 +1180,7 @@ func (h *Handler) listPlugins(c *gin.Context) {
 		return
 	}
 	var rows []store.PluginRegistry
-	if err := h.db.Where("space_id = ?", currentSpace(c)).Order("created_at desc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", currentSpace(c)).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_LIST_FAILED", err.Error()))
 		return
 	}
@@ -1227,11 +1227,11 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 		Capabilities: string(caps), Compatible: compatible, Status: status, LastError: lastErr,
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_REGISTER_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "plugin.registered", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "plugin.registered", map[string]any{
 		"pluginId": row.ID, "name": row.Name, "version": row.Version,
 		"protocol": row.Protocol, "abi": row.ABI, "compatible": row.Compatible,
 	})).Error
@@ -1250,7 +1250,7 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 // @Router /api/v1/plugins/{pluginId}/verify [post]
 func (h *Handler) verifyPlugin(c *gin.Context) {
 	var row store.PluginRegistry
-	if err := h.db.First(&row, "id = ?", c.Param("pluginId")).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("pluginId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("PLUGIN_NOT_FOUND", "plugin not found"))
 		return
 	}
@@ -1268,21 +1268,22 @@ func (h *Handler) verifyPlugin(c *gin.Context) {
 		row.Status = "incompatible"
 	}
 	row.UpdatedAt = time.Now().UTC()
-	if err := h.db.Save(&row).Error; err != nil {
+	if err := h.dbFor(c).Save(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_VERIFY_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(row.SpaceID, currentActor(c), "plugin.verified", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "plugin.verified", map[string]any{
 		"pluginId": row.ID, "protocol": row.Protocol, "abi": row.ABI,
 		"compatible": row.Compatible, "lastError": row.LastError,
 	})).Error
 	c.JSON(http.StatusOK, row)
 }
 
-func (h *Handler) auditPolicy(space string) (*store.AuditPolicy, error) {
+func (h *Handler) auditPolicy(c *gin.Context, space string) (*store.AuditPolicy, error) {
 	space = firstNonEmptyAPI(space, "local")
+	gdb := h.dbFor(c)
 	var policy store.AuditPolicy
-	if err := h.db.First(&policy, "space_id = ?", space).Error; err == nil {
+	if err := gdb.First(&policy, "space_id = ?", space).Error; err == nil {
 		return &policy, nil
 	} else if err != gorm.ErrRecordNotFound {
 		return nil, err
@@ -1292,7 +1293,7 @@ func (h *Handler) auditPolicy(space string) (*store.AuditPolicy, error) {
 		SpaceID: space, RetentionDays: 365, RedactPayload: false,
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := h.db.Create(&policy).Error; err != nil {
+	if err := gdb.Create(&policy).Error; err != nil {
 		return nil, err
 	}
 	return &policy, nil
@@ -1311,7 +1312,7 @@ func pluginCompatibility(protocol, abi, name, version, endpoint string) (bool, s
 func (h *Handler) spaceForParam(c *gin.Context) (store.Space, bool) {
 	spaceID := strings.TrimSpace(c.Param("spaceId"))
 	var space store.Space
-	if err := h.db.First(&space, "id = ?", spaceID).Error; err != nil {
+	if err := h.dbFor(c).First(&space, "id = ?", spaceID).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("SPACE_NOT_FOUND", "space not found"))
 		return store.Space{}, false
 	}

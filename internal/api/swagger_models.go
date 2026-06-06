@@ -23,8 +23,9 @@ type APIErrorResponse struct {
 
 // HealthResponse for liveness/readiness probes.
 type HealthResponse struct {
-	Status string `json:"status" example:"ok"`
-	Error  string `json:"error,omitempty"`
+	Status  string `json:"status" example:"ok"`
+	Dialect string `json:"dialect,omitempty" example:"postgres"`
+	Error   string `json:"error,omitempty"`
 }
 
 type AuthSessionResponse struct {
@@ -197,9 +198,12 @@ type SecretResponse struct {
 }
 
 type DatabaseProfile struct {
-	Dialect       string `json:"dialect"`
-	URLConfigured bool   `json:"urlConfigured"`
-	DataDir       string `json:"dataDir"`
+	Dialect                string `json:"dialect"`
+	URLConfigured          bool   `json:"urlConfigured"`
+	DataDir                string `json:"dataDir"`
+	PostgresRLSEnabled     bool   `json:"postgresRLSEnabled,omitempty"`
+	PostgresRLSForce       bool   `json:"postgresRLSForce,omitempty"`
+	PostgresRLSPolicyCount int64  `json:"postgresRLSPolicyCount,omitempty"`
 }
 
 // ScenarioListResponse lists loaded scenarios.

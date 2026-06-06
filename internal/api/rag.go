@@ -32,7 +32,7 @@ func (h *Handler) indexRAG(c *gin.Context) {
 		return
 	}
 	req.SpaceID = space
-	resp, err := h.runs.RAG().Index(req)
+	resp, err := h.runsFor(c).RAG().Index(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RAG_INDEX_FAILED", err.Error()))
 		return
@@ -64,7 +64,7 @@ func (h *Handler) queryRAG(c *gin.Context) {
 		return
 	}
 	req.SpaceID = space
-	resp, err := h.runs.RAG().Query(req)
+	resp, err := h.runsFor(c).RAG().Query(req)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RAG_QUERY_FAILED", err.Error()))
 		return

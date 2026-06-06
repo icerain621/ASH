@@ -19,6 +19,10 @@ export type ScaleReadiness = {
   dualWriteRuntime?: boolean;
   dualWriteSource?: string;
   lastMigrationSyncAtMs?: number;
+  postgresRLSEnabled?: boolean;
+  postgresRLSForce?: boolean;
+  postgresRLSPolicyCount?: number;
+  postgresAppUrlConfigured?: boolean;
 };
 
 export function getScaleReadiness() {

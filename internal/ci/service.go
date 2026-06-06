@@ -32,6 +32,7 @@ type Service struct {
 	db             *store.DB
 	providers      map[string]Provider
 	secretResolver SecretResolver
+	ctx            context.Context
 }
 
 type CreateConnectionRequest struct {
@@ -114,6 +115,27 @@ func (s *Service) WithProvider(name string, provider Provider) *Service {
 	return s
 }
 
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{
+		db: s.db, providers: s.providers, secretResolver: s.secretResolver, ctx: ctx,
+	}
+}
+
+func (s *Service) q(callCtx context.Context) *gorm.DB {
+	ctx := callCtx
+	if ctx == nil {
+		ctx = s.ctx
+	}
+	if ctx != nil {
+		return s.db.WithContext(ctx)
+	}
+	return s.db.DB
+}
+
 func (s *Service) CreateConnection(req CreateConnectionRequest) (store.RepoConnection, error) {
 	provider := normalizeProvider(req.Provider)
 	if provider == "" {
@@ -144,7 +166,7 @@ func (s *Service) CreateConnection(req CreateConnectionRequest) (store.RepoConne
 		CreatedAt:     now,
 		UpdatedAt:     now,
 	}
-	if err := s.db.Create(&row).Error; err != nil {
+	if err := s.q(nil).Create(&row).Error; err != nil {
 		return store.RepoConnection{}, err
 	}
 	return row, nil
@@ -152,7 +174,7 @@ func (s *Service) CreateConnection(req CreateConnectionRequest) (store.RepoConne
 
 func (s *Service) ListConnections(spaceID string) ([]store.RepoConnection, error) {
 	var rows []store.RepoConnection
-	err := s.db.Where("space_id = ?", firstNonEmpty(spaceID, "local")).Order("created_at desc").Find(&rows).Error
+	err := s.q(nil).Where("space_id = ?", firstNonEmpty(spaceID, "local")).Order("created_at desc").Find(&rows).Error
 	return rows, err
 }
 
@@ -166,7 +188,7 @@ func (s *Service) ListRuns(ctx context.Context, spaceID, connectionID string, li
 			return nil, err
 		}
 	}
-	q := s.db.Where("space_id = ?", spaceID)
+	q := s.q(ctx).Where("space_id = ?", spaceID)
 	if strings.TrimSpace(connectionID) != "" {
 		q = q.Where("connection_id = ?", strings.TrimSpace(connectionID))
 	}
@@ -189,7 +211,7 @@ func (s *Service) ListJobs(ctx context.Context, spaceID, runID string, limit int
 			return nil, err
 		}
 	}
-	q := s.db.Where("space_id = ?", spaceID)
+	q := s.q(ctx).Where("space_id = ?", spaceID)
 	if runID != "" {
 		q = q.Where("ci_run_id = ?", runID)
 	}
@@ -201,7 +223,7 @@ func (s *Service) ListJobs(ctx context.Context, spaceID, runID string, limit int
 func (s *Service) SyncJobs(ctx context.Context, spaceID, runID string) error {
 	spaceID = firstNonEmpty(spaceID, "local")
 	var run store.CIRun
-	if err := s.db.First(&run, "id = ? AND space_id = ?", strings.TrimSpace(runID), spaceID).Error; err != nil {
+	if err := s.q(ctx).First(&run, "id = ? AND space_id = ?", strings.TrimSpace(runID), spaceID).Error; err != nil {
 		return fmt.Errorf("ci run not found: %w", err)
 	}
 	conn, err := s.connection(spaceID, run.ConnectionID)
@@ -235,7 +257,7 @@ func (s *Service) SyncJobs(ctx context.Context, spaceID, runID string) error {
 		if row.ID == "" {
 			row.ID = "ci_job_" + uuid.NewString()
 		}
-		if err := s.db.Where("connection_id = ? AND provider_job_id = ?", conn.ID, row.ProviderJobID).
+		if err := s.q(ctx).Where("connection_id = ? AND provider_job_id = ?", conn.ID, row.ProviderJobID).
 			Assign(row).FirstOrCreate(&store.CIJob{}).Error; err != nil {
 			return err
 		}
@@ -271,14 +293,14 @@ func (s *Service) SyncRuns(ctx context.Context, spaceID, connectionID string, li
 		if row.ID == "" {
 			row.ID = "ci_run_" + uuid.NewString()
 		}
-		if err := s.db.Where("connection_id = ? AND provider_run_id = ?", conn.ID, row.ProviderRunID).
+		if err := s.q(ctx).Where("connection_id = ? AND provider_run_id = ?", conn.ID, row.ProviderRunID).
 			Assign(row).FirstOrCreate(&store.CIRun{}).Error; err != nil {
 			return err
 		}
 	}
 	conn.LastSyncAt = &now
 	conn.UpdatedAt = now
-	return s.db.Save(&conn).Error
+	return s.q(ctx).Save(&conn).Error
 }
 
 func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisResponse, error) {
@@ -297,7 +319,7 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 	}
 	var run store.CIRun
 	if runID != "" {
-		if err := s.db.First(&run, "id = ? AND space_id = ?", runID, spaceID).Error; err != nil {
+		if err := s.q(ctx).First(&run, "id = ? AND space_id = ?", runID, spaceID).Error; err != nil {
 			return DiagnosisResponse{}, fmt.Errorf("ci run not found: %w", err)
 		}
 		if connID == "" {
@@ -306,7 +328,7 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 	}
 	var job store.CIJob
 	if jobID != "" {
-		if err := s.db.First(&job, "id = ? AND space_id = ?", jobID, spaceID).Error; err != nil {
+		if err := s.q(ctx).First(&job, "id = ? AND space_id = ?", jobID, spaceID).Error; err != nil {
 			return DiagnosisResponse{}, fmt.Errorf("ci job not found: %w", err)
 		}
 		if connID == "" {
@@ -338,7 +360,7 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 		}
 		logText = fetched
 		if digest := digestText(logText); digest != "" && job.ID != "" {
-			_ = s.db.Model(&store.CIJob{}).
+			_ = s.q(ctx).Model(&store.CIJob{}).
 				Where("id = ? AND space_id = ?", job.ID, spaceID).
 				Updates(map[string]any{"log_digest": digest, "updated_at": time.Now().UTC()}).Error
 		}
@@ -364,7 +386,7 @@ func (s *Service) Diagnose(ctx context.Context, req DiagnoseRequest) (DiagnosisR
 		CreatedAt:          now,
 		UpdatedAt:          now,
 	}
-	if err := s.db.Create(&row).Error; err != nil {
+	if err := s.q(ctx).Create(&row).Error; err != nil {
 		return DiagnosisResponse{}, err
 	}
 	out.ID = row.ID
@@ -389,7 +411,7 @@ func (s *Service) ListDiagnoses(req ListDiagnosesRequest) ([]DiagnosisResponse, 
 	if limit <= 0 || limit > 100 {
 		limit = 50
 	}
-	q := s.db.Where("space_id = ?", spaceID)
+	q := s.q(nil).Where("space_id = ?", spaceID)
 	if strings.TrimSpace(req.ConnectionID) != "" {
 		q = q.Where("connection_id = ?", strings.TrimSpace(req.ConnectionID))
 	}
@@ -420,7 +442,7 @@ func (s *Service) DecideDiagnosis(req DecideDiagnosisRequest) (DiagnosisResponse
 	}
 	spaceID := firstNonEmpty(req.SpaceID, "local")
 	var row store.CIDiagnosis
-	if err := s.db.First(&row, "id = ? AND space_id = ?", strings.TrimSpace(req.DiagnosisID), spaceID).Error; err != nil {
+	if err := s.q(nil).First(&row, "id = ? AND space_id = ?", strings.TrimSpace(req.DiagnosisID), spaceID).Error; err != nil {
 		return DiagnosisResponse{}, fmt.Errorf("ci diagnosis not found: %w", err)
 	}
 	now := time.Now().UTC()
@@ -430,7 +452,7 @@ func (s *Service) DecideDiagnosis(req DecideDiagnosisRequest) (DiagnosisResponse
 	row.DecidedBy = strings.TrimSpace(req.ActorID)
 	row.DecidedAt = &now
 	row.UpdatedAt = now
-	if err := s.db.Save(&row).Error; err != nil {
+	if err := s.q(nil).Save(&row).Error; err != nil {
 		return DiagnosisResponse{}, err
 	}
 	return diagnosisFromRow(row), nil
@@ -585,7 +607,7 @@ func rex(patterns ...string) []*regexp.Regexp {
 
 func (s *Service) connection(spaceID, connectionID string) (store.RepoConnection, error) {
 	var row store.RepoConnection
-	err := s.db.First(&row, "id = ? AND space_id = ?", connectionID, firstNonEmpty(spaceID, "local")).Error
+	err := s.q(nil).First(&row, "id = ? AND space_id = ?", connectionID, firstNonEmpty(spaceID, "local")).Error
 	if err == gorm.ErrRecordNotFound {
 		return row, fmt.Errorf("repo connection not found")
 	}

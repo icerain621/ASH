@@ -26,7 +26,7 @@ func (s *Service) Replay(sourceRunID string, req ReplayRequest) (*ReplayResponse
 		return nil, err
 	}
 	var sourceRec store.RunRecord
-	_ = s.db.Select("space_id", "actor_role").First(&sourceRec, "id = ?", sourceRunID).Error
+	_ = s.gdb().Select("space_id", "actor_role").First(&sourceRec, "id = ?", sourceRunID).Error
 
 	inputs := copyMap(meta.Inputs)
 	for k, v := range req.Overrides {
@@ -57,7 +57,7 @@ func (s *Service) Replay(sourceRunID string, req ReplayRequest) (*ReplayResponse
 // Resume re-executes a failed run on the same run id (M0: full re-run, append events).
 func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 	var rec store.RunRecord
-	if err := s.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrRunNotFound
 		}
@@ -77,11 +77,11 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 	rec.ErrorCode = ""
 	rec.ErrorMessage = ""
 	rec.FinishedAt = nil
-	if err := s.db.Save(&rec).Error; err != nil {
+	if err := s.gdb().Save(&rec).Error; err != nil {
 		return nil, err
 	}
 
-	if _, err := s.events.Append(runID, rec.TraceID, "run.resumed", "info", map[string]any{
+	if _, err := s.eventsFor().Append(runID, rec.TraceID, "run.resumed", "info", map[string]any{
 		"fromStatus": "failed",
 		"recovered":  true,
 	}); err != nil {

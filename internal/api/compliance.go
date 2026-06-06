@@ -53,7 +53,7 @@ func (h *Handler) complianceSecretScan(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "200"))
-	c.JSON(http.StatusOK, h.collectSecretScan(space, limit))
+	c.JSON(http.StatusOK, h.collectSecretScan(c, space, limit))
 }
 
 func buildSecretScan(space string, redactEnabled bool, items []struct{ Source, Ref, Text string }) SecretScanResponse {
@@ -64,22 +64,23 @@ func buildSecretScan(space string, redactEnabled bool, items []struct{ Source, R
 	}
 }
 
-func (h *Handler) collectSecretScan(space string, limit int) SecretScanResponse {
+func (h *Handler) collectSecretScan(c *gin.Context, space string, limit int) SecretScanResponse {
 	if limit <= 0 || limit > 500 {
 		limit = 200
 	}
+	db := h.dbFor(c)
 	var policy store.AuditPolicy
 	redactEnabled := false
-	if err := h.db.First(&policy, "space_id = ?", space).Error; err == nil {
+	if err := db.First(&policy, "space_id = ?", space).Error; err == nil {
 		redactEnabled = policy.RedactPayload
 	}
 	var auditLogs []store.AuditLog
-	_ = h.db.Where("space_id = ?", space).Order("created_at desc").Limit(limit).Find(&auditLogs).Error
+	_ = db.Where("space_id = ?", space).Order("created_at desc").Limit(limit).Find(&auditLogs).Error
 	var runIDs []string
-	_ = h.db.Model(&store.RunRecord{}).Where("space_id = ?", space).Pluck("id", &runIDs).Error
+	_ = db.Model(&store.RunRecord{}).Where("space_id = ?", space).Pluck("id", &runIDs).Error
 	var events []store.RunEvent
 	if len(runIDs) > 0 {
-		_ = h.db.Where("run_id IN ?", runIDs).Order("seq desc").Limit(limit).Find(&events).Error
+		_ = db.Where("run_id IN ?", runIDs).Order("seq desc").Limit(limit).Find(&events).Error
 	}
 	items := make([]struct{ Source, Ref, Text string }, 0, len(auditLogs)+len(events))
 	for _, row := range auditLogs {
@@ -140,15 +141,16 @@ func (h *Handler) complianceExportBundle(c *gin.Context) {
 		reportID = h.doctorReports.put(rep)
 	}
 
-	secretScan := h.collectSecretScan(space, 200)
+	secretScan := h.collectSecretScan(c, space, 200)
 
+	db := h.dbFor(c)
 	var logs []store.AuditLog
-	if err := h.db.Where("space_id = ?", space).Order("created_at asc").Find(&logs).Error; err != nil {
+	if err := db.Where("space_id = ?", space).Order("created_at asc").Find(&logs).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_FAILED", err.Error()))
 		return
 	}
 	var policy store.AuditPolicy
-	if err := h.db.First(&policy, "space_id = ?", space).Error; err == nil && policy.RedactPayload {
+	if err := db.First(&policy, "space_id = ?", space).Error; err == nil && policy.RedactPayload {
 		for i := range logs {
 			logs[i].PayloadJSON = security.RedactJSON(logs[i].PayloadJSON)
 		}
@@ -158,7 +160,7 @@ func (h *Handler) complianceExportBundle(c *gin.Context) {
 		ID: "audexp_" + uuid.NewString(), SpaceID: space,
 		Status: "running", RequestedBy: currentActor(c), CreatedAt: now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := db.Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_CREATE_FAILED", err.Error()))
 		return
 	}
@@ -176,7 +178,7 @@ func (h *Handler) complianceExportBundle(c *gin.Context) {
 	ref, err := artifactStore.Put(context.Background(), storeKey, bytes.NewReader(b), "application/json")
 	if err != nil {
 		row.Status = "failed"
-		_ = h.db.Save(&row).Error
+		_ = db.Save(&row).Error
 		c.JSON(http.StatusInternalServerError, errorBody("AUDIT_EXPORT_FAILED", err.Error()))
 		return
 	}
@@ -188,8 +190,8 @@ func (h *Handler) complianceExportBundle(c *gin.Context) {
 	row.ContentType = ref.ContentType
 	row.SizeBytes = ref.SizeBytes
 	row.CompletedAt = &done
-	_ = h.db.Save(&row).Error
-	_ = h.db.Create(auditRow(space, currentActor(c), "compliance.export_completed", map[string]any{
+	_ = db.Save(&row).Error
+	_ = db.Create(auditRow(space, currentActor(c), "compliance.export_completed", map[string]any{
 		"exportId": row.ID, "doctorReportId": reportID, "suite": suite, "digest": digest,
 	})).Error
 	c.JSON(http.StatusAccepted, ComplianceExportResponse{

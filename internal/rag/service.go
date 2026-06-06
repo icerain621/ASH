@@ -2,6 +2,7 @@ package rag
 
 import (
 	"bufio"
+	"context"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -20,11 +21,30 @@ import (
 )
 
 type Service struct {
-	db *store.DB
+	db  *store.DB
+	ctx context.Context
 }
 
 func NewService(db *store.DB) *Service {
 	return &Service{db: db}
+}
+
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
 }
 
 type IndexRequest struct {
@@ -114,7 +134,7 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	}
 	space := firstNonEmpty(req.SpaceID, "local")
 
-	q := s.db.Where("space_id = ?", space)
+	q := s.gdb().Where("space_id = ?", space)
 	if req.RepoRoot != "" {
 		if abs, err := AbsRepoRoot(req.RepoRoot); err == nil {
 			q = q.Where("repo_root = ?", abs)
@@ -163,7 +183,7 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 	ftsAvailable := s.ensureFTS() == nil
 
 	var doc store.RAGDocument
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.gdb().Transaction(func(tx *gorm.DB) error {
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGDocument{}).Error
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGChunk{}).Error
 		if ftsAvailable {
@@ -199,7 +219,7 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 			Text: text, Digest: digestString(fmt.Sprintf("%s:%d:%s", digest, start+1, text)),
 			CreatedAt: now,
 		}
-		if err := s.db.Create(&chunk).Error; err != nil {
+		if err := s.gdb().Create(&chunk).Error; err != nil {
 			return chunkCount, err
 		}
 		if ftsAvailable {
@@ -216,7 +236,7 @@ func (s *Service) ensureFTS() error {
 	if s.db.Dialect() != "sqlite" {
 		return fmt.Errorf("fts is only available for sqlite")
 	}
-	db := s.db.Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)})
+	db := s.gdb().Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)})
 	return db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS rag_chunks_fts USING fts5(
 		chunk_id UNINDEXED,
 		space_id UNINDEXED,
@@ -231,7 +251,7 @@ func (s *Service) ensureFTS() error {
 }
 
 func (s *Service) insertFTS(chunk store.RAGChunk) error {
-	return s.db.Exec(`INSERT INTO rag_chunks_fts
+	return s.gdb().Exec(`INSERT INTO rag_chunks_fts
 		(chunk_id, space_id, repo_root, path, symbol, text, digest, start_line, end_line)
 		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		chunk.ID, chunk.SpaceID, chunk.RepoRoot, chunk.Path, chunk.Symbol, chunk.Text,
@@ -268,7 +288,7 @@ func (s *Service) queryFTS(req QueryRequest, terms []string, topK int, space str
 		Text      string  `gorm:"column:text"`
 		Rank      float64 `gorm:"column:rank"`
 	}
-	err := s.db.Raw(`SELECT chunk_id, path, symbol, start_line, end_line, digest, text, bm25(rag_chunks_fts) AS rank
+	err := s.gdb().Raw(`SELECT chunk_id, path, symbol, start_line, end_line, digest, text, bm25(rag_chunks_fts) AS rank
 		FROM rag_chunks_fts
 		WHERE `+where+`
 		ORDER BY rank ASC

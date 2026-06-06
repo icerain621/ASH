@@ -29,6 +29,10 @@ type ScaleReadinessResponse struct {
 	DualWriteRuntime      bool   `json:"dualWriteRuntime"`
 	DualWriteSource       string `json:"dualWriteSource,omitempty"`
 	LastMigrationSyncAtMs *int64 `json:"lastMigrationSyncAtMs,omitempty"`
+	PostgresRLSEnabled    bool   `json:"postgresRLSEnabled"`
+	PostgresRLSForce      bool   `json:"postgresRLSForce"`
+	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
+	PostgresAppURLConfigured bool `json:"postgresAppUrlConfigured,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -43,21 +47,27 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	if !h.requirePermission(c, permMemoryRead, space) {
 		return
 	}
+	db := h.dbFor(c)
 	var memApproved int64
-	_ = h.db.Model(&store.MemoryRecord{}).
+	_ = db.Model(&store.MemoryRecord{}).
 		Where("space_id = ? AND status = ?", space, "approved").Count(&memApproved).Error
 	var ragDocs, ragChunks int64
-	_ = h.db.Model(&store.RAGDocument{}).Where("space_id = ?", space).Count(&ragDocs).Error
-	_ = h.db.Model(&store.RAGChunk{}).Where("space_id = ?", space).Count(&ragChunks).Error
+	_ = db.Model(&store.RAGDocument{}).Where("space_id = ?", space).Count(&ragDocs).Error
+	_ = db.Model(&store.RAGChunk{}).Where("space_id = ?", space).Count(&ragChunks).Error
 	var usageRows int64
 	var costTotal int64
-	_ = h.db.Model(&store.ModelUsage{}).Count(&usageRows).Error
-	_ = h.db.Model(&store.ModelUsage{}).Select("COALESCE(SUM(cost_micros),0)").Scan(&costTotal).Error
+	_ = db.Model(&store.ModelUsage{}).Count(&usageRows).Error
+	_ = db.Model(&store.ModelUsage{}).Select("COALESCE(SUM(cost_micros),0)").Scan(&costTotal).Error
 	var qmRows int64
-	_ = h.db.Model(&store.QualityMetric{}).Where("space_id = ?", space).Count(&qmRows).Error
+	_ = db.Model(&store.QualityMetric{}).Where("space_id = ?", space).Count(&qmRows).Error
 	var auditRows int64
-	_ = h.db.Model(&store.AuditLog{}).Where("space_id = ?", space).Count(&auditRows).Error
+	_ = db.Model(&store.AuditLog{}).Where("space_id = ?", space).Count(&auditRows).Error
 	dbProfile, _ := store.DatabaseProfile(h.db.DataDir(), os.Getenv("ASH_DATABASE_URL"))
+	if dbProfile.PostgresRLSEnabled && h.db.Dialect() == "postgres" {
+		if n, err := store.CountPostgresRLSPolicies(h.db); err == nil {
+			dbProfile.PostgresRLSPolicyCount = n
+		}
+	}
 	migSnap, _ := store.MigrationSnapshotFor(h.db.DataDir())
 	var lastSyncMs *int64
 	if migSnap.LastSyncAt != nil {
@@ -84,5 +94,9 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		DualWriteRuntime:      migSnap.DualWriteRuntime,
 		DualWriteSource:       string(migSnap.DualWriteSource),
 		LastMigrationSyncAtMs: lastSyncMs,
+		PostgresRLSEnabled:     dbProfile.PostgresRLSEnabled,
+		PostgresRLSForce:       dbProfile.PostgresRLSForce,
+		PostgresRLSPolicyCount:   dbProfile.PostgresRLSPolicyCount,
+		PostgresAppURLConfigured: dbProfile.PostgresAppURL,
 	})
 }

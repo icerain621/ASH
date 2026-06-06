@@ -61,7 +61,7 @@ func (h *Handler) createRelease(c *gin.Context) {
 	if !h.requirePermission(c, permReleaseWrite, space) {
 		return
 	}
-	row, err := h.releases.Create(releases.CreateRequest{
+	row, err := h.releasesFor(c).Create(releases.CreateRequest{
 		SpaceID: space, Version: req.Version, Title: req.Title,
 		CanaryStrategy: req.CanaryStrategy, CreatedBy: currentActor(c),
 	})
@@ -69,7 +69,7 @@ func (h *Handler) createRelease(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("RELEASE_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "release.created", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "release.created", map[string]any{
 		"releaseId": row.ID, "version": row.Version,
 	}))
 	c.JSON(http.StatusCreated, row)
@@ -90,7 +90,7 @@ func (h *Handler) listReleases(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	rows, err := h.releases.List(space, limit)
+	rows, err := h.releasesFor(c).List(space, limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("RELEASE_LIST_FAILED", err.Error()))
 		return
@@ -112,7 +112,7 @@ func (h *Handler) getReleaseChecklist(c *gin.Context) {
 	if !h.requirePermission(c, permReleaseRead, space) {
 		return
 	}
-	rows, err := h.releases.Checklist(space, c.Param("releaseId"))
+	rows, err := h.releasesFor(c).Checklist(space, c.Param("releaseId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("RELEASE_CHECKLIST_FAILED", err.Error()))
 		return
@@ -142,12 +142,12 @@ func (h *Handler) patchReleaseChecklist(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	rows, err := h.releases.PatchChecklist(space, c.Param("releaseId"), currentActor(c), req.Items)
+	rows, err := h.releasesFor(c).PatchChecklist(space, c.Param("releaseId"), currentActor(c), req.Items)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("RELEASE_CHECKLIST_UPDATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "release.checklist_updated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "release.checklist_updated", map[string]any{
 		"releaseId": c.Param("releaseId"), "count": len(req.Items),
 	}))
 	c.JSON(http.StatusOK, ReleaseChecklistResponse{Items: rows})
@@ -167,12 +167,12 @@ func (h *Handler) evaluateReleaseGate(c *gin.Context) {
 	if !h.requirePermission(c, permReleaseWrite, space) {
 		return
 	}
-	resp, err := h.releases.EvaluateGate(space, c.Param("releaseId"))
+	resp, err := h.releasesFor(c).EvaluateGate(space, c.Param("releaseId"))
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("RELEASE_GATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "release.gate_evaluated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "release.gate_evaluated", map[string]any{
 		"releaseId": resp.ReleaseID, "overall": resp.Overall, "results": len(resp.Results),
 	}))
 	c.JSON(http.StatusOK, resp)
@@ -200,7 +200,7 @@ func (h *Handler) createRollbackDrill(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	row, err := h.releases.CreateRollbackDrill(releases.RollbackDrillRequest{
+	row, err := h.releasesFor(c).CreateRollbackDrill(releases.RollbackDrillRequest{
 		SpaceID: space, ReleaseID: c.Param("releaseId"), Scenario: req.Scenario,
 		Status: req.Status, DurationMs: req.DurationMs, EvidenceRefs: req.EvidenceRefs,
 		Notes: req.Notes, CreatedBy: currentActor(c),
@@ -209,7 +209,7 @@ func (h *Handler) createRollbackDrill(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("ROLLBACK_DRILL_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "release.rollback_drill_recorded", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "release.rollback_drill_recorded", map[string]any{
 		"releaseId": row.ReleaseID, "drillId": row.ID, "status": row.Status,
 	}))
 	c.JSON(http.StatusCreated, row)

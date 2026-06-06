@@ -10,13 +10,18 @@ import {
   putAlertRules,
   type AlertRule,
 } from "@/modules/closure/api/closure.api";
+import { getCurrentSpaceId } from "@/services/http/client";
 
 export function ObservabilityPage() {
   const qc = useQueryClient();
+  const activeSpaceId = getCurrentSpaceId();
   const [traceId, setTraceId] = useState("");
   const alertsQuery = useQuery({ queryKey: ["observability-alerts", "active"], queryFn: () => listAlerts({ status: "active", limit: 100 }) });
   const rulesQuery = useQuery({ queryKey: ["observability-rules"], queryFn: listAlertRules });
-  const metricsQuery = useQuery({ queryKey: ["prometheus-text"], queryFn: getPrometheusText });
+  const metricsQuery = useQuery({
+    queryKey: ["prometheus-text", activeSpaceId],
+    queryFn: () => getPrometheusText(activeSpaceId),
+  });
   const traceQuery = useQuery({
     queryKey: ["trace", traceId],
     queryFn: () => getTrace(traceId),
@@ -47,7 +52,8 @@ export function ObservabilityPage() {
       <div className="page-heading">
         <div>
           <h1>可观测与告警</h1>
-          <p>查看站内告警、规则评估、trace 关联记录和 Prometheus 指标快照。</p>
+          <p>查看站内告警、规则评估、trace 关联记录和当前空间的 Prometheus 指标快照。</p>
+          <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar metrics-toolbar">
           <button className="btn primary icon-btn" onClick={() => evaluateMut.mutate()} disabled={evaluateMut.isPending}>

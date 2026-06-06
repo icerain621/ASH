@@ -25,7 +25,7 @@ func (h *Handler) resumeRun(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	resp, err := h.runs.Resume(runID)
+	resp, err := h.runsFor(c).Resume(runID)
 	if err != nil {
 		writeRunControlError(c, err)
 		return
@@ -60,7 +60,7 @@ func (h *Handler) replayRun(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	resp, err := h.runs.Replay(runID, req)
+	resp, err := h.runsFor(c).Replay(runID, req)
 	if err != nil {
 		writeRunControlError(c, err)
 		return
@@ -84,7 +84,7 @@ func (h *Handler) cancelRun(c *gin.Context) {
 	if !h.requireRunPermission(c, runID, permRunCancel) {
 		return
 	}
-	resp, err := h.runs.Cancel(runID)
+	resp, err := h.runsFor(c).Cancel(runID)
 	if err != nil {
 		writeRunControlError(c, err)
 		return
@@ -113,7 +113,7 @@ func (h *Handler) approveRun(c *gin.Context) {
 	if req.ActorID == "" {
 		req.ActorID = currentActor(c)
 	}
-	resp, err := h.runs.Approve(runID, req)
+	resp, err := h.runsFor(c).Approve(runID, req)
 	if err != nil {
 		writeRunControlError(c, err)
 		return

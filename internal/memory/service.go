@@ -41,7 +41,7 @@ func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateR
 	governance, _ := s.previewGovernance(spaceID, req, dedupe)
 
 	var out *CreateCandidateResponse
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.gdb().Transaction(func(tx *gorm.DB) error {
 		rec := store.MemoryRecord{
 			ID:            id,
 			Layer:         req.Layer,
@@ -135,7 +135,7 @@ func (s *Service) ListCandidatesForSpace(spaceID, layer, status, repo string, li
 		offset = 0
 	}
 
-	q := s.db.Model(&store.MemoryRecord{}).Where("space_id = ?", firstNonEmpty(spaceID, "local"))
+	q := s.gdb().Model(&store.MemoryRecord{}).Where("space_id = ?", firstNonEmpty(spaceID, "local"))
 	if layer != "" {
 		q = q.Where("layer = ?", layer)
 	}
@@ -182,7 +182,7 @@ func (s *Service) Review(candidateID string, req ReviewRequest) (*ReviewResponse
 	}
 
 	var rec store.MemoryRecord
-	if err := s.db.First(&rec, "id = ?", candidateID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", candidateID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return nil, ErrNotFound
 		}
@@ -196,7 +196,7 @@ func (s *Service) Review(candidateID string, req ReviewRequest) (*ReviewResponse
 
 	now := time.Now().UTC()
 	var governanceEdges []store.MemoryEdge
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.gdb().Transaction(func(tx *gorm.DB) error {
 		rec.Status = newStatus
 		if req.Decision == "approve" {
 			rec.Confidence = reviewConfidence(req, rec)
@@ -268,7 +268,7 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 		topK = 10
 	}
 
-	q := s.db.Where("status = ? AND space_id = ?", "approved", firstNonEmpty(spaceID, "local"))
+	q := s.gdb().Where("status = ? AND space_id = ?", "approved", firstNonEmpty(spaceID, "local"))
 	if len(req.Layers) > 0 {
 		q = q.Where("layer IN ?", req.Layers)
 	}
@@ -319,7 +319,7 @@ func (s *Service) HitUsed(req HitUsedRequest) (*HitUsedResponse, error) {
 		"runId":     req.RunID,
 		"recordIds": req.RecordIDs,
 	})
-	if err := s.db.Create(&store.AuditLog{
+	if err := s.gdb().Create(&store.AuditLog{
 		ID:          "aud_" + uuid.NewString(),
 		SpaceID:     spaceID,
 		TraceID:     traceID,
@@ -339,7 +339,7 @@ func (s *Service) HitUsed(req HitUsedRequest) (*HitUsedResponse, error) {
 
 func (s *Service) runSpaceID(runID string) (string, error) {
 	var rec store.RunRecord
-	if err := s.db.Select("space_id").First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().Select("space_id").First(&rec, "id = ?", runID).Error; err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
 			return "", ErrRunNotFound
 		}
@@ -354,7 +354,7 @@ func (s *Service) Get(id string) (*RecordView, error) {
 
 func (s *Service) GetForSpace(spaceID, id string) (*RecordView, error) {
 	var rec store.MemoryRecord
-	q := s.db.DB
+	q := s.gdb()
 	if spaceID != "" {
 		q = q.Where("space_id = ?", spaceID)
 	}
@@ -380,7 +380,7 @@ func (s *Service) attachEvidence(rows []store.MemoryRecord) ([]RecordView, error
 		ids[i] = r.ID
 	}
 	var evRows []store.MemoryEvidence
-	if err := s.db.Where("memory_id IN ?", ids).Find(&evRows).Error; err != nil {
+	if err := s.gdb().Where("memory_id IN ?", ids).Find(&evRows).Error; err != nil {
 		return nil, err
 	}
 	byMem := map[string][]EvidenceView{}
@@ -390,7 +390,7 @@ func (s *Service) attachEvidence(rows []store.MemoryRecord) ([]RecordView, error
 		})
 	}
 	var edgeRows []store.MemoryEdge
-	if err := s.db.Where("from_id IN ? OR to_id IN ?", ids, ids).Order("created_at asc").Find(&edgeRows).Error; err != nil {
+	if err := s.gdb().Where("from_id IN ? OR to_id IN ?", ids, ids).Order("created_at asc").Find(&edgeRows).Error; err != nil {
 		return nil, err
 	}
 	edgesByMem := map[string][]EdgeView{}
@@ -561,7 +561,7 @@ func (s *Service) filterQueryableMemory(rows []store.MemoryRecord, topK int, now
 		ids = append(ids, row.ID)
 	}
 	var edges []store.MemoryEdge
-	if err := s.db.Where("from_id IN ? AND kind = ?", ids, "duplicate").Find(&edges).Error; err != nil {
+	if err := s.gdb().Where("from_id IN ? AND kind = ?", ids, "duplicate").Find(&edges).Error; err != nil {
 		return nil, err
 	}
 	duplicated := map[string]bool{}
@@ -673,7 +673,7 @@ func (s *Service) previewGovernance(spaceID string, req CreateCandidateRequest, 
 		ScopeRepo: req.ScopeRepo,
 		DedupeKey: dedupe,
 	}
-	tx := s.db.DB
+	tx := s.gdb()
 	dupIDs, err := s.findApprovedDuplicates(tx, rec)
 	if err != nil {
 		return nil, err

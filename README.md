@@ -128,6 +128,7 @@ ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_c
 
 - `.github/workflows/ci.yml`：PR 与 `main` push 执行 `go test ./...`、`make test`、Doctor M3/ALL static、`make web-build`。
 - `.github/workflows/postgres-e2e.yml`：手动或 nightly 执行 `make postgres-e2e`。
+- 云 RDS 生产切换：见 [`doc/checklists/postgres-rds-e2e.md`](doc/checklists/postgres-rds-e2e.md)。
 
 Repo/CI 诊断使用 GitHub Actions v1 provider。先通过 Secrets 保存 token，再创建 repo connection；token 只允许通过 `secretId` 引用，API 会拒绝明文 token。
 
@@ -150,7 +151,7 @@ PRD 后四项闭环入口：
 
 - CI 诊断控制台：`/ui/ci`；API 支持 `GET /api/v1/ci/jobs`、`GET /api/v1/ci/diagnoses`、`POST /api/v1/ci/diagnoses/{id}/adopt|dismiss`。
 - 反馈闭环：`/ui/feedback`；API 支持 `GET /api/v1/feedback`、`PATCH /api/v1/feedback/{id}`，低分反馈会写入站内 `AlertEvent`。
-- 可观测与告警：`/ui/observability`；API 支持 alert rules、manual evaluate、trace 查询；`/metrics` 输出 DB 派生 Prometheus 文本。
+- 可观测与告警：`/ui/observability`；API 支持 alert rules、manual evaluate、trace 查询；租户 Prometheus 快照见 `GET /api/v1/metrics/prometheus`；运维 scrape 仍用全局 `GET /metrics`（RLS 开启时 bypass）。
 - 发布治理：`/ui/releases`；API 支持 release record、MVP checklist、gate 评估和 rollback drill 记录。v1 只记录灰度/回滚策略与证据，不执行真实生产部署；人工模板见 `scripts/release-notes-template.md`、`scripts/rollback-drill-template.md`。
 
 ## M0 新增 API
@@ -174,6 +175,7 @@ PRD 后四项闭环入口：
 - `POST /api/v1/ci/diagnoses/:id/adopt|dismiss` — 记录诊断采纳/驳回
 - `GET /api/v1/feedback` / `PATCH /api/v1/feedback/:id` — 反馈列表与处理状态
 - `GET /api/v1/metrics/overview` — KPI 看板聚合
+- `GET /api/v1/metrics/prometheus` — 租户范围 Prometheus 文本（`observability:read`）
 - `GET /api/v1/observability/alerts` — 告警事件
 - `GET/PUT /api/v1/observability/alert-rules` — 告警规则
 - `POST /api/v1/observability/alerts/evaluate` — 手动评估告警

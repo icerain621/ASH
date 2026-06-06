@@ -19,7 +19,7 @@
 ### 2.1 后续强化
 
 - ✅ **API 租户边界**（v0.2）：`requireRequestSpace` / `requireTargetSpace`；`spaceForParam`、runs/secrets/RAG/MCP/审批等路径统一 `EnforceSpaceAccess` → `403 SPACE_ACCESS_DENIED`
-- Postgres **RLS**（行级安全）作为第二道防线（P2）
+- Postgres **RLS**（行级安全）骨架（P2，可选启用）：`ASH_POSTGRES_RLS=1` 安装 `ash_space_*` 策略；`ASH_POSTGRES_RLS_FORCE=1` 对表 owner 也生效；迁移路径使用 `app.ash_rls_bypass=on`
 - 跨空间管理操作显式 `org:admin` 权限 + 审计（P2）
 
 ## 3. Postgres 迁移路径
@@ -88,6 +88,38 @@ export ASH_DATABASE_URL='postgres://ash:secret@db.example.com:5432/ash?sslmode=r
 - `databaseDialect`：`sqlite` | `postgres`
 - `postgresConfigured`：是否通过 `ASH_DATABASE_URL` 使用 Postgres
 - `migrationReady`：当前方言是否纳入支持矩阵
+- `postgresRLSEnabled` / `postgresRLSForce`：Postgres 行级安全骨架是否启用
+
+### 2.2 Postgres RLS 骨架（第二道防线）
+
+```bash
+export ASH_DATABASE_URL='postgres://ash:ash@127.0.0.1:5432/ash?sslmode=disable'
+export ASH_POSTGRES_RLS=1          # 启动时安装 ash_space_* 策略 + GORM 回调
+export ASH_POSTGRES_RLS_FORCE=1    # 可选：表 owner 也受策略约束（集成测试 / 生产 ash_app 角色）
+make postgres-roles                # 创建 ash_app / ash_rls_tester（scripts/postgres-init/01-ash-roles.sql）
+export ASH_DATABASE_APP_URL='postgres://ash_app:ash_app@127.0.0.1:5432/ash?sslmode=disable'  # Worker 运行时
+make postgres-rls-e2e              # RLS 策略 + ash_rls_tester 隔离 + 可选 migrated-db ash_app 探针
+# 迁移/Doctor 仍用 ASH_DATABASE_URL（owner）；Worker store.Open 优先 ASH_DATABASE_APP_URL
+# Doctor M3-07 在设置 ASH_DATABASE_APP_URL 时 ping ash_app 连接
+```
+
+- 会话变量：`app.ash_space_id`（租户空间）、`app.ash_rls_bypass=on`（迁移/管理）
+- org 管理员 `GET /orgs`、`GET /spaces` 可走 RLS bypass（需 `org:write`，审计 `tenant.rls_bypass`）
+- API：`rlsMiddleware` 将认证空间写入 `request.Context`；查询请使用 `h.dbFor(c)`（`WithContext`）
+- 程序化：`db.TransactionWithRLSSpace(space, fn)` / `db.TransactionWithRLSBypass(fn)`
+- 覆盖表：含 `space_id` 的业务表 + `run_*` 子表（经 `runs.space_id` 关联）
+- 验证：`go test -tags=integration ./internal/store/ -run TestPostgresRLS -count=1`（需 Postgres）
+
+### 2.3 指标与 Prometheus（v1 策略）
+
+| 端点 | 认证 | 租户范围 | RLS 行为 |
+|------|------|----------|----------|
+| `GET /metrics` | 无（运维 scrape） | **全局**（所有 space 聚合） | `ASH_POSTGRES_RLS=1` 时使用 `app.ash_rls_bypass` 读取全库 |
+| `GET /api/v1/metrics/prometheus` | 是 | 当前会话 space（可 `?spaceId=`） | 走 `rlsMiddleware` + SQL `space_id` 过滤；序列带 `space_id` 标签 |
+| `GET /api/v1/metrics/overview` | 是 | 同上 | KPI 聚合；`OverviewContext` 绑定请求 context |
+
+- 控制台 `/ui/observability` 使用 **租户** `/api/v1/metrics/prometheus`；`/ui/metrics` 使用 overview API。
+- 生产 Prometheus 继续 scrape `GET /metrics`；按空间看板请用 overview 或 tenant prometheus API。
 
 Doctor **M3-02** 校验 Postgres URL 解析与当前方言一致性；**M3-03** 校验 `ash migrate` 表目录与当前 schema 一致；**M3-04** 在 `ASH_MIGRATE_E2E=1` 时对 live Postgres 执行 `migrate verify`（默认跳过）。
 
@@ -99,7 +131,11 @@ make postgres-e2e         # 完整 sqlite→postgres plan/copy/verify + doctor M
 make postgres-down        # 停止并清理卷
 ```
 
-## 5. 验证命令
+## 5. 云 RDS E2E 清单
+
+生产切换前在目标 RDS 执行完整验证，见 **[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md)**（迁移、RLS、`ash_app`、Doctor M3/ALL、业务抽样与回滚）。
+
+## 6. 验证命令
 
 ```bash
 go run ./cmd/cli doctor --suite M3

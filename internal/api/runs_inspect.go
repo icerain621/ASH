@@ -23,7 +23,7 @@ func (h *Handler) getRunTimeline(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	resp, err := h.runs.Timeline(runID, limit)
+	resp, err := h.runsFor(c).Timeline(runID, limit)
 	if err != nil {
 		c.JSON(http.StatusNotFound, errorBody("RUN_TIMELINE_NOT_FOUND", err.Error()))
 		return
@@ -44,7 +44,7 @@ func (h *Handler) listRunToolCalls(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	items, err := h.runs.ToolCalls(runID)
+	items, err := h.runsFor(c).ToolCalls(runID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("TOOL_CALL_LIST_FAILED", err.Error()))
 		return
@@ -65,7 +65,7 @@ func (h *Handler) listRunAgentTasks(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	items, err := h.runs.AgentTasks(runID)
+	items, err := h.runsFor(c).AgentTasks(runID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AGENT_TASK_LIST_FAILED", err.Error()))
 		return
@@ -87,7 +87,7 @@ func (h *Handler) listRunQualityMetrics(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
-	items, err := h.runs.QualityMetrics(runID)
+	items, err := h.runsFor(c).QualityMetrics(runID)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("QUALITY_METRIC_LIST_FAILED", err.Error()))
 		return

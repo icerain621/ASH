@@ -24,18 +24,52 @@ type putAlertRulesRequest struct {
 }
 
 // PrometheusMetrics godoc
-// @Summary Get Prometheus metrics
+// @Summary Get deployment-global Prometheus metrics (ops scrape)
+// @Description Unauthenticated scrape endpoint. When Postgres RLS is enabled, queries use admin bypass so Prometheus sees all spaces. For tenant-scoped text use GET /api/v1/metrics/prometheus.
 // @Tags health
 // @Produce text/plain
 // @Success 200 {string} string
 // @Router /metrics [get]
 func (h *Handler) prometheusMetrics(c *gin.Context) {
-	text, err := h.alerts.PrometheusText()
+	ctx := c.Request.Context()
+	if store.PostgresRLSEnabled() {
+		ctx = store.WithRLSBypassContext(ctx)
+		c.Request = c.Request.WithContext(ctx)
+	}
+	text, err := h.alertsFor(c).PrometheusTextWith(alerts.PrometheusOptions{})
 	if err != nil {
 		c.String(http.StatusInternalServerError, err.Error())
 		return
 	}
 	c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	c.Header("X-Ash-Metrics-Scope", "global")
+	c.String(http.StatusOK, text)
+}
+
+// GetMetricsPrometheus godoc
+// @Summary Get tenant-scoped Prometheus metrics
+// @Tags metrics
+// @Produce text/plain
+// @Param spaceId query string false "space id (defaults to session space)"
+// @Success 200 {string} string
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/metrics/prometheus [get]
+func (h *Handler) getMetricsPrometheus(c *gin.Context) {
+	space := firstNonEmptyAPI(c.Query("spaceId"), currentSpace(c))
+	if !h.requireRequestSpace(c, space) {
+		return
+	}
+	if !h.requirePermission(c, permObservabilityRead, space) {
+		return
+	}
+	text, err := h.alertsFor(c).PrometheusTextWith(alerts.PrometheusOptions{SpaceID: space})
+	if err != nil {
+		c.String(http.StatusInternalServerError, err.Error())
+		return
+	}
+	c.Header("Content-Type", "text/plain; version=0.0.4; charset=utf-8")
+	c.Header("X-Ash-Metrics-Scope", "space:"+space)
 	c.String(http.StatusOK, text)
 }
 
@@ -55,7 +89,7 @@ func (h *Handler) listAlerts(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "100"))
-	rows, err := h.alerts.ListEvents(space, c.Query("status"), limit)
+	rows, err := h.alertsFor(c).ListEvents(space, c.Query("status"), limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ALERT_LIST_FAILED", err.Error()))
 		return
@@ -76,7 +110,7 @@ func (h *Handler) listAlertRules(c *gin.Context) {
 	if !h.requirePermission(c, permObservabilityRead, space) {
 		return
 	}
-	rows, err := h.alerts.ListRules(space)
+	rows, err := h.alertsFor(c).ListRules(space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ALERT_RULE_LIST_FAILED", err.Error()))
 		return
@@ -105,12 +139,12 @@ func (h *Handler) putAlertRules(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	rows, err := h.alerts.PutRules(space, req.Items)
+	rows, err := h.alertsFor(c).PutRules(space, req.Items)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("ALERT_RULE_UPDATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "alert.rules_updated", map[string]any{"count": len(req.Items)}))
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "alert.rules_updated", map[string]any{"count": len(req.Items)}))
 	c.JSON(http.StatusOK, AlertRuleListResponse{Items: rows})
 }
 
@@ -127,12 +161,12 @@ func (h *Handler) evaluateAlerts(c *gin.Context) {
 	if !h.requirePermission(c, permObservabilityRead, space) {
 		return
 	}
-	resp, err := h.alerts.Evaluate(space)
+	resp, err := h.alertsFor(c).Evaluate(space)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ALERT_EVALUATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "alert.rules_evaluated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "alert.rules_evaluated", map[string]any{
 		"results": len(resp.Results), "events": len(resp.Events),
 	}))
 	c.JSON(http.StatusOK, resp)
@@ -154,7 +188,7 @@ func (h *Handler) getTrace(c *gin.Context) {
 		return
 	}
 	traceID := strings.TrimSpace(c.Param("traceId"))
-	resp, err := h.alerts.Trace(space, traceID)
+	resp, err := h.alertsFor(c).Trace(space, traceID)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("TRACE_LOOKUP_FAILED", err.Error()))
 		return

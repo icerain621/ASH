@@ -2,7 +2,7 @@
 # Usage: bash scripts/postgres-up.sh
 services:
   postgres:
-    image: postgres:16-alpine
+    image: ${ASH_POSTGRES_IMAGE:-postgres:16-alpine}
     container_name: ash-postgres-dev
     environment:
       POSTGRES_USER: ash
@@ -17,6 +17,7 @@ services:
       retries: 20
     volumes:
       - ash_postgres_data:/var/lib/postgresql/data
+      - ./scripts/postgres-init:/docker-entrypoint-initdb.d:ro
 
 volumes:
   ash_postgres_data:

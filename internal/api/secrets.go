@@ -44,7 +44,7 @@ func (h *Handler) listSecrets(c *gin.Context) {
 		return
 	}
 	var rows []store.SecretRecord
-	if err := h.db.Where("space_id = ?", space).Order("name asc").Find(&rows).Error; err != nil {
+	if err := h.dbFor(c).Where("space_id = ?", space).Order("name asc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SECRET_LIST_FAILED", err.Error()))
 		return
 	}
@@ -85,7 +85,7 @@ func (h *Handler) createSecret(c *gin.Context) {
 		return
 	}
 	var existing store.SecretRecord
-	err := h.db.Where("space_id = ? AND name = ?", space, name).First(&existing).Error
+	err := h.dbFor(c).Where("space_id = ? AND name = ?", space, name).First(&existing).Error
 	if err == nil {
 		c.JSON(http.StatusConflict, errorBody("SECRET_ALREADY_EXISTS", "secret already exists in this space"))
 		return
@@ -119,11 +119,11 @@ func (h *Handler) createSecret(c *gin.Context) {
 		CreatedAt:       now,
 		UpdatedAt:       now,
 	}
-	if err := h.db.Create(&row).Error; err != nil {
+	if err := h.dbFor(c).Create(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SECRET_CREATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(space, currentActor(c), "secret.created", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "secret.created", map[string]any{
 		"secretId": row.ID, "name": row.Name, "digest": row.ValueDigest,
 	}))
 	c.JSON(http.StatusCreated, secretResponse(row))
@@ -163,11 +163,11 @@ func (h *Handler) rotateSecret(c *gin.Context) {
 	if strings.TrimSpace(req.Description) != "" {
 		row.Description = strings.TrimSpace(req.Description)
 	}
-	if err := h.db.Save(&row).Error; err != nil {
+	if err := h.dbFor(c).Save(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SECRET_ROTATE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(row.SpaceID, currentActor(c), "secret.rotated", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "secret.rotated", map[string]any{
 		"secretId": row.ID, "name": row.Name, "digest": row.ValueDigest,
 	}))
 	c.JSON(http.StatusOK, secretResponse(row))
@@ -187,11 +187,11 @@ func (h *Handler) deleteSecret(c *gin.Context) {
 	if !ok {
 		return
 	}
-	if err := h.db.Delete(&row).Error; err != nil {
+	if err := h.dbFor(c).Delete(&row).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SECRET_DELETE_FAILED", err.Error()))
 		return
 	}
-	_ = h.db.Create(auditRow(row.SpaceID, currentActor(c), "secret.deleted", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "secret.deleted", map[string]any{
 		"secretId": row.ID, "name": row.Name, "digest": row.ValueDigest,
 	}))
 	c.Status(http.StatusNoContent)
@@ -199,7 +199,7 @@ func (h *Handler) deleteSecret(c *gin.Context) {
 
 func (h *Handler) secretByID(c *gin.Context, id, permission string) (store.SecretRecord, bool) {
 	var row store.SecretRecord
-	if err := h.db.First(&row, "id = ?", id).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ?", id).Error; err != nil {
 		c.AbortWithStatusJSON(http.StatusNotFound, errorBody("SECRET_NOT_FOUND", "secret not found"))
 		return row, false
 	}

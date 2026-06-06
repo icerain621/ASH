@@ -174,24 +174,38 @@ func TestM2Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M2-03", "policyDenied")
 }
 
+func TestM3SuiteRunsMigrateVerifyFirstWhenE2E(t *testing.T) {
+	t.Setenv("ASH_MIGRATE_E2E", "1")
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rep.Results) == 0 || rep.Results[0].ID != "M3-04" {
+		t.Fatalf("first M3 case=%v want M3-04 first when ASH_MIGRATE_E2E=1", firstCaseID(rep))
+	}
+}
+
 func TestM3Suite(t *testing.T) {
 	svc := newTestDoctor(t)
 	rep, err := svc.RunSuite("M3")
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.Summary.Pass != 5 {
+	if rep.Summary.Pass != 7 {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
 				t.Errorf("%s: %s", r.ID, r.Message)
 			}
 		}
-		t.Fatalf("M3 pass=%d fail=%d want pass=5", rep.Summary.Pass, rep.Summary.Fail)
+		t.Fatalf("M3 pass=%d fail=%d want pass=7", rep.Summary.Pass, rep.Summary.Fail)
 	}
 	assertCaseEvidence(t, rep, "M3-01", "tenantScope")
 	assertCaseEvidence(t, rep, "M3-02", "databaseDialect")
 	assertCaseEvidence(t, rep, "M3-03", "migrationCatalog")
 	assertCaseEvidence(t, rep, "M3-04", "skipped")
+	assertCaseEvidence(t, rep, "M3-06", "skipped")
+	assertCaseEvidence(t, rep, "M3-07", "skipped")
 	assertCaseEvidence(t, rep, "M3-05", "skipped")
 }
 
@@ -205,7 +219,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 30
+	want := 32
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
@@ -281,6 +295,13 @@ func TestArtifactQualityEvidenceRejectsPlaceholdersInStrictMode(t *testing.T) {
 	if msg == "" || msg != "test_report.json is placeholder; test.run did not produce a real report" {
 		t.Fatalf("msg=%q want placeholder test report rejection", msg)
 	}
+}
+
+func firstCaseID(rep *Report) string {
+	if rep == nil || len(rep.Results) == 0 {
+		return ""
+	}
+	return rep.Results[0].ID
 }
 
 func TestArtifactQualityEvidenceAllowsStaticPlaceholders(t *testing.T) {

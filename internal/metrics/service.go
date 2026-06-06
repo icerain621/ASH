@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math"
@@ -8,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/store"
+	"gorm.io/gorm"
 )
 
 type OverviewRequest struct {
@@ -80,7 +82,23 @@ func NewService(db *store.DB) *Service {
 	return &Service{db: db}
 }
 
+func (s *Service) gdb(ctx context.Context) *gorm.DB {
+	if ctx != nil {
+		return s.db.WithContext(ctx)
+	}
+	return s.db.DB
+}
+
 func (s *Service) Overview(req OverviewRequest) (Overview, error) {
+	return s.overview(nil, req)
+}
+
+func (s *Service) OverviewContext(ctx context.Context, req OverviewRequest) (Overview, error) {
+	return s.overview(ctx, req)
+}
+
+func (s *Service) overview(ctx context.Context, req OverviewRequest) (Overview, error) {
+	gdb := s.gdb(ctx)
 	req = normalizeRequest(req)
 	out := Overview{
 		SpaceID: req.SpaceID, ProjectID: req.ProjectID,
@@ -88,27 +106,31 @@ func (s *Service) Overview(req OverviewRequest) (Overview, error) {
 		Period: req.Period, GeneratedAt: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	runStats, err := s.runStats(req)
+	runStats, err := s.runStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
-	feedbackStats, err := s.feedbackStats(req)
+	feedbackStats, err := s.feedbackStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
-	memoryStats, err := s.memoryStats(req)
+	memoryStats, err := s.memoryStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
-	ciStats, err := s.ciStats(req)
+	ciStats, err := s.ciStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
-	apiStats, err := s.apiStats(req)
+	apiStats, err := s.apiStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
-	queueStats, err := s.queueStats(req)
+	queueStats, err := s.queueStats(gdb, req)
+	if err != nil {
+		return out, err
+	}
+	sseStats, err := s.sseStats(gdb, req)
 	if err != nil {
 		return out, err
 	}
@@ -121,18 +143,18 @@ func (s *Service) Overview(req OverviewRequest) (Overview, error) {
 		ratioCard("KPI-05", "CI 诊断采纳率", ciStats.adoptedDiagnosis, ciStats.totalDiagnosis, "ratio"),
 		ratioCard("KPI-06", "低分反馈率", feedbackStats.lowScore, feedbackStats.totalFeedback, "ratio"),
 		ratioCard("KPI-07", "Memory 命中率", memoryStats.used, memoryStats.queries, "ratio"),
-		unavailableCard("KPI-08", "SSE 稳定率", "当前缺少 SSE 会话成功/失败事件源，v1 不造假数据。"),
+		sseStabilityCard(sseStats),
 		ratioCard("KPI-09", "API 错误率", apiStats.errors, apiStats.total, "ratio"),
 		durationCard("KPI-10", "队列积压时长", queueStats.totalWaitMs, queueStats.count),
 	}
 	out.Trends = []MetricTrend{
-		{MetricID: "KPI-01", Points: s.runSuccessTrend(req)},
-		{MetricID: "KPI-04", Points: s.ciFirstPassTrend(req)},
-		{MetricID: "KPI-06", Points: s.lowFeedbackTrend(req)},
+		{MetricID: "KPI-01", Points: s.runSuccessTrend(gdb, req)},
+		{MetricID: "KPI-04", Points: s.ciFirstPassTrend(gdb, req)},
+		{MetricID: "KPI-06", Points: s.lowFeedbackTrend(gdb, req)},
 	}
 	out.Breakdowns = []MetricBreakdown{
-		{ID: "ciDiagnosis", Label: "CI 诊断根因", Items: s.ciDiagnosisBreakdown(req)},
-		{ID: "feedbackRatings", Label: "反馈评分分布", Items: s.feedbackRatingBreakdown(req)},
+		{ID: "ciDiagnosis", Label: "CI 诊断根因", Items: s.ciDiagnosisBreakdown(gdb, req)},
+		{ID: "feedbackRatings", Label: "反馈评分分布", Items: s.feedbackRatingBreakdown(gdb, req)},
 		{ID: "memoryEvents", Label: "Memory 事件", Items: []BreakdownItem{
 			{Key: "queries", Label: "查询", Value: float64(memoryStats.queries), Unit: "count"},
 			{Key: "used", Label: "命中使用", Value: float64(memoryStats.used), Unit: "count"},
@@ -155,9 +177,9 @@ type runStatsResult struct {
 	totalDurationMs int64
 }
 
-func (s *Service) runStats(req OverviewRequest) (runStatsResult, error) {
+func (s *Service) runStats(gdb *gorm.DB, req OverviewRequest) (runStatsResult, error) {
 	var rows []store.RunRecord
-	err := s.db.Where("space_id = ? AND started_at >= ? AND started_at <= ?", req.SpaceID, req.From, req.To).Find(&rows).Error
+	err := gdb.Where("space_id = ? AND started_at >= ? AND started_at <= ?", req.SpaceID, req.From, req.To).Find(&rows).Error
 	if err != nil {
 		return runStatsResult{}, err
 	}
@@ -182,9 +204,9 @@ type feedbackStatsResult struct {
 	accepted         int64
 }
 
-func (s *Service) feedbackStats(req OverviewRequest) (feedbackStatsResult, error) {
+func (s *Service) feedbackStats(gdb *gorm.DB, req OverviewRequest) (feedbackStatsResult, error) {
 	var rows []store.Feedback
-	err := s.db.Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To).Find(&rows).Error
+	err := gdb.Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To).Find(&rows).Error
 	if err != nil {
 		return feedbackStatsResult{}, err
 	}
@@ -209,20 +231,20 @@ type memoryStatsResult struct {
 	used    int64
 }
 
-func (s *Service) memoryStats(req OverviewRequest) (memoryStatsResult, error) {
+func (s *Service) memoryStats(gdb *gorm.DB, req OverviewRequest) (memoryStatsResult, error) {
 	var out memoryStatsResult
-	if err := s.db.Model(&store.RunEvent{}).
+	if err := gdb.Model(&store.RunEvent{}).
 		Where("created_at >= ? AND created_at <= ? AND type IN ?", req.From, req.To, []string{"memory.injected", "memory.query_failed"}).
 		Count(&out.queries).Error; err != nil {
 		return out, err
 	}
-	if err := s.db.Model(&store.AuditLog{}).
+	if err := gdb.Model(&store.AuditLog{}).
 		Where("space_id = ? AND created_at >= ? AND created_at <= ? AND event_type = ?", req.SpaceID, req.From, req.To, "memory.hit_used").
 		Count(&out.used).Error; err != nil {
 		return out, err
 	}
 	if out.queries == 0 {
-		if err := s.db.Model(&store.RunEvent{}).
+		if err := gdb.Model(&store.RunEvent{}).
 			Where("created_at >= ? AND created_at <= ? AND type = ?", req.From, req.To, "memory.hit_used").
 			Count(&out.used).Error; err != nil {
 			return out, err
@@ -239,9 +261,9 @@ type ciStatsResult struct {
 	adoptedDiagnosis int64
 }
 
-func (s *Service) ciStats(req OverviewRequest) (ciStatsResult, error) {
+func (s *Service) ciStats(gdb *gorm.DB, req OverviewRequest) (ciStatsResult, error) {
 	var runs []store.CIRun
-	q := s.db.Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
+	q := gdb.Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
 	if req.ProjectID != "" {
 		q = q.Where("connection_id = ?", req.ProjectID)
 	}
@@ -257,7 +279,7 @@ func (s *Service) ciStats(req OverviewRequest) (ciStatsResult, error) {
 			}
 		}
 	}
-	dq := s.db.Model(&store.CIDiagnosis{}).Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
+	dq := gdb.Model(&store.CIDiagnosis{}).Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
 	if req.ProjectID != "" {
 		dq = dq.Where("connection_id = ?", req.ProjectID)
 	}
@@ -275,14 +297,14 @@ type apiStatsResult struct {
 	errors int64
 }
 
-func (s *Service) apiStats(req OverviewRequest) (apiStatsResult, error) {
+func (s *Service) apiStats(gdb *gorm.DB, req OverviewRequest) (apiStatsResult, error) {
 	var total, errors int64
-	if err := s.db.Model(&store.AuditLog{}).
+	if err := gdb.Model(&store.AuditLog{}).
 		Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To).
 		Count(&total).Error; err != nil {
 		return apiStatsResult{}, err
 	}
-	if err := s.db.Model(&store.AuditLog{}).
+	if err := gdb.Model(&store.AuditLog{}).
 		Where("space_id = ? AND created_at >= ? AND created_at <= ? AND event_type LIKE ?", req.SpaceID, req.From, req.To, "%.failed%").
 		Count(&errors).Error; err != nil {
 		return apiStatsResult{}, err
@@ -295,9 +317,48 @@ type queueStatsResult struct {
 	count       int64
 }
 
-func (s *Service) queueStats(req OverviewRequest) (queueStatsResult, error) {
+type sseStatsResult struct {
+	opened int64
+	closed int64
+	failed int64
+}
+
+func (s *Service) sseStats(gdb *gorm.DB, req OverviewRequest) (sseStatsResult, error) {
+	var out sseStatsResult
+	count := func(eventType string, dest *int64) error {
+		return gdb.Model(&store.AuditLog{}).
+			Where("space_id = ? AND created_at >= ? AND created_at <= ? AND event_type = ?", req.SpaceID, req.From, req.To, eventType).
+			Count(dest).Error
+	}
+	if err := count("stream.session_opened", &out.opened); err != nil {
+		return out, err
+	}
+	if err := count("stream.session_closed", &out.closed); err != nil {
+		return out, err
+	}
+	if err := count("stream.session_failed", &out.failed); err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+func sseStabilityCard(stats sseStatsResult) MetricCard {
+	if stats.opened == 0 && stats.failed == 0 {
+		return unavailableCard("KPI-08", "SSE 稳定率", "当前时间窗口尚无 SSE 会话审计事件；连接 /runs/{id}/stream 后将自动采集。")
+	}
+	if stats.opened == 0 {
+		return MetricCard{
+			ID: "KPI-08", Label: "SSE 稳定率", Unit: "ratio", Status: "empty",
+			Numerator: 0, Denominator: stats.failed,
+			Description: "仅有失败会话，尚无成功建立的 SSE 连接。",
+		}
+	}
+	return ratioCard("KPI-08", "SSE 稳定率", stats.closed, stats.opened, "ratio")
+}
+
+func (s *Service) queueStats(gdb *gorm.DB, req OverviewRequest) (queueStatsResult, error) {
 	var rows []store.RunStep
-	if err := s.db.Where("created_at >= ? AND created_at <= ? AND started_at IS NOT NULL", req.From, req.To).Find(&rows).Error; err != nil {
+	if err := gdb.Where("created_at >= ? AND created_at <= ? AND started_at IS NOT NULL", req.From, req.To).Find(&rows).Error; err != nil {
 		return queueStatsResult{}, err
 	}
 	var out queueStatsResult
@@ -314,25 +375,25 @@ func (s *Service) queueStats(req OverviewRequest) (queueStatsResult, error) {
 	return out, nil
 }
 
-func (s *Service) runSuccessTrend(req OverviewRequest) []MetricPoint {
+func (s *Service) runSuccessTrend(gdb *gorm.DB, req OverviewRequest) []MetricPoint {
 	buckets := buckets(req)
 	points := make([]MetricPoint, 0, len(buckets))
 	for _, b := range buckets {
 		next := advance(b, req.Period)
 		var started, success int64
-		_ = s.db.Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ? AND started_at < ?", req.SpaceID, b, next).Count(&started).Error
-		_ = s.db.Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ? AND started_at < ? AND status = ?", req.SpaceID, b, next, "finished").Count(&success).Error
+		_ = gdb.Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ? AND started_at < ?", req.SpaceID, b, next).Count(&started).Error
+		_ = gdb.Model(&store.RunRecord{}).Where("space_id = ? AND started_at >= ? AND started_at < ? AND status = ?", req.SpaceID, b, next, "finished").Count(&success).Error
 		points = append(points, point(b, ratio(success, started), started))
 	}
 	return points
 }
 
-func (s *Service) ciFirstPassTrend(req OverviewRequest) []MetricPoint {
+func (s *Service) ciFirstPassTrend(gdb *gorm.DB, req OverviewRequest) []MetricPoint {
 	buckets := buckets(req)
 	points := make([]MetricPoint, 0, len(buckets))
 	for _, b := range buckets {
 		next := advance(b, req.Period)
-		q := s.db.Model(&store.CIRun{}).Where("space_id = ? AND created_at >= ? AND created_at < ? AND (attempt = ? OR attempt = ?)", req.SpaceID, b, next, 0, 1)
+		q := gdb.Model(&store.CIRun{}).Where("space_id = ? AND created_at >= ? AND created_at < ? AND (attempt = ? OR attempt = ?)", req.SpaceID, b, next, 0, 1)
 		if req.ProjectID != "" {
 			q = q.Where("connection_id = ?", req.ProjectID)
 		}
@@ -349,21 +410,21 @@ func (s *Service) ciFirstPassTrend(req OverviewRequest) []MetricPoint {
 	return points
 }
 
-func (s *Service) lowFeedbackTrend(req OverviewRequest) []MetricPoint {
+func (s *Service) lowFeedbackTrend(gdb *gorm.DB, req OverviewRequest) []MetricPoint {
 	buckets := buckets(req)
 	points := make([]MetricPoint, 0, len(buckets))
 	for _, b := range buckets {
 		next := advance(b, req.Period)
 		var total, low int64
-		_ = s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND created_at < ?", req.SpaceID, b, next).Count(&total).Error
-		_ = s.db.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND created_at < ? AND rating > 0 AND rating <= 2", req.SpaceID, b, next).Count(&low).Error
+		_ = gdb.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND created_at < ?", req.SpaceID, b, next).Count(&total).Error
+		_ = gdb.Model(&store.Feedback{}).Where("space_id = ? AND created_at >= ? AND created_at < ? AND rating > 0 AND rating <= 2", req.SpaceID, b, next).Count(&low).Error
 		points = append(points, point(b, ratio(low, total), total))
 	}
 	return points
 }
 
-func (s *Service) ciDiagnosisBreakdown(req OverviewRequest) []BreakdownItem {
-	q := s.db.Model(&store.CIDiagnosis{}).Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
+func (s *Service) ciDiagnosisBreakdown(gdb *gorm.DB, req OverviewRequest) []BreakdownItem {
+	q := gdb.Model(&store.CIDiagnosis{}).Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To)
 	if req.ProjectID != "" {
 		q = q.Where("connection_id = ?", req.ProjectID)
 	}
@@ -379,12 +440,12 @@ func (s *Service) ciDiagnosisBreakdown(req OverviewRequest) []BreakdownItem {
 	return out
 }
 
-func (s *Service) feedbackRatingBreakdown(req OverviewRequest) []BreakdownItem {
+func (s *Service) feedbackRatingBreakdown(gdb *gorm.DB, req OverviewRequest) []BreakdownItem {
 	var rows []struct {
 		Rating int
 		Count  int64
 	}
-	_ = s.db.Model(&store.Feedback{}).
+	_ = gdb.Model(&store.Feedback{}).
 		Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To).
 		Select("rating, COUNT(*) as count").Group("rating").Order("rating asc").Scan(&rows).Error
 	out := make([]BreakdownItem, 0, len(rows))

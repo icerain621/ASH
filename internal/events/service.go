@@ -1,6 +1,7 @@
 package events
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"time"
@@ -23,11 +24,30 @@ type Envelope struct {
 }
 
 type Service struct {
-	db *store.DB
+	db  *store.DB
+	ctx context.Context
 }
 
 func NewService(db *store.DB) *Service {
 	return &Service{db: db}
+}
+
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
 }
 
 func (s *Service) Append(runID, traceID, eventType, severity string, payload any) (*Envelope, error) {
@@ -37,7 +57,7 @@ func (s *Service) Append(runID, traceID, eventType, severity string, payload any
 	}
 
 	var env Envelope
-	err = s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.gdb().Transaction(func(tx *gorm.DB) error {
 		var last store.RunEvent
 		q := tx.Where("run_id = ?", runID).Order("seq desc").Limit(1).First(&last)
 		seq := int64(1)
@@ -84,7 +104,7 @@ func (s *Service) ListAfter(runID string, afterSeq int64, limit int) ([]Envelope
 		limit = 500
 	}
 	var rows []store.RunEvent
-	q := s.db.Where("run_id = ? AND seq > ?", runID, afterSeq).Order("seq asc").Limit(limit).Find(&rows)
+	q := s.gdb().Where("run_id = ? AND seq > ?", runID, afterSeq).Order("seq asc").Limit(limit).Find(&rows)
 	if q.Error != nil {
 		return nil, q.Error
 	}
@@ -102,7 +122,7 @@ func (s *Service) ListAfter(runID string, afterSeq int64, limit int) ([]Envelope
 	}
 	if len(out) > 0 {
 		var run store.RunRecord
-		if err := s.db.First(&run, "id = ?", runID).Error; err == nil {
+		if err := s.gdb().First(&run, "id = ?", runID).Error; err == nil {
 			for i := range out {
 				out[i].TraceID = run.TraceID
 			}
@@ -113,7 +133,7 @@ func (s *Service) ListAfter(runID string, afterSeq int64, limit int) ([]Envelope
 
 func (s *Service) SeqFromEventID(runID, eventID string) (int64, error) {
 	var ev store.RunEvent
-	if err := s.db.Where("run_id = ? AND id = ?", runID, eventID).First(&ev).Error; err != nil {
+	if err := s.gdb().Where("run_id = ? AND id = ?", runID, eventID).First(&ev).Error; err != nil {
 		return 0, err
 	}
 	return ev.Seq, nil

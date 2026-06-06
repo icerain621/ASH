@@ -65,7 +65,29 @@ func TestOverviewAggregatesKPIInputs(t *testing.T) {
 		t.Fatalf("ci cards=%+v/%+v want 1", card(overview, "KPI-04"), card(overview, "KPI-05"))
 	}
 	if card(overview, "KPI-08").Status != "unavailable" {
-		t.Fatalf("KPI-08=%+v want unavailable", card(overview, "KPI-08"))
+		t.Fatalf("KPI-08=%+v want unavailable without stream audits", card(overview, "KPI-08"))
+	}
+}
+
+func TestOverviewSSEStabilityFromStreamAudits(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	for _, row := range []store.AuditLog{
+		{ID: "aud_sse_open", SpaceID: "local", RunID: "run_sse", EventType: "stream.session_opened", PayloadJSON: `{"runId":"run_sse"}`, CreatedAt: now},
+		{ID: "aud_sse_close", SpaceID: "local", RunID: "run_sse", EventType: "stream.session_closed", PayloadJSON: `{"runId":"run_sse","reason":"client_disconnect"}`, CreatedAt: now},
+	} {
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	overview, err := svc.Overview(OverviewRequest{SpaceID: "local", From: now.Add(-time.Hour), To: now.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kpi := card(overview, "KPI-08")
+	if kpi.Status != "ok" || kpi.Value != 1 {
+		t.Fatalf("KPI-08=%+v want ok ratio=1", kpi)
 	}
 }
 

@@ -82,17 +82,17 @@
 | 导出含 Secret 扫描 | ✅ TR2 | 合规导出 JSON 内嵌 `secretScan` 摘要 |
 | Runs 溯源面板 | ✅ TR3 | 运行详情展示 `/runs/:id/provenance` 链路 |
 | OpenAPI 合规/规模化/迭代 | ✅ | `bash scripts/regenerate-swagger.sh` 含 improve/compliance/scale/provenance |
-| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（30 项，非 `-short`，含 M3-05 ExecGo live smoke skipped/live 门禁） |
+| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（31 项，非 `-short`，含 M3-06 RLS / M3-05 ExecGo live smoke 门禁） |
 | Runs 控制台 actorRole | ✅ | 创建运行可选角色；API 返回 `executionError` |
 | 跨空间访问 403 | ✅ | `requireRequestSpace` 统一 runs/space-param/secrets/RAG/MCP/审批等 |
 | M2 权限矩阵 | ✅ 基础 | `internal/authz` + API/UI + 场景工具 enforcement + Doctor M2-01 |
-| M2 场景策略 API | ✅ | `PUT /spaces/:id/resource-scopes/:scopeId` + 审计；M2-02/03；ALL 27 项 |
+| M2 场景策略 API | ✅ | `PUT /spaces/:id/resource-scopes/:scopeId` + 审计；M2-02/03；ALL 30 项 |
 | M2 运行期 enforcement | ✅ | `m2_policy_enforce` 场景 + `POLICY_DENIED` + `policy.denied` 事件 |
-| M3 多租户 / Postgres | ✅ 展望 | Doctor M3-01..04；`docker-compose.postgres.yml`；`make postgres-e2e`；`ash migrate` CLI |
+| M3 多租户 / Postgres | ✅ 展望 | Doctor M3-01..04 live；`make postgres-e2e`；Postgres RLS 骨架（`ASH_POSTGRES_RLS`）；`ash migrate` CLI |
 | GitHub Actions CI 门禁 | ✅ PRD 前四项 | PR/main 执行 Go + Doctor static + Web build；manual/nightly 执行 Postgres e2e |
 | ExecGo/Codex 执行面稳定化 | ✅ PRD 前四项 | `make execgo-health` 分类失败；`ASH_EXECGO_E2E=1` 触发 Doctor M3-05 live smoke |
 | Repo/CI 连接与诊断 | ✅ PRD 前四项 | GitHub Actions provider；`/api/v1/repo/connections`、`/api/v1/ci/runs`、`/api/v1/ci/failures/diagnose` |
-| KPI 指标看板 | ✅ PRD 前四项 | `/api/v1/metrics/overview` + `/ui/metrics`；缺失 SSE 数据源返回 unavailable |
+| KPI 指标看板 | ✅ PRD 前四项 | `/api/v1/metrics/overview` + `/ui/metrics`；KPI-08 由 `stream.session_*` 审计聚合 |
 | CI 诊断采纳闭环 | ✅ PRD 后四项 | `/ui/ci` + `GET /ci/diagnoses` + adopt/dismiss；job logs 可通过 provider 拉取并记录 digest |
 | 反馈与低分告警 | ✅ PRD 后四项 | Feedback 分类/状态/严重级别；`/ui/feedback`；低分反馈写站内 `AlertEvent` |
 | 可观测与告警 | ✅ PRD 后四项 | `/ui/observability`；alert rules/evaluate/trace；`/metrics` 输出 DB 派生 Prometheus 指标 |

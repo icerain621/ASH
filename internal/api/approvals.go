@@ -37,7 +37,7 @@ func (h *Handler) listApprovals(c *gin.Context) {
 	if limit <= 0 || limit > 200 {
 		limit = 50
 	}
-	q := h.db.Where("space_id = ?", space)
+	q := h.dbFor(c).Where("space_id = ?", space)
 	if status != "" && status != "all" {
 		q = q.Where("status = ?", status)
 	}
@@ -74,7 +74,7 @@ func (h *Handler) approveApproval(c *gin.Context) {
 	if req.ActorID == "" {
 		req.ActorID = currentActor(c)
 	}
-	resp, err := h.runs.Approve(row.RunID, req)
+	resp, err := h.runsFor(c).Approve(row.RunID, req)
 	if err != nil {
 		writeRunControlError(c, err)
 		return
@@ -107,7 +107,7 @@ func (h *Handler) rejectApproval(c *gin.Context) {
 	actor := firstNonEmptyAPI(req.ActorID, currentActor(c))
 	reason := firstNonEmptyAPI(req.Reason, "approval rejected")
 	now := time.Now().UTC()
-	if err := h.db.Model(&store.ApprovalRequest{}).
+	if err := h.dbFor(c).Model(&store.ApprovalRequest{}).
 		Where("id = ? AND status = ?", row.ID, "pending").
 		Updates(map[string]any{
 			"status":          "rejected",
@@ -119,13 +119,13 @@ func (h *Handler) rejectApproval(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("APPROVAL_REJECT_FAILED", err.Error()))
 		return
 	}
-	_, _ = h.events.Append(row.RunID, row.TraceID, "approval.rejected", "warn", map[string]any{
+	_, _ = h.eventsFor(c).Append(row.RunID, row.TraceID, "approval.rejected", "warn", map[string]any{
 		"approvalId": row.ID, "actorId": actor, "reason": reason, "stepId": row.StepID,
 	})
-	_ = h.db.Create(auditRow(row.SpaceID, actor, "approval.rejected", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, actor, "approval.rejected", map[string]any{
 		"approvalId": row.ID, "runId": row.RunID, "stepId": row.StepID, "reason": reason,
 	})).Error
-	resp, err := h.runs.Cancel(row.RunID)
+	resp, err := h.runsFor(c).Cancel(row.RunID)
 	if err != nil {
 		writeRunControlError(c, err)
 		return
@@ -135,7 +135,7 @@ func (h *Handler) rejectApproval(c *gin.Context) {
 
 func (h *Handler) lookupApproval(c *gin.Context) (*store.ApprovalRequest, bool) {
 	var row store.ApprovalRequest
-	if err := h.db.First(&row, "id = ?", c.Param("approvalId")).Error; err != nil {
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("approvalId")).Error; err != nil {
 		c.JSON(http.StatusNotFound, errorBody("APPROVAL_NOT_FOUND", "approval not found"))
 		return nil, false
 	}

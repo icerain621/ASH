@@ -35,7 +35,7 @@ func (h *Handler) createImproveProposal(c *gin.Context) {
 	if req.ActorID == "" {
 		req.ActorID = currentActor(c)
 	}
-	resp, err := h.improve.Create(req)
+	resp, err := h.improveFor(c).Create(req)
 	if err != nil {
 		if errors.Is(err, runs.ErrRunNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", err.Error()))
@@ -60,7 +60,7 @@ func (h *Handler) createImproveProposal(c *gin.Context) {
 // @Router /api/v1/improve/proposals [get]
 func (h *Handler) listImproveProposals(c *gin.Context) {
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	resp, err := h.improve.List(currentSpace(c), limit)
+	resp, err := h.improveFor(c).List(currentSpace(c), limit)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("IMPROVE_LIST_FAILED", err.Error()))
 		return
@@ -77,7 +77,7 @@ func (h *Handler) listImproveProposals(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/improve/proposals/{proposalId} [get]
 func (h *Handler) getImproveProposal(c *gin.Context) {
-	resp, err := h.improve.Get(currentSpace(c), c.Param("proposalId"))
+	resp, err := h.improveFor(c).Get(currentSpace(c), c.Param("proposalId"))
 	if err != nil {
 		if errors.Is(err, improve.ErrNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("PROPOSAL_NOT_FOUND", err.Error()))
@@ -99,7 +99,7 @@ func (h *Handler) getImproveProposal(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/improve/proposals/{proposalId}/experiment [post]
 func (h *Handler) startImproveExperiment(c *gin.Context) {
-	resp, err := h.improve.StartExperiment(currentSpace(c), c.Param("proposalId"))
+	resp, err := h.improveFor(c).StartExperiment(currentSpace(c), c.Param("proposalId"))
 	if err != nil {
 		if errors.Is(err, improve.ErrNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("PROPOSAL_NOT_FOUND", err.Error()))
@@ -132,7 +132,7 @@ func (h *Handler) startImproveCanary(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	resp, err := h.improve.StartCanary(currentSpace(c), c.Param("proposalId"), req)
+	resp, err := h.improveFor(c).StartCanary(currentSpace(c), c.Param("proposalId"), req)
 	if err != nil {
 		if errors.Is(err, improve.ErrNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("PROPOSAL_NOT_FOUND", err.Error()))
@@ -154,7 +154,7 @@ func (h *Handler) startImproveCanary(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/improve/proposals/{proposalId}/promote [post]
 func (h *Handler) promoteImproveProposal(c *gin.Context) {
-	resp, err := h.improve.Promote(currentSpace(c), c.Param("proposalId"))
+	resp, err := h.improveFor(c).Promote(currentSpace(c), c.Param("proposalId"))
 	if err != nil {
 		if errors.Is(err, improve.ErrNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("PROPOSAL_NOT_FOUND", err.Error()))
@@ -176,7 +176,7 @@ func (h *Handler) promoteImproveProposal(c *gin.Context) {
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/improve/proposals/{proposalId}/rollback [post]
 func (h *Handler) rollbackImproveProposal(c *gin.Context) {
-	resp, err := h.improve.Rollback(currentSpace(c), c.Param("proposalId"))
+	resp, err := h.improveFor(c).Rollback(currentSpace(c), c.Param("proposalId"))
 	if err != nil {
 		if errors.Is(err, improve.ErrNotFound) {
 			c.JSON(http.StatusNotFound, errorBody("PROPOSAL_NOT_FOUND", err.Error()))

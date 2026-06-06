@@ -19,6 +19,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
+	"gorm.io/gorm"
 )
 
 var ErrWaitingApproval = fmt.Errorf("run waiting for approval")
@@ -123,6 +124,7 @@ type Service struct {
 	agent     agentexec.Executor
 	rag       *rag.Service
 	artifacts artifactstore.Store
+	ctx       context.Context
 }
 
 func NewService(db *store.DB, ev *events.Service, scenarios *rules.Loader, tools *toolbus.Bus) *Service {
@@ -157,6 +159,37 @@ func (s *Service) WithArtifactStore(store artifactstore.Store) *Service {
 		s.artifacts = store
 	}
 	return s
+}
+
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{
+		db: s.db, events: s.events, scenarios: s.scenarios, tools: s.tools,
+		agent: s.agent, rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
+	}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
+	}
+	return s.db.DB
+}
+
+func (s *Service) eventsFor() *events.Service {
+	if s == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.eventsFor().WithContext(s.ctx)
+	}
+	return s.events
 }
 
 func (s *Service) Create(req CreateRequest) (*CreateResponse, error) {
@@ -196,8 +229,8 @@ func (s *Service) failRun(rec *store.RunRecord, runID, traceID string, started t
 	rec.ErrorCode = code
 	rec.ErrorMessage = msg
 	rec.UpdatedAt = finished
-	_ = s.db.Save(rec).Error
-	_, _ = s.events.Append(runID, traceID, "run.failed", "error", map[string]any{
+	_ = s.gdb().Save(rec).Error
+	_, _ = s.eventsFor().Append(runID, traceID, "run.failed", "error", map[string]any{
 		"ok":         false,
 		"durationMs": finished.Sub(started).Milliseconds(),
 		"error":      map[string]any{"code": code, "message": msg, "recoverable": true},
@@ -214,7 +247,7 @@ func checkpointStrategy(doc *rules.Document) string {
 
 func (s *Service) Get(runID string) (*Summary, error) {
 	var rec store.RunRecord
-	if err := s.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		return nil, err
 	}
 	return recordToSummary(rec), nil
@@ -229,7 +262,7 @@ func (s *Service) ListForSpace(spaceID string, limit int) ([]Summary, error) {
 		limit = 50
 	}
 	var rows []store.RunRecord
-	q := s.db.Order("started_at desc").Limit(limit)
+	q := s.gdb().Order("started_at desc").Limit(limit)
 	if spaceID != "" {
 		q = q.Where("space_id = ?", spaceID)
 	}
@@ -255,7 +288,7 @@ func (s *Service) Checkpoints(runID string) ([]store.Checkpoint, error) {
 		return nil, err
 	}
 	var rows []store.Checkpoint
-	if err := s.db.Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
+	if err := s.gdb().Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -269,7 +302,7 @@ func (s *Service) ArtifactAccess(runID, name string, ttl time.Duration) (*Artifa
 		return nil, err
 	}
 	var row store.ArtifactIndex
-	if err := s.db.Where("run_id = ? AND name = ?", runID, name).First(&row).Error; err != nil {
+	if err := s.gdb().Where("run_id = ? AND name = ?", runID, name).First(&row).Error; err != nil {
 		return nil, fmt.Errorf("artifact not found: %w", err)
 	}
 	expires := time.Now().UTC().Add(ttl)
@@ -302,7 +335,7 @@ func (s *Service) CheckpointAccess(runID, checkpointID string, ttl time.Duration
 		return nil, err
 	}
 	var row store.Checkpoint
-	if err := s.db.Where("run_id = ? AND id = ?", runID, checkpointID).First(&row).Error; err != nil {
+	if err := s.gdb().Where("run_id = ? AND id = ?", runID, checkpointID).First(&row).Error; err != nil {
 		return nil, fmt.Errorf("checkpoint not found: %w", err)
 	}
 	expires := time.Now().UTC().Add(ttl)
@@ -336,7 +369,7 @@ func (s *Service) Timeline(runID string, limit int) (*TimelineResponse, error) {
 	if _, err := s.Get(runID); err != nil {
 		return nil, err
 	}
-	evs, err := s.events.ListAfter(runID, 0, limit)
+	evs, err := s.eventsFor().ListAfter(runID, 0, limit)
 	if err != nil {
 		return nil, err
 	}
@@ -351,7 +384,7 @@ func (s *Service) Timeline(runID string, limit int) (*TimelineResponse, error) {
 
 func (s *Service) ToolCalls(runID string) ([]store.ToolCall, error) {
 	var rows []store.ToolCall
-	if err := s.db.Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
+	if err := s.gdb().Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -359,7 +392,7 @@ func (s *Service) ToolCalls(runID string) ([]store.ToolCall, error) {
 
 func (s *Service) AgentTasks(runID string) ([]store.AgentTask, error) {
 	var rows []store.AgentTask
-	if err := s.db.Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
+	if err := s.gdb().Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -370,7 +403,7 @@ func (s *Service) QualityMetrics(runID string) ([]store.QualityMetric, error) {
 		return nil, err
 	}
 	var rows []store.QualityMetric
-	if err := s.db.Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
+	if err := s.gdb().Where("run_id = ?", runID).Order("created_at asc").Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	return rows, nil
@@ -378,14 +411,14 @@ func (s *Service) QualityMetrics(runID string) ([]store.QualityMetric, error) {
 
 func (s *Service) Cancel(runID string) (*CancelResponse, error) {
 	var rec store.RunRecord
-	if err := s.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		return nil, ErrRunNotFound
 	}
 	if rec.Status == "finished" || rec.Status == "failed" || rec.Status == "canceled" {
 		return &CancelResponse{RunID: runID, Status: rec.Status}, nil
 	}
 	var tasks []store.AgentTask
-	_ = s.db.Where("run_id = ? AND status IN ?", runID, []string{"running", "accepted"}).Find(&tasks).Error
+	_ = s.gdb().Where("run_id = ? AND status IN ?", runID, []string{"running", "accepted"}).Find(&tasks).Error
 	for _, task := range tasks {
 		_ = s.agent.Cancel(context.Background(), firstNonEmpty(task.ExecGoTaskID, task.ActionID, task.ID))
 	}
@@ -393,17 +426,17 @@ func (s *Service) Cancel(runID string) (*CancelResponse, error) {
 	rec.Status = "canceled"
 	rec.FinishedAt = &now
 	rec.UpdatedAt = now
-	if err := s.db.Save(&rec).Error; err != nil {
+	if err := s.gdb().Save(&rec).Error; err != nil {
 		return nil, err
 	}
-	_, _ = s.events.Append(runID, rec.TraceID, "run.canceled", "warn", map[string]any{"status": "canceled"})
+	_, _ = s.eventsFor().Append(runID, rec.TraceID, "run.canceled", "warn", map[string]any{"status": "canceled"})
 	s.decidePendingApproval(runID, "", "canceled", "", "run canceled")
 	return &CancelResponse{RunID: runID, Status: rec.Status}, nil
 }
 
 func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, error) {
 	var rec store.RunRecord
-	if err := s.db.First(&rec, "id = ?", runID).Error; err != nil {
+	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		return nil, ErrRunNotFound
 	}
 	if rec.Status != "waiting_approval" {
@@ -411,7 +444,7 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	}
 
 	var step store.RunStep
-	if err := s.db.Where("run_id = ? AND status = ?", runID, "waiting_approval").
+	if err := s.gdb().Where("run_id = ? AND status = ?", runID, "waiting_approval").
 		Order("updated_at desc").
 		First(&step).Error; err != nil {
 		return nil, fmt.Errorf("waiting approval step not found: %w", err)
@@ -438,7 +471,7 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		return nil, err
 	}
 
-	_, _ = s.events.Append(runID, rec.TraceID, "gate.approved", "info", map[string]any{
+	_, _ = s.eventsFor().Append(runID, rec.TraceID, "gate.approved", "info", map[string]any{
 		"actorId": req.ActorID,
 		"reason":  req.Reason,
 		"stepId":  step.StepID,
@@ -457,10 +490,10 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	rec.ErrorCode = ""
 	rec.ErrorMessage = ""
 	rec.UpdatedAt = time.Now().UTC()
-	if err := s.db.Save(&rec).Error; err != nil {
+	if err := s.gdb().Save(&rec).Error; err != nil {
 		return nil, err
 	}
-	_, _ = s.events.Append(runID, rec.TraceID, "run.approval_resumed", "info", map[string]any{
+	_, _ = s.eventsFor().Append(runID, rec.TraceID, "run.approval_resumed", "info", map[string]any{
 		"fromStatus": "waiting_approval",
 		"stepId":     step.StepID,
 		"kind":       approvalKind,
@@ -492,7 +525,18 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	return &ApproveResponse{RunID: runID, OK: true}, nil
 }
 
-func (s *Service) RAG() *rag.Service       { return s.rag }
+func (s *Service) RAG() *rag.Service { return s.rag }
+
+// RAGFor returns the RAG service with request context for Postgres RLS.
+func (s *Service) RAGFor(ctx context.Context) *rag.Service {
+	if s == nil {
+		return nil
+	}
+	if ctx == nil {
+		return s.rag
+	}
+	return s.rag.WithContext(ctx)
+}
 func (s *Service) DB() *store.DB           { return s.db }
 func (s *Service) Events() *events.Service { return s.events }
 
