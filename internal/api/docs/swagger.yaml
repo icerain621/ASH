@@ -1,5 +1,89 @@
 basePath: /
 definitions:
+  github_com_ash-repwiki_ash_internal_alerts.EvaluationResult:
+    properties:
+      evaluatedAt:
+        type: string
+      events:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AlertEvent'
+        type: array
+      results:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleEvaluation'
+        type: array
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_alerts.RuleEvaluation:
+    properties:
+      evidenceRefs:
+        items:
+          type: string
+        type: array
+      message:
+        type: string
+      metric:
+        type: string
+      ruleId:
+        type: string
+      ruleName:
+        type: string
+      status:
+        type: string
+      threshold:
+        type: number
+      value:
+        type: number
+    type: object
+  github_com_ash-repwiki_ash_internal_alerts.RuleInput:
+    properties:
+      condition:
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      metric:
+        type: string
+      name:
+        type: string
+      severity:
+        type: string
+      threshold:
+        type: number
+      windowMinutes:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_alerts.TraceView:
+    properties:
+      agentTasks:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AgentTask'
+        type: array
+      auditLogs:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AuditLog'
+        type: array
+      events:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.RunEvent'
+        type: array
+      runs:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.RunRecord'
+        type: array
+      spaceId:
+        type: string
+      toolCalls:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.ToolCall'
+        type: array
+      traceId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_artifactstore.Profile:
     properties:
       error:
@@ -100,11 +184,21 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse:
     properties:
+      adopted:
+        type: boolean
       confidence:
         type: number
       connectionId:
         type: string
       createdAt:
+        type: string
+      decidedAt:
+        type: string
+      decidedBy:
+        type: string
+      decisionReason:
+        type: string
+      decisionStatus:
         type: string
       evidenceRefs:
         items:
@@ -792,6 +886,36 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit'
         type: array
     type: object
+  github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate:
+    properties:
+      evidenceRef:
+        type: string
+      id:
+        type: string
+      itemKey:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_releases.GateEvaluation:
+    properties:
+      evaluatedAt:
+        type: string
+      evidenceRefs:
+        items:
+          type: string
+        type: array
+      overall:
+        type: string
+      releaseId:
+        type: string
+      results:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseGateResult'
+        type: array
+      spaceId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_rules.AgentSpec:
     properties:
       adapter:
@@ -1247,6 +1371,66 @@ definitions:
       traceID:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_store.AlertEvent:
+    properties:
+      createdAt:
+        type: string
+      evidenceRefsJson:
+        type: string
+      fingerprint:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      resolvedAt:
+        type: string
+      ruleId:
+        type: string
+      ruleName:
+        type: string
+      severity:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      targetId:
+        type: string
+      targetType:
+        type: string
+      triggeredAt:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.AlertRule:
+    properties:
+      condition:
+        type: string
+      createdAt:
+        type: string
+      description:
+        type: string
+      enabled:
+        type: boolean
+      id:
+        type: string
+      metric:
+        type: string
+      name:
+        type: string
+      severity:
+        type: string
+      spaceId:
+        type: string
+      threshold:
+        type: number
+      updatedAt:
+        type: string
+      windowMinutes:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_store.ApprovalRequest:
     properties:
       createdAt:
@@ -1341,6 +1525,37 @@ definitions:
       updatedAt:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_store.CIJob:
+    properties:
+      attempt:
+        type: integer
+      ciRunId:
+        type: string
+      completedAt:
+        type: string
+      conclusion:
+        type: string
+      connectionId:
+        type: string
+      createdAt:
+        type: string
+      id:
+        type: string
+      logDigest:
+        type: string
+      name:
+        type: string
+      providerJobId:
+        type: string
+      spaceId:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_store.CIRun:
     properties:
       attempt:
@@ -1402,6 +1617,8 @@ definitions:
     properties:
       actorID:
         type: string
+      category:
+        type: string
       comment:
         type: string
       createdAt:
@@ -1410,11 +1627,19 @@ definitions:
         type: string
       rating:
         type: integer
+      severity:
+        type: string
+      source:
+        type: string
       spaceID:
+        type: string
+      status:
         type: string
       targetID:
         type: string
       targetType:
+        type: string
+      updatedAt:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_store.MCPTool:
@@ -1519,6 +1744,73 @@ definitions:
         format: float64
         type: number
     type: object
+  github_com_ash-repwiki_ash_internal_store.ReleaseChecklistItem:
+    properties:
+      createdAt:
+        type: string
+      evidenceRef:
+        type: string
+      id:
+        type: string
+      itemKey:
+        type: string
+      label:
+        type: string
+      releaseId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+      updatedBy:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.ReleaseGateResult:
+    properties:
+      createdAt:
+        type: string
+      evidenceRefsJson:
+        type: string
+      gateKey:
+        type: string
+      id:
+        type: string
+      message:
+        type: string
+      releaseId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.ReleaseRecord:
+    properties:
+      canaryStrategy:
+        type: string
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      evidenceRefsJson:
+        type: string
+      gateStatus:
+        type: string
+      id:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: string
+      version:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_store.RepoConnection:
     properties:
       createdAt:
@@ -1557,6 +1849,87 @@ definitions:
       orgID:
         type: string
       permissions:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.RollbackDrill:
+    properties:
+      createdAt:
+        type: string
+      createdBy:
+        type: string
+      durationMs:
+        type: integer
+      evidenceRefsJson:
+        type: string
+      id:
+        type: string
+      notes:
+        type: string
+      releaseId:
+        type: string
+      scenario:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.RunEvent:
+    properties:
+      createdAt:
+        type: string
+      id:
+        type: string
+      payloadJSON:
+        type: string
+      runID:
+        type: string
+      seq:
+        type: integer
+      severity:
+        type: string
+      ts:
+        type: integer
+      type:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_store.RunRecord:
+    properties:
+      actorRole:
+        type: string
+      createdAt:
+        type: string
+      errorCode:
+        type: string
+      errorMessage:
+        type: string
+      finishedAt:
+        type: string
+      id:
+        type: string
+      inputsDigest:
+        type: string
+      policyProfile:
+        type: string
+      recovered:
+        type: boolean
+      repoRoot:
+        type: string
+      scenarioName:
+        type: string
+      scenarioVersion:
+        type: string
+      spaceID:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+      traceID:
         type: string
       updatedAt:
         type: string
@@ -1630,6 +2003,20 @@ definitions:
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AgentTask'
+        type: array
+    type: object
+  internal_api.AlertEventListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AlertEvent'
+        type: array
+    type: object
+  internal_api.AlertRuleListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AlertRule'
         type: array
     type: object
   internal_api.ApprovalRequestListResponse:
@@ -1742,6 +2129,20 @@ definitions:
       id:
         type: string
     type: object
+  internal_api.CIDiagnosisListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse'
+        type: array
+    type: object
+  internal_api.CIJobListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.CIJob'
+        type: array
+    type: object
   internal_api.CIRunListResponse:
     properties:
       items:
@@ -1803,6 +2204,13 @@ definitions:
         type: string
       urlConfigured:
         type: boolean
+    type: object
+  internal_api.FeedbackListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback'
+        type: array
     type: object
   internal_api.HealthResponse:
     properties:
@@ -1918,6 +2326,20 @@ definitions:
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.QualityMetric'
+        type: array
+    type: object
+  internal_api.ReleaseChecklistResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseChecklistItem'
+        type: array
+    type: object
+  internal_api.ReleaseListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseRecord'
         type: array
     type: object
   internal_api.RepoConnectionListResponse:
@@ -2142,11 +2564,19 @@ definitions:
     properties:
       actorId:
         type: string
+      category:
+        type: string
       comment:
         type: string
       rating:
         type: integer
+      severity:
+        type: string
+      source:
+        type: string
       spaceId:
+        type: string
+      status:
         type: string
       targetId:
         type: string
@@ -2182,6 +2612,19 @@ definitions:
     required:
     - name
     type: object
+  internal_api.createReleaseRequest:
+    properties:
+      canaryStrategy:
+        type: string
+      spaceId:
+        type: string
+      title:
+        type: string
+      version:
+        type: string
+    required:
+    - version
+    type: object
   internal_api.createRepoConnectionRequest:
     properties:
       defaultBranch:
@@ -2212,6 +2655,23 @@ definitions:
     required:
     - name
     type: object
+  internal_api.createRollbackDrillRequest:
+    properties:
+      durationMs:
+        type: integer
+      evidenceRefs:
+        items:
+          type: string
+        type: array
+      notes:
+        type: string
+      scenario:
+        type: string
+      status:
+        type: string
+    required:
+    - scenario
+    type: object
   internal_api.createSecretRequest:
     properties:
       description:
@@ -2240,6 +2700,11 @@ definitions:
     required:
     - name
     - orgId
+    type: object
+  internal_api.decideCIDiagnosisRequest:
+    properties:
+      reason:
+        type: string
     type: object
   internal_api.diagnoseCIFailureRequest:
     properties:
@@ -2277,6 +2742,20 @@ definitions:
     required:
     - email
     - password
+    type: object
+  internal_api.patchReleaseChecklistRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate'
+        type: array
+    type: object
+  internal_api.putAlertRulesRequest:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleInput'
+        type: array
     type: object
   internal_api.registerMCPToolRequest:
     properties:
@@ -2340,6 +2819,17 @@ definitions:
         type: boolean
       retentionDays:
         type: integer
+    type: object
+  internal_api.updateFeedbackRequest:
+    properties:
+      category:
+        type: string
+      comment:
+        type: string
+      severity:
+        type: string
+      status:
+        type: string
     type: object
   internal_api.updateResourceScopeRequest:
     properties:
@@ -2729,6 +3219,114 @@ paths:
       summary: Change current user's password
       tags:
       - auth
+  /api/v1/ci/diagnoses:
+    get:
+      parameters:
+      - description: repo connection id
+        in: query
+        name: connectionId
+        type: string
+      - description: ci run id
+        in: query
+        name: runId
+        type: string
+      - description: ci job id
+        in: query
+        name: jobId
+        type: string
+      - description: pending|adopted|dismissed
+        in: query
+        name: decisionStatus
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.CIDiagnosisListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List CI failure diagnoses
+      tags:
+      - ci
+  /api/v1/ci/diagnoses/{diagnosisId}/adopt:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: diagnosis id
+        in: path
+        name: diagnosisId
+        required: true
+        type: string
+      - description: decision reason
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.decideCIDiagnosisRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Mark a CI diagnosis as adopted
+      tags:
+      - ci
+  /api/v1/ci/diagnoses/{diagnosisId}/dismiss:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: diagnosis id
+        in: path
+        name: diagnosisId
+        required: true
+        type: string
+      - description: decision reason
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.decideCIDiagnosisRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Mark a CI diagnosis as dismissed
+      tags:
+      - ci
   /api/v1/ci/failures/diagnose:
     post:
       consumes:
@@ -2760,6 +3358,40 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Diagnose a CI failure using deterministic rules
+      tags:
+      - ci
+  /api/v1/ci/jobs:
+    get:
+      parameters:
+      - description: ci run id
+        in: query
+        name: runId
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      - description: sync from GitHub before listing
+        in: query
+        name: sync
+        type: boolean
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.CIJobListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List CI workflow jobs
       tags:
       - ci
   /api/v1/ci/runs:
@@ -2895,6 +3527,51 @@ paths:
       tags:
       - doctor
   /api/v1/feedback:
+    get:
+      parameters:
+      - description: target type
+        in: query
+        name: targetType
+        type: string
+      - description: category
+        in: query
+        name: category
+        type: string
+      - description: rating
+        in: query
+        name: rating
+        type: integer
+      - description: status
+        in: query
+        name: status
+        type: string
+      - description: severity
+        in: query
+        name: severity
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.FeedbackListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List feedback
+      tags:
+      - feedback
     post:
       consumes:
       - application/json
@@ -2921,6 +3598,44 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Create feedback
+      tags:
+      - feedback
+  /api/v1/feedback/{feedbackId}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: feedback id
+        in: path
+        name: feedbackId
+        required: true
+        type: string
+      - description: feedback patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.updateFeedbackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Update feedback handling state
       tags:
       - feedback
   /api/v1/improve/proposals:
@@ -3403,6 +4118,108 @@ paths:
       summary: Route a non-coding model request
       tags:
       - model-router
+  /api/v1/observability/alert-rules:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AlertRuleListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List alert rules
+      tags:
+      - observability
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: alert rules
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.putAlertRulesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AlertRuleListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Update alert rules
+      tags:
+      - observability
+  /api/v1/observability/alerts:
+    get:
+      parameters:
+      - description: active|resolved
+        in: query
+        name: status
+        type: string
+      - default: 100
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AlertEventListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List alert events
+      tags:
+      - observability
+  /api/v1/observability/alerts/evaluate:
+    post:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_alerts.EvaluationResult'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Evaluate alert rules
+      tags:
+      - observability
   /api/v1/observability/quality/{runId}:
     get:
       parameters:
@@ -3427,6 +4244,36 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Get run quality metrics
+      tags:
+      - observability
+  /api/v1/observability/trace/{traceId}:
+    get:
+      parameters:
+      - description: trace id
+        in: path
+        name: traceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_alerts.TraceView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get trace-linked records
       tags:
       - observability
   /api/v1/observability/waterfall/{runId}:
@@ -3723,6 +4570,191 @@ paths:
       summary: Query repository retrieval index
       tags:
       - rag
+  /api/v1/releases:
+    get:
+      parameters:
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.ReleaseListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List release governance records
+      tags:
+      - releases
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: release
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.createReleaseRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.ReleaseRecord'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Create a release governance record
+      tags:
+      - releases
+  /api/v1/releases/{releaseId}/checklist:
+    get:
+      parameters:
+      - description: release id
+        in: path
+        name: releaseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.ReleaseChecklistResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get release checklist
+      tags:
+      - releases
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: release id
+        in: path
+        name: releaseId
+        required: true
+        type: string
+      - description: checklist patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.patchReleaseChecklistRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.ReleaseChecklistResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Update release checklist items
+      tags:
+      - releases
+  /api/v1/releases/{releaseId}/gate:
+    post:
+      parameters:
+      - description: release id
+        in: path
+        name: releaseId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_releases.GateEvaluation'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Evaluate release gates
+      tags:
+      - releases
+  /api/v1/releases/{releaseId}/rollback-drills:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: release id
+        in: path
+        name: releaseId
+        required: true
+        type: string
+      - description: rollback drill
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.createRollbackDrillRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.RollbackDrill'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Record a rollback drill
+      tags:
+      - releases
   /api/v1/repo/connections:
     get:
       produces:
@@ -4713,6 +5745,18 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.HealthResponse'
       summary: Liveness probe
+      tags:
+      - health
+  /metrics:
+    get:
+      produces:
+      - text/plain
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+      summary: Get Prometheus metrics
       tags:
       - health
   /readyz:

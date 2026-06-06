@@ -12,6 +12,9 @@ tags:
   - name: CI
   - name: Spaces
   - name: Feedback
+  - name: Metrics
+  - name: Observability
+  - name: Releases
 components:
   securitySchemes:
     bearerAuth:
@@ -420,6 +423,210 @@ paths:
       responses:
         "200":
           description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/jobs:
+    get:
+      tags: [CI]
+      summary: List CI workflow jobs
+      parameters:
+        - in: query
+          name: runId
+          schema: { type: string }
+        - in: query
+          name: sync
+          schema: { type: boolean }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/diagnoses:
+    get:
+      tags: [CI]
+      summary: List CI diagnoses
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/diagnoses/{diagnosisId}/adopt:
+    post:
+      tags: [CI]
+      summary: Adopt CI diagnosis
+      parameters:
+        - in: path
+          name: diagnosisId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/ci/diagnoses/{diagnosisId}/dismiss:
+    post:
+      tags: [CI]
+      summary: Dismiss CI diagnosis
+      parameters:
+        - in: path
+          name: diagnosisId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/feedback/{feedbackId}:
+    patch:
+      tags: [Feedback]
+      summary: Update feedback handling state
+      parameters:
+        - in: path
+          name: feedbackId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/observability/alerts:
+    get:
+      tags: [Observability]
+      summary: List alert events
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/observability/alert-rules:
+    get:
+      tags: [Observability]
+      summary: List alert rules
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    put:
+      tags: [Observability]
+      summary: Update alert rules
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/observability/alerts/evaluate:
+    post:
+      tags: [Observability]
+      summary: Evaluate alert rules
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/observability/trace/{traceId}:
+    get:
+      tags: [Observability]
+      summary: Get trace-linked records
+      parameters:
+        - in: path
+          name: traceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/releases:
+    get:
+      tags: [Releases]
+      summary: List releases
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Releases]
+      summary: Create release
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/releases/{releaseId}/checklist:
+    get:
+      tags: [Releases]
+      summary: Get release checklist
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    patch:
+      tags: [Releases]
+      summary: Update release checklist
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/releases/{releaseId}/gate:
+    post:
+      tags: [Releases]
+      summary: Evaluate release gates
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/releases/{releaseId}/rollback-drills:
+    post:
+      tags: [Releases]
+      summary: Record rollback drill
+      parameters:
+        - in: path
+          name: releaseId
+          required: true
+          schema: { type: string }
+      responses:
+        "201":
+          description: created
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }

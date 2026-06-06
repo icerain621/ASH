@@ -122,7 +122,7 @@ make execgo-health
 ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_codex
 ```
 
-## CI / Repo 诊断 / KPI
+## CI / Repo 诊断 / KPI / 闭环治理
 
 仓库已提供 GitHub Actions 门禁：
 
@@ -146,6 +146,13 @@ KPI 看板入口：
 - API：`GET /api/v1/metrics/overview?period=day&from=...&to=...`
 - 控制台：`/ui/metrics`
 
+PRD 后四项闭环入口：
+
+- CI 诊断控制台：`/ui/ci`；API 支持 `GET /api/v1/ci/jobs`、`GET /api/v1/ci/diagnoses`、`POST /api/v1/ci/diagnoses/{id}/adopt|dismiss`。
+- 反馈闭环：`/ui/feedback`；API 支持 `GET /api/v1/feedback`、`PATCH /api/v1/feedback/{id}`，低分反馈会写入站内 `AlertEvent`。
+- 可观测与告警：`/ui/observability`；API 支持 alert rules、manual evaluate、trace 查询；`/metrics` 输出 DB 派生 Prometheus 文本。
+- 发布治理：`/ui/releases`；API 支持 release record、MVP checklist、gate 评估和 rollback drill 记录。v1 只记录灰度/回滚策略与证据，不执行真实生产部署；人工模板见 `scripts/release-notes-template.md`、`scripts/rollback-drill-template.md`。
+
 ## M0 新增 API
 
 - `POST /api/v1/runs/:runId/resume` — 恢复 failed run
@@ -161,8 +168,20 @@ KPI 看板入口：
 - `POST /api/v1/memory/hit-used` — 记录 run 命中审计
 - `POST /api/v1/repo/connections` / `GET /api/v1/repo/connections` — GitHub repo connection
 - `GET /api/v1/ci/runs` — CI run 摘要
+- `GET /api/v1/ci/jobs` — CI job 摘要，可 `sync=true`
 - `POST /api/v1/ci/failures/diagnose` — CI 失败确定性诊断
+- `GET /api/v1/ci/diagnoses` — CI 诊断历史
+- `POST /api/v1/ci/diagnoses/:id/adopt|dismiss` — 记录诊断采纳/驳回
+- `GET /api/v1/feedback` / `PATCH /api/v1/feedback/:id` — 反馈列表与处理状态
 - `GET /api/v1/metrics/overview` — KPI 看板聚合
+- `GET /api/v1/observability/alerts` — 告警事件
+- `GET/PUT /api/v1/observability/alert-rules` — 告警规则
+- `POST /api/v1/observability/alerts/evaluate` — 手动评估告警
+- `GET /api/v1/observability/trace/:traceId` — trace 关联查询
+- `POST /api/v1/releases` / `GET /api/v1/releases` — 发布治理记录
+- `GET/PATCH /api/v1/releases/:id/checklist` — MVP 发布清单
+- `POST /api/v1/releases/:id/gate` — 发布门禁评估
+- `POST /api/v1/releases/:id/rollback-drills` — 回滚演练记录
 
 带 `runId` 的 memory 操作会追加到该 run 的 **SSE 事件流**（`GET /api/v1/runs/:runId/stream`）：
 

@@ -60,12 +60,18 @@ make web-build
 - Repo connection 只接受 `secretId`，拒绝明文 token
 - `POST /api/v1/ci/failures/diagnose` 可落库并输出 rootCause / fixSuggestions / evidenceRefs
 - `/ui/metrics` 与 `GET /api/v1/metrics/overview` 展示 KPI v1；缺失 SSE 数据源时返回 unavailable，不造假
+- `/ui/ci` 可列出诊断历史并记录采纳/驳回；`jobId` 诊断可拉取 provider job logs
+- `/ui/feedback` 可筛选与处理反馈；低分反馈写入站内告警事件
+- `/ui/observability` 可查看 active alerts、规则、trace 查询和 Prometheus 指标快照
+- `/ui/releases` 可创建 release、初始化 MVP checklist、运行 gate、记录 rollback drill
 
 **剩余人工项**：
 
 - 在真实 GitHub token 下验证 `GET /api/v1/ci/runs?sync=true`
+- 在真实 GitHub token 下验证 `GET /api/v1/ci/jobs?runId=...&sync=true` 与 job log diagnosis
 - 在 live ExecGo / execgo-runtime 环境下验证 M3-05 通过
 - 将 repo connection 的 token secret 接入团队密钥轮换策略
+- 用真实发布窗口补齐 Postgres e2e、Doctor ALL/M3、ExecGo live smoke 的 audit gate 证据
 
 ---
 
@@ -78,3 +84,7 @@ make web-build
 - ExecGo health 分类输出 + Doctor M3-05 live smoke
 - GitHub repo connection、CI run 摘要、CI 失败确定性诊断 API
 - KPI overview API 与 `/ui/metrics` 控制台页面
+- CI 诊断历史、job 同步、采纳/驳回 API 与 `/ui/ci`
+- Feedback 分类/状态/严重级别、低分站内告警与 `/ui/feedback`
+- Alert rules/evaluate/trace、DB 派生 `/metrics` 与 `/ui/observability`
+- Release record/checklist/gate/rollback drill API 与 `/ui/releases`

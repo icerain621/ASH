@@ -93,6 +93,10 @@
 | ExecGo/Codex 执行面稳定化 | ✅ PRD 前四项 | `make execgo-health` 分类失败；`ASH_EXECGO_E2E=1` 触发 Doctor M3-05 live smoke |
 | Repo/CI 连接与诊断 | ✅ PRD 前四项 | GitHub Actions provider；`/api/v1/repo/connections`、`/api/v1/ci/runs`、`/api/v1/ci/failures/diagnose` |
 | KPI 指标看板 | ✅ PRD 前四项 | `/api/v1/metrics/overview` + `/ui/metrics`；缺失 SSE 数据源返回 unavailable |
+| CI 诊断采纳闭环 | ✅ PRD 后四项 | `/ui/ci` + `GET /ci/diagnoses` + adopt/dismiss；job logs 可通过 provider 拉取并记录 digest |
+| 反馈与低分告警 | ✅ PRD 后四项 | Feedback 分类/状态/严重级别；`/ui/feedback`；低分反馈写站内 `AlertEvent` |
+| 可观测与告警 | ✅ PRD 后四项 | `/ui/observability`；alert rules/evaluate/trace；`/metrics` 输出 DB 派生 Prometheus 指标 |
+| 发布与灰度回滚治理 | ✅ PRD 后四项 | `/ui/releases`；release checklist/gate/rollback drills；只记录策略和证据，不执行生产发布 |
 | SQLite 纯 Go 驱动 | ✅ | `glebarez/sqlite`，Windows 无需 CGO |
 | 本地验证脚本 | ✅ | `bash scripts/verify-local.sh`（Git Bash / Linux） |
 
@@ -107,6 +111,7 @@ go run ./cmd/cli doctor --suite TR1 --format md
 go run ./cmd/cli doctor --suite TR3 --format md
 go run ./cmd/cli doctor --suite M3 --format md --agent static
 go test ./internal/ci ./internal/metrics ./internal/api -run 'TestDiagnose|TestOverview|TestCreateRepo|TestRepoConnection' -count=1
+go test ./internal/ci ./internal/alerts ./internal/releases ./internal/api -run 'TestServiceSyncJobs|TestEvaluateLowFeedback|TestReleaseChecklist|TestObservabilityAlerts|TestReleaseGovernance' -count=1
 # Run control
 curl -X POST http://localhost:8080/api/v1/runs/{runId}/resume
 curl -X POST http://localhost:8080/api/v1/runs/{runId}/replay -H "Content-Type: application/json" -d "{\"mode\":\"exact\"}"
