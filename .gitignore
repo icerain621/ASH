@@ -1,7 +1,10 @@
 bin/
 backend/.ash/
 backend/bin/
+backend/go.sum
 .ash/
+.idea/
+.cursor/
 *.db
 *.exe
 *.test
