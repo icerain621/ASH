@@ -2,7 +2,6 @@ package api
 
 import (
 	"net/http"
-	"os"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,11 +27,16 @@ type ScaleReadinessResponse struct {
 	DualWriteEnabled      bool   `json:"dualWriteEnabled"`
 	DualWriteRuntime      bool   `json:"dualWriteRuntime"`
 	DualWriteSource       string `json:"dualWriteSource,omitempty"`
-	LastMigrationSyncAtMs *int64 `json:"lastMigrationSyncAtMs,omitempty"`
+	LastMigrationSyncAtMs      *int64  `json:"lastMigrationSyncAtMs,omitempty"`
+	LastMigrationSyncError     string  `json:"lastMigrationSyncError,omitempty"`
+	LastMigrationSyncErrorAtMs *int64  `json:"lastMigrationSyncErrorAtMs,omitempty"`
 	PostgresRLSEnabled    bool   `json:"postgresRLSEnabled"`
 	PostgresRLSForce      bool   `json:"postgresRLSForce"`
 	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
-	PostgresAppURLConfigured bool `json:"postgresAppUrlConfigured,omitempty"`
+	PostgresAppURLConfigured bool   `json:"postgresAppUrlConfigured,omitempty"`
+	WorkerConnectionRole     string `json:"workerConnectionRole,omitempty"`
+	RuntimeDSNHint           string `json:"runtimeDsnHint,omitempty"`
+	DualWriteShadowURLHint   string `json:"dualWriteShadowUrlHint,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -62,17 +66,21 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	_ = db.Model(&store.QualityMetric{}).Where("space_id = ?", space).Count(&qmRows).Error
 	var auditRows int64
 	_ = db.Model(&store.AuditLog{}).Where("space_id = ?", space).Count(&auditRows).Error
-	dbProfile, _ := store.DatabaseProfile(h.db.DataDir(), os.Getenv("ASH_DATABASE_URL"))
+	dbProfile, _ := store.DatabaseProfile(h.db.DataDir(), store.RuntimeDatabaseURL())
 	if dbProfile.PostgresRLSEnabled && h.db.Dialect() == "postgres" {
 		if n, err := store.CountPostgresRLSPolicies(h.db); err == nil {
 			dbProfile.PostgresRLSPolicyCount = n
 		}
 	}
 	migSnap, _ := store.MigrationSnapshotFor(h.db.DataDir())
-	var lastSyncMs *int64
+	var lastSyncMs, lastSyncErrMs *int64
 	if migSnap.LastSyncAt != nil {
 		ms := migSnap.LastSyncAt.UnixMilli()
 		lastSyncMs = &ms
+	}
+	if migSnap.LastSyncErrorAt != nil {
+		ms := migSnap.LastSyncErrorAt.UnixMilli()
+		lastSyncErrMs = &ms
 	}
 
 	c.JSON(http.StatusOK, ScaleReadinessResponse{
@@ -93,10 +101,15 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		DualWriteEnabled:      migSnap.DualWriteEnabled,
 		DualWriteRuntime:      migSnap.DualWriteRuntime,
 		DualWriteSource:       string(migSnap.DualWriteSource),
-		LastMigrationSyncAtMs: lastSyncMs,
+		LastMigrationSyncAtMs:      lastSyncMs,
+		LastMigrationSyncError:     migSnap.LastSyncError,
+		LastMigrationSyncErrorAtMs: lastSyncErrMs,
 		PostgresRLSEnabled:     dbProfile.PostgresRLSEnabled,
 		PostgresRLSForce:       dbProfile.PostgresRLSForce,
 		PostgresRLSPolicyCount:   dbProfile.PostgresRLSPolicyCount,
 		PostgresAppURLConfigured: dbProfile.PostgresAppURL,
+		WorkerConnectionRole:       store.WorkerConnectionRole(),
+		RuntimeDSNHint:             dbProfile.DSNHint,
+		DualWriteShadowURLHint:     migSnap.DualWriteShadowURLHint,
 	})
 }

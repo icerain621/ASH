@@ -86,7 +86,7 @@ frontend/
 - 统一请求入口：`services/http/client.ts`
 - 所有 API 由模块内 `api` 文件夹导出，页面不直连底层 HTTP
 - 错误处理统一在拦截器做基础归一（鉴权失败、网络异常）
-- 契约来源：`doc/api/openapi-ash-v1.yaml`
+- 契约来源：运行时 `/openapi.json`（swag）；产品草稿 `doc/api/openapi-ash-v1.yaml`（见 `doc/api/openapi-alignment.md`）
 
 ## 8. 实时能力（任务执行流）
 - 任务详情与步骤结果：REST 获取

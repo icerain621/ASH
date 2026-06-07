@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan postgres-up postgres-down postgres-roles postgres-e2e postgres-rls-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan postgres-up postgres-down postgres-roles postgres-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -20,15 +20,7 @@ swagger:
 	bash scripts/regenerate-swagger.sh
 
 openapi-check:
-	cd $(BACKEND_DIR) && tmp=$$(mktemp -d) && \
-		trap 'rm -rf "$$tmp"' EXIT && \
-		cp -R internal/api/docs "$$tmp/docs" && \
-		go run github.com/swaggo/swag/cmd/swag@latest init \
-			-g cmd/worker/main.go \
-			-o internal/api/docs \
-			--parseDependency \
-			--parseInternal >/dev/null && \
-		diff -ru "$$tmp/docs" internal/api/docs
+	bash scripts/openapi-check.sh
 
 proto-lint:
 	cd $(BACKEND_DIR) && go run github.com/bufbuild/buf/cmd/buf@latest lint proto
@@ -84,6 +76,9 @@ test-rls:
 
 postgres-rls-e2e:
 	bash scripts/postgres-rls-e2e.sh
+
+postgres-rds-e2e:
+	bash scripts/postgres-rds-e2e.sh
 
 verify:
 	bash scripts/verify-local.sh

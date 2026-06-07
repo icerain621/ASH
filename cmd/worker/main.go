@@ -1,4 +1,4 @@
-//go:generate go run github.com/swaggo/swag/cmd/swag@latest init -g cmd/worker/main.go -o internal/api/docs --parseDependency --parseInternal
+//go:generate go run github.com/swaggo/swag/cmd/swag@v1.16.4 init -g cmd/worker/main.go -o internal/api/docs --parseDependency --parseInternal
 
 // ASH Worker HTTP API.
 //

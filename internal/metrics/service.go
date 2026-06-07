@@ -75,30 +75,42 @@ type DataQualityNote struct {
 }
 
 type Service struct {
-	db *store.DB
+	db  *store.DB
+	ctx context.Context
 }
 
 func NewService(db *store.DB) *Service {
 	return &Service{db: db}
 }
 
-func (s *Service) gdb(ctx context.Context) *gorm.DB {
-	if ctx != nil {
-		return s.db.WithContext(ctx)
+// WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
+func (s *Service) WithContext(ctx context.Context) *Service {
+	if s == nil || ctx == nil {
+		return s
+	}
+	return &Service{db: s.db, ctx: ctx}
+}
+
+func (s *Service) gdb() *gorm.DB {
+	if s == nil || s.db == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.db.WithContext(s.ctx)
 	}
 	return s.db.DB
 }
 
 func (s *Service) Overview(req OverviewRequest) (Overview, error) {
-	return s.overview(nil, req)
+	return s.overview(req)
 }
 
 func (s *Service) OverviewContext(ctx context.Context, req OverviewRequest) (Overview, error) {
-	return s.overview(ctx, req)
+	return s.WithContext(ctx).overview(req)
 }
 
-func (s *Service) overview(ctx context.Context, req OverviewRequest) (Overview, error) {
-	gdb := s.gdb(ctx)
+func (s *Service) overview(req OverviewRequest) (Overview, error) {
+	gdb := s.gdb()
 	req = normalizeRequest(req)
 	out := Overview{
 		SpaceID: req.SpaceID, ProjectID: req.ProjectID,
@@ -231,10 +243,34 @@ type memoryStatsResult struct {
 	used    int64
 }
 
+func runIDsInSpace(gdb *gorm.DB, spaceID string) *gorm.DB {
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		return nil
+	}
+	return gdb.Model(&store.RunRecord{}).Select("id").Where("space_id = ?", spaceID)
+}
+
+func (s *Service) runEventsQuery(gdb *gorm.DB, req OverviewRequest) *gorm.DB {
+	q := gdb.Model(&store.RunEvent{}).Where("created_at >= ? AND created_at <= ?", req.From, req.To)
+	if sub := runIDsInSpace(gdb, req.SpaceID); sub != nil {
+		q = q.Where("run_id IN (?)", sub)
+	}
+	return q
+}
+
+func (s *Service) runStepsQuery(gdb *gorm.DB, req OverviewRequest) *gorm.DB {
+	q := gdb.Model(&store.RunStep{}).Where("created_at >= ? AND created_at <= ?", req.From, req.To)
+	if sub := runIDsInSpace(gdb, req.SpaceID); sub != nil {
+		q = q.Where("run_id IN (?)", sub)
+	}
+	return q
+}
+
 func (s *Service) memoryStats(gdb *gorm.DB, req OverviewRequest) (memoryStatsResult, error) {
 	var out memoryStatsResult
-	if err := gdb.Model(&store.RunEvent{}).
-		Where("created_at >= ? AND created_at <= ? AND type IN ?", req.From, req.To, []string{"memory.injected", "memory.query_failed"}).
+	if err := s.runEventsQuery(gdb, req).
+		Where("type IN ?", []string{"memory.injected", "memory.query_failed"}).
 		Count(&out.queries).Error; err != nil {
 		return out, err
 	}
@@ -244,8 +280,8 @@ func (s *Service) memoryStats(gdb *gorm.DB, req OverviewRequest) (memoryStatsRes
 		return out, err
 	}
 	if out.queries == 0 {
-		if err := gdb.Model(&store.RunEvent{}).
-			Where("created_at >= ? AND created_at <= ? AND type = ?", req.From, req.To, "memory.hit_used").
+		if err := s.runEventsQuery(gdb, req).
+			Where("type = ?", "memory.hit_used").
 			Count(&out.used).Error; err != nil {
 			return out, err
 		}
@@ -358,7 +394,7 @@ func sseStabilityCard(stats sseStatsResult) MetricCard {
 
 func (s *Service) queueStats(gdb *gorm.DB, req OverviewRequest) (queueStatsResult, error) {
 	var rows []store.RunStep
-	if err := gdb.Where("created_at >= ? AND created_at <= ? AND started_at IS NOT NULL", req.From, req.To).Find(&rows).Error; err != nil {
+	if err := s.runStepsQuery(gdb, req).Where("started_at IS NOT NULL").Find(&rows).Error; err != nil {
 		return queueStatsResult{}, err
 	}
 	var out queueStatsResult

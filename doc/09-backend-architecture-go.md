@@ -111,7 +111,7 @@ backend/
 - 非法流转返回业务错误码，不允许直接更新 DB 绕过校验
 
 ## 8. API 规范
-- 接口契约以 `doc/api/openapi-ash-v1.yaml` 为准
+- 接口契约以实现为准（`internal/api/docs`，`make swagger`）；产品草稿 `doc/api/openapi-ash-v1.yaml` 与校验见 `doc/api/openapi-alignment.md`
 - 返回结构统一：
 ```json
 {

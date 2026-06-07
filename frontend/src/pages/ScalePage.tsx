@@ -147,8 +147,26 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
-              <td>ash_app 连接</td>
+              <td>Worker 连接角色</td>
+              <td>
+                {r?.workerConnectionRole ?? "—"}
+                {r?.runtimeDsnHint ? (
+                  <>
+                    {" "}
+                    <code>{r.runtimeDsnHint}</code>
+                  </>
+                ) : null}
+              </td>
+            </tr>
+            <tr>
+              <td>ash_app 配置</td>
               <td>{r?.postgresAppUrlConfigured ? "ASH_DATABASE_APP_URL" : "—"}</td>
+            </tr>
+            <tr>
+              <td>双写影子库</td>
+              <td>
+                {r?.dualWriteShadowUrlHint ? <code>{r.dualWriteShadowUrlHint}</code> : "—"}
+              </td>
             </tr>
             <tr>
               <td>迁移表数量</td>
@@ -168,6 +186,26 @@ export function ScalePage() {
                 {r?.lastMigrationSyncAtMs
                   ? new Date(r.lastMigrationSyncAtMs).toLocaleString()
                   : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>最近 sync 失败</td>
+              <td>
+                {r?.lastMigrationSyncError ? (
+                  <>
+                    <span className="error-text">{r.lastMigrationSyncError}</span>
+                    {r.lastMigrationSyncErrorAtMs ? (
+                      <>
+                        {" "}
+                        <span className="muted-line">
+                          ({new Date(r.lastMigrationSyncErrorAtMs).toLocaleString()})
+                        </span>
+                      </>
+                    ) : null}
+                  </>
+                ) : (
+                  "—"
+                )}
               </td>
             </tr>
             <tr>
@@ -195,9 +233,9 @@ export function ScalePage() {
           </tbody>
         </table>
         <p className="muted-line">
-          Postgres 迁移见 <code>doc/05-M3-多租户与Postgres演进.md</code>；CLI{" "}
-          <code>ash migrate plan|copy|verify|sync</code>；脚本{" "}
-          <code>bash scripts/migrate-postgres.sh</code>、<code>postgres-smoke.sh</code>。
+          Postgres 迁移见 <code>doc/05-M3-多租户与Postgres演进.md</code>；云 RDS 验收见{" "}
+          <code>doc/checklists/postgres-rds-e2e.md</code>（<code>make postgres-rds-e2e</code>）；本地{" "}
+          <code>make postgres-e2e</code>；CLI <code>ash migrate plan|copy|verify|sync</code>。
         </p>
       </div>
 

@@ -9,6 +9,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/improve"
+	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -121,4 +122,11 @@ func (h *Handler) improveFor(c *gin.Context) *improve.Service {
 		return h.improve
 	}
 	return h.improve.WithContext(c.Request.Context())
+}
+
+func (h *Handler) metricsFor(c *gin.Context) *metricssvc.Service {
+	if h == nil || h.metrics == nil {
+		return h.metrics
+	}
+	return h.metrics.WithContext(c.Request.Context())
 }

@@ -57,6 +57,19 @@ func DatabaseProfile(dataDir, databaseURL string) (DatabaseProfileInfo, error) {
 }
 
 func redactDSN(dsn string) string {
+	dsn = strings.TrimSpace(dsn)
+	if dsn == "" {
+		return ""
+	}
+	if i := strings.Index(dsn, "://"); i >= 0 {
+		rest := dsn[i+3:]
+		if at := strings.Index(rest, "@"); at > 0 {
+			creds := rest[:at]
+			if colon := strings.Index(creds, ":"); colon >= 0 {
+				return dsn[:i+3] + creds[:colon+1] + "***" + rest[at:]
+			}
+		}
+	}
 	lower := strings.ToLower(dsn)
 	for _, key := range []string{"password=", "secret="} {
 		if idx := strings.Index(lower, key); idx >= 0 {
@@ -64,4 +77,17 @@ func redactDSN(dsn string) string {
 		}
 	}
 	return dsn
+}
+
+// WorkerConnectionRole reports how the worker DB handle is expected to connect.
+func WorkerConnectionRole() string {
+	if strings.TrimSpace(os.Getenv("ASH_DATABASE_APP_URL")) != "" {
+		return "ash_app"
+	}
+	if raw := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL")); raw != "" {
+		if target, err := ParseDatabaseTarget("", raw); err == nil && target.Dialect == "postgres" {
+			return "owner"
+		}
+	}
+	return "sqlite"
 }

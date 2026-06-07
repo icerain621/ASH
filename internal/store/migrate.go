@@ -56,8 +56,25 @@ type CopyReport struct {
 
 // SyncState tracks incremental dual-write / sync checkpoints.
 type SyncState struct {
-	LastSyncAt *time.Time `json:"lastSyncAt,omitempty"`
-	UpdatedAt  time.Time  `json:"updatedAt"`
+	LastSyncAt  *time.Time `json:"lastSyncAt,omitempty"`
+	LastError   string     `json:"lastError,omitempty"`
+	LastErrorAt *time.Time `json:"lastErrorAt,omitempty"`
+	UpdatedAt   time.Time  `json:"updatedAt"`
+}
+
+func (s *SyncState) recordSuccess(now time.Time) {
+	s.LastSyncAt = &now
+	s.LastError = ""
+	s.LastErrorAt = nil
+	s.UpdatedAt = now
+}
+
+func (s *SyncState) recordFailure(err error, now time.Time) {
+	if err != nil {
+		s.LastError = err.Error()
+	}
+	s.LastErrorAt = &now
+	s.UpdatedAt = now
 }
 
 // Migrator copies metadata between two ASH databases.
@@ -176,12 +193,13 @@ func (m *Migrator) Sync(dataDir string, opts CopyOptions) (*CopyReport, error) {
 		return nil, err
 	}
 	report, err := m.copy(opts, state.LastSyncAt)
+	now := time.Now().UTC()
 	if err != nil {
+		state.recordFailure(err, now)
+		_ = SaveSyncState(dataDir, state)
 		return nil, err
 	}
-	now := time.Now().UTC()
-	state.LastSyncAt = &now
-	state.UpdatedAt = now
+	state.recordSuccess(now)
 	if err := SaveSyncState(dataDir, state); err != nil {
 		return nil, err
 	}

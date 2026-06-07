@@ -250,14 +250,8 @@ export ASH_MIGRATE_E2E=1
 export ASH_POSTGRES_RLS=1
 export ASH_POSTGRES_RLS_FORCE=1
 
-bash scripts/postgres-smoke.sh
-bash scripts/postgres-ensure-app-role.sh
-go run ./cmd/cli migrate plan  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
-go run ./cmd/cli migrate copy  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
-go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
-go run ./cmd/cli doctor --suite M3 --format md
-go test -tags=integration ./internal/store/ -run TestPostgresRLS -count=1
-go run ./cmd/cli doctor --suite ALL --agent static --format md
+make postgres-rds-e2e
+# 等价于 scripts/postgres-rds-e2e.sh
 ```
 
 ## 附录 B：相关文档

@@ -67,7 +67,7 @@
 | 消息队列 | Kafka | 运维与部署复杂度较高，MVP 阶段性价比不足 |
 
 ## 4. 前后端协作规范建议
-- 接口优先：以 `doc/api/openapi-ash-v1.yaml` 为单一契约源。
+- 接口优先：实现以 `internal/api/docs`（swag）为准；`doc/api/openapi-ash-v1.yaml` 为产品契约草稿，对齐策略见 `doc/api/openapi-alignment.md`。
 - 错误码统一：业务错误码、鉴权错误码、系统错误码分层。
 - 实时更新规范：任务详情走 REST，执行日志走 SSE。
 - 可观测标准：关键接口必须携带 traceId，任务事件全量记录。

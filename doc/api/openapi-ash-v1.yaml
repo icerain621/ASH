@@ -2,15 +2,42 @@ openapi: 3.0.3
 info:
   title: ASH API
   version: 1.0.0
-  description: ASH AI Platform MVP APIs
+  description: |
+    ASH AI Platform MVP APIs (product contract draft).
+    Implementation source of truth is swag output in internal/api/docs (served at /openapi.json).
+    Alignment policy: doc/api/openapi-alignment.md — only /api/v1/* paths here are enforced by make openapi-check.
+x-ash-contract:
+  role: product-draft
+  implementationSource: internal/api/docs/swagger.yaml
+  enforcedPathPrefix: /api/v1/
+  legacyPlannedPathPrefix: /v1/
 servers:
   - url: https://api.ash.local
 tags:
   - name: Tasks
   - name: AgentRuns
   - name: Memories
-  - name: CI
+  - name: Runs
+  - name: Scenarios
+  - name: Memory
+  - name: Auth
+  - name: Orgs
   - name: Spaces
+  - name: Approvals
+  - name: Audit
+  - name: Compliance
+  - name: Doctor
+  - name: Improve
+  - name: Mcp
+  - name: ModelRouter
+  - name: Permissions
+  - name: Plugins
+  - name: Rag
+  - name: Scale
+  - name: Secrets
+  - name: Storage
+  - name: Repo
+  - name: CI
   - name: Feedback
   - name: Metrics
   - name: Observability
@@ -28,6 +55,17 @@ components:
         code: { type: integer, example: 0 }
         message: { type: string, example: ok }
         data: { type: object, nullable: true }
+    ApiError:
+      type: object
+      required: [code, message]
+      properties:
+        code: { type: string, example: INVALID_REQUEST }
+        message: { type: string, example: validation failed }
+    ApiErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error: { $ref: "#/components/schemas/ApiError" }
     CreateTaskRequest:
       type: object
       required: [title, goal, projectId, mode]
@@ -400,6 +438,25 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/metrics/prometheus:
+    get:
+      tags: [Metrics]
+      summary: Get tenant-scoped Prometheus metrics text
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+      responses:
+        "200":
+          description: Prometheus text/plain
+          content:
+            text/plain:
+              schema: { type: string }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
   /api/v1/metrics/overview:
     get:
       tags: [Metrics]
@@ -627,6 +684,1073 @@ paths:
       responses:
         "201":
           description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/approvals:
+    get:
+      tags: [Approvals]
+      summary: List approval requests
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/approvals/{approvalId}/approve:
+    post:
+      tags: [Approvals]
+      summary: Approve an approval request
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/approvals/{approvalId}/reject:
+    post:
+      tags: [Approvals]
+      summary: Reject an approval request and cancel the run
+      parameters:
+        - in: path
+          name: approvalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/audit/exports:
+    get:
+      tags: [Audit]
+      summary: List audit exports
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/audit/exports/{exportId}/access:
+    get:
+      tags: [Audit]
+      summary: Get signed audit export access
+      parameters:
+        - in: path
+          name: exportId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/audit/logs:
+    get:
+      tags: [Audit]
+      summary: List audit logs
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/audit/policy:
+    get:
+      tags: [Audit]
+      summary: Get audit retention policy
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    put:
+      tags: [Audit]
+      summary: Update audit retention policy
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/audit/retention/apply:
+    post:
+      tags: [Audit]
+      summary: Apply audit retention policy
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/auth/login:
+    post:
+      tags: [Auth]
+      summary: Login with local credentials
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/auth/me:
+    get:
+      tags: [Auth]
+      summary: Get current authenticated identity
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/auth/password:
+    post:
+      tags: [Auth]
+      summary: "Change current user's password"
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/compliance/export:
+    post:
+      tags: [Compliance]
+      summary: Export audit bundle with doctor report and secret scan summary
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/compliance/secret-scan:
+    get:
+      tags: [Compliance]
+      summary: Scan audit logs and run events for secret patterns
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/doctor/reports/{reportId}:
+    get:
+      tags: [Doctor]
+      summary: Get doctor report
+      parameters:
+        - in: path
+          name: reportId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/doctor/run:
+    post:
+      tags: [Doctor]
+      summary: Run validation suite
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/feedback:
+    get:
+      tags: [Feedback]
+      summary: List feedback
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Feedback]
+      summary: Create feedback
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals:
+    get:
+      tags: [Improve]
+      summary: List improvement proposals
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Improve]
+      summary: Create self-improvement proposal
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals/{proposalId}:
+    get:
+      tags: [Improve]
+      summary: Get improvement proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals/{proposalId}/canary:
+    post:
+      tags: [Improve]
+      summary: Start canary rollout for proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals/{proposalId}/experiment:
+    post:
+      tags: [Improve]
+      summary: Run experiment replay for proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals/{proposalId}/promote:
+    post:
+      tags: [Improve]
+      summary: Promote proposal after canary
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/improve/proposals/{proposalId}/rollback:
+    post:
+      tags: [Improve]
+      summary: Rollback promoted proposal
+      parameters:
+        - in: path
+          name: proposalId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/mcp/tools:
+    get:
+      tags: [Mcp]
+      summary: List registered MCP tools
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Mcp]
+      summary: Register an MCP tool
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/memory/candidates:
+    get:
+      tags: [Memory]
+      summary: List memory candidates
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Memory]
+      summary: Create memory candidate
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/memory/candidates/{candidateId}/review:
+    post:
+      tags: [Memory]
+      summary: Review a memory candidate
+      parameters:
+        - in: path
+          name: candidateId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/memory/hit-used:
+    post:
+      tags: [Memory]
+      summary: Record memory usage in a run
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/memory/query:
+    post:
+      tags: [Memory]
+      summary: Query approved memory records
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/memory/records/{recordId}:
+    get:
+      tags: [Memory]
+      summary: Get memory record by id
+      parameters:
+        - in: path
+          name: recordId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/model-router/providers:
+    get:
+      tags: [ModelRouter]
+      summary: List configured model providers
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/model-router/route:
+    post:
+      tags: [ModelRouter]
+      summary: Route a non-coding model request
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/observability/quality/{runId}:
+    get:
+      tags: [Observability]
+      summary: Get run quality metrics
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/observability/waterfall/{runId}:
+    get:
+      tags: [Observability]
+      summary: Get run waterfall spans
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/orgs:
+    post:
+      tags: [Orgs]
+      summary: Create organization
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/orgs/{orgId}/roles:
+    get:
+      tags: [Orgs]
+      summary: List organization roles
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Orgs]
+      summary: Create organization role
+      parameters:
+        - in: path
+          name: orgId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/permissions/matrix:
+    get:
+      tags: [Permissions]
+      summary: M2 permission matrix for current space
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/plugins:
+    get:
+      tags: [Plugins]
+      summary: List registered plugins
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Plugins]
+      summary: Register a plugin
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/plugins/abi:
+    get:
+      tags: [Plugins]
+      summary: Get plugin ABI profile
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/plugins/{pluginId}/verify:
+    post:
+      tags: [Plugins]
+      summary: Verify plugin ABI compatibility
+      parameters:
+        - in: path
+          name: pluginId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/rag/index:
+    post:
+      tags: [Rag]
+      summary: Index repository for retrieval
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/rag/query:
+    post:
+      tags: [Rag]
+      summary: Query repository retrieval index
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs:
+    get:
+      tags: [Runs]
+      summary: List runs
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Runs]
+      summary: Create and start a run
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}:
+    get:
+      tags: [Runs]
+      summary: Get run summary
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/agent-tasks:
+    get:
+      tags: [Runs]
+      summary: List run agent tasks
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/approve:
+    post:
+      tags: [Runs]
+      summary: Approve a waiting run gate
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/artifacts:
+    get:
+      tags: [Runs]
+      summary: List run artifacts manifest
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/artifacts/{artifactName}/access:
+    get:
+      tags: [Runs]
+      summary: Get a signed artifact access URL
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: artifactName
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/cancel:
+    post:
+      tags: [Runs]
+      summary: Cancel a running run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/checkpoints:
+    get:
+      tags: [Runs]
+      summary: List run checkpoints
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/checkpoints/{checkpointId}/access:
+    get:
+      tags: [Runs]
+      summary: Get a signed checkpoint access URL
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: checkpointId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/provenance:
+    get:
+      tags: [Runs]
+      summary: Delivery provenance chain for a run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/quality-metrics:
+    get:
+      tags: [Runs]
+      summary: List run quality metrics
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/replay:
+    post:
+      tags: [Runs]
+      summary: Replay a run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/resume:
+    post:
+      tags: [Runs]
+      summary: Resume a failed run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/stream:
+    get:
+      tags: [Runs]
+      summary: Stream run events (SSE)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/timeline:
+    get:
+      tags: [Runs]
+      summary: Get run timeline
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runs/{runId}/tool-calls:
+    get:
+      tags: [Runs]
+      summary: List run tool calls
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/scale/readiness:
+    get:
+      tags: [Scale]
+      summary: TR3 scale readiness snapshot
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/scenarios:
+    get:
+      tags: [Scenarios]
+      summary: List loaded scenarios
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/scenarios/validate:
+    post:
+      tags: [Scenarios]
+      summary: Validate scenario DSL (JSON body)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/scenarios/validate/raw:
+    post:
+      tags: [Scenarios]
+      summary: Validate scenario DSL (raw YAML body)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/scenarios/{name}/{version}:
+    get:
+      tags: [Scenarios]
+      summary: Get scenario by name and version
+      parameters:
+        - in: path
+          name: name
+          required: true
+          schema: { type: string }
+        - in: path
+          name: version
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/secrets:
+    get:
+      tags: [Secrets]
+      summary: List space secrets
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Secrets]
+      summary: Create a space secret
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/secrets/{secretId}:
+    delete:
+      tags: [Secrets]
+      summary: Delete a secret
+      parameters:
+        - in: path
+          name: secretId
+          required: true
+          schema: { type: string }
+      responses:
+        "204":
+          description: no content
+
+  /api/v1/secrets/{secretId}/rotate:
+    post:
+      tags: [Secrets]
+      summary: Rotate a secret value
+      parameters:
+        - in: path
+          name: secretId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/spaces:
+    post:
+      tags: [Spaces]
+      summary: Create space
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/spaces/{spaceId}/members:
+    get:
+      tags: [Spaces]
+      summary: List space members
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+    post:
+      tags: [Spaces]
+      summary: Add a member to a space
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/spaces/{spaceId}/permissions/matrix:
+    get:
+      tags: [Permissions]
+      summary: M2 permission matrix for a specific space
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/spaces/{spaceId}/resource-scopes:
+    get:
+      tags: [Spaces]
+      summary: List resource scopes for a space
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/spaces/{spaceId}/resource-scopes/{scopeId}:
+    put:
+      tags: [Spaces]
+      summary: Update a space resource scope policy (scenario tool matrix)
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: scopeId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/storage/profile:
+    get:
+      tags: [Storage]
+      summary: Get storage profile
+      responses:
+        "200":
+          description: ok
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }

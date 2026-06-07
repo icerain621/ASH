@@ -18,8 +18,8 @@ go run ./cmd/cli doctor --suite ALL --agent static
 echo "== metrics KPI regression =="
 go test ./internal/metrics -run 'TestOverview' -count=1
 
-echo "== swagger regen =="
-bash scripts/regenerate-swagger.sh
+echo "== openapi-check =="
+bash scripts/openapi-check.sh
 
 echo "== frontend build =="
 (cd frontend && npm install && npm run build)

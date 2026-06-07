@@ -128,7 +128,7 @@ ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_c
 
 - `.github/workflows/ci.yml`：PR 与 `main` push 执行 `go test ./...`、`make test`、Doctor M3/ALL static、`make web-build`。
 - `.github/workflows/postgres-e2e.yml`：手动或 nightly 执行 `make postgres-e2e`。
-- 云 RDS 生产切换：见 [`doc/checklists/postgres-rds-e2e.md`](doc/checklists/postgres-rds-e2e.md)。
+- 云 RDS 生产切换：见 [`doc/checklists/postgres-rds-e2e.md`](doc/checklists/postgres-rds-e2e.md)；`make postgres-rds-e2e`。
 
 Repo/CI 诊断使用 GitHub Actions v1 provider。先通过 Secrets 保存 token，再创建 repo connection；token 只允许通过 `secretId` 引用，API 会拒绝明文 token。
 

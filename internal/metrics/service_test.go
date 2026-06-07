@@ -91,6 +91,61 @@ func TestOverviewSSEStabilityFromStreamAudits(t *testing.T) {
 	}
 }
 
+func TestOverviewScopesRunEventsAndStepsBySpace(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	localStarted := now.Add(5 * time.Minute)
+	otherStarted := now.Add(20 * time.Minute)
+
+	seeds := []struct {
+		runID, spaceID, eventID, stepID string
+		stepStarted                     time.Time
+	}{
+		{"run_local_mem", "local", "ev_local_mem", "step_local", localStarted},
+		{"run_other_mem", "space_other", "ev_other_mem", "step_other", otherStarted},
+	}
+	for _, seed := range seeds {
+		if err := db.Create(&store.RunRecord{
+			ID: seed.runID, TraceID: "tr_" + seed.runID, ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+			PolicyProfile: "default", Status: "finished", SpaceID: seed.spaceID,
+			StartedAt: now, CreatedAt: now, UpdatedAt: now,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Create(&store.RunEvent{
+			ID: seed.eventID, RunID: seed.runID, Seq: 1, TS: now.UnixMilli(), Type: "memory.injected",
+			Severity: "info", PayloadJSON: "{}", CreatedAt: now,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+		if err := db.Create(&store.RunStep{
+			ID: seed.stepID, RunID: seed.runID, StepID: "s1", StepOrder: 1, Kind: "tool", Status: "finished",
+			CreatedAt: now, StartedAt: &seed.stepStarted,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := OverviewRequest{SpaceID: "local", From: now.Add(-time.Hour), To: now.Add(2 * time.Hour)}
+	overview, err := svc.Overview(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	kpi07 := card(overview, "KPI-07")
+	if kpi07.Denominator != 1 {
+		t.Fatalf("KPI-07 denominator=%d want 1 (scoped memory.injected)", kpi07.Denominator)
+	}
+	kpi10 := card(overview, "KPI-10")
+	if kpi10.Denominator != 1 {
+		t.Fatalf("KPI-10 denominator=%d want 1 (scoped run_steps)", kpi10.Denominator)
+	}
+	wantWaitMs := int64(5 * time.Minute / time.Millisecond)
+	if kpi10.Numerator != wantWaitMs {
+		t.Fatalf("KPI-10 numerator=%d want %d (exclude foreign space queue wait)", kpi10.Numerator, wantWaitMs)
+	}
+}
+
 func card(overview Overview, id string) MetricCard {
 	for _, item := range overview.Summary {
 		if item.ID == id {

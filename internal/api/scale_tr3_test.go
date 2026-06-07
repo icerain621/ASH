@@ -48,6 +48,43 @@ func TestScaleReadiness(t *testing.T) {
 	if resp.DatabaseDialect == "" {
 		t.Fatal("databaseDialect is empty")
 	}
+	if resp.WorkerConnectionRole != "sqlite" {
+		t.Fatalf("workerConnectionRole=%q want sqlite", resp.WorkerConnectionRole)
+	}
+}
+
+func TestScaleReadinessMigrationSyncError(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	errAt := time.Now().UTC().Add(-2 * time.Minute)
+	if err := store.SaveSyncState(db.DataDir(), &store.SyncState{
+		LastError:   "verify row counts: orgs mismatch",
+		LastErrorAt: &errAt,
+		UpdatedAt:   errAt,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/readiness", nil)
+	req.Header.Set("X-ASH-Space-ID", "local")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp ScaleReadinessResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.LastMigrationSyncError != "verify row counts: orgs mismatch" {
+		t.Fatalf("lastMigrationSyncError=%q", resp.LastMigrationSyncError)
+	}
+	if resp.LastMigrationSyncErrorAtMs == nil {
+		t.Fatal("expected lastMigrationSyncErrorAtMs")
+	}
+	if *resp.LastMigrationSyncErrorAtMs != errAt.UnixMilli() {
+		t.Fatalf("lastMigrationSyncErrorAtMs=%d want %d", *resp.LastMigrationSyncErrorAtMs, errAt.UnixMilli())
+	}
 }
 
 func TestRunProvenance(t *testing.T) {

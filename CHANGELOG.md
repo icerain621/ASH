@@ -72,6 +72,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Fixed
 
+- Fixed `runs.Service.eventsFor` infinite recursion when bound to a request context (approval/cancel paths stack overflow).
 - Fixed malformed return statements in the SQLite store initialization path.
 - Fixed backend static UI routing so nested SPA routes fall back to `index.html` without allowing path traversal outside the web directory.
 - Fixed event spelling for memory review request emission.

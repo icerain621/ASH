@@ -100,6 +100,66 @@ func TestMigratorPlanAndSyncState(t *testing.T) {
 	if err != nil || state.LastSyncAt == nil {
 		t.Fatalf("state=%+v err=%v", state, err)
 	}
+	if state.LastError != "" || state.LastErrorAt != nil {
+		t.Fatalf("expected cleared sync error, state=%+v", state)
+	}
+}
+
+func TestMigratorSyncPersistsFailure(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "a.db")
+	dstPath := filepath.Join(dir, "b.db")
+	src := mustOpenSQLite(t, dir, srcPath)
+	now := time.Now().UTC()
+	_ = src.Create(&Space{ID: "space_fail", OrgID: "org_x", Name: "S", Slug: "s", CreatedAt: now, UpdatedAt: now}).Error
+	_ = src.Close()
+	dst := mustOpenSQLite(t, dir, dstPath)
+	_ = dst.Close()
+
+	m := &Migrator{Source: mustOpenSQLite(t, dir, srcPath), Target: mustOpenSQLite(t, dir, dstPath)}
+	defer m.Close()
+
+	if _, err := m.Sync(dir, CopyOptions{}); err != nil {
+		t.Fatal(err)
+	}
+	state, err := LoadSyncState(dir)
+	if err != nil || state.LastSyncAt == nil {
+		t.Fatalf("state=%+v err=%v", state, err)
+	}
+	firstSync := *state.LastSyncAt
+
+	if err := m.Target.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := m.Sync(dir, CopyOptions{}); err == nil {
+		t.Fatal("expected sync error with closed target")
+	}
+	state, err = LoadSyncState(dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if state.LastError == "" || state.LastErrorAt == nil {
+		t.Fatalf("expected persisted sync error, state=%+v", state)
+	}
+	if state.LastSyncAt == nil || !state.LastSyncAt.Equal(firstSync) {
+		t.Fatalf("lastSyncAt=%v want %v", state.LastSyncAt, firstSync)
+	}
+}
+
+func TestSyncStateRecordSuccessClearsError(t *testing.T) {
+	now := time.Now().UTC()
+	state := &SyncState{
+		LastError:   "previous failure",
+		LastErrorAt: &now,
+		UpdatedAt:   now,
+	}
+	state.recordSuccess(now.Add(time.Minute))
+	if state.LastError != "" || state.LastErrorAt != nil {
+		t.Fatalf("expected cleared error, state=%+v", state)
+	}
+	if state.LastSyncAt == nil {
+		t.Fatal("expected lastSyncAt")
+	}
 }
 
 func TestDualWriteConfigRoundTrip(t *testing.T) {

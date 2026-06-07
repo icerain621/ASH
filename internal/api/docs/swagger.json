@@ -1908,6 +1908,46 @@
                 }
             }
         },
+        "/api/v1/metrics/prometheus": {
+            "get": {
+                "description": "DB-derived Prometheus text for the active space (requires observability:read). Global ops scrape uses GET /metrics.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get tenant-scoped Prometheus metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id (defaults to session space)",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prometheus text",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/model-router/providers": {
             "get": {
                 "produces": [
@@ -4462,13 +4502,14 @@
         },
         "/metrics": {
             "get": {
+                "description": "Unauthenticated scrape endpoint. When Postgres RLS is enabled, queries use admin bypass so Prometheus sees all spaces. For tenant-scoped text use GET /api/v1/metrics/prometheus.",
                 "produces": [
                     "text/plain"
                 ],
                 "tags": [
                     "health"
                 ],
-                "summary": "Get Prometheus metrics",
+                "summary": "Get deployment-global Prometheus metrics (ops scrape)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6548,8 +6589,7 @@
                     "type": "string"
                 },
                 "durationMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "errorCode": {
                     "type": "string"
@@ -6591,8 +6631,7 @@
                     "type": "string"
                 },
                 "timeoutMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "traceID": {
                     "type": "string"
@@ -6946,8 +6985,7 @@
                     "type": "string"
                 },
                 "sizeBytes": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "snapshotDigest": {
                     "type": "string"
@@ -7160,8 +7198,7 @@
                     "type": "string"
                 },
                 "value": {
-                    "type": "number",
-                    "format": "float64"
+                    "type": "number"
                 }
             }
         },
@@ -7493,8 +7530,7 @@
                     "type": "string"
                 },
                 "durationMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "error": {
                     "type": "string"
@@ -7518,8 +7554,7 @@
                     "type": "string"
                 },
                 "timeoutMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "tool": {
                     "type": "string"
@@ -7866,6 +7901,15 @@
                 "dialect": {
                     "type": "string"
                 },
+                "postgresRLSEnabled": {
+                    "type": "boolean"
+                },
+                "postgresRLSForce": {
+                    "type": "boolean"
+                },
+                "postgresRLSPolicyCount": {
+                    "type": "integer"
+                },
                 "urlConfigured": {
                     "type": "boolean"
                 }
@@ -7885,6 +7929,10 @@
         "internal_api.HealthResponse": {
             "type": "object",
             "properties": {
+                "dialect": {
+                    "type": "string",
+                    "example": "postgres"
+                },
                 "error": {
                     "type": "string"
                 },
@@ -8168,10 +8216,19 @@
                 "dualWriteRuntime": {
                     "type": "boolean"
                 },
+                "dualWriteShadowUrlHint": {
+                    "type": "string"
+                },
                 "dualWriteSource": {
                     "type": "string"
                 },
                 "lastMigrationSyncAtMs": {
+                    "type": "integer"
+                },
+                "lastMigrationSyncError": {
+                    "type": "string"
+                },
+                "lastMigrationSyncErrorAtMs": {
                     "type": "integer"
                 },
                 "memoryApprovedCount": {
@@ -8192,8 +8249,20 @@
                 "modelUsageRows": {
                     "type": "integer"
                 },
+                "postgresAppUrlConfigured": {
+                    "type": "boolean"
+                },
                 "postgresConfigured": {
                     "type": "boolean"
+                },
+                "postgresRLSEnabled": {
+                    "type": "boolean"
+                },
+                "postgresRLSForce": {
+                    "type": "boolean"
+                },
+                "postgresRLSPolicyCount": {
+                    "type": "integer"
                 },
                 "qualityMetricRows": {
                     "type": "integer"
@@ -8204,10 +8273,16 @@
                 "ragDocumentCount": {
                     "type": "integer"
                 },
+                "runtimeDsnHint": {
+                    "type": "string"
+                },
                 "spaceId": {
                     "type": "string"
                 },
                 "sqlitePath": {
+                    "type": "string"
+                },
+                "workerConnectionRole": {
                     "type": "string"
                 }
             }

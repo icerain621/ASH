@@ -2,6 +2,8 @@
 
 > 目的：给 Gin + Swagger（`swaggo/swag`）生成与评审提供“端点边界”。M0 只覆盖必需端点，避免范围失控。
 >
+> 与手写契约、swag 输出的对齐策略见 `doc/api/openapi-alignment.md`；CI 本地校验：`make openapi-check`。
+>
 > 冻结等级：**M0 冻结**（v0.1）。字段新增需向后兼容；破坏性变更必须升 API 版本或保持旧字段。
 
 ## 1. 通用约定
@@ -14,8 +16,8 @@
   - `message`：可读信息
   - `details`：可选扩展
 
-**TODO（负责人：后端）**：补齐错误码表（tool/model/rag/memory/rules）。  
-**验收方式**：TR0/1 所有失败路径均返回统一错误形状。
+**错误码表**：`doc/api/error-codes.md` + `internal/apicodes/catalog.go`（`go test ./internal/apicodes` 与 handler 同步校验）。  
+**验收方式**：TR0/1 失败路径返回 `{"error":{"code","message"}}` 统一形状。
 
 ## 2. Health / Docs / Metrics
 - `GET /healthz`：存活探针

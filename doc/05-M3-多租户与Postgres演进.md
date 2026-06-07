@@ -131,6 +131,20 @@ make postgres-e2e         # 完整 sqlite→postgres plan/copy/verify + doctor M
 make postgres-down        # 停止并清理卷
 ```
 
+### 3.4 PgBouncer / 连接池（生产建议）
+
+| 角色 | 连接目标 | 说明 |
+|------|----------|------|
+| Worker（`ash_app`） | PgBouncer **transaction** 模式 → RDS | `ASH_DATABASE_APP_URL` 指向 pooler；RLS session 变量在事务内有效 |
+| 迁移 / Doctor（owner） | 直连 RDS 或 pooler **session** 模式 | `ASH_DATABASE_URL`；需 DDL / `ALTER` RLS |
+| Prometheus scrape | 无 DB 或全局 bypass | `GET /metrics` 不经过 pooler 租户会话 |
+
+建议：
+
+- Pool size：按 Worker 实例数 × 并发 × 1.2 预留；`ash_app` 无 DDL 权限。
+- `server_reset_query = DISCARD ALL`（transaction pooling）避免 RLS 会话变量泄漏。
+- `/ui/scale` 就绪卡可查看 `workerConnectionRole`、`runtimeDsnHint`、双写影子库 URL（脱敏）。
+
 ## 5. 云 RDS E2E 清单
 
 生产切换前在目标 RDS 执行完整验证，见 **[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md)**（迁移、RLS、`ash_app`、Doctor M3/ALL、业务抽样与回滚）。

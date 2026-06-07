@@ -21,10 +21,10 @@
 | KPI-04 | CI 一次通过率 | 首次触发即通过的 CI 占比 | `first_pass_ci / total_ci_runs` | 日/周 | 测试负责人 |
 | KPI-05 | CI 诊断采纳率 | 诊断建议被执行的比例 | `adopted_diagnosis / total_diagnosis` | 周/月 | 后端负责人 |
 | KPI-06 | 低分反馈率 | 评分 <=2 的反馈占比 | `low_score_feedback / total_feedback` | 日/周 | 产品负责人 |
-| KPI-07 | Memory 命中率 | 执行中命中记忆次数占检索次数比 | `memory_hits / memory_queries` | 日/周 | 算法负责人 |
+| KPI-07 | Memory 命中率 | 执行中命中记忆次数占检索次数比 | `memory_hits / memory_queries`（`run_events` 经 `runs.space_id` 过滤） | 日/周 | 算法负责人 |
 | KPI-08 | SSE 稳定率 | SSE 正常会话占比 | `successful_sse_sessions / total_sse_sessions` | 日/周 | 前端负责人 |
 | KPI-09 | API 错误率 | 非 2xx 请求占比 | `error_requests / total_requests` | 日/周 | 后端负责人 |
-| KPI-10 | 队列积压时长 | 队列任务平均等待时长 | `sum(queue_wait_ms)/queue_task_count` | 日/周 | 运维负责人 |
+| KPI-10 | 队列积压时长 | 队列任务平均等待时长 | `sum(queue_wait_ms)/queue_task_count`（`run_steps` 经 `runs.space_id` 过滤） | 日/周 | 运维负责人 |
 
 ## 4. 关键指标详细口径
 

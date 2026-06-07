@@ -1914,6 +1914,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/metrics/prometheus": {
+            "get": {
+                "description": "DB-derived Prometheus text for the active space (requires observability:read). Global ops scrape uses GET /metrics.",
+                "produces": [
+                    "text/plain"
+                ],
+                "tags": [
+                    "metrics"
+                ],
+                "summary": "Get tenant-scoped Prometheus metrics",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id (defaults to session space)",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Prometheus text",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/model-router/providers": {
             "get": {
                 "produces": [
@@ -4468,13 +4508,14 @@ const docTemplate = `{
         },
         "/metrics": {
             "get": {
+                "description": "Unauthenticated scrape endpoint. When Postgres RLS is enabled, queries use admin bypass so Prometheus sees all spaces. For tenant-scoped text use GET /api/v1/metrics/prometheus.",
                 "produces": [
                     "text/plain"
                 ],
                 "tags": [
                     "health"
                 ],
-                "summary": "Get Prometheus metrics",
+                "summary": "Get deployment-global Prometheus metrics (ops scrape)",
                 "responses": {
                     "200": {
                         "description": "OK",
@@ -6554,8 +6595,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "durationMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "errorCode": {
                     "type": "string"
@@ -6597,8 +6637,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "timeoutMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "traceID": {
                     "type": "string"
@@ -6952,8 +6991,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "sizeBytes": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "snapshotDigest": {
                     "type": "string"
@@ -7166,8 +7204,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "value": {
-                    "type": "number",
-                    "format": "float64"
+                    "type": "number"
                 }
             }
         },
@@ -7499,8 +7536,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "durationMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "error": {
                     "type": "string"
@@ -7524,8 +7560,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "timeoutMs": {
-                    "type": "integer",
-                    "format": "int64"
+                    "type": "integer"
                 },
                 "tool": {
                     "type": "string"
@@ -7872,6 +7907,15 @@ const docTemplate = `{
                 "dialect": {
                     "type": "string"
                 },
+                "postgresRLSEnabled": {
+                    "type": "boolean"
+                },
+                "postgresRLSForce": {
+                    "type": "boolean"
+                },
+                "postgresRLSPolicyCount": {
+                    "type": "integer"
+                },
                 "urlConfigured": {
                     "type": "boolean"
                 }
@@ -7891,6 +7935,10 @@ const docTemplate = `{
         "internal_api.HealthResponse": {
             "type": "object",
             "properties": {
+                "dialect": {
+                    "type": "string",
+                    "example": "postgres"
+                },
                 "error": {
                     "type": "string"
                 },
@@ -8174,10 +8222,19 @@ const docTemplate = `{
                 "dualWriteRuntime": {
                     "type": "boolean"
                 },
+                "dualWriteShadowUrlHint": {
+                    "type": "string"
+                },
                 "dualWriteSource": {
                     "type": "string"
                 },
                 "lastMigrationSyncAtMs": {
+                    "type": "integer"
+                },
+                "lastMigrationSyncError": {
+                    "type": "string"
+                },
+                "lastMigrationSyncErrorAtMs": {
                     "type": "integer"
                 },
                 "memoryApprovedCount": {
@@ -8198,8 +8255,20 @@ const docTemplate = `{
                 "modelUsageRows": {
                     "type": "integer"
                 },
+                "postgresAppUrlConfigured": {
+                    "type": "boolean"
+                },
                 "postgresConfigured": {
                     "type": "boolean"
+                },
+                "postgresRLSEnabled": {
+                    "type": "boolean"
+                },
+                "postgresRLSForce": {
+                    "type": "boolean"
+                },
+                "postgresRLSPolicyCount": {
+                    "type": "integer"
                 },
                 "qualityMetricRows": {
                     "type": "integer"
@@ -8210,10 +8279,16 @@ const docTemplate = `{
                 "ragDocumentCount": {
                     "type": "integer"
                 },
+                "runtimeDsnHint": {
+                    "type": "string"
+                },
                 "spaceId": {
                     "type": "string"
                 },
                 "sqlitePath": {
+                    "type": "string"
+                },
+                "workerConnectionRole": {
                     "type": "string"
                 }
             }

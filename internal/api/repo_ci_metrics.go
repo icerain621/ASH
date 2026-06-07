@@ -326,7 +326,7 @@ func (h *Handler) getMetricsOverview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_TO", err.Error()))
 		return
 	}
-	resp, err := h.metrics.OverviewContext(c.Request.Context(), metricssvc.OverviewRequest{
+	resp, err := h.metricsFor(c).Overview(metricssvc.OverviewRequest{
 		SpaceID: space, ProjectID: c.Query("projectId"), From: from, To: to, Period: c.Query("period"),
 	})
 	if err != nil {

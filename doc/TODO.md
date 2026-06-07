@@ -2,122 +2,103 @@
 
 > 记录尚未完成或需人工环境验证的项。完成请移入 CHANGELOG 并删除对应条目。
 
-## 1. Postgres 端到端迁移验证
+## 人工验证（暂缓）
 
-**状态**：本地 E2E 已通过（`make postgres-e2e` / M3-04 live / `migrate verify` / `readyz`）；云 RDS 切换前仍需重复验证  
-**优先级**：P1（切换生产前必做）  
-**清单**：[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md)
+> **状态**：依赖云 RDS / 真实 GitHub token / live ExecGo，当前迭代**暂不执行**，保留清单待发布窗口统一验收。
+> **清单**：[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) · 一键脚本 `make postgres-rds-e2e`
 
-本地一键验证（需 Docker）：
+| # | 项 | 命令 / 入口 | 验收 |
+|---|-----|-------------|------|
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate verify` + Doctor M3 7/7 + ALL 32/32 |
+| H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
+| H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
+| H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
+| H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + diagnose | job log 落库与 rootCause |
+| H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1` + Doctor M3-05 | live 执行链路通过 |
+| H-07 | 密钥轮换策略 | repo connection `secretId` | 接入团队 Secrets 轮换 SOP |
+| H-08 | 发布窗口 audit gate | 真实发布 checklist | Postgres e2e + ALL/M3 + ExecGo 证据归档 |
+| H-09 | 业务抽样 §7 | 清单 §7.1–7.7 | Run/SSE/Memory/KPI/CI/合规/Scale |
+
+本地自动化（无需云环境，CI 可跑）：
 
 ```bash
 make postgres-e2e
-# 或分步：
-make postgres-up
-export ASH_DATABASE_URL='postgres://ash:ash@127.0.0.1:5432/ash?sslmode=disable'
-bash scripts/postgres-e2e-migrate.sh
-make postgres-down
+make postgres-rls-e2e
+go test ./internal/metrics/... ./internal/doctor/... -count=1 -short
+bash scripts/verify-local.sh
 ```
-
-集成测试（Postgres 已启动且 `ASH_DATABASE_URL` 已设置）：
-
-```bash
-export ASH_DATABASE_URL='postgres://ash:ash@127.0.0.1:5432/ash?sslmode=disable'
-export ASH_MIGRATE_E2E=1
-make test-integration
-```
-
-**验收标准**：
-
-- `migrate verify` 全表行数一致
-- Doctor **M3-04** 在 `ASH_MIGRATE_E2E=1` 时通过（默认跳过）
-- 切换 `ASH_DATABASE_URL` 后 Worker `readyz` 通过（`TestPostgresReadyzProbe`，返回 `dialect=postgres`）
-- `doctor --suite ALL` 无回退
-
-**备注**：云 RDS / 生产切换前按 [`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) 执行 `copy` + `verify` + RLS + 抽样业务校验。
 
 ---
 
-## 2. CI / ExecGo / Repo 诊断 / KPI 验证
+## 1. Postgres 迁移（代码已完成，待 H-01/H-02）
 
-**状态**：已实现 MVP，本地与 CI 需持续回归
-**优先级**：P0（PRD 前四项闭环）
+**状态**：本地 `make postgres-e2e` 已通过；生产切换见 **人工验证（暂缓）** H-01–H-03
+**优先级**：P1（切换生产前必做）
 
-入口：
+```bash
+make postgres-e2e
+make postgres-roles
+make test-integration   # 需 ASH_DATABASE_URL + ASH_MIGRATE_E2E=1
+```
+
+**自动化验收**（本地 / CI nightly）：
+
+- `migrate verify` 全表行数一致
+- Doctor **M3-04** 在 `ASH_MIGRATE_E2E=1` 时通过
+- `TestPostgresReadyzProbe` → `dialect=postgres`
+- `doctor --suite ALL` 无回退
+
+---
+
+## 2. CI / ExecGo / KPI（MVP 已完成，待 H-04–H-06）
+
+**状态**：API 与控制台 MVP 已交付；外部依赖验证见 **人工验证（暂缓）**
+**优先级**：P0 自动化回归 / P1 人工闭环
 
 ```bash
 go test ./internal/ci ./internal/metrics ./internal/api -run 'TestDiagnose|TestOverview|TestCreateRepo|TestRepoConnection' -count=1
 make execgo-health
-ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --format md --agent execgo_codex
 go run ./cmd/cli doctor --suite ALL --format md --agent static
 make web-build
 ```
 
-**验收标准**：
+**已实现（自动化可验）**：
 
-- GitHub Actions PR/main 门禁执行 Go、Doctor static 与前端 build
-- Postgres e2e 仅在 nightly/manual workflow 执行，避免拖慢普通 PR
-- ExecGo live smoke 在 `ASH_EXECGO_E2E=1` 时失败可定位，未启用时 M3-05 明确 skipped
-- Repo connection 只接受 `secretId`，拒绝明文 token
-- `POST /api/v1/ci/failures/diagnose` 可落库并输出 rootCause / fixSuggestions / evidenceRefs
-- `/ui/metrics` 与 `GET /api/v1/metrics/overview` 展示 KPI v1；KPI-08 由 `stream.session_*` 审计事件聚合，无会话时返回 unavailable
-- `/ui/ci` 可列出诊断历史并记录采纳/驳回；`jobId` 诊断可拉取 provider job logs
-- `/ui/feedback` 可筛选与处理反馈；低分反馈写入站内告警事件
-- `/ui/observability` 可查看 active alerts、规则、trace 查询和 Prometheus 指标快照
-- `/ui/releases` 可创建 release、初始化 MVP checklist、运行 gate、记录 rollback drill
-
-**剩余人工项**：
-
-- 在真实 GitHub token 下验证 `GET /api/v1/ci/runs?sync=true`
-- 在真实 GitHub token 下验证 `GET /api/v1/ci/jobs?runId=...&sync=true` 与 job log diagnosis
-- 在 live ExecGo / execgo-runtime 环境下验证 M3-05 通过
-- 将 repo connection 的 token secret 接入团队密钥轮换策略
-- 用真实发布窗口补齐 Postgres e2e、Doctor ALL/M3、ExecGo live smoke 的 audit gate 证据
+- GitHub Actions PR/main：Go + Doctor static + Web build
+- Postgres e2e：nightly/manual workflow
+- Repo `secretId` only；CI diagnose API；KPI overview；控制台 feedback/ci/observability/releases
 
 ---
 
-## 3. Postgres RLS 全面接线（P2 后续）
+## 3. Postgres RLS 生产部署（待 H-02/H-03）
 
-**状态**：API 主路径已接线；生产切换需 `ash_app` 连接串  
+**状态**：RLS 骨架与 API 接线已完成；生产角色与连接串见 **人工验证（暂缓）**
 **优先级**：P2
-
-剩余工作：
-
-- 生产 Worker 设置 `ASH_DATABASE_APP_URL`（`ash_app` 角色）+ `ASH_POSTGRES_RLS_FORCE=1`
-- 云 RDS 上执行 `bash scripts/postgres-ensure-app-role.sh`（或挂载 `scripts/postgres-init/`）
-- 云 RDS / 生产环境重复 `make postgres-e2e`（含 RLS 阶段）与 `make postgres-rls-e2e`
-
-本地角色脚本：
 
 ```bash
 make postgres-up
-make postgres-roles   # 或 bash scripts/postgres-ensure-app-role.sh
+make postgres-roles
 ```
+
+---
+
+## 代码待办（可继续开发）
+
+（暂无 — 见下方已完成与人工验证暂缓）
 
 ---
 
 ## 已完成（近期）
 
-- `/metrics` v1：全局 scrape + RLS bypass；`GET /api/v1/metrics/prometheus` 租户范围 + `space_id` 标签
-- `make postgres-rls-e2e` + e2e 脚本 RLS 阶段；Doctor **M3-07**（`ASH_DATABASE_APP_URL`）；`TestPostgresRLSE2EAfterMigrate`
-- `alerts` / `releases` / `improve` 服务 `WithContext` + `alertsFor`/`releasesFor`/`improveFor` API 接线
-- `runs` / `events` / `ci` 服务 `WithContext` + `runsFor`/`eventsFor`/`ciFor` API 接线
-- `memory` / `rag` 服务 `WithContext` + API 传入请求上下文；`store.Open` 优先 `ASH_DATABASE_APP_URL`
-- `ash_app` / `ash_rls_tester` 角色 DDL + `make postgres-roles`；M3-06 在 `RLS_FORCE` 时校验 `ash_app`
-- org:admin `GET /orgs|/spaces` RLS bypass + `tenant.rls_bypass` 审计；metrics `OverviewContext`
-- Postgres RLS 接线：`dbFor(c)` 覆盖 secrets/compliance/platform/approvals 等；Doctor **M3-06**；`make test-rls`
-- Postgres RLS 骨架：`ASH_POSTGRES_RLS` / `ASH_POSTGRES_RLS_FORCE`；`ash_space_*` 策略；迁移 bypass
-- Postgres E2E 脚本修复：种子阶段 sqlite-only、schema 重置、M3-04 优先执行；`postgres-up` 端口/镜像回退
-- `/readyz` 返回 `dialect`（sqlite/postgres）；集成探针 `TestPostgresReadyzProbe`
-- KPI-08 SSE 稳定率：`/runs/{id}/stream` 写入 `stream.session_opened/closed/failed` 审计；metrics 按空间聚合
-- M3 API 租户隔离：`requireRequestSpace` / `requireTargetSpace` + `spaceForParam` 强制校验
-- Worker 启动自动读取 `.ash/migration/dual-write.json`（`ASH_DUAL_WRITE_POSTGRES_URL` 优先）
-- `docker-compose.postgres.yml` + `scripts/postgres-{up,down,e2e-migrate}.sh`
-- GitHub Actions CI 门禁 + manual/nightly Postgres e2e workflow
-- ExecGo health 分类输出 + Doctor M3-05 live smoke
-- GitHub repo connection、CI run 摘要、CI 失败确定性诊断 API
-- KPI overview API 与 `/ui/metrics` 控制台页面
-- CI 诊断历史、job 同步、采纳/驳回 API 与 `/ui/ci`
-- Feedback 分类/状态/严重级别、低分站内告警与 `/ui/feedback`
-- Alert rules/evaluate/trace、DB 派生 `/metrics` 与 `/ui/observability`
-- Release record/checklist/gate/rollback drill API 与 `/ui/releases`
+- `runs.Service.eventsFor` 无限递归修复（审批/取消路径 stack overflow）；`openapi-check` 网络受限时自动重试（GOSUMDB=off + GOPROXY 镜像）
+- API 错误码表：`doc/api/error-codes.md`、`internal/apicodes` 目录校验；CI 接入 `make openapi-check`
+- OpenAPI 对齐：`doc/api/openapi-alignment.md`、`internal/openapicheck`、`make openapi-check`；手写契约已补全全部 `/api/v1` 实现端点
+- Scale readiness：`lastMigrationSyncError` / `lastMigrationSyncErrorAtMs`；`migrate sync` 失败写入 `SyncState` 并成功后清空
+- Scale readiness：`workerConnectionRole`、`runtimeDsnHint`、双写影子库脱敏 URL；M3 §3.4 PgBouncer 指引
+- `metrics` 服务 `WithContext` + `metricsFor(c)`；OpenAPI 草稿补充 `/metrics/prometheus`
+- TODO 重组：人工验证 H-01..H-09 单列暂缓
+- KPI-07/KPI-10：`run_events` / `run_steps` 经 `runs.space_id` 租户过滤；`make postgres-rds-e2e`
+- `/metrics` v1：全局 scrape + RLS bypass；`GET /api/v1/metrics/prometheus` 租户范围
+- Postgres RLS + `ash_app` + Doctor M3-06/07 + e2e 脚本
+- 云 RDS 清单 `doc/checklists/postgres-rds-e2e.md`
+- PRD 前四项 + 后四项 MVP

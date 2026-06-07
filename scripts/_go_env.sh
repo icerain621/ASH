@@ -1,5 +1,18 @@
 # shellcheck shell=bash
 # Source from bash scripts when GOPATH/GOMODCACHE may be unset (Git Bash + make).
+
+_ash_go_meets_mod() {
+  local root="${1:?root required}"
+  local need ver
+  need="$(awk '/^go / {print $2; exit}' "$root/go.mod")"
+  [[ -z "$need" ]] && return 0
+  command -v go >/dev/null 2>&1 || return 1
+  # Must inspect the installed toolchain (local), not GOTOOLCHAIN=auto wrapper version.
+  ver="$(GOTOOLCHAIN=local go env GOVERSION 2>/dev/null | sed 's/^go//')"
+  [[ -z "$ver" ]] && return 1
+  [[ "$(printf '%s\n' "$need" "$ver" | sort -V | tail -n1)" == "$ver" ]]
+}
+
 _ash_go_env_bootstrap() {
   local root="${1:?root required}"
   if [[ -z "${GOPATH:-}" ]]; then
@@ -32,5 +45,9 @@ _ash_go_env_bootstrap() {
       mkdir -p "$GOTMPDIR" 2>/dev/null || true
       export GOTMPDIR TMPDIR="$GOTMPDIR" TEMP="$GOTMPDIR" TMP="$GOTMPDIR"
     fi
+  fi
+  # When local Go already satisfies go.mod, avoid downloading golang.org/toolchain (offline-friendly).
+  if [[ -z "${GOTOOLCHAIN:-}" ]] && _ash_go_meets_mod "$root"; then
+    export GOTOOLCHAIN=local
   fi
 }

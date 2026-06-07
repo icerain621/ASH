@@ -1,0 +1,187 @@
+// Package apicodes documents stable HTTP API error codes returned as {"error":{"code","message"}}.
+package apicodes
+
+// Entry describes one error code.
+type Entry struct {
+	Domain  string
+	Summary string
+}
+
+// Catalog is the authoritative list of API error codes (M0+).
+// New errorBody("CODE", ...) usages must register here; apicodes tests enforce parity.
+var Catalog = map[string]Entry{
+	// common / authz
+	"INVALID_REQUEST":          {Domain: "common", Summary: "Request body or parameters failed validation"},
+	"FORBIDDEN":                {Domain: "authz", Summary: "Authenticated but missing role or permission"},
+	"UNAUTHORIZED":             {Domain: "auth", Summary: "Missing or invalid bearer token / actor"},
+	"SPACE_ACCESS_DENIED":      {Domain: "authz", Summary: "Actor cannot access the requested space"},
+	"PERMISSION_CHECK_FAILED":  {Domain: "authz", Summary: "Permission evaluation failed"},
+	"PERMISSION_LOOKUP_FAILED": {Domain: "authz", Summary: "Failed to load actor permissions"},
+	"RUN_SCOPE_CHECK_FAILED":   {Domain: "authz", Summary: "Failed to verify run belongs to active space"},
+
+	// auth
+	"INVALID_CREDENTIALS":    {Domain: "auth", Summary: "Email/password mismatch"},
+	"USER_DISABLED":        {Domain: "auth", Summary: "User account is not active"},
+	"USER_NOT_FOUND":         {Domain: "auth", Summary: "Authenticated user record not found"},
+	"LOGIN_SCOPE_FAILED":     {Domain: "auth", Summary: "Failed to resolve login space membership"},
+	"TOKEN_SIGN_FAILED":      {Domain: "auth", Summary: "Failed to sign session JWT"},
+	"WEAK_PASSWORD":          {Domain: "auth", Summary: "Password does not meet minimum length"},
+	"PASSWORD_HASH_FAILED":   {Domain: "auth", Summary: "Failed to hash password"},
+	"PASSWORD_UPDATE_FAILED": {Domain: "auth", Summary: "Failed to persist password change"},
+	"SPACE_LOOKUP_FAILED":    {Domain: "auth", Summary: "Failed to load space for session"},
+
+	// runs
+	"RUN_NOT_FOUND":           {Domain: "runs", Summary: "Run id not found"},
+	"RUN_CREATE_FAILED":       {Domain: "runs", Summary: "Failed to create or start run"},
+	"RUN_LIST_FAILED":         {Domain: "runs", Summary: "Failed to list runs"},
+	"RUN_CONTROL_FAILED":      {Domain: "runs", Summary: "Resume/replay/cancel operation failed"},
+	"RUN_NOT_RESUMABLE":       {Domain: "runs", Summary: "Run status does not allow resume"},
+	"RUN_META_MISSING":        {Domain: "runs", Summary: "Run metadata required for control action is missing"},
+	"INVALID_REPLAY_MODE":     {Domain: "runs", Summary: "Replay mode must be exact or latest_memory"},
+	"RUN_LOOKUP_FAILED":       {Domain: "runs", Summary: "Failed to load run for provenance"},
+	"RUN_TIMELINE_NOT_FOUND":  {Domain: "runs", Summary: "Run timeline not available"},
+	"EVENT_LIST_FAILED":       {Domain: "runs", Summary: "Failed to list run events for SSE"},
+	"SSE_UNSUPPORTED":         {Domain: "runs", Summary: "Response writer does not support streaming"},
+	"TOOL_CALL_LIST_FAILED":   {Domain: "runs", Summary: "Failed to list tool calls"},
+	"AGENT_TASK_LIST_FAILED":  {Domain: "runs", Summary: "Failed to list agent tasks"},
+	"ARTIFACTS_NOT_FOUND":     {Domain: "runs", Summary: "Run artifacts manifest not found"},
+	"ARTIFACT_ACCESS_NOT_FOUND":   {Domain: "runs", Summary: "Artifact access URL could not be built"},
+	"CHECKPOINT_LIST_NOT_FOUND":   {Domain: "runs", Summary: "Run checkpoints not found"},
+	"CHECKPOINT_ACCESS_NOT_FOUND": {Domain: "runs", Summary: "Checkpoint access URL could not be built"},
+
+	// rules / scenarios
+	"SCENARIO_NOT_FOUND": {Domain: "rules", Summary: "Scenario name/version not loaded"},
+
+	// memory
+	"MEMORY_CREATE_FAILED":       {Domain: "memory", Summary: "Failed to create memory candidate"},
+	"MEMORY_LIST_FAILED":         {Domain: "memory", Summary: "Failed to list memory candidates"},
+	"MEMORY_NOT_FOUND":           {Domain: "memory", Summary: "Memory record or candidate not found"},
+	"MEMORY_SCOPE_CHECK_FAILED":  {Domain: "memory", Summary: "Failed to verify memory belongs to space"},
+	"MEMORY_REVIEW_FAILED":       {Domain: "memory", Summary: "Memory review decision failed"},
+	"MEMORY_QUERY_FAILED":        {Domain: "memory", Summary: "Memory query failed"},
+	"MEMORY_HIT_FAILED":          {Domain: "memory", Summary: "Failed to record memory hit-used"},
+
+	// rag
+	"RAG_INDEX_FAILED": {Domain: "rag", Summary: "Repository index build failed"},
+	"RAG_QUERY_FAILED": {Domain: "rag", Summary: "Retrieval query failed"},
+
+	// model router
+	"MODEL_USAGE_RECORD_FAILED": {Domain: "model", Summary: "Failed to persist model usage row"},
+
+	// tool / mcp
+	"MCP_TOOL_LIST_FAILED":   {Domain: "tool", Summary: "Failed to list MCP tools"},
+	"MCP_TOOL_CREATE_FAILED": {Domain: "tool", Summary: "Failed to register MCP tool"},
+
+	// improve
+	"BASELINE_NOT_READY":        {Domain: "improve", Summary: "Baseline run not finished for proposal"},
+	"IMPROVE_CREATE_FAILED":     {Domain: "improve", Summary: "Failed to create improvement proposal"},
+	"IMPROVE_LIST_FAILED":       {Domain: "improve", Summary: "Failed to list proposals"},
+	"IMPROVE_GET_FAILED":        {Domain: "improve", Summary: "Failed to load proposal"},
+	"PROPOSAL_NOT_FOUND":        {Domain: "improve", Summary: "Proposal id not found"},
+	"INVALID_STATE":             {Domain: "improve", Summary: "Proposal not in required status"},
+	"IMPROVE_EXPERIMENT_FAILED": {Domain: "improve", Summary: "Experiment replay failed"},
+	"IMPROVE_CANARY_FAILED":     {Domain: "improve", Summary: "Canary rollout failed"},
+	"IMPROVE_PROMOTE_FAILED":    {Domain: "improve", Summary: "Promotion failed"},
+	"IMPROVE_ROLLBACK_FAILED":   {Domain: "improve", Summary: "Rollback failed"},
+
+	// ci / repo
+	"PLAINTEXT_TOKEN_REJECTED":      {Domain: "ci", Summary: "Repo connection must use secretId, not plaintext token"},
+	"INVALID_SECRET_REFERENCE":      {Domain: "ci", Summary: "secretId not found or inactive in space"},
+	"REPO_CONNECTION_CREATE_FAILED": {Domain: "ci", Summary: "Failed to create repo connection"},
+	"REPO_CONNECTION_LIST_FAILED":   {Domain: "ci", Summary: "Failed to list repo connections"},
+	"CI_RUN_LIST_FAILED":            {Domain: "ci", Summary: "Failed to list CI runs"},
+	"CI_JOB_LIST_FAILED":            {Domain: "ci", Summary: "Failed to list CI jobs"},
+	"CI_DIAGNOSE_FAILED":            {Domain: "ci", Summary: "CI failure diagnosis failed"},
+	"CI_DIAGNOSIS_LIST_FAILED":      {Domain: "ci", Summary: "Failed to list CI diagnoses"},
+	"CI_DIAGNOSIS_DECISION_FAILED":  {Domain: "ci", Summary: "Failed to adopt/dismiss diagnosis"},
+	"INVALID_FROM":                  {Domain: "metrics", Summary: "metrics overview from timestamp invalid"},
+	"INVALID_TO":                    {Domain: "metrics", Summary: "metrics overview to timestamp invalid"},
+	"METRICS_OVERVIEW_FAILED":       {Domain: "metrics", Summary: "KPI overview query failed"},
+
+	// observability
+	"ALERT_LIST_FAILED":        {Domain: "observability", Summary: "Failed to list alert events"},
+	"ALERT_RULE_LIST_FAILED":   {Domain: "observability", Summary: "Failed to list alert rules"},
+	"ALERT_RULE_UPDATE_FAILED": {Domain: "observability", Summary: "Failed to update alert rules"},
+	"ALERT_EVALUATE_FAILED":    {Domain: "observability", Summary: "Alert rule evaluation failed"},
+	"TRACE_LOOKUP_FAILED":      {Domain: "observability", Summary: "Trace-linked record lookup failed"},
+	"WATERFALL_NOT_FOUND":      {Domain: "observability", Summary: "Run waterfall not found"},
+	"QUALITY_METRIC_LIST_FAILED": {Domain: "observability", Summary: "Failed to list quality metrics"},
+
+	// feedback
+	"FEEDBACK_CREATE_FAILED": {Domain: "feedback", Summary: "Failed to create feedback"},
+	"FEEDBACK_LIST_FAILED":   {Domain: "feedback", Summary: "Failed to list feedback"},
+	"FEEDBACK_NOT_FOUND":     {Domain: "feedback", Summary: "Feedback id not found"},
+	"FEEDBACK_UPDATE_FAILED": {Domain: "feedback", Summary: "Failed to update feedback"},
+	"FEEDBACK_RELOAD_FAILED": {Domain: "feedback", Summary: "Failed to reload feedback after update"},
+
+	// orgs / spaces / permissions
+	"ORG_LIST_FAILED":                {Domain: "platform", Summary: "Failed to list organizations"},
+	"ORG_CREATE_FAILED":              {Domain: "platform", Summary: "Failed to create organization"},
+	"ORG_NOT_FOUND":                  {Domain: "platform", Summary: "Organization not found"},
+	"SPACE_LIST_FAILED":              {Domain: "platform", Summary: "Failed to list spaces"},
+	"SPACE_CREATE_FAILED":            {Domain: "platform", Summary: "Failed to create space"},
+	"SPACE_NOT_FOUND":                {Domain: "platform", Summary: "Space not found"},
+	"ROLE_LIST_FAILED":               {Domain: "platform", Summary: "Failed to list roles"},
+	"ROLE_CREATE_FAILED":             {Domain: "platform", Summary: "Failed to create role"},
+	"ROLE_NOT_FOUND":                 {Domain: "platform", Summary: "Role not found"},
+	"ROLE_SCOPE_MISMATCH":            {Domain: "platform", Summary: "Role org does not match space org"},
+	"MEMBER_LIST_FAILED":             {Domain: "platform", Summary: "Failed to list space members"},
+	"MEMBER_CREATE_FAILED":           {Domain: "platform", Summary: "Failed to add space member"},
+	"RESOURCE_SCOPE_LIST_FAILED":     {Domain: "platform", Summary: "Failed to list resource scopes"},
+	"RESOURCE_SCOPE_NOT_FOUND":       {Domain: "platform", Summary: "Resource scope not found"},
+	"RESOURCE_SCOPE_UPDATE_FAILED":   {Domain: "platform", Summary: "Failed to update resource scope"},
+	"INVALID_POLICY":                 {Domain: "platform", Summary: "Scenario policy JSON invalid"},
+	"INVALID_RESOURCE_TYPE":          {Domain: "platform", Summary: "Resource scope type does not support update"},
+	"PERMISSION_MATRIX_FAILED":       {Domain: "platform", Summary: "Failed to build permission matrix"},
+
+	// audit
+	"AUDIT_EXPORT_CREATE_FAILED":  {Domain: "audit", Summary: "Failed to create audit export job"},
+	"AUDIT_EXPORT_FAILED":         {Domain: "audit", Summary: "Audit export processing failed"},
+	"AUDIT_EXPORT_LIST_FAILED":    {Domain: "audit", Summary: "Failed to list audit exports"},
+	"AUDIT_EXPORT_NOT_FOUND":      {Domain: "audit", Summary: "Audit export id not found"},
+	"AUDIT_EXPORT_NOT_READY":      {Domain: "audit", Summary: "Audit export not ready for download"},
+	"AUDIT_EXPORT_ACCESS_FAILED":  {Domain: "audit", Summary: "Failed to build audit export access URL"},
+	"AUDIT_LOG_LIST_FAILED":       {Domain: "audit", Summary: "Failed to list audit logs"},
+	"AUDIT_POLICY_GET_FAILED":     {Domain: "audit", Summary: "Failed to load audit policy"},
+	"INVALID_AUDIT_POLICY":          {Domain: "audit", Summary: "Audit retention policy out of range"},
+	"AUDIT_POLICY_LOCKED":         {Domain: "audit", Summary: "Audit policy is locked"},
+	"AUDIT_POLICY_UPDATE_FAILED":  {Domain: "audit", Summary: "Failed to update audit policy"},
+	"AUDIT_RETENTION_COUNT_FAILED":  {Domain: "audit", Summary: "Failed to count rows for retention"},
+	"AUDIT_RETENTION_APPLY_FAILED":  {Domain: "audit", Summary: "Failed to apply audit retention"},
+
+	// plugins
+	"PLUGIN_LIST_FAILED":         {Domain: "plugins", Summary: "Failed to list plugins"},
+	"PLUGIN_REGISTER_FAILED":     {Domain: "plugins", Summary: "Failed to register plugin"},
+	"PLUGIN_NOT_FOUND":           {Domain: "plugins", Summary: "Plugin id not found"},
+	"PLUGIN_VERIFY_FAILED":       {Domain: "plugins", Summary: "Plugin ABI verification failed"},
+	"PLUGIN_ABI_PROFILE_FAILED":  {Domain: "plugins", Summary: "Failed to load plugin ABI profile"},
+
+	// secrets
+	"SECRET_LIST_FAILED":      {Domain: "secrets", Summary: "Failed to list secrets"},
+	"INVALID_SECRET_NAME":     {Domain: "secrets", Summary: "Secret name format invalid"},
+	"SECRET_ALREADY_EXISTS":   {Domain: "secrets", Summary: "Secret name already used in space"},
+	"SECRET_LOOKUP_FAILED":    {Domain: "secrets", Summary: "Secret lookup failed"},
+	"SECRET_ENCRYPT_FAILED":   {Domain: "secrets", Summary: "Secret encryption failed"},
+	"INVALID_SECRET_SCOPE":    {Domain: "secrets", Summary: "Secret scope JSON invalid"},
+	"SECRET_CREATE_FAILED":    {Domain: "secrets", Summary: "Failed to create secret"},
+	"SECRET_ROTATE_FAILED":    {Domain: "secrets", Summary: "Failed to rotate secret"},
+	"SECRET_DELETE_FAILED":    {Domain: "secrets", Summary: "Failed to delete secret"},
+	"SECRET_NOT_FOUND":        {Domain: "secrets", Summary: "Secret id not found"},
+
+	// releases
+	"RELEASE_CREATE_FAILED":           {Domain: "releases", Summary: "Failed to create release record"},
+	"RELEASE_LIST_FAILED":             {Domain: "releases", Summary: "Failed to list releases"},
+	"RELEASE_CHECKLIST_FAILED":        {Domain: "releases", Summary: "Failed to load release checklist"},
+	"RELEASE_CHECKLIST_UPDATE_FAILED": {Domain: "releases", Summary: "Failed to update checklist items"},
+	"RELEASE_GATE_FAILED":             {Domain: "releases", Summary: "Release gate evaluation failed"},
+	"ROLLBACK_DRILL_CREATE_FAILED":    {Domain: "releases", Summary: "Failed to record rollback drill"},
+
+	// doctor / compliance
+	"DOCTOR_FAILED":     {Domain: "doctor", Summary: "Doctor suite execution failed"},
+	"REPORT_NOT_FOUND":  {Domain: "doctor", Summary: "Doctor report id not found"},
+
+	// approvals
+	"APPROVAL_LIST_FAILED":   {Domain: "approvals", Summary: "Failed to list approval requests"},
+	"APPROVAL_REJECT_FAILED": {Domain: "approvals", Summary: "Failed to reject approval"},
+	"APPROVAL_NOT_FOUND":     {Domain: "approvals", Summary: "Approval id not found"},
+}

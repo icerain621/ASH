@@ -24,7 +24,8 @@
 
 ## api/ / db/
 
-- `api/openapi-ash-v1.yaml` — OpenAPI 3.0 草稿
+- `api/openapi-ash-v1.yaml` — OpenAPI 3.0 产品契约草稿（`/api/v1/*` 与 swag 对齐策略见 `api/openapi-alignment.md`）
+- `api/error-codes.md` — HTTP 错误码表（`internal/apicodes` 机器校验）
 - `db/ash_mvp_schema.sql` — MySQL DDL
 
 ## reports/

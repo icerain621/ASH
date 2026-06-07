@@ -23,6 +23,9 @@ jobs:
       - name: Go test all packages
         run: go test ./...
 
+      - name: OpenAPI contract check
+        run: make openapi-check
+
       - name: Make test
         run: make test
 

@@ -187,7 +187,7 @@ func (s *Service) eventsFor() *events.Service {
 		return nil
 	}
 	if s.ctx != nil {
-		return s.eventsFor().WithContext(s.ctx)
+		return s.events.WithContext(s.ctx)
 	}
 	return s.events
 }

@@ -48,10 +48,11 @@ func (h *Handler) prometheusMetrics(c *gin.Context) {
 
 // GetMetricsPrometheus godoc
 // @Summary Get tenant-scoped Prometheus metrics
+// @Description DB-derived Prometheus text for the active space (requires observability:read). Global ops scrape uses GET /metrics.
 // @Tags metrics
-// @Produce text/plain
+// @Produce plain
 // @Param spaceId query string false "space id (defaults to session space)"
-// @Success 200 {string} string
+// @Success 200 {string} string "Prometheus text"
 // @Failure 403 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/metrics/prometheus [get]

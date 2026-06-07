@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+# Cloud RDS E2E: runs doc/checklists/postgres-rds-e2e.md appendix A (no Docker required).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "$ROOT"
+# shellcheck source=_go_env.sh
+source "$ROOT/scripts/_go_env.sh"
+_ash_go_env_bootstrap "$ROOT"
+
+if [[ -z "${ASH_DATABASE_URL:-}" ]]; then
+  echo "ASH_DATABASE_URL is required (migrator/owner URL)" >&2
+  echo "See doc/checklists/postgres-rds-e2e.md" >&2
+  exit 2
+fi
+
+export ASH_DATA_DIR="${ASH_DATA_DIR:-.ash}"
+export ASH_SQLITE_PATH="${ASH_SQLITE_PATH:-$ASH_DATA_DIR/ash.db}"
+export ASH_MIGRATE_E2E="${ASH_MIGRATE_E2E:-1}"
+export ASH_POSTGRES_RLS="${ASH_POSTGRES_RLS:-1}"
+export ASH_POSTGRES_RLS_FORCE="${ASH_POSTGRES_RLS_FORCE:-1}"
+
+echo "== postgres RDS e2e (checklist appendix A) =="
+echo "ASH_DATABASE_URL=${ASH_DATABASE_URL}"
+echo "ASH_DATABASE_APP_URL=${ASH_DATABASE_APP_URL:-<unset>}"
+echo "ASH_SQLITE_PATH=${ASH_SQLITE_PATH}"
+
+bash scripts/postgres-smoke.sh
+bash scripts/postgres-ensure-app-role.sh
+
+go run ./cmd/cli migrate plan  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
+go run ./cmd/cli migrate copy  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
+go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
+
+go run ./cmd/cli doctor --suite M3 --format md
+go test -tags=integration ./internal/store/ -run TestPostgresRLS -count=1
+go run ./cmd/cli doctor --suite ALL --agent static --format md
+
+echo "OK cloud RDS e2e (see doc/checklists/postgres-rds-e2e.md for manual §7 sampling)"
