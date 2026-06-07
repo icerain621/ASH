@@ -15,18 +15,28 @@ func ParseYAML(raw []byte) (*Document, error) {
 	return &doc, nil
 }
 
-// ParseAndValidate parses YAML and runs semantic validation.
+// ParseAndValidate parses YAML, validates against the JSON Schema, then runs semantic checks.
 func ParseAndValidate(raw []byte) ValidationResult {
+	res := ValidationResult{OK: true}
+	if issues := ValidateSchema(raw); len(issues) > 0 {
+		res.OK = false
+		res.Issues = append(res.Issues, issues...)
+	}
 	doc, err := ParseYAML(raw)
 	if err != nil {
-		return ValidationResult{
-			OK: false,
-			Issues: []ValidationIssue{{
-				Path:    "$",
-				Code:    "YAML_PARSE_ERROR",
-				Message: err.Error(),
-			}},
-		}
+		res.OK = false
+		res.Issues = append(res.Issues, ValidationIssue{
+			Path:    "$",
+			Code:    "YAML_PARSE_ERROR",
+			Message: err.Error(),
+		})
+		return res
 	}
-	return Validate(doc)
+	sem := Validate(doc)
+	if !sem.OK {
+		res.OK = false
+		res.Issues = append(res.Issues, sem.Issues...)
+	}
+	res.Doc = doc
+	return res
 }

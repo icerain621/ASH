@@ -55,6 +55,11 @@ func (s *Service) Append(runID, traceID, eventType, severity string, payload any
 	if err != nil {
 		return nil, fmt.Errorf("marshal payload: %w", err)
 	}
+	if PayloadValidationEnabled() {
+		if err := ValidatePayload(eventType, payloadBytes); err != nil {
+			return nil, err
+		}
+	}
 
 	var env Envelope
 	err = s.gdb().Transaction(func(tx *gorm.DB) error {

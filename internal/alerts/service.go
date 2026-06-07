@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/observability/derive"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -301,6 +303,13 @@ func (s *Service) PrometheusTextWith(opts PrometheusOptions) (string, error) {
 		b.WriteString(fmt.Sprintf("alerts_active{space_id=%q} %d\n", label(opts.SpaceID), activeAlerts))
 	} else {
 		b.WriteString(fmt.Sprintf("alerts_active %d\n", activeAlerts))
+	}
+	if os.Getenv("ASH_METRICS_EVENT_REPLAY") == "1" {
+		events, err := derive.LoadFromDB(s.gdb(), derive.LoadOptions{SpaceID: opts.SpaceID})
+		if err == nil && len(events) > 0 {
+			b.WriteString("\n")
+			b.WriteString(derive.Replay(events).PrometheusText())
+		}
 	}
 	return b.String(), nil
 }

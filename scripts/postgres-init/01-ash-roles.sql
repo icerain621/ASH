@@ -1,4 +1,5 @@
 -- Dev / e2e Postgres roles for ASH tenant RLS (idempotent).
+-- Canonical DDL also ships in golang-migrate 000014_ash_app_grants.up.sql.
 -- ash_app: production-style app role (NOBYPASSRLS); use with ASH_POSTGRES_RLS_FORCE=1.
 -- ash_rls_tester: integration tests that SET LOCAL ROLE to verify isolation.
 

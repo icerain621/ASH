@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ash.obs/v0.1",
+  "title": "ASH Observability config v0.1",
+  "type": "object",
+  "required": ["version"],
+  "additionalProperties": false,
+  "properties": {
+    "version": {
+      "type": "string",
+      "const": "ash.obs/v0.1"
+    },
+    "redaction": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "denyKeys": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "maskValue": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sampling": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "eventExportRate": { "type": "number", "minimum": 0, "maximum": 1 }
+      }
+    },
+    "export": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "allowOutbound": { "type": "boolean" }
+      }
+    },
+    "plugins": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "prometheus": { "$ref": "#/$defs/prometheusPlugin" },
+        "otel": { "$ref": "#/$defs/otelPlugin" },
+        "console": { "$ref": "#/$defs/consolePlugin" }
+      }
+    }
+  },
+  "$defs": {
+    "prometheusPlugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "path": { "type": "string", "minLength": 1, "pattern": "^/" }
+      }
+    },
+    "otelPlugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "endpoint": { "type": "string" },
+        "insecure": { "type": "boolean" }
+      }
+    },
+    "consolePlugin": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error"]
+        }
+      }
+    }
+  }
+}

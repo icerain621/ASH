@@ -12,8 +12,8 @@
 ## 2. 插件配置（ash.obs/v0.1）
 **位置建议**：`config/ash-observability.yaml`（或 `~/.ash/observability.yaml`）。
 
-**TODO（负责人：后端）**：将 `ash.obs/v0.1` JSON Schema 固化在仓库中并做运行时校验。  
-**验收方式**：加载 10 个非法配置样例，报错定位准确；敏感字段不外发。
+**JSON Schema**：`internal/observability/config/schemas/ash.obs.v0.1.schema.json`；默认文件 `config/ash-observability.yaml`；Worker 启动时 `obsconfig.Load()` 校验。  
+**验收方式**：`go test ./internal/observability/config -run ValidateSchema`（含 10+ 非法样例）；`allowOutbound=true` 须 `redaction.enabled=true`。
 
 ## 3. 核心指标清单（M0 必须）
 > 命名建议采用 Prometheus 风格。

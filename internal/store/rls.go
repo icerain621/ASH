@@ -142,9 +142,24 @@ func quoteIdent(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
-// ApplyPostgresRLSPolicies enables RLS and (re)creates tenant isolation policies.
+// RLSPoliciesSQLRevision is the golang-migrate version that installs tenant policies.
+const RLSPoliciesSQLRevision = 13
+
+// ApplyPostgresRLSPolicies ensures tenant RLS is active. Policies are created by SQL
+// revision 000013 when present; this path only backfills legacy databases and applies FORCE.
 func ApplyPostgresRLSPolicies(db *DB) error {
 	if db == nil || db.Dialect() != "postgres" {
+		return nil
+	}
+	want := int64(PostgresRLSExpectedPolicyCount())
+	installed, err := CountPostgresRLSPolicies(db)
+	if err != nil {
+		return err
+	}
+	if installed >= want {
+		if PostgresRLSForce() {
+			return applyPostgresRLSForceAll(db)
+		}
 		return nil
 	}
 	force := PostgresRLSForce()
@@ -156,6 +171,21 @@ func ApplyPostgresRLSPolicies(db *DB) error {
 	for _, table := range postgresRLSRunScopedTables() {
 		if err := applyPostgresRLSPolicy(db, table, "run_id", postgresRLSRunPolicyExpr(), force); err != nil {
 			return err
+		}
+	}
+	return nil
+}
+
+func applyPostgresRLSForceAll(db *DB) error {
+	tables := make([]string, 0, PostgresRLSExpectedPolicyCount())
+	for _, tbl := range PostgresRLSTables() {
+		tables = append(tables, tbl.Table)
+	}
+	tables = append(tables, postgresRLSRunScopedTables()...)
+	for _, table := range tables {
+		qTable := quoteIdent(table)
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY", qTable)).Error; err != nil {
+			return fmt.Errorf("force rls on %s: %w", table, err)
 		}
 	}
 	return nil

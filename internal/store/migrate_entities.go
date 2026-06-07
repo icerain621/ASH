@@ -1,6 +1,10 @@
 package store
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
+)
 
 // migrationEntity describes one table participating in sqlite→postgres copy.
 type migrationEntity struct {
@@ -30,12 +34,22 @@ func VerifyMigrationSchema(db *DB) error {
 	if db == nil || db.DB == nil {
 		return fmt.Errorf("database is nil")
 	}
+	if db.Dialect() == "postgres" && SQLMigrationsEnabledForDB() {
+		if err := sqlmigrations.VerifyApplied(RuntimeDatabaseURL()); err != nil {
+			return err
+		}
+	}
 	for _, ent := range migrationEntities() {
 		if !db.Migrator().HasTable(ent.model) {
 			return fmt.Errorf("missing table %s", ent.table)
 		}
 	}
 	return nil
+}
+
+// SQLMigrationsEnabledForDB reports whether versioned SQL migrations are active.
+func SQLMigrationsEnabledForDB() bool {
+	return sqlmigrations.SQLMigrationsEnabled("postgres")
 }
 
 func migrationEntities() []migrationEntity {

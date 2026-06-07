@@ -21,6 +21,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
@@ -1165,6 +1166,7 @@ func (s *Service) m3SuiteCases() []CaseResult {
 			s.m3PostgresRLSPolicies(),
 			s.m3AppDatabaseRuntime(),
 			s.m3ExecGoLiveSmoke(),
+			s.m3SQLSchemaMode(),
 		}
 	}
 	return []CaseResult{
@@ -1175,6 +1177,7 @@ func (s *Service) m3SuiteCases() []CaseResult {
 		s.m3PostgresRLSPolicies(),
 		s.m3AppDatabaseRuntime(),
 		s.m3ExecGoLiveSmoke(),
+		s.m3SQLSchemaMode(),
 	}
 }
 
@@ -1394,6 +1397,60 @@ func (s *Service) m3PostgresRLSPolicies() CaseResult {
 			return res
 		}
 		res.Evidence = append(res.Evidence, Evidence{Kind: "appRole", Ref: "ash_app"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3SQLSchemaMode() CaseResult {
+	res := CaseResult{ID: "M3-08", Status: "fail"}
+	mode := sqlmigrations.Mode()
+	res.Evidence = append(res.Evidence, Evidence{Kind: "schemaMode", Ref: mode})
+	dialect := s.runs.DB().Dialect()
+	if dialect != "postgres" {
+		res.Status = "pass"
+		res.Message = "skipped: postgres-only sql migration version check"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: dialect})
+		return res
+	}
+	if !sqlmigrations.SQLMigrationsEnabled(dialect) {
+		res.Status = "pass"
+		res.Message = "skipped: ASH_SCHEMA_MODE=automigrate (sql migrations disabled)"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "automigrate"})
+		return res
+	}
+	pgURL := strings.TrimSpace(store.RuntimeDatabaseURL())
+	if pgURL == "" {
+		pgURL = strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	}
+	if pgURL == "" {
+		res.Message = "ASH_DATABASE_URL required for sql migration version check"
+		return res
+	}
+	v, dirty, err := sqlmigrations.VersionPostgres(pgURL)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if dirty {
+		res.Message = fmt.Sprintf("schema_migrations dirty at version %d", v)
+		return res
+	}
+	expected := sqlmigrations.ExpectedVersion()
+	if v < expected {
+		res.Message = fmt.Sprintf("sql migration version %d < expected %d", v, expected)
+		return res
+	}
+	res.Evidence = append(res.Evidence, Evidence{Kind: "sqlVersion", Ref: fmt.Sprintf("%d", v)})
+	if v >= store.RLSPoliciesSQLRevision {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "rlsSQL", Ref: fmt.Sprintf("revision>=%d", store.RLSPoliciesSQLRevision)})
+	}
+	if mode == sqlmigrations.SchemaModeSQL {
+		if sqlmigrations.AutoMigrateEnabled(dialect) {
+			res.Message = "ASH_SCHEMA_MODE=sql but AutoMigrate is still enabled"
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "autoMigrate", Ref: "disabled"})
 	}
 	res.Status = "pass"
 	return res

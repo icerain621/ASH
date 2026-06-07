@@ -33,6 +33,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/api"
 	_ "github.com/ash-repwiki/ash/internal/api/docs" // swag OpenAPI
 	"github.com/ash-repwiki/ash/internal/config"
+	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -40,6 +41,12 @@ import (
 
 func main() {
 	cfg := config.Load()
+	obsCfg, err := obsconfig.Load()
+	if err != nil {
+		log.Fatalf("observability config: %v", err)
+	}
+	log.Printf("observability: redaction=%v outbound=%v prometheus=%v",
+		obsCfg.Redaction.Enabled, obsCfg.Export.AllowOutbound, pluginEnabled(obsCfg.Plugins.Prometheus))
 
 	db, err := store.Open(cfg.DataDir)
 	if err != nil {
@@ -104,4 +111,8 @@ func trimLeadingColon(addr string) string {
 		return "localhost" + addr
 	}
 	return addr
+}
+
+func pluginEnabled(p *obsconfig.PrometheusPlugin) bool {
+	return p != nil && p.Enabled
 }

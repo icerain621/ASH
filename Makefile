@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan postgres-up postgres-down postgres-roles postgres-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -55,6 +55,9 @@ doctor:
 migrate-plan:
 	cd $(BACKEND_DIR) && go run ./cmd/cli migrate plan --postgres "$${ASH_DATABASE_URL}"
 
+migrate-schema:
+	cd $(BACKEND_DIR) && go run ./cmd/cli migrate schema up --postgres "$${ASH_DATABASE_URL}"
+
 postgres-up:
 	bash scripts/postgres-up.sh
 
@@ -66,6 +69,9 @@ postgres-roles:
 
 postgres-e2e:
 	bash scripts/postgres-e2e-migrate.sh
+
+postgres-sql-schema-e2e:
+	bash scripts/postgres-sql-schema-e2e.sh
 
 test-integration:
 	cd $(BACKEND_DIR) && ASH_MIGRATE_E2E=1 go test -tags=integration ./internal/api/ -run TestPostgresReadyzProbe -count=1

@@ -37,6 +37,11 @@ type ScaleReadinessResponse struct {
 	WorkerConnectionRole     string `json:"workerConnectionRole,omitempty"`
 	RuntimeDSNHint           string `json:"runtimeDsnHint,omitempty"`
 	DualWriteShadowURLHint   string `json:"dualWriteShadowUrlHint,omitempty"`
+	SchemaMode               string `json:"schemaMode,omitempty"`
+	SQLMigrationsEnabled     bool   `json:"sqlMigrationsEnabled,omitempty"`
+	AutoMigrateEnabled       bool   `json:"autoMigrateEnabled,omitempty"`
+	SQLMigrationVersion      uint   `json:"sqlMigrationVersion,omitempty"`
+	SQLMigrationExpected     uint   `json:"sqlMigrationExpected,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -111,5 +116,10 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		WorkerConnectionRole:       store.WorkerConnectionRole(),
 		RuntimeDSNHint:             dbProfile.DSNHint,
 		DualWriteShadowURLHint:     migSnap.DualWriteShadowURLHint,
+		SchemaMode:                 dbProfile.SchemaMode,
+		SQLMigrationsEnabled:       dbProfile.SQLMigrationsEnabled,
+		AutoMigrateEnabled:         dbProfile.AutoMigrateEnabled,
+		SQLMigrationVersion:        dbProfile.SQLMigrationVersion,
+		SQLMigrationExpected:       dbProfile.SQLMigrationExpected,
 	})
 }

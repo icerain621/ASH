@@ -13,6 +13,8 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
+
+	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
 
 type DB struct {
@@ -133,6 +135,18 @@ func resolveSQLiteFilePath(dataDir, rest string) string {
 }
 
 func (db *DB) migrate() error {
+	if sqlmigrations.SQLMigrationsEnabled(db.dialect) {
+		pgDSN := strings.TrimSpace(RuntimeDatabaseURL())
+		if pgDSN == "" {
+			return fmt.Errorf("postgres sql migrations require ASH_DATABASE_URL")
+		}
+		if _, err := sqlmigrations.ApplyPostgres(pgDSN); err != nil {
+			return fmt.Errorf("sql migrations: %w", err)
+		}
+	}
+	if !sqlmigrations.AutoMigrateEnabled(db.dialect) {
+		return db.ensureSchemaMeta()
+	}
 	if err := db.AutoMigrate(
 		&RunRecord{},
 		&RunStep{},
@@ -179,6 +193,10 @@ func (db *DB) migrate() error {
 	); err != nil {
 		return fmt.Errorf("automigrate: %w", err)
 	}
+	return db.ensureSchemaMeta()
+}
+
+func (db *DB) ensureSchemaMeta() error {
 	var meta SchemaMeta
 	res := db.First(&meta, "key = ?", "schema_version")
 	if res.Error == gorm.ErrRecordNotFound {

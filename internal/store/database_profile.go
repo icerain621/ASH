@@ -20,7 +20,12 @@ type DatabaseProfileInfo struct {
 	PostgresRLSEnabled bool   `json:"postgresRLSEnabled"`
 	PostgresRLSForce   bool   `json:"postgresRLSForce"`
 	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
-	DSNHint            string `json:"dsnHint,omitempty"`
+	DSNHint                string `json:"dsnHint,omitempty"`
+	SchemaMode             string `json:"schemaMode,omitempty"`
+	SQLMigrationsEnabled   bool   `json:"sqlMigrationsEnabled,omitempty"`
+	AutoMigrateEnabled     bool   `json:"autoMigrateEnabled,omitempty"`
+	SQLMigrationVersion    uint   `json:"sqlMigrationVersion,omitempty"`
+	SQLMigrationExpected   uint   `json:"sqlMigrationExpected,omitempty"`
 }
 
 // ParseDatabaseTarget resolves ASH_DATABASE_URL (or dev SQLite default).
@@ -52,6 +57,12 @@ func DatabaseProfile(dataDir, databaseURL string) (DatabaseProfileInfo, error) {
 		profile.DSNHint = redactDSN(target.DSN)
 		profile.PostgresRLSEnabled = PostgresRLSEnabled()
 		profile.PostgresRLSForce = PostgresRLSForce()
+		schema := SchemaProfile(target.Dialect, raw)
+		profile.SchemaMode = schema.Mode
+		profile.SQLMigrationsEnabled = schema.SQLMigrationsEnabled
+		profile.AutoMigrateEnabled = schema.AutoMigrateEnabled
+		profile.SQLMigrationVersion = schema.SQLMigrationVersion
+		profile.SQLMigrationExpected = schema.SQLMigrationExpected
 	}
 	return profile, nil
 }

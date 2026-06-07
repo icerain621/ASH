@@ -1,0 +1,312 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ash.events.payloads.tr0/v0.1",
+  "title": "ASH TR0 event payload schemas v0.1",
+  "type": "object",
+  "additionalProperties": false,
+  "properties": {},
+  "$defs": {
+    "run.started": {
+      "type": "object",
+      "required": ["scenario", "policyProfile", "inputsDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "scenario": {
+          "type": "object",
+          "required": ["name", "scenarioVersion"],
+          "additionalProperties": false,
+          "properties": {
+            "name": { "type": "string", "minLength": 1 },
+            "scenarioVersion": { "type": "string", "minLength": 1 }
+          }
+        },
+        "policyProfile": { "type": "string", "minLength": 1 },
+        "inputsDigest": { "type": "string", "minLength": 1 },
+        "repo": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "root": { "type": "string", "minLength": 1 },
+            "revision": { "type": "string" },
+            "branch": { "type": "string" }
+          }
+        }
+      }
+    },
+    "step.started": {
+      "type": "object",
+      "required": ["stepId", "role", "kind"],
+      "additionalProperties": false,
+      "properties": {
+        "stepId": { "type": "string", "minLength": 1 },
+        "role": { "type": "string", "minLength": 1 },
+        "kind": { "type": "string", "enum": ["llm", "agent", "tool_chain", "human"] }
+      }
+    },
+    "step.finished": {
+      "type": "object",
+      "required": ["stepId", "ok", "durationMs"],
+      "additionalProperties": false,
+      "properties": {
+        "stepId": { "type": "string", "minLength": 1 },
+        "ok": { "type": "boolean" },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "type": "string", "minLength": 1 },
+              "digest": { "type": "string" }
+            }
+          }
+        },
+        "memoryCandidates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["layer", "title"],
+            "additionalProperties": false,
+            "properties": {
+              "layer": { "type": "string", "minLength": 1 },
+              "title": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string", "minLength": 1 },
+            "message": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "run.checkpoint_saved": {
+      "type": "object",
+      "required": ["checkpointId", "stepId", "snapshotDigest", "strategy"],
+      "additionalProperties": false,
+      "properties": {
+        "checkpointId": { "type": "string", "minLength": 1 },
+        "stepId": { "type": "string", "minLength": 1 },
+        "snapshotDigest": { "type": "string", "minLength": 1 },
+        "strategy": { "type": "string", "enum": ["per_step", "per_tool", "manual"] }
+      }
+    },
+    "tool.called": {
+      "type": "object",
+      "required": ["tool", "risk", "timeoutMs", "argsDigest"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": { "type": "string", "minLength": 1 },
+        "risk": { "type": "string", "enum": ["safe", "restricted", "danger"] },
+        "timeoutMs": { "type": "number", "minimum": 0 },
+        "argsDigest": { "type": "string", "minLength": 1 }
+      }
+    },
+    "tool.result": {
+      "type": "object",
+      "required": ["tool", "ok", "durationMs"],
+      "additionalProperties": false,
+      "properties": {
+        "tool": { "type": "string", "minLength": 1 },
+        "ok": { "type": "boolean" },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "outputDigest": { "type": "string" },
+        "artifacts": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "type"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "type": "string", "minLength": 1 },
+              "digest": { "type": "string" }
+            }
+          }
+        },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string", "minLength": 1 },
+            "message": { "type": "string", "minLength": 1 },
+            "details": {}
+          }
+        }
+      }
+    },
+    "model.selected": {
+      "type": "object",
+      "required": ["providerId", "modelId", "caps"],
+      "additionalProperties": false,
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "caps": {
+          "type": "object",
+          "required": ["streaming", "toolCalling", "jsonSchema"],
+          "additionalProperties": false,
+          "properties": {
+            "streaming": { "type": "boolean" },
+            "toolCalling": { "type": "boolean" },
+            "jsonSchema": { "type": "boolean" },
+            "maxContextTokens": { "type": "number", "minimum": 0 }
+          }
+        },
+        "budget": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxTokens": { "type": "number", "minimum": 0 },
+            "maxCost": { "type": "number", "minimum": 0 },
+            "currency": { "type": "string" }
+          }
+        }
+      }
+    },
+    "model.usage": {
+      "type": "object",
+      "required": ["providerId", "modelId", "inTokens", "outTokens"],
+      "additionalProperties": false,
+      "properties": {
+        "providerId": { "type": "string", "minLength": 1 },
+        "modelId": { "type": "string", "minLength": 1 },
+        "inTokens": { "type": "number", "minimum": 0 },
+        "outTokens": { "type": "number", "minimum": 0 },
+        "costEstimated": { "type": "number", "minimum": 0 },
+        "currency": { "type": "string" }
+      }
+    },
+    "rag.query": {
+      "type": "object",
+      "required": ["queryDigest", "sources", "topK", "requireCitations"],
+      "additionalProperties": false,
+      "properties": {
+        "queryDigest": { "type": "string", "minLength": 1 },
+        "sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "enum": ["code", "docs", "memory", "artifacts"] }
+        },
+        "topK": { "type": "number", "minimum": 1 },
+        "requireCitations": { "type": "boolean" }
+      }
+    },
+    "rag.results": {
+      "type": "object",
+      "required": ["durationMs", "results"],
+      "additionalProperties": false,
+      "properties": {
+        "durationMs": { "type": "number", "minimum": 0 },
+        "results": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["ref"],
+            "additionalProperties": false,
+            "properties": {
+              "ref": { "type": "string", "minLength": 1 },
+              "digest": { "type": "string" },
+              "score": { "type": "number" }
+            }
+          }
+        },
+        "citationsMissing": { "type": "boolean" }
+      }
+    },
+    "policy.denied": {
+      "type": "object",
+      "required": ["target", "reason", "action"],
+      "additionalProperties": false,
+      "properties": {
+        "target": { "type": "string", "enum": ["tool", "model", "memory", "gate"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "action": { "type": "string", "enum": ["deny", "degrade", "require_human"] },
+        "ref": { "type": "string" }
+      }
+    },
+    "memory.candidate_created": {
+      "type": "object",
+      "required": ["candidateId", "layer", "evidenceCount", "sensitivity"],
+      "additionalProperties": false,
+      "properties": {
+        "candidateId": { "type": "string", "minLength": 1 },
+        "layer": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
+        "evidenceCount": { "type": "number", "minimum": 0 },
+        "sensitivity": { "type": "string", "enum": ["normal", "restricted", "secret"] }
+      }
+    },
+    "memory.reviewed": {
+      "type": "object",
+      "required": ["candidateId", "decision", "reason", "policyProfile"],
+      "additionalProperties": false,
+      "properties": {
+        "candidateId": { "type": "string", "minLength": 1 },
+        "decision": { "type": "string", "enum": ["approve", "reject", "deprecate"] },
+        "reason": { "type": "string", "minLength": 1 },
+        "policyProfile": { "type": "string", "minLength": 1 },
+        "latencyMs": { "type": "number", "minimum": 0 }
+      }
+    },
+    "run.finished": {
+      "type": "object",
+      "required": ["ok", "durationMs", "artifacts"],
+      "additionalProperties": false,
+      "properties": {
+        "ok": { "const": true },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "artifacts": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "required": ["id", "type", "digest"],
+            "additionalProperties": false,
+            "properties": {
+              "id": { "type": "string", "minLength": 1 },
+              "type": { "type": "string", "minLength": 1 },
+              "digest": { "type": "string", "minLength": 1 }
+            }
+          }
+        },
+        "metrics": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "toolFailures": { "type": "number", "minimum": 0 },
+            "citationMissing": { "type": "number", "minimum": 0 },
+            "recovered": { "type": "boolean" }
+          }
+        }
+      }
+    },
+    "run.failed": {
+      "type": "object",
+      "required": ["ok", "durationMs", "error"],
+      "additionalProperties": false,
+      "properties": {
+        "ok": { "const": false },
+        "durationMs": { "type": "number", "minimum": 0 },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "additionalProperties": false,
+          "properties": {
+            "code": { "type": "string", "minLength": 1 },
+            "message": { "type": "string", "minLength": 1 },
+            "recoverable": { "type": "boolean" }
+          }
+        },
+        "lastCheckpointId": { "type": "string" }
+      }
+    }
+  }
+}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
 
 func runMigrate(args []string) {
@@ -29,6 +30,8 @@ func runMigrate(args []string) {
 		runMigrateSync(args[1:])
 	case "dual-write":
 		runMigrateDualWrite(args[1:])
+	case "schema":
+		runMigrateSchema(args[1:])
 	default:
 		migrateUsage()
 		os.Exit(2)
@@ -44,6 +47,7 @@ Subcommands:
   verify     Fail when per-table row counts differ
   sync       Incremental upsert (uses .ash/migration/sync-state.json)
   dual-write enable|disable|status|sync
+  schema     Apply or inspect golang-migrate SQL revisions (Postgres)
 
 Flags (plan/copy/verify/sync):
   --data-dir <path>       ASH data dir (default: .ash)
@@ -275,6 +279,47 @@ func formatCopyReportMD(v any) string {
 		b.WriteByte('\n')
 	}
 	return b.String()
+}
+
+func runMigrateSchema(args []string) {
+	if len(args) == 0 {
+		fmt.Fprintf(os.Stderr, "Usage: ash migrate schema <up|down|version> [--postgres <url>]\n")
+		os.Exit(2)
+	}
+	fs := flag.NewFlagSet("migrate schema", flag.ExitOnError)
+	postgres := fs.String("postgres", "", "postgres URL (default ASH_DATABASE_URL)")
+	_ = fs.Parse(args[1:])
+	sub := args[0]
+	dsn := strings.TrimSpace(*postgres)
+	if dsn == "" {
+		dsn = strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	}
+	if dsn == "" {
+		log.Fatal("postgres URL required (--postgres or ASH_DATABASE_URL)")
+	}
+	switch sub {
+	case "up":
+		v, err := sqlmigrations.ApplyPostgres(dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("sql migrations applied (version=%d)\n", v)
+	case "down":
+		v, err := sqlmigrations.DownPostgres(dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("sql migrations rolled back (version=%d)\n", v)
+	case "version":
+		v, dirty, err := sqlmigrations.VersionPostgres(dsn)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("version=%d dirty=%v expected=%d mode=%s\n", v, dirty, sqlmigrations.ExpectedVersion(), sqlmigrations.Mode())
+	default:
+		fmt.Fprintf(os.Stderr, "unknown schema subcommand %q\n", sub)
+		os.Exit(2)
+	}
 }
 
 func splitCSV(raw string) []string {

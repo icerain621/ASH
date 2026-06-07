@@ -109,8 +109,8 @@ hooks:
 - `hooks[].on` 必须是白名单事件（减少注入面）。
 - `${...}` 模板变量必须在运行时解析失败时阻断（避免静默错误）。
 
-**TODO（负责人：后端）**：生成并固化 `ash.rules/v0.1` 的完整 JSON Schema。  
-**验收方式**：以 20 个非法 DSL 样例回归，错误定位准确。
+**JSON Schema**：`internal/rules/schemas/ash.rules.v0.1.schema.json`（`ParseAndValidate` 先跑 schema 再语义校验）。  
+**验收方式**：`go test ./internal/rules -run ValidateSchema`（含 20 个非法 DSL 样例）。
 
 ## 5. 示例：Feature/Hotfix/SecPatch 的最小差异（指导）
 - **Feature**：强调设计/评审/回归；产物四件套 + ADR 可选。

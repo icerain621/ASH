@@ -192,13 +192,13 @@ func TestM3Suite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.Summary.Pass != 7 {
+	if rep.Summary.Pass != 8 {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
 				t.Errorf("%s: %s", r.ID, r.Message)
 			}
 		}
-		t.Fatalf("M3 pass=%d fail=%d want pass=7", rep.Summary.Pass, rep.Summary.Fail)
+		t.Fatalf("M3 pass=%d fail=%d want pass=8", rep.Summary.Pass, rep.Summary.Fail)
 	}
 	assertCaseEvidence(t, rep, "M3-01", "tenantScope")
 	assertCaseEvidence(t, rep, "M3-02", "databaseDialect")
@@ -207,6 +207,7 @@ func TestM3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M3-06", "skipped")
 	assertCaseEvidence(t, rep, "M3-07", "skipped")
 	assertCaseEvidence(t, rep, "M3-05", "skipped")
+	assertCaseEvidence(t, rep, "M3-08", "skipped")
 }
 
 func TestALLSuite(t *testing.T) {
@@ -219,7 +220,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 32
+	want := 33
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

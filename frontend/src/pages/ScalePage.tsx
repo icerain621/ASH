@@ -14,6 +14,7 @@ const M3_CHECKS = [
   { id: "M3-05", title: "ExecGo E2E", hint: "ASH_EXECGO_E2E=1 时真实执行链路（需手动开启）" },
   { id: "M3-06", title: "Postgres RLS", hint: "ASH_POSTGRES_RLS=1 时租户策略安装与隔离" },
   { id: "M3-07", title: "ash_app 连接", hint: "ASH_DATABASE_APP_URL 时 Worker 应用角色连通性" },
+  { id: "M3-08", title: "SQL 修订版本", hint: "ASH_SCHEMA_MODE=sql 时 golang-migrate 版本与 AutoMigrate 关闭" },
 ] as const;
 
 const TR3_CHECKS = [
@@ -166,6 +167,19 @@ export function ScalePage() {
               <td>双写影子库</td>
               <td>
                 {r?.dualWriteShadowUrlHint ? <code>{r.dualWriteShadowUrlHint}</code> : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>Schema 模式 / SQL 修订</td>
+              <td>
+                {r?.schemaMode
+                  ? `${r.schemaMode} · v${r.sqlMigrationVersion ?? "?"} / ${r.sqlMigrationExpected ?? "?"}`
+                  : "-"}
+                {r?.schemaMode === "sql" && r.autoMigrateEnabled === false
+                  ? " (AutoMigrate off)"
+                  : r?.autoMigrateEnabled
+                    ? " (AutoMigrate on)"
+                    : null}
               </td>
             </tr>
             <tr>

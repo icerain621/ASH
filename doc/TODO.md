@@ -9,7 +9,7 @@
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate verify` + Doctor M3 7/7 + ALL 32/32 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate verify` + Doctor M3 8/8 + ALL 33/33 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
@@ -84,12 +84,22 @@ make postgres-roles
 
 ## 代码待办（可继续开发）
 
-（暂无 — 见下方已完成与人工验证暂缓）
+- 新表 DDL 修订需同步追加 RLS policy（`000013` DO 块）与 `ash_app` GRANT
 
 ---
 
 ## 已完成（近期）
 
+- RLS SQL 化：`000013` 租户策略（`ash_rls_*` 函数 + `ash_space_*` policies）、`000014` `ash_app`/`ash_rls_tester` 授权；运行时仅 backfill/FORCE
+- `ASH_SCHEMA_MODE=sql` 试点：`make postgres-sql-schema-e2e`、Doctor **M3-08**、Scale readiness 暴露 schema 模式与 SQL 修订版本
+- SQL 修订 `000009`–`000012` 完成迁移目录全表覆盖（CI/告警/发布/密钥/审批/插件/improve）；`expectedVersion=12`
+- SQL 修订 `000005`–`000008`：run 执行（tool_calls/agent_tasks/artifact_index/checkpoints）、memory/RAG、租户身份、model/feedback
+- 事件 → 指标表驱动派生：`internal/observability/derive`（附录 D §4 catalog + replay）；`ASH_METRICS_EVENT_REPLAY=1` 追加离线 replay 段
+- SQL 修订 `000004`（run_steps / memory_records / audit_log）
+- TR0 事件 payload JSON Schema 运行时校验（`ASH_VALIDATE_EVENT_PAYLOADS=1`）；SQL 修订 `000003`（runs/run_events）
+- `golang-migrate` 版本化迁移骨架：Postgres embed SQL、`ash migrate schema`、`ASH_SCHEMA_MODE`、Doctor M3-03 校验
+- Observability 配置 JSON Schema：`ash.obs/v0.1` + `config/ash-observability.yaml` + Worker 启动校验
+- Rules DSL JSON Schema：`internal/rules/schemas/ash.rules.v0.1.schema.json` + `ValidateSchema`（20 非法样例回归）
 - `runs.Service.eventsFor` 无限递归修复（审批/取消路径 stack overflow）；`openapi-check` 网络受限时自动重试（GOSUMDB=off + GOPROXY 镜像）
 - API 错误码表：`doc/api/error-codes.md`、`internal/apicodes` 目录校验；CI 接入 `make openapi-check`
 - OpenAPI 对齐：`doc/api/openapi-alignment.md`、`internal/openapicheck`、`make openapi-check`；手写契约已补全全部 `/api/v1` 实现端点

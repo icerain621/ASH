@@ -8,6 +8,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- TR0 event payload JSON Schema validation (`ASH_VALIDATE_EVENT_PAYLOADS=1`) and Postgres SQL revision `000003` for `runs` / `run_events`.
+- Postgres `golang-migrate` skeleton (`internal/store/sqlmigrations`), `ash migrate schema up|down|version`, `ASH_SCHEMA_MODE` / `ASH_DISABLE_AUTOMIGRATE`, and `make migrate-schema`.
+- Observability config JSON Schema (`ash.obs/v0.1`): `config/ash-observability.yaml`, `obsconfig.Load()` at Worker startup, outbound-export requires redaction.
+- Rules DSL JSON Schema (`internal/rules/schemas/ash.rules.v0.1.schema.json`) with runtime validation in `ParseAndValidate` and 20 invalid-sample regression tests.
 - Added frontend scenario listing API and Runs page scenario picker backed by `/api/v1/scenarios`.
 - Added Doctor console suite selector for TR0, TR1, TR2, and ALL.
 - Added TR0-08 doctor case to verify `feature_delivery`, `hotfix`, and `security_patch` scenarios are loaded.

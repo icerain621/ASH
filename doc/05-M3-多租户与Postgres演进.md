@@ -41,7 +41,13 @@ export ASH_DATABASE_URL='postgres://ash:secret@db.example.com:5432/ash?sslmode=r
 
 1. **准备**：部署 Postgres 13+；创建库与用户；配置备份与连接池（PgBouncer 可选）。
 2. **冒烟**：`bash scripts/postgres-smoke.sh`（解析 URL + 可选 live 连接）。
-3. **Schema**：使用当前 GORM `AutoMigrate` 在新库建表（M0 策略）；P2 引入 `golang-migrate` 版本化。
+3. **Schema**：Postgres 默认 `ASH_SCHEMA_MODE=dual`（`golang-migrate` + GORM `AutoMigrate` 兜底）；`ASH_SCHEMA_MODE=sql` / `ASH_DISABLE_AUTOMIGRATE=1` 仅跑 SQL 修订；SQLite 仍用 `AutoMigrate`。租户 RLS 策略与 `ash_app` 授权见 SQL 修订 `000013` / `000014`（`ASH_POSTGRES_RLS=1` 时运行时仅注册 session 回调与可选 `FORCE`）。
+   ```bash
+   go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
+   go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
+   make migrate-schema
+   ```
+   SQL 文件：`internal/store/sqlmigrations/migrations/postgres/`（embed）。
 4. **数据迁移**（停机或双写窗口）— 使用 `ash migrate` CLI：
    ```bash
    # 行数对比（源 sqlite / 目标 postgres）

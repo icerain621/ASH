@@ -1,0 +1,28 @@
+version: "ash.obs/v0.1"
+
+redaction:
+  enabled: true
+  denyKeys:
+    - password
+    - secret
+    - token
+    - authorization
+    - apiKey
+    - api_key
+  maskValue: "[REDACTED]"
+
+sampling:
+  eventExportRate: 1
+
+export:
+  allowOutbound: false
+
+plugins:
+  prometheus:
+    enabled: true
+    path: /metrics
+  console:
+    enabled: true
+    level: info
+  otel:
+    enabled: false

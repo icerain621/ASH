@@ -28,6 +28,11 @@ export type ScaleReadiness = {
   workerConnectionRole?: string;
   runtimeDsnHint?: string;
   dualWriteShadowUrlHint?: string;
+  schemaMode?: string;
+  sqlMigrationsEnabled?: boolean;
+  autoMigrateEnabled?: boolean;
+  sqlMigrationVersion?: number;
+  sqlMigrationExpected?: number;
 };
 
 export function getScaleReadiness() {

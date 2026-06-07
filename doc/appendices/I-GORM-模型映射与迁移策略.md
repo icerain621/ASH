@@ -48,10 +48,9 @@
 - 风险：AutoMigrate 在复杂变更时不可控（列改名/回滚困难）
 
 ### 3.2 P1（严格迁移）
-- 引入 `golang-migrate`（或等价）：
-  - `migrations/0001_init.up.sql` / `.down.sql`
-  - CI 检查：迁移可应用、可回滚（至少开发环境）
-- 约束：所有 schema 变更必须以迁移文件形式提交，不允许运行时隐式变更
+- **已接入** `golang-migrate`（Postgres）：`internal/store/sqlmigrations/migrations/postgres/`、`ash migrate schema`、`ASH_SCHEMA_MODE=sql|dual|automigrate`
+- 后续：将全量 DDL 从 GORM `AutoMigrate` 拆入递增 SQL 修订；CI 检查 up/down（开发环境）
+- 约束：新 schema 变更优先以 SQL 修订提交；`ASH_DISABLE_AUTOMIGRATE=1` 关闭隐式变更
 
 ### 3.3 P2（多租户/高并发）
 - Postgres：

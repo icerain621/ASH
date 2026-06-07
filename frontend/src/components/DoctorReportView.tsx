@@ -28,6 +28,7 @@ const CASE_LABELS: Record<string, string> = {
   "M2-03": "运行期策略拒绝",
   "M3-01": "多租户隔离",
   "M3-02": "Postgres 就绪",
+  "M3-08": "SQL 修订版本",
 };
 
 function caseLabel(id: string) {
