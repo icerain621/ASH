@@ -203,6 +203,28 @@ export type AuthMe = {
   permissions: string[];
 };
 
+export type AuthSession = {
+  token: string;
+  user: {
+    id: string;
+    email?: string;
+    displayName?: string;
+  };
+  space: Space;
+};
+
+export type RuntimePreflight = {
+  agent: "execgo_codex" | "static" | string;
+  defaultExecutor: string;
+  ready: boolean;
+  checks: Array<{
+    id: "execgocli" | "codex" | "execgoHealth" | "execgoTools" | string;
+    ok: boolean;
+    message?: string;
+  }>;
+  issues: string[];
+};
+
 type RawRecord = Record<string, unknown>;
 
 function itemsFrom<T>(res: { items?: T[]; Items?: T[] }) {
@@ -374,14 +396,28 @@ function normalizeAuditPolicy(raw: RawRecord): AuditPolicy {
 }
 
 export function devLogin(spaceId?: string) {
-  return api<{ token: string; user: { id: string; displayName: string }; space: Space }>("/auth/dev-login", {
+  return api<AuthSession>("/auth/dev-login", {
     method: "POST",
     body: JSON.stringify({ spaceId }),
   });
 }
 
+export function login(body: { email: string; password: string; spaceId?: string }) {
+  return api<AuthSession>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function getAuthMe() {
   return api<AuthMe>("/auth/me");
+}
+
+export function changePassword(body: { currentPassword: string; newPassword: string }) {
+  return api<{ ok: boolean }>("/auth/password", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function listSpaces() {
@@ -476,10 +512,31 @@ export function listMCPTools() {
   }));
 }
 
+export function registerMCPTool(body: { name: string; server: string; risk?: string; status?: string }) {
+  return api<RawRecord>("/mcp/tools", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then(normalizeMCPTool);
+}
+
 export function listPlugins() {
   return api<{ items?: RawRecord[]; Items?: RawRecord[] }>("/plugins").then((res) => ({
     items: itemsFrom(res).map(normalizePlugin),
   }));
+}
+
+export function registerPlugin(body: {
+  name: string;
+  version: string;
+  protocol: string;
+  abi?: string;
+  endpoint: string;
+  capabilities?: string[];
+}) {
+  return api<RawRecord>("/plugins", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then(normalizePlugin);
 }
 
 export function verifyPlugin(pluginId: string) {
@@ -495,6 +552,10 @@ export function getPluginABIProfile() {
 
 export function getStorageProfile() {
   return api<StorageProfile>("/storage/profile");
+}
+
+export function getRuntimePreflight(agent = "execgo_codex") {
+  return api<RuntimePreflight>(`/runtime/preflight?agent=${encodeURIComponent(agent)}`);
 }
 
 export function listSecrets() {

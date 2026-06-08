@@ -95,6 +95,63 @@ textarea {
   font-family: var(--mono);
 }
 
+.header-select {
+  min-height: 1.8rem;
+  max-width: 9.5rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 0.18rem 0.42rem;
+  font-family: var(--sans);
+  font-size: 0.78rem;
+}
+
+.identity {
+  display: inline-block;
+  max-width: 13rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--text);
+  font-family: var(--sans);
+}
+
+.icon-only {
+  display: inline-grid;
+  width: 1.85rem;
+  height: 1.85rem;
+  place-items: center;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.icon-only:hover {
+  color: var(--text);
+  border-color: var(--border-strong);
+}
+
+.header-popover {
+  position: sticky;
+  top: 3.8rem;
+  z-index: 19;
+  display: flex;
+  justify-content: flex-end;
+  padding: 0.65rem 1.25rem 0;
+}
+
+.header-popover .stack-form {
+  width: min(24rem, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.8rem;
+  box-shadow: 0 18px 48px rgba(15, 23, 42, 0.14);
+}
+
 .tabs {
   display: flex;
   gap: 0.35rem;
@@ -127,6 +184,104 @@ main {
   width: min(1480px, 100%);
   margin: 0 auto;
   padding: 1.15rem 1.25rem 2rem;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 1.25rem;
+  background:
+    linear-gradient(rgba(23, 32, 51, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 32, 51, 0.045) 1px, transparent 1px),
+    var(--bg);
+  background-size: 32px 32px;
+}
+
+.login-panel {
+  width: min(25rem, 100%);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 1.2rem;
+  box-shadow: 0 20px 56px rgba(15, 23, 42, 0.12);
+}
+
+.login-brand {
+  min-width: 0;
+  margin-bottom: 1rem;
+}
+
+.login-copy h1 {
+  margin: 0;
+  font-size: 1.45rem;
+  line-height: 1.15;
+}
+
+.login-copy p {
+  margin: 0.4rem 0 0.9rem;
+  color: var(--muted);
+  font-size: 0.9rem;
+}
+
+.segmented {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.35rem;
+  margin-bottom: 0.85rem;
+  padding: 0.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-raised);
+}
+
+.segmented button {
+  display: inline-flex;
+  min-height: 2rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.35rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font-size: 0.84rem;
+}
+
+.segmented button.active {
+  background: #ffffff;
+  color: var(--text);
+  border-color: var(--border);
+}
+
+.stack-form {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.stack-form.compact {
+  gap: 0.55rem;
+}
+
+.stack-form label {
+  display: grid;
+  gap: 0.25rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.stack-form input,
+.stack-form select,
+.stack-form textarea {
+  min-width: 0;
+  width: 100%;
+  min-height: 2.25rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #ffffff;
+  color: var(--text);
+  padding: 0.48rem 0.58rem;
 }
 
 .panel {
@@ -545,6 +700,50 @@ main {
   min-width: 0;
 }
 
+.readiness-card,
+.artifact-health {
+  display: grid;
+  gap: 0.35rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 0.75rem;
+  margin-bottom: 0.9rem;
+}
+
+.readiness-card > div {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  flex-wrap: wrap;
+}
+
+.readiness-card strong,
+.artifact-health strong {
+  font-size: 0.9rem;
+}
+
+.readiness-card p,
+.artifact-health span {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.artifact-health {
+  margin: 0 0 0.65rem;
+  background: #f8fafc;
+}
+
+.artifact-health.ok {
+  border-color: rgba(22, 128, 63, 0.24);
+}
+
+.artifact-health.warn {
+  border-color: rgba(183, 121, 31, 0.3);
+}
+
 .run-control-status {
   display: grid;
   gap: 0.55rem;
@@ -946,6 +1145,23 @@ main {
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.75rem;
   align-items: end;
+}
+
+.compact-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-bottom: 0.75rem;
+  padding: 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: #f8fafc;
+}
+
+.form-message {
+  align-self: center;
+  color: var(--muted);
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
 }
 
 .form-grid label {

@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Link as RouterLink } from "@tanstack/react-router";
 import {
   flexRender,
   getCoreRowModel,
@@ -36,6 +37,7 @@ import {
   type ToolCall,
   type WaterfallSpan,
 } from "@/modules/runs/api/runs.api";
+import { getRuntimePreflight } from "@/modules/platform/api/platform.api";
 import { listScenarios, type ScenarioSummary } from "@/modules/scenarios/api/scenarios.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { useRunStream } from "@/services/sse/runStream";
@@ -167,6 +169,37 @@ function artifactItems(data: { artifacts?: ArtifactItem[]; manifest?: { artifact
   return data?.artifacts ?? data?.manifest?.artifacts ?? [];
 }
 
+function agentFailureLabel(code?: string) {
+  const labels: Record<string, string> = {
+    AGENT_OUTPUT_INVALID: "Agent 输出无法解析",
+    AGENT_TASK_FAILED: "Agent 任务失败",
+    BRIDGE_UNAVAILABLE: "ExecGo/Codex 桥接不可用",
+  };
+  return code ? labels[code] || code : "-";
+}
+
+function artifactHealth(artifacts: ArtifactItem[], metrics: QualityMetric[] | undefined) {
+  const byName = new Map(artifacts.map((item) => [item.name, item]));
+  const issues: string[] = [];
+  for (const name of ["diff.patch", "test_report.json"]) {
+    const item = byName.get(name);
+    if (!item) {
+      issues.push(`${name} 缺失`);
+    } else if (!item.sizeBytes || item.sizeBytes <= 0) {
+      issues.push(`${name} 为空`);
+    }
+  }
+  const qualityFailed = (metrics ?? []).find((metric) => metric.name === "artifact_quality_failed_total");
+  if (qualityFailed && qualityFailed.value > 0) {
+    issues.push("产物质量门禁失败，可能包含 placeholder 或缺少真实测试报告");
+  }
+  const testReport = byName.get("test_report.json");
+  if (testReport && (!testReport.digest || testReport.digest === "-")) {
+    issues.push("test_report.json 缺少 digest");
+  }
+  return issues;
+}
+
 function durationLabel(ms?: number) {
   if (!ms || ms <= 0) return "-";
   if (ms < 1000) return `${ms}ms`;
@@ -245,6 +278,12 @@ export function RunsPage() {
   const scenariosQuery = useQuery({
     queryKey: ["scenarios"],
     queryFn: listScenarios,
+  });
+
+  const runtimeQuery = useQuery({
+    queryKey: ["runtime-preflight", "execgo_codex"],
+    queryFn: () => getRuntimePreflight("execgo_codex"),
+    staleTime: 30_000,
   });
 
   const runsQuery = useQuery({
@@ -436,6 +475,7 @@ export function RunsPage() {
   const canApprove = selectedId && selected?.status === "waiting_approval";
   const waterfallSpans = waterfallQuery.data?.spans ?? [];
   const waterfall = waterfallBounds(waterfallSpans);
+  const artifactIssues = artifactHealth(artifacts, qualityQuery.data?.items);
 
   return (
     <section className="panel active">
@@ -495,6 +535,22 @@ export function RunsPage() {
             新建运行
           </button>
         </div>
+      </div>
+      <div className="readiness-card">
+        <div>
+          <strong>Agent readiness</strong>
+          <span className={"status-pill " + (runtimeQuery.data?.ready ? "ok" : "idle")}>
+            <span className="status-dot" />
+            {runtimeQuery.isFetching ? "检查中" : runtimeQuery.data?.ready ? "ready" : "not ready"}
+          </span>
+        </div>
+        <p>
+          默认执行器 {runtimeQuery.data?.defaultExecutor || "-"} ·{" "}
+          {(runtimeQuery.data?.checks ?? []).map((check) => `${check.id}:${check.ok ? "ok" : "fail"}`).join(" / ") || "-"}
+        </p>
+        {!!runtimeQuery.data?.issues.length && (
+          <p className="warn-text">{runtimeQuery.data.issues.join("；")}</p>
+        )}
       </div>
       {err && <p className="error-text">{err}</p>}
       <div className="split runs-grid">
@@ -566,6 +622,9 @@ export function RunsPage() {
                   <strong>{gate.gate === "citation" ? "引用门禁" : "人工门禁"}</strong>
                   <span>{gate.stepId || "-"}</span>
                   {gate.reason && <p>{gate.reason}</p>}
+                  <RouterLink to="/automation" className="inline-link">
+                    打开审批队列
+                  </RouterLink>
                 </div>
               )}
               {actionMessage && <p className="action-message">{actionMessage}</p>}
@@ -761,8 +820,11 @@ export function RunsPage() {
               <tr>
                 <th>步骤</th>
                 <th>适配器</th>
+                <th>Agent</th>
                 <th>状态</th>
                 <th>ExecGo</th>
+                <th>耗时</th>
+                <th>失败分类</th>
               </tr>
             </thead>
             <tbody>
@@ -770,13 +832,18 @@ export function RunsPage() {
                 <tr key={task.id}>
                   <td>{task.stepId || "-"}</td>
                   <td>{task.adapter}</td>
-                  <td>{statusLabel(task.status)}</td>
+                  <td title={task.agentId}>{task.agentId || "-"}</td>
+                  <td title={[task.errorMessage, task.stdoutSummary, task.stderrSummary].filter(Boolean).join("\n\n")}>
+                    {statusLabel(task.status)}
+                  </td>
                   <td title={task.execGoTaskId}>{task.execGoTaskId ? shortId(task.execGoTaskId) : "-"}</td>
+                  <td>{durationLabel(task.durationMs)}</td>
+                  <td title={task.errorMessage}>{agentFailureLabel(task.errorCode)}</td>
                 </tr>
               ))}
               {selectedId && !(agentsQuery.data?.items.length) && (
                 <tr className="empty-row">
-                  <td colSpan={4}>暂无智能体任务。</td>
+                  <td colSpan={7}>暂无智能体任务。</td>
                 </tr>
               )}
             </tbody>
@@ -814,6 +881,12 @@ export function RunsPage() {
             <h3>产物</h3>
             <span>{artifactsQuery.isFetching ? "加载中" : `${artifacts.length} 个产物`}</span>
           </div>
+          {selectedId && (
+            <div className={"artifact-health " + (artifactIssues.length ? "warn" : "ok")}>
+              <strong>{artifactIssues.length ? "产物需要复核" : "核心产物就绪"}</strong>
+              <span>{artifactIssues.length ? artifactIssues.join("；") : "diff.patch 与 test_report.json 已登记"}</span>
+            </div>
+          )}
           <table className="table compact artifacts-table">
             <thead>
               <tr>

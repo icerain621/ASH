@@ -65,11 +65,14 @@ export type AgentTask = {
   id: string;
   stepId?: string;
   adapter: string;
+  agentId?: string;
   execGoTaskId?: string;
   status: string;
   durationMs?: number;
   errorCode?: string;
   errorMessage?: string;
+  stdoutSummary?: string;
+  stderrSummary?: string;
 };
 
 export type QualityMetric = {
@@ -210,11 +213,14 @@ function normalizeAgentTask(raw: RawRecord): AgentTask {
     id: str(raw, "id", "ID"),
     stepId: str(raw, "stepId", "StepID"),
     adapter: str(raw, "adapter", "Adapter"),
+    agentId: str(raw, "agentId", "AgentID"),
     execGoTaskId: str(raw, "execGoTaskId", "ExecGoTaskID"),
     status: str(raw, "status", "Status"),
     durationMs: num(raw, "durationMs", "DurationMs"),
     errorCode: str(raw, "errorCode", "ErrorCode"),
     errorMessage: str(raw, "errorMessage", "ErrorMessage"),
+    stdoutSummary: str(raw, "stdoutSummary", "StdoutSummary"),
+    stderrSummary: str(raw, "stderrSummary", "StderrSummary"),
   };
 }
 

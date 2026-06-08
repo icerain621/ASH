@@ -9,6 +9,7 @@ import { MetricsPage } from "../pages/MetricsPage";
 import { ObservabilityPage } from "../pages/ObservabilityPage";
 import { ReleasesPage } from "../pages/ReleasesPage";
 import { RunsPage } from "../pages/RunsPage";
+import { LoginPage } from "../pages/LoginPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
 import { SpacePage } from "../pages/SpacePage";
@@ -27,6 +28,12 @@ const runsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/runs",
   component: RunsPage,
+});
+
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
 });
 
 const memoryRoute = createRoute({
@@ -97,6 +104,7 @@ const scaleRoute = createRoute({
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
+  loginRoute,
   runsRoute,
   memoryRoute,
 	automationRoute,
