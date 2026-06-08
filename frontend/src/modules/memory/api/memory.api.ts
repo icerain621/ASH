@@ -28,13 +28,25 @@ export type MemoryRecord = {
   title: string;
   body?: string;
   status: string;
+  ttlDays?: number;
+  confidence?: number;
   dedupeKey?: string;
   edges?: MemoryEdge[];
   evidence?: { id: string; kind: string; ref: string }[];
 };
 
-export function listCandidates(limit = 50) {
-  return api<{ items: MemoryRecord[] }>(`/memory/candidates?limit=${limit}`);
+export function listCandidates(params: {
+  limit?: number;
+  status?: string;
+  expiring?: boolean;
+  reviewDue?: boolean;
+} = {}) {
+  const search = new URLSearchParams();
+  search.set("limit", String(params.limit ?? 50));
+  if (params.status) search.set("status", params.status);
+  if (params.expiring) search.set("expiring", "true");
+  if (params.reviewDue) search.set("reviewDue", "true");
+  return api<{ items: MemoryRecord[] }>(`/memory/candidates?${search.toString()}`);
 }
 
 export function getMemoryRecord(recordId: string) {
@@ -60,4 +72,14 @@ export function queryMemory(body: { text: string; layers?: string[]; topK?: numb
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export function applyMemoryRetention(body: { dryRun?: boolean }) {
+  return api<{ spaceId: string; matched: number; archived: number; reviewRequired: number; decayed: number; dryRun: boolean }>(
+    "/memory/retention/apply",
+    {
+      method: "POST",
+      body: JSON.stringify(body),
+    },
+  );
 }

@@ -21,6 +21,9 @@ func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateR
 	if err := validateCreate(req); err != nil {
 		return nil, err
 	}
+	if req.TTLDays == nil {
+		req.TTLDays = defaultTTL(req.Layer)
+	}
 	traceID, err := s.validateRunRef(req.RunID, req.TraceID)
 	if err != nil {
 		return nil, err
@@ -125,8 +128,14 @@ func (s *Service) ListCandidates(layer, status, repo string, limit, offset int) 
 }
 
 func (s *Service) ListCandidatesForSpace(spaceID, layer, status, repo string, limit, offset int) (*ListCandidatesResponse, error) {
+	return s.ListForSpace(spaceID, layer, status, repo, limit, offset, ListOptions{})
+}
+
+func (s *Service) ListForSpace(spaceID, layer, status, repo string, limit, offset int, opts ListOptions) (*ListCandidatesResponse, error) {
 	if status == "" {
-		status = "candidate"
+		if !opts.Expiring && !opts.ReviewDue {
+			status = "candidate"
+		}
 	}
 	if limit <= 0 || limit > 100 {
 		limit = 50
@@ -146,21 +155,111 @@ func (s *Service) ListCandidatesForSpace(spaceID, layer, status, repo string, li
 		q = q.Where("scope_repo = ?", repo)
 	}
 
-	var total int64
-	if err := q.Count(&total).Error; err != nil {
-		return nil, err
+	if !opts.Expiring && !opts.ReviewDue {
+		var total int64
+		if err := q.Count(&total).Error; err != nil {
+			return nil, err
+		}
+
+		var rows []store.MemoryRecord
+		if err := q.Order("created_at desc").Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+			return nil, err
+		}
+
+		items, err := s.attachEvidence(rows)
+		if err != nil {
+			return nil, err
+		}
+		return &ListCandidatesResponse{Items: items, Limit: limit, Offset: offset, Total: total}, nil
 	}
 
 	var rows []store.MemoryRecord
-	if err := q.Order("created_at desc").Limit(limit).Offset(offset).Find(&rows).Error; err != nil {
+	if err := q.Order("updated_at desc").Limit(500).Find(&rows).Error; err != nil {
 		return nil, err
 	}
+	now := time.Now().UTC()
+	filtered := make([]store.MemoryRecord, 0, len(rows))
+	for _, row := range rows {
+		if opts.Expiring && !memoryExpiring(row, now) {
+			continue
+		}
+		if opts.ReviewDue && !memoryReviewDue(row, now) {
+			continue
+		}
+		filtered = append(filtered, row)
+	}
+	total := int64(len(filtered))
+	if offset > len(filtered) {
+		filtered = nil
+	} else {
+		end := offset + limit
+		if end > len(filtered) {
+			end = len(filtered)
+		}
+		filtered = filtered[offset:end]
+	}
 
-	items, err := s.attachEvidence(rows)
+	items, err := s.attachEvidence(filtered)
 	if err != nil {
 		return nil, err
 	}
 	return &ListCandidatesResponse{Items: items, Limit: limit, Offset: offset, Total: total}, nil
+}
+
+func (s *Service) ApplyRetention(spaceID string, req RetentionApplyRequest, actorID string) (*RetentionApplyResponse, error) {
+	spaceID = firstNonEmpty(spaceID, "local")
+	now := time.Now().UTC()
+	var rows []store.MemoryRecord
+	if err := s.gdb().Where("space_id = ? AND ttl_days IS NOT NULL AND status NOT IN ?", spaceID, []string{"archived", "rejected", "deprecated"}).
+		Order("updated_at asc").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	resp := &RetentionApplyResponse{SpaceID: spaceID, DryRun: req.DryRun}
+	err := s.gdb().Transaction(func(tx *gorm.DB) error {
+		for _, row := range rows {
+			expired := memoryExpired(row, now)
+			reviewDue := memoryReviewDue(row, now)
+			if !expired && !reviewDue {
+				continue
+			}
+			resp.Matched++
+			if req.DryRun {
+				if expired {
+					resp.Archived++
+				} else {
+					resp.ReviewRequired++
+					if row.Confidence > 0 {
+						resp.Decayed++
+					}
+				}
+				continue
+			}
+			updates := map[string]any{"updated_at": now}
+			if expired {
+				updates["status"] = "archived"
+				resp.Archived++
+			} else {
+				updates["status"] = "review_required"
+				resp.ReviewRequired++
+				if row.Confidence > 0 {
+					updates["confidence"] = row.Confidence * 0.9
+					resp.Decayed++
+				}
+			}
+			if err := tx.Model(&store.MemoryRecord{}).Where("id = ?", row.ID).Updates(updates).Error; err != nil {
+				return err
+			}
+		}
+		payload, _ := json.Marshal(resp)
+		return tx.Create(&store.AuditLog{
+			ID: "aud_" + uuid.NewString(), SpaceID: spaceID, ActorID: actorID,
+			EventType: "memory.retention_applied", PayloadJSON: string(payload), CreatedAt: now,
+		}).Error
+	})
+	if err != nil {
+		return nil, err
+	}
+	return resp, nil
 }
 
 func (s *Service) Review(candidateID string, req ReviewRequest) (*ReviewResponse, error) {
@@ -514,6 +613,52 @@ func ensureMemoryExists(tx *gorm.DB, id string) error {
 	return nil
 }
 
+func defaultTTL(layer string) *int {
+	days := 365
+	switch strings.ToUpper(strings.TrimSpace(layer)) {
+	case "L0":
+		days = 7
+	case "L1":
+		days = 90
+	case "L2", "L3":
+		days = 365
+	}
+	return &days
+}
+
+func memoryExpiresAt(rec store.MemoryRecord) (time.Time, bool) {
+	if rec.TTLDays == nil || *rec.TTLDays <= 0 {
+		return time.Time{}, false
+	}
+	base := rec.UpdatedAt
+	if base.IsZero() {
+		base = rec.CreatedAt
+	}
+	return base.Add(time.Duration(*rec.TTLDays) * 24 * time.Hour), true
+}
+
+func memoryExpired(rec store.MemoryRecord, now time.Time) bool {
+	expiresAt, ok := memoryExpiresAt(rec)
+	return ok && !expiresAt.After(now)
+}
+
+func memoryExpiring(rec store.MemoryRecord, now time.Time) bool {
+	expiresAt, ok := memoryExpiresAt(rec)
+	return ok && expiresAt.After(now) && !expiresAt.After(now.Add(14*24*time.Hour))
+}
+
+func memoryReviewDue(rec store.MemoryRecord, now time.Time) bool {
+	if rec.Status != "approved" || rec.TTLDays == nil || *rec.TTLDays <= 0 {
+		return false
+	}
+	base := rec.UpdatedAt
+	if base.IsZero() {
+		base = rec.CreatedAt
+	}
+	dueAt := base.Add(time.Duration(*rec.TTLDays) * 12 * time.Hour)
+	return !dueAt.After(now)
+}
+
 func (s *Service) findApprovedDuplicates(tx *gorm.DB, rec store.MemoryRecord) ([]string, error) {
 	if rec.DedupeKey == "" {
 		return nil, nil
@@ -580,13 +725,6 @@ func (s *Service) filterQueryableMemory(rows []store.MemoryRecord, topK int, now
 		}
 	}
 	return out, nil
-}
-
-func memoryExpired(row store.MemoryRecord, now time.Time) bool {
-	if row.TTLDays == nil || *row.TTLDays <= 0 {
-		return false
-	}
-	return row.CreatedAt.Add(time.Duration(*row.TTLDays) * 24 * time.Hour).Before(now)
 }
 
 func reviewConfidence(req ReviewRequest, rec store.MemoryRecord) float64 {

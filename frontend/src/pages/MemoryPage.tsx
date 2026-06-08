@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import {
+  applyMemoryRetention,
   createCandidate,
   getMemoryRecord,
   listCandidates,
@@ -16,9 +17,11 @@ import { shortId } from "@/shared/utils/format";
 function memoryStatusLabel(status: string) {
   const labels: Record<string, string> = {
     approved: "已通过",
+    archived: "已归档",
     candidate: "待审核",
     deprecated: "已弃用",
     rejected: "已拒绝",
+    review_required: "需复核",
   };
   return labels[status] || status;
 }
@@ -53,10 +56,18 @@ export function MemoryPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [governanceMsg, setGovernanceMsg] = useState("");
   const [queryText, setQueryText] = useState("doctor release");
+  const [memoryView, setMemoryView] = useState("candidate");
+  const [retentionMsg, setRetentionMsg] = useState("");
 
   const candidatesQuery = useQuery({
-    queryKey: ["memory", "candidates", activeSpaceId],
-    queryFn: () => listCandidates(50),
+    queryKey: ["memory", "candidates", activeSpaceId, memoryView],
+    queryFn: () =>
+      listCandidates({
+        limit: 50,
+        status: ["candidate", "approved", "archived"].includes(memoryView) ? memoryView : undefined,
+        expiring: memoryView === "expiring",
+        reviewDue: memoryView === "review_due",
+      }),
   });
 
   const detailQuery = useQuery({
@@ -90,6 +101,19 @@ export function MemoryPage() {
       qc.invalidateQueries({ queryKey: ["memory", "candidates"] });
       if (selectedId) qc.invalidateQueries({ queryKey: ["memory", "record", selectedId] });
     },
+  });
+
+  const retentionMut = useMutation({
+    mutationFn: (dryRun: boolean) => applyMemoryRetention({ dryRun }),
+    onSuccess: async (res) => {
+      setRetentionMsg(
+        res.dryRun
+          ? `dry-run matched ${res.matched}`
+          : `archived ${res.archived}, review ${res.reviewRequired}, decayed ${res.decayed}`,
+      );
+      await qc.invalidateQueries({ queryKey: ["memory"] });
+    },
+    onError: (error) => setRetentionMsg(error instanceof Error ? error.message : "retention failed"),
   });
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -129,12 +153,26 @@ export function MemoryPage() {
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar">
+          <select className="control-select" value={memoryView} onChange={(event) => setMemoryView(event.target.value)}>
+            <option value="candidate">Candidates</option>
+            <option value="approved">Approved</option>
+            <option value="expiring">Expiring</option>
+            <option value="review_due">Review Due</option>
+            <option value="archived">Archived</option>
+          </select>
+          <button className="btn icon-btn" onClick={() => retentionMut.mutate(true)} disabled={retentionMut.isPending}>
+            Dry Run
+          </button>
+          <button className="btn err icon-btn" onClick={() => retentionMut.mutate(false)} disabled={retentionMut.isPending}>
+            Apply TTL
+          </button>
           <button className="btn icon-btn" onClick={() => candidatesQuery.refetch()}>
             <RefreshCw size={16} strokeWidth={1.8} />
             刷新候选
           </button>
         </div>
       </div>
+      {retentionMsg && <p className="action-message">{retentionMsg}</p>}
       <div className="split">
         <div className="pane">
           <div className="pane-title">
@@ -148,6 +186,7 @@ export function MemoryPage() {
                 <th>层级</th>
                 <th>标题</th>
                 <th>状态</th>
+                <th>TTL</th>
                 <th></th>
               </tr>
             </thead>
@@ -162,6 +201,7 @@ export function MemoryPage() {
                   <td>{m.layer}</td>
                   <td>{m.title}</td>
                   <td>{memoryStatusLabel(m.status)}</td>
+                  <td>{m.ttlDays ? `${m.ttlDays}d` : "-"}</td>
                   <td>
                     {m.status === "candidate" && (
                       <div className="row-actions" onClick={(e) => e.stopPropagation()}>
@@ -186,7 +226,7 @@ export function MemoryPage() {
               ))}
               {!items.length && (
                 <tr className="empty-row">
-                  <td colSpan={5}>暂无记忆候选。</td>
+                  <td colSpan={6}>暂无记忆记录。</td>
                 </tr>
               )}
             </tbody>
@@ -200,6 +240,10 @@ export function MemoryPage() {
           {selected ? (
             <>
               <p className="muted-line">dedupe: {selected.dedupeKey ? shortId(selected.dedupeKey) : "-"}</p>
+              <p className="muted-line">
+                status {memoryStatusLabel(selected.status)} · ttl {selected.ttlDays ? `${selected.ttlDays}d` : "-"} · confidence{" "}
+                {typeof selected.confidence === "number" ? selected.confidence.toFixed(2) : "-"}
+              </p>
               <table className="table">
                 <thead>
                   <tr>

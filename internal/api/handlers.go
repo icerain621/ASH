@@ -110,6 +110,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/memory/candidates", h.createMemoryCandidate)
 		v1.GET("/memory/candidates", h.listMemoryCandidates)
 		v1.POST("/memory/candidates/:candidateId/review", h.reviewMemoryCandidate)
+		v1.POST("/memory/retention/apply", h.applyMemoryRetention)
 		v1.GET("/memory/records/:recordId", h.getMemoryRecord)
 		v1.POST("/memory/query", h.queryMemory)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
@@ -125,6 +126,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/rag/index", h.indexRAG)
 		v1.POST("/rag/query", h.queryRAG)
 
+		v1.GET("/runtime/preflight", h.runtimePreflight)
 		v1.GET("/model-router/providers", h.listModelProviders)
 		v1.POST("/model-router/route", h.routeModel)
 		v1.GET("/observability/waterfall/:runId", h.getWaterfall)
@@ -141,6 +143,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.PATCH("/feedback/:feedbackId", h.updateFeedback)
 		v1.POST("/repo/connections", h.createRepoConnection)
 		v1.GET("/repo/connections", h.listRepoConnections)
+		v1.POST("/repo/connections/:connectionId/test", h.testRepoConnection)
 		v1.GET("/ci/runs", h.listCIRuns)
 		v1.GET("/ci/jobs", h.listCIJobs)
 		v1.POST("/ci/failures/diagnose", h.diagnoseCIFailure)

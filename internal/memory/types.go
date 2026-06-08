@@ -6,7 +6,7 @@ const CurrentSchemaVersion = 1
 
 var (
 	validLayers       = map[string]struct{}{"L0": {}, "L1": {}, "L2": {}, "L3": {}}
-	validStatuses     = map[string]struct{}{"candidate": {}, "approved": {}, "rejected": {}, "deprecated": {}}
+	validStatuses     = map[string]struct{}{"candidate": {}, "approved": {}, "rejected": {}, "deprecated": {}, "archived": {}, "review_required": {}}
 	validSensitivity  = map[string]struct{}{"normal": {}, "restricted": {}, "secret": {}}
 	validEvidenceKind = map[string]struct{}{"file": {}, "pr": {}, "ci": {}, "url": {}}
 	validDecisions    = map[string]struct{}{"approve": {}, "reject": {}, "deprecate": {}}
@@ -150,6 +150,24 @@ type HitUsedRequest struct {
 // HitUsedResponse confirms audit write.
 type HitUsedResponse struct {
 	OK bool `json:"ok"`
+}
+
+type ListOptions struct {
+	Expiring  bool
+	ReviewDue bool
+}
+
+type RetentionApplyRequest struct {
+	DryRun bool `json:"dryRun,omitempty"`
+}
+
+type RetentionApplyResponse struct {
+	SpaceID        string `json:"spaceId"`
+	Matched        int    `json:"matched"`
+	Archived       int    `json:"archived"`
+	ReviewRequired int    `json:"reviewRequired"`
+	Decayed        int    `json:"decayed"`
+	DryRun         bool   `json:"dryRun"`
 }
 
 func ms(t time.Time) int64 { return t.UTC().UnixMilli() }

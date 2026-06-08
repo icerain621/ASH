@@ -65,6 +65,8 @@ func (h *Handler) createMemoryCandidate(c *gin.Context) {
 // @Param layer query string false "layer filter L0-L3"
 // @Param status query string false "status filter" default(candidate)
 // @Param repo query string false "scope repo"
+// @Param expiring query bool false "filter records expiring within 14 days"
+// @Param reviewDue query bool false "filter records due for review"
 // @Param limit query int false "page size" default(50)
 // @Param offset query int false "offset" default(0)
 // @Success 200 {object} memory.ListCandidatesResponse
@@ -76,16 +78,46 @@ func (h *Handler) listMemoryCandidates(c *gin.Context) {
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
 	offset, _ := strconv.Atoi(c.DefaultQuery("offset", "0"))
-	resp, err := h.memory.WithContext(c.Request.Context()).ListCandidatesForSpace(
+	expiring, _ := strconv.ParseBool(c.DefaultQuery("expiring", "false"))
+	reviewDue, _ := strconv.ParseBool(c.DefaultQuery("reviewDue", "false"))
+	resp, err := h.memory.WithContext(c.Request.Context()).ListForSpace(
 		currentSpace(c),
 		c.Query("layer"),
 		c.Query("status"),
 		c.Query("repo"),
 		limit,
 		offset,
+		memory.ListOptions{Expiring: expiring, ReviewDue: reviewDue},
 	)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_LIST_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// ApplyMemoryRetention godoc
+// @Summary Apply memory TTL and review governance
+// @Tags memory
+// @Accept json
+// @Produce json
+// @Param body body memory.RetentionApplyRequest true "retention options"
+// @Success 200 {object} memory.RetentionApplyResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/memory/retention/apply [post]
+func (h *Handler) applyMemoryRetention(c *gin.Context) {
+	if !h.requirePermission(c, permMemoryReview) {
+		return
+	}
+	var req memory.RetentionApplyRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	resp, err := h.memory.WithContext(c.Request.Context()).ApplyRetention(currentSpace(c), req, currentActor(c))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_RETENTION_FAILED", err.Error()))
 		return
 	}
 	c.JSON(http.StatusOK, resp)
