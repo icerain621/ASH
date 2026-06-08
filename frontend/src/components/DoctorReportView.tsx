@@ -25,6 +25,7 @@ const CASE_LABELS: Record<string, string> = {
   "TR3-04": "审计可追责",
   "TR3-05": "指标回放一致",
   "TR3-06": "Postgres RAG FTS",
+  "TR3-07": "插件导出健康",
   "M2-01": "权限矩阵",
   "M2-02": "场景策略更新",
   "M2-03": "运行期策略拒绝",

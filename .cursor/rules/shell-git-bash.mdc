@@ -1,0 +1,34 @@
+---
+description: Windows 本地用 Git Bash 执行 shell；脚本需兼容 Win 与 Linux
+alwaysApply: true
+---
+
+# Shell：Git Bash（Windows）
+
+## 终端与命令执行
+
+- 用户在 **Windows** 上，但 **一律用 Git Bash** 执行 shell 命令（不要用 PowerShell 语法作为默认终端命令）。
+- Agent 调用 Shell 工具时：
+  - 使用 Bash 语法：`&&`、`||`、`|`、`$()`、heredoc、`export` 等。
+  - **不要**使用 PowerShell 专有写法（如 `Select-Object`、`$LASTEXITCODE`、`;` 接 cmdlet、`%ENV%`）。
+  - 路径优先用 Git Bash 形式：`/c/Go_Work/src/ash`，或仓库内相对路径；避免依赖反斜杠转义。
+
+## 编写 shell 脚本（`.sh`）
+
+- Shebang：`#!/usr/bin/env bash`
+- 建议：`set -euo pipefail`（需要宽松处局部 `set +e`）。
+- 兼容 Win（Git Bash / MSYS）与 Linux/macOS：
+  - 用 `command -v` 检测命令，不用 `which` 的硬依赖。
+  - 临时目录：`$(mktemp -d 2>/dev/null || mktemp -d -t ash)` 或 `"${TMPDIR:-/tmp}"`。
+  - 路径拼接用 `"$ROOT/$name"`，引号包裹变量；避免裸反斜杠路径。
+  - 行尾 **LF**；脚本内只用 `/` 作为路径分隔符。
+  - 不调用仅 Windows CMD 存在的命令；可选能力用 `if command -v foo` 分支。
+  - 需要 `sed`/`awk` 时优先 POSIX 子集，或注明 Git Bash 与 GNU 差异。
+- 仓库已有 `scripts/*.ps1` 可保留；**新增自动化优先 `.sh`**，或在 Makefile 中提供跨平台目标。
+
+## 示例
+
+```bash
+cd "$(dirname "$0")/.." || exit 1
+go test ./... -count=1
+```

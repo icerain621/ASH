@@ -42,6 +42,7 @@ export type ScaleReadiness = {
   ragFallbackQueryCount?: number;
   otelEnabled?: boolean;
   alertsEvalInterval?: string;
+  metricsEventReplayEnabled?: boolean;
 };
 
 export function getScaleReadiness() {

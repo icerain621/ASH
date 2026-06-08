@@ -17,6 +17,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/observability/derive"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
@@ -105,6 +106,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
+		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -134,6 +136,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
+		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -1783,6 +1786,45 @@ func (s *Service) tr3MetricsReplayParity() CaseResult {
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "eventReplay", Ref: fmt.Sprintf("events=%d", len(events))},
 		Evidence{Kind: "metricsParity", Ref: "ash_* replay tallies match"},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3PluginExportHealth() CaseResult {
+	res := CaseResult{ID: "TR3-07", Status: "fail"}
+	spaceID := "local"
+	if err := pluginhealth.EnsureOtelExporter(s.runs.DB().DB, spaceID); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if err := pluginhealth.ReportExport(s.runs.DB().DB, spaceID, pluginhealth.OtelExporterPluginID, pluginhealth.OtelExporterPluginName, false, 1); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var row store.PluginRegistry
+	if err := s.runs.DB().First(&row, "id = ? AND space_id = ?", pluginhealth.OtelExporterPluginID, spaceID).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if row.ExportErrors < 1 || row.DropCount < 1 {
+		res.Message = fmt.Sprintf("registry counters: exportErrors=%d dropCount=%d", row.ExportErrors, row.DropCount)
+		return res
+	}
+	var failedAudits int64
+	if err := s.runs.DB().Model(&store.AuditLog{}).
+		Where("space_id = ? AND event_type = ?", spaceID, "plugin.export_failed").
+		Count(&failedAudits).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if failedAudits < 1 {
+		res.Message = "missing plugin.export_failed audit event"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "pluginExport", Ref: row.ID},
+		Evidence{Kind: "exportAudit", Ref: fmt.Sprintf("failed=%d", failedAudits)},
 	)
 	res.Status = "pass"
 	return res

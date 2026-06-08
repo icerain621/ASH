@@ -4,7 +4,9 @@ backend/bin/
 backend/go.sum
 .ash/
 .idea/
-.cursor/
+.cursor/*
+!.cursor/rules/
+!.cursor/rules/**
 *.db
 *.exe
 *.test

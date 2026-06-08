@@ -2284,11 +2284,23 @@ definitions:
     type: object
   internal_api.HealthResponse:
     properties:
+      alertsEvalInterval:
+        example: 5m0s
+        type: string
       dialect:
         example: postgres
         type: string
       error:
         type: string
+      metricsEventReplayEnabled:
+        type: boolean
+      otelEnabled:
+        type: boolean
+      schemaMode:
+        example: sql
+        type: string
+      sqlMigrationVersion:
+        type: integer
       status:
         example: ok
         type: string
@@ -2479,6 +2491,8 @@ definitions:
     type: object
   internal_api.ScaleReadinessResponse:
     properties:
+      alertsEvalInterval:
+        type: string
       auditLogRows:
         type: integer
       autoMigrateEnabled:
@@ -2507,6 +2521,8 @@ definitions:
         type: integer
       memorySchemaVersion:
         type: integer
+      metricsEventReplayEnabled:
+        type: boolean
       migrationReady:
         type: boolean
       migrationTableCount:
@@ -2515,6 +2531,8 @@ definitions:
         type: integer
       modelUsageRows:
         type: integer
+      otelEnabled:
+        type: boolean
       postgresAppUrlConfigured:
         type: boolean
       postgresConfigured:

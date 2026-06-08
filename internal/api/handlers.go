@@ -231,10 +231,26 @@ func (h *Handler) readyz(c *gin.Context) {
 		return
 	}
 	if err := sqlDB.Ping(); err != nil {
-		c.JSON(http.StatusServiceUnavailable, HealthResponse{Status: "not_ready", Dialect: h.db.Dialect(), Error: err.Error()})
+		c.JSON(http.StatusServiceUnavailable, h.readyzResponse("not_ready", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, HealthResponse{Status: "ready", Dialect: h.db.Dialect()})
+	c.JSON(http.StatusOK, h.readyzResponse("ready", ""))
+}
+
+func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
+	ops := workerOpsSnapshot()
+	profile, _ := store.DatabaseProfile(h.db.DataDir(), store.RuntimeDatabaseURL())
+	resp := HealthResponse{
+		Status:                    status,
+		Dialect:                   h.db.Dialect(),
+		Error:                     errMsg,
+		SchemaMode:                profile.SchemaMode,
+		SQLMigrationVersion:       profile.SQLMigrationVersion,
+		OtelEnabled:               ops.OtelEnabled,
+		AlertsEvalInterval:        ops.AlertsEvalInterval,
+		MetricsEventReplayEnabled: ops.MetricsEventReplayEnabled,
+	}
+	return resp
 }
 
 // CreateRun godoc

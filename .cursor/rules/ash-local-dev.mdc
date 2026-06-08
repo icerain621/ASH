@@ -1,0 +1,34 @@
+---
+description: ASH 本地开发约定（Windows/Git Bash、Postgres E2E、中文 commit）
+alwaysApply: true
+---
+
+# ASH 本地开发
+
+## 环境
+
+- 仓库根目录执行命令；Windows 优先 **Git Bash**（`make`、`bash scripts/*.sh`）。
+- Go 模块代理受限时：`export GOPROXY=https://goproxy.cn,direct`
+- Postgres E2E 需 **Docker Desktop**；端口冲突时用 `source scripts/postgres-up.sh`（可能为 **5433**）。
+- SQL schema 试点：`ASH_SCHEMA_MODE=sql`；完整迁移 E2E：`ASH_MIGRATE_E2E=1` + `ASH_DATABASE_URL`。
+
+## 常用命令
+
+```bash
+go test ./internal/doctor/... -run TestTR3Suite -count=1
+make postgres-sql-schema-e2e
+make openapi-check
+bash scripts/verify-local.sh
+```
+
+## Git / Commit
+
+- **Commit 说明使用中文**（类型前缀可保留英文，如 `feat:` / `fix:`，正文用中文写清动机与范围）。
+- 仅在用户明确要求时 `git commit` / `git push`；不主动提交 `.idea/`、密钥或 `.env`。
+- 大功能按 Sprint 分批提交，消息聚焦「为什么」而非文件清单。
+
+## 代码习惯
+
+- 新 HTTP 端点：handler 注释 → `make swagger` → `doc/api/openapi-ash-v1.yaml` → `make openapi-check`。
+- 新 Postgres 表：SQL 修订 + `expectedVersion`；有 `space_id` 的表同步 RLS（`000013`）；全局审计表单独说明。
+- Doctor 新用例：同步更新 `TestTR3Suite` / `TestALLSuite` 计数与 `DoctorReportView` / Scale 卡片。

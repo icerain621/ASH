@@ -8202,12 +8202,29 @@ const docTemplate = `{
         "internal_api.HealthResponse": {
             "type": "object",
             "properties": {
+                "alertsEvalInterval": {
+                    "type": "string",
+                    "example": "5m0s"
+                },
                 "dialect": {
                     "type": "string",
                     "example": "postgres"
                 },
                 "error": {
                     "type": "string"
+                },
+                "metricsEventReplayEnabled": {
+                    "type": "boolean"
+                },
+                "otelEnabled": {
+                    "type": "boolean"
+                },
+                "schemaMode": {
+                    "type": "string",
+                    "example": "sql"
+                },
+                "sqlMigrationVersion": {
+                    "type": "integer"
                 },
                 "status": {
                     "type": "string",
@@ -8503,6 +8520,9 @@ const docTemplate = `{
         "internal_api.ScaleReadinessResponse": {
             "type": "object",
             "properties": {
+                "alertsEvalInterval": {
+                    "type": "string"
+                },
                 "auditLogRows": {
                     "type": "integer"
                 },
@@ -8545,6 +8565,9 @@ const docTemplate = `{
                 "memorySchemaVersion": {
                     "type": "integer"
                 },
+                "metricsEventReplayEnabled": {
+                    "type": "boolean"
+                },
                 "migrationReady": {
                     "type": "boolean"
                 },
@@ -8556,6 +8579,9 @@ const docTemplate = `{
                 },
                 "modelUsageRows": {
                     "type": "integer"
+                },
+                "otelEnabled": {
+                    "type": "boolean"
                 },
                 "postgresAppUrlConfigured": {
                     "type": "boolean"

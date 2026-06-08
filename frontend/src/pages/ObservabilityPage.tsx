@@ -10,7 +10,9 @@ import {
   putAlertRules,
   type AlertRule,
 } from "@/modules/closure/api/closure.api";
+import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getOtelStatus, getRagProfile } from "@/modules/observability/api/observability.api";
+import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const GOVERNANCE_METRIC_HINTS: Record<string, string> = {
@@ -43,6 +45,15 @@ export function ObservabilityPage() {
     queryKey: ["rag-profile", activeSpaceId],
     queryFn: getRagProfile,
   });
+  const scaleQuery = useQuery({
+    queryKey: ["scale", "readiness", activeSpaceId],
+    queryFn: getScaleReadiness,
+  });
+  const pluginHealthQuery = useQuery({
+    queryKey: ["plugin-health", activeSpaceId],
+    queryFn: getPluginHealth,
+  });
+  const otelExporter = pluginHealthQuery.data?.items.find((p) => p.id === "ash-otel-exporter");
   const traceQuery = useQuery({
     queryKey: ["trace", traceId],
     queryFn: () => getTrace(traceId),
@@ -89,6 +100,8 @@ export function ObservabilityPage() {
               metricsQuery.refetch();
               otelQuery.refetch();
               ragQuery.refetch();
+              scaleQuery.refetch();
+              pluginHealthQuery.refetch();
             }}
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
@@ -125,6 +138,24 @@ export function ObservabilityPage() {
             <tr>
               <td>Insecure</td>
               <td>{otelQuery.data?.insecure ? "yes" : "no"}</td>
+            </tr>
+            <tr>
+              <td>Exporter 健康</td>
+              <td>
+                {otelExporter
+                  ? `错误 ${otelExporter.exportErrors} · 丢弃 ${otelExporter.dropCount}`
+                  : pluginHealthQuery.isLoading
+                    ? "加载中"
+                    : "未注册"}
+              </td>
+            </tr>
+            <tr>
+              <td>后台告警</td>
+              <td>{scaleQuery.data?.alertsEvalInterval || "未配置"}</td>
+            </tr>
+            <tr>
+              <td>指标 replay</td>
+              <td>{scaleQuery.data?.metricsEventReplayEnabled ? "ASH_METRICS_EVENT_REPLAY=1" : "off"}</td>
             </tr>
           </tbody>
         </table>

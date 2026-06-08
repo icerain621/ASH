@@ -1,4 +1,4 @@
-# Postgres 生产配置模板（revision 15）
+# Postgres 生产配置模板（revision 17）
 
 > 切换生产前复制本模板为环境变量/密钥配置。本地验证：`make postgres-sql-schema-e2e`、`make postgres-rls-e2e`。
 
@@ -39,7 +39,7 @@ export ASH_POSTGRES_RLS_FORCE=1
 # 1. 应用全部 SQL 修订（000001–000017，expectedVersion=17）
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
-# 期望：version=14 dirty=false expected=14 mode=sql
+# 期望：version=17 dirty=false expected=17 mode=sql
 
 # 2. SQLite → Postgres 数据（若有存量）
 export ASH_MIGRATE_E2E=1
@@ -50,14 +50,32 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 # 3. 门禁
 go run ./cmd/cli doctor --suite M3 --format md
 go run ./cmd/cli doctor --suite ALL --agent static --format md
-# 期望：M3 8/8，ALL 35/35（M3-08 sqlVersion=17，TR3-05 metricsParity，TR3-06 postgres FTS）
+# 期望：M3 8/8，ALL 36/36（M3-08 sqlVersion=17，TR3-05 metricsParity，TR3-06 postgres FTS，TR3-07 plugin export）
 ```
+
+## 可观测性（可选）
+
+```bash
+# Prometheus /metrics 追加 run_events 离线 replay 段（与 derive catalog 口径一致）
+export ASH_METRICS_EVENT_REPLAY=1
+
+# 后台治理告警评估（最短 1m；未设置则仅手动 POST /observability/alerts/evaluate）
+export ASH_ALERTS_EVAL_INTERVAL=5m
+
+# OTel traces（需可达 OTLP collector）
+export ASH_OTEL_ENABLED=1
+export ASH_OTEL_ENDPOINT=otel-collector:4317
+```
+
+配置说明见 `config/ash-observability.yaml`。
 
 ## Worker 启动检查
 
 ```bash
 curl -s http://<worker>/readyz | jq .
-# dialect=postgres；Scale readiness：schemaMode=sql、sqlMigrationVersion=14、autoMigrateEnabled=false
+# dialect=postgres
+# schemaMode=sql、sqlMigrationVersion=17、autoMigrateEnabled=false
+# otelEnabled、alertsEvalInterval、metricsEventReplayEnabled 与上表环境变量一致
 ```
 
 ## 双写
