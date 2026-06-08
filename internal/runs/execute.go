@@ -18,6 +18,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
+	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -136,14 +137,14 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 
 	if err := s.executeSteps(runCtx, &rec, req, doc, eng, now); err != nil {
 		ashotel.EndSpan(runSpan, err)
-		s.exportRunWaterfallOTel(runID)
+		s.exportRunWaterfallOTel(runID, rec.SpaceID)
 		resp := &CreateResponse{RunID: runID, TraceID: traceID}
 		if errors.Is(err, ErrWaitingApproval) {
 			return resp, nil
 		}
 		return resp, err
 	}
-	s.exportRunWaterfallOTel(runID)
+	s.exportRunWaterfallOTel(runID, rec.SpaceID)
 	return &CreateResponse{RunID: runID, TraceID: traceID}, nil
 }
 
@@ -1116,13 +1117,21 @@ func ragQueryRequest(spaceID, repoRoot, text string) rag.QueryRequest {
 	return rag.QueryRequest{RepoRoot: repoRoot, Text: text, TopK: 6, SpaceID: firstNonEmpty(spaceID, "local")}
 }
 
-func (s *Service) exportRunWaterfallOTel(runID string) {
+func (s *Service) exportRunWaterfallOTel(runID, spaceID string) {
 	if !ashotel.Enabled() {
 		return
 	}
+	spaceID = firstNonEmpty(spaceID, "local")
 	wf, err := observability.BuildWaterfall(s.db, runID)
 	if err != nil {
+		_ = pluginhealth.ReportExport(s.gdb(), spaceID, pluginhealth.OtelExporterPluginID, pluginhealth.OtelExporterPluginName, false, 0)
 		return
 	}
-	_, _ = ashotel.ExportWaterfall(context.Background(), wf)
+	exported, err := ashotel.ExportWaterfall(context.Background(), wf)
+	dropped := int64(len(wf.Spans) - exported)
+	if dropped < 0 {
+		dropped = int64(len(wf.Spans))
+	}
+	ok := err == nil && exported == len(wf.Spans)
+	_ = pluginhealth.ReportExport(s.gdb(), spaceID, pluginhealth.OtelExporterPluginID, pluginhealth.OtelExporterPluginName, ok, dropped)
 }

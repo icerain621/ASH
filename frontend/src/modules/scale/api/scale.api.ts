@@ -40,6 +40,8 @@ export type ScaleReadiness = {
   ragFtsEngine?: string;
   ragDefaultRetrievalMode?: string;
   ragFallbackQueryCount?: number;
+  otelEnabled?: boolean;
+  alertsEvalInterval?: string;
 };
 
 export function getScaleReadiness() {

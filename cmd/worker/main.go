@@ -31,12 +31,14 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/api"
 	_ "github.com/ash-repwiki/ash/internal/api/docs" // swag OpenAPI
 	"github.com/ash-repwiki/ash/internal/config"
 	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -95,6 +97,18 @@ func main() {
 
 	if cfg.PluginGRPCAddr != "" {
 		startPluginGRPC(cfg.PluginGRPCAddr, db)
+	}
+
+	if ashotel.Enabled() {
+		if err := pluginhealth.EnsureOtelExporter(db.DB, "local"); err != nil {
+			log.Printf("otel exporter plugin ensure: %v", err)
+		}
+	}
+
+	if interval, ok := alerts.ParseEvalInterval(os.Getenv("ASH_ALERTS_EVAL_INTERVAL")); ok {
+		stopAlerts := alerts.StartBackgroundEvaluator(db, interval)
+		defer stopAlerts()
+		log.Printf("alerts: background evaluation every %s", interval)
 	}
 
 	log.Printf("ASH worker listening on %s (data dir: %s)", cfg.HTTPAddr, cfg.DataDir)

@@ -38,7 +38,7 @@ make postgres-sql-schema-e2e
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 8/8 + ALL 34/34 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 8/8 + ALL 35/35 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
@@ -119,6 +119,8 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint O：OTel waterfall 导出自动写入 `pluginhealth`（`ash-otel-exporter`）；Scale 暴露 `otelEnabled` / `alertsEvalInterval`；`postgres-e2e` 追加 live Postgres **TR3**
+- Sprint N：Worker 后台治理告警评估（`ASH_ALERTS_EVAL_INTERVAL`）；`postgres-sql-schema-e2e` 追加 live Postgres **TR3**；Scale TR3-06 卡片；swagger 再生
 - Sprint M：`postgres-e2e-migrate` 复用 `source postgres-up.sh`；`postgres-sql-schema-e2e` 追加 `TestPostgresRAGFTSQuery`；Doctor **TR3-06**（Postgres `tsvector` FTS，sqlite skip）
 - Sprint L：Observability 治理指标告警表；Scale 插件导出健康摘要
 - Sprint K：Postgres RAG `tsvector` + GIN（SQL **17**）；`postgres-tsvector` FTS 引擎；集成测试 `TestPostgresRAGFTSQuery`

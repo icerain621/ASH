@@ -30,4 +30,7 @@ env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3
 echo "== rag postgres fts integration test =="
 go test -tags=integration ./internal/rag/ -count=1 -run TestPostgresRAGFTSQuery
 
+echo "== doctor TR3 on live postgres (TR3-06 fts; TR3-02 fallback sqlite-only) =="
+env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite TR3 --agent static
+
 echo "OK postgres sql-schema e2e (mode=sql, data dir: $E2E_DIR)"

@@ -176,7 +176,7 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 | 套件 | 项数 | 云 RDS 期望 |
 |------|------|-------------|
 | M3 | 8 | **全部 pass**（M3-04 / 06 / 07 / 08 非 skip） |
-| ALL | 34 | **全部 pass**（含 TR0–TR3、M2、**TR3-05** 指标回放一致性） |
+| ALL | 35 | **全部 pass**（含 TR0–TR3、M2、**TR3-05** 指标回放一致性、**TR3-06** Postgres FTS） |
 | M3-05 ExecGo | 1 | 可选：`ASH_EXECGO_E2E=1` + live ExecGo；未启用可 skipped |
 
 ---
@@ -239,7 +239,7 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 - [ ] `migrate plan` / `verify` 输出日志
 - [ ] `migrate schema version` 输出（version=14）
 - [ ] `doctor --suite M3` 报告（8/8 pass）
-- [ ] `doctor --suite ALL` 报告（34/34 pass）
+- [ ] `doctor --suite ALL` 报告（35/35 pass）
 - [ ] RLS 集成测试日志
 - [ ] `readyz` 响应 + 切换时间戳
 - [ ] §7 业务抽样记录

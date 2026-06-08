@@ -511,6 +511,8 @@ definitions:
         items:
           type: string
         type: array
+      runId:
+        type: string
       scope:
         additionalProperties:
           type: string
@@ -519,6 +521,8 @@ definitions:
         type: string
       topK:
         type: integer
+      traceId:
+        type: string
     required:
     - text
     type: object
@@ -611,6 +615,32 @@ definitions:
         type: boolean
       status:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.RunMigrationRequest:
+    properties:
+      dryRun:
+        type: boolean
+      runId:
+        type: string
+      traceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.RunMigrationResponse:
+    properties:
+      alreadyCurrent:
+        type: boolean
+      fromVersion:
+        type: integer
+      migrationId:
+        type: string
+      ok:
+        type: boolean
+      recordsUpdated:
+        type: integer
+      summary:
+        type: string
+      toVersion:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_metrics.BreakdownItem:
     properties:
@@ -831,6 +861,17 @@ definitions:
       traceId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_observability_otel.Status:
+    properties:
+      enabled:
+        type: boolean
+      endpoint:
+        type: string
+      insecure:
+        type: boolean
+      serviceName:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_rag.Hit:
     properties:
       digest:
@@ -866,6 +907,25 @@ definitions:
       documents:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_rag.Profile:
+    properties:
+      chunkCount:
+        type: integer
+      databaseDialect:
+        type: string
+      defaultRetrievalMode:
+        type: string
+      documentCount:
+        type: integer
+      fallbackQueryCount:
+        type: integer
+      ftsAvailable:
+        type: boolean
+      ftsEngine:
+        type: string
+      spaceId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:
     properties:
       repoRoot:
@@ -881,10 +941,14 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_rag.QueryResponse:
     properties:
+      ftsAvailable:
+        type: boolean
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit'
         type: array
+      retrievalMode:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate:
     properties:
@@ -1704,11 +1768,17 @@ definitions:
         type: boolean
       createdAt:
         type: string
+      dropCount:
+        type: integer
       endpoint:
         type: string
+      exportErrors:
+        type: integer
       id:
         type: string
       lastError:
+        type: string
+      lastExportAt:
         type: string
       name:
         type: string
@@ -2276,6 +2346,23 @@ definitions:
           type: string
         type: array
     type: object
+  internal_api.PluginHealthSummary:
+    properties:
+      dropCountTotal:
+        type: integer
+      exportErrorsTotal:
+        type: integer
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.PluginRegistry'
+        type: array
+      pluginCount:
+        type: integer
+      spaceId:
+        type: string
+      staleExportCount:
+        type: integer
+    type: object
   internal_api.PluginProtoFile:
     properties:
       bytes:
@@ -2394,6 +2481,8 @@ definitions:
     properties:
       auditLogRows:
         type: integer
+      autoMigrateEnabled:
+        type: boolean
       databaseDialect:
         type: string
       dualWriteEnabled:
@@ -2411,6 +2500,10 @@ definitions:
       lastMigrationSyncErrorAtMs:
         type: integer
       memoryApprovedCount:
+        type: integer
+      memoryCatalogVersion:
+        type: integer
+      memoryPendingMigrationRecords:
         type: integer
       memorySchemaVersion:
         type: integer
@@ -2436,12 +2529,32 @@ definitions:
         type: integer
       ragChunkCount:
         type: integer
+      ragDefaultRetrievalMode:
+        type: string
       ragDocumentCount:
         type: integer
+      ragFallbackQueryCount:
+        type: integer
+      ragFtsAvailable:
+        type: boolean
+      ragFtsEngine:
+        type: string
+      readinessWarnings:
+        items:
+          type: string
+        type: array
       runtimeDsnHint:
+        type: string
+      schemaMode:
         type: string
       spaceId:
         type: string
+      sqlMigrationExpected:
+        type: integer
+      sqlMigrationVersion:
+        type: integer
+      sqlMigrationsEnabled:
+        type: boolean
       sqlitePath:
         type: string
       workerConnectionRole:
@@ -2770,6 +2883,15 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate'
         type: array
+    type: object
+  internal_api.pluginExportReportRequest:
+    properties:
+      dropped:
+        type: integer
+      ok:
+        type: boolean
+      runId:
+        type: string
     type: object
   internal_api.putAlertRulesRequest:
     properties:
@@ -4010,6 +4132,31 @@ paths:
       summary: Record memory usage in a run
       tags:
       - memory
+  /api/v1/memory/migrate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: migration
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.RunMigrationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.RunMigrationResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Apply pending memory schema migrations
+      tags:
+      - memory
   /api/v1/memory/query:
     post:
       consumes:
@@ -4268,6 +4415,18 @@ paths:
       summary: Evaluate alert rules
       tags:
       - observability
+  /api/v1/observability/otel/status:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_otel.Status'
+      summary: OTel trace export status
+      tags:
+      - observability
   /api/v1/observability/quality/{runId}:
     get:
       parameters:
@@ -4510,6 +4669,40 @@ paths:
       summary: Register a plugin
       tags:
       - plugins
+  /api/v1/plugins/{pluginId}/export-report:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: plugin id
+        in: path
+        name: pluginId
+        required: true
+        type: string
+      - description: export report
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.pluginExportReportRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.PluginRegistry'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Report plugin export outcome
+      tags:
+      - plugins
   /api/v1/plugins/{pluginId}/verify:
     post:
       parameters:
@@ -4560,6 +4753,22 @@ paths:
       summary: Get plugin ABI profile
       tags:
       - plugins
+  /api/v1/plugins/health:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.PluginHealthSummary'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Plugin export health snapshot
+      tags:
+      - plugins
   /api/v1/rag/index:
     post:
       consumes:
@@ -4587,6 +4796,22 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Index repository for retrieval
+      tags:
+      - rag
+  /api/v1/rag/profile:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.Profile'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: RAG retrieval profile for current space
       tags:
       - rag
   /api/v1/rag/query:

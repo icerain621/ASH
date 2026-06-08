@@ -25,6 +25,7 @@ const TR3_CHECKS = [
   { id: "TR3-03", title: "成本/延迟 SLO", hint: "瀑布时长与 model_cost/tool_calls 质量指标" },
   { id: "TR3-04", title: "审计可追责", hint: "traceId、事件、产物与 tool/agent 链路" },
   { id: "TR3-05", title: "指标回放一致", hint: "run_events 离线 replay 与 ash_* 计数口径一致" },
+  { id: "TR3-06", title: "Postgres RAG FTS", hint: "dialect=postgres 时 tsvector 检索；SQLite 自动 skip" },
 ] as const;
 
 export function ScalePage() {
@@ -186,6 +187,14 @@ export function ScalePage() {
                 {(r?.ragFallbackQueryCount ?? 0) > 0
                   ? ` · 历史降级 ${r!.ragFallbackQueryCount} 次`
                   : null}
+              </td>
+            </tr>
+            <tr>
+              <td>可观测性</td>
+              <td>
+                {r
+                  ? `OTel ${r.otelEnabled ? "启用" : "关闭"}${r.alertsEvalInterval ? ` · 告警评估 ${r.alertsEvalInterval}` : ""}`
+                  : "-"}
               </td>
             </tr>
             <tr>

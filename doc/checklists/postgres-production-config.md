@@ -50,7 +50,7 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 # 3. 门禁
 go run ./cmd/cli doctor --suite M3 --format md
 go run ./cmd/cli doctor --suite ALL --agent static --format md
-# 期望：M3 8/8，ALL 34/34（M3-08 sqlVersion=14，TR3-05 metricsParity）
+# 期望：M3 8/8，ALL 35/35（M3-08 sqlVersion=17，TR3-05 metricsParity，TR3-06 postgres FTS）
 ```
 
 ## Worker 启动检查

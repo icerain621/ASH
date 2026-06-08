@@ -79,4 +79,7 @@ echo "== doctor M3 with RLS env =="
 ASH_POSTGRES_RLS=1 ASH_POSTGRES_RLS_FORCE=1 ASH_DATABASE_APP_URL="$ASH_DATABASE_APP_URL" \
   go run ./cmd/cli doctor --suite M3
 
+echo "== doctor TR3 on postgres (TR3-06 fts) =="
+env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite TR3 --agent static
+
 echo "OK postgres e2e migrate (data dir: $E2E_DIR)"

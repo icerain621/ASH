@@ -177,7 +177,7 @@ func (h *Handler) getWaterfall(c *gin.Context) {
 // @Summary OTel trace export status
 // @Tags observability
 // @Produce json
-// @Success 200 {object} otel.Status
+// @Success 200 {object} ashotel.Status
 // @Router /api/v1/observability/otel/status [get]
 func (h *Handler) getOtelStatus(c *gin.Context) {
 	obsCfg, err := obsconfig.Load()

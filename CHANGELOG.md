@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- OTel waterfall export health: built-in `ash-otel-exporter` plugin row; run completion reports export via `pluginhealth.ReportExport`; Scale readiness `otelEnabled` / `alertsEvalInterval`.
+- Worker background governance alert evaluation via `ASH_ALERTS_EVAL_INTERVAL` (minimum 1m); `postgres-sql-schema-e2e` runs Doctor TR3 on live Postgres; swagger regen for Sprint E–M API endpoints.
 - Sprint M: `postgres-sql-schema-e2e` runs Postgres RAG FTS integration test; `postgres-e2e-migrate` sources `postgres-up.sh` for port export; Doctor **TR3-06** validates `postgres-tsvector` retrieval (skipped on SQLite).
 - Postgres RAG full-text search: `rag_chunks.search_vector` tsvector + GIN index (SQL rev 17), `postgres-tsvector` retrieval path alongside SQLite FTS5.
 - Observability governance alert rules panel; Scale page plugin export health summary.

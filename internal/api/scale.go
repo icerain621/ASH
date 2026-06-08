@@ -2,11 +2,14 @@ package api
 
 import (
 	"net/http"
+	"os"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
+	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
@@ -51,6 +54,8 @@ type ScaleReadinessResponse struct {
 	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
 	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
 	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
+	OtelEnabled                    bool     `json:"otelEnabled,omitempty"`
+	AlertsEvalInterval             string   `json:"alertsEvalInterval,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -92,6 +97,10 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	ragSvc := h.runsFor(c).RAG()
 	ragFts := ragSvc.FTSAvailable()
 	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
+	alertsInterval := ""
+	if d, ok := alerts.ParseEvalInterval(os.Getenv("ASH_ALERTS_EVAL_INTERVAL")); ok {
+		alertsInterval = d.String()
+	}
 	var lastSyncMs, lastSyncErrMs *int64
 	if migSnap.LastSyncAt != nil {
 		ms := migSnap.LastSyncAt.UnixMilli()
@@ -142,6 +151,8 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		RAGFtsEngine:                  ragSvc.FtsEngine(),
 		RAGDefaultRetrievalMode:       ragSvc.DefaultRetrievalMode(),
 		RAGFallbackQueryCount:         ragFallbacks,
+		OtelEnabled:                   ashotel.Enabled(),
+		AlertsEvalInterval:            alertsInterval,
 	})
 }
 

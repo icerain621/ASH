@@ -1772,6 +1772,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/memory/migrate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memory"
+                ],
+                "summary": "Apply pending memory schema migrations",
+                "parameters": [
+                    {
+                        "description": "migration",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.RunMigrationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.RunMigrationResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/memory/query": {
             "post": {
                 "consumes": [
@@ -2164,6 +2203,25 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/otel/status": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "OTel trace export status",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_otel.Status"
                         }
                     }
                 }
@@ -2572,6 +2630,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/plugins/health": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Plugin export health snapshot",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.PluginHealthSummary"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/plugins/{pluginId}/export-report": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "plugins"
+                ],
+                "summary": "Report plugin export outcome",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "plugin id",
+                        "name": "pluginId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "export report",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.pluginExportReportRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.PluginRegistry"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/plugins/{pluginId}/verify": {
             "post": {
                 "produces": [
@@ -2656,6 +2791,31 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rag/profile": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rag"
+                ],
+                "summary": "RAG retrieval profile for current space",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.Profile"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -5335,6 +5495,9 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "runId": {
+                    "type": "string"
+                },
                 "scope": {
                     "type": "object",
                     "additionalProperties": {
@@ -5346,6 +5509,9 @@ const docTemplate = `{
                 },
                 "topK": {
                     "type": "integer"
+                },
+                "traceId": {
+                    "type": "string"
                 }
             }
         },
@@ -5482,6 +5648,46 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.RunMigrationRequest": {
+            "type": "object",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "traceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.RunMigrationResponse": {
+            "type": "object",
+            "properties": {
+                "alreadyCurrent": {
+                    "type": "boolean"
+                },
+                "fromVersion": {
+                    "type": "integer"
+                },
+                "migrationId": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "recordsUpdated": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "toVersion": {
+                    "type": "integer"
                 }
             }
         },
@@ -5820,6 +6026,23 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_observability_otel.Status": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "endpoint": {
+                    "type": "string"
+                },
+                "insecure": {
+                    "type": "boolean"
+                },
+                "serviceName": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_rag.Hit": {
             "type": "object",
             "properties": {
@@ -5874,6 +6097,35 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_rag.Profile": {
+            "type": "object",
+            "properties": {
+                "chunkCount": {
+                    "type": "integer"
+                },
+                "databaseDialect": {
+                    "type": "string"
+                },
+                "defaultRetrievalMode": {
+                    "type": "string"
+                },
+                "documentCount": {
+                    "type": "integer"
+                },
+                "fallbackQueryCount": {
+                    "type": "integer"
+                },
+                "ftsAvailable": {
+                    "type": "boolean"
+                },
+                "ftsEngine": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_rag.QueryRequest": {
             "type": "object",
             "required": [
@@ -5897,11 +6149,17 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_rag.QueryResponse": {
             "type": "object",
             "properties": {
+                "ftsAvailable": {
+                    "type": "boolean"
+                },
                 "items": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit"
                     }
+                },
+                "retrievalMode": {
+                    "type": "string"
                 }
             }
         },
@@ -7153,13 +7411,22 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "dropCount": {
+                    "type": "integer"
+                },
                 "endpoint": {
                     "type": "string"
+                },
+                "exportErrors": {
+                    "type": "integer"
                 },
                 "id": {
                     "type": "string"
                 },
                 "lastError": {
+                    "type": "string"
+                },
+                "lastExportAt": {
                     "type": "string"
                 },
                 "name": {
@@ -8030,6 +8297,32 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.PluginHealthSummary": {
+            "type": "object",
+            "properties": {
+                "dropCountTotal": {
+                    "type": "integer"
+                },
+                "exportErrorsTotal": {
+                    "type": "integer"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.PluginRegistry"
+                    }
+                },
+                "pluginCount": {
+                    "type": "integer"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "staleExportCount": {
+                    "type": "integer"
+                }
+            }
+        },
         "internal_api.PluginProtoFile": {
             "type": "object",
             "properties": {
@@ -8213,6 +8506,9 @@ const docTemplate = `{
                 "auditLogRows": {
                     "type": "integer"
                 },
+                "autoMigrateEnabled": {
+                    "type": "boolean"
+                },
                 "databaseDialect": {
                     "type": "string"
                 },
@@ -8238,6 +8534,12 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "memoryApprovedCount": {
+                    "type": "integer"
+                },
+                "memoryCatalogVersion": {
+                    "type": "integer"
+                },
+                "memoryPendingMigrationRecords": {
                     "type": "integer"
                 },
                 "memorySchemaVersion": {
@@ -8276,14 +8578,44 @@ const docTemplate = `{
                 "ragChunkCount": {
                     "type": "integer"
                 },
+                "ragDefaultRetrievalMode": {
+                    "type": "string"
+                },
                 "ragDocumentCount": {
                     "type": "integer"
+                },
+                "ragFallbackQueryCount": {
+                    "type": "integer"
+                },
+                "ragFtsAvailable": {
+                    "type": "boolean"
+                },
+                "ragFtsEngine": {
+                    "type": "string"
+                },
+                "readinessWarnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "runtimeDsnHint": {
                     "type": "string"
                 },
+                "schemaMode": {
+                    "type": "string"
+                },
                 "spaceId": {
                     "type": "string"
+                },
+                "sqlMigrationExpected": {
+                    "type": "integer"
+                },
+                "sqlMigrationVersion": {
+                    "type": "integer"
+                },
+                "sqlMigrationsEnabled": {
+                    "type": "boolean"
                 },
                 "sqlitePath": {
                     "type": "string"
@@ -8783,6 +9115,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate"
                     }
+                }
+            }
+        },
+        "internal_api.pluginExportReportRequest": {
+            "type": "object",
+            "properties": {
+                "dropped": {
+                    "type": "integer"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "runId": {
+                    "type": "string"
                 }
             }
         },
