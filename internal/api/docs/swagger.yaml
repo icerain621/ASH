@@ -1,5 +1,31 @@
 basePath: /
 definitions:
+  github_com_ash-repwiki_ash_internal_agentexec.PreflightCheck:
+    properties:
+      id:
+        type: string
+      message:
+        type: string
+      ok:
+        type: boolean
+    type: object
+  github_com_ash-repwiki_ash_internal_agentexec.PreflightResult:
+    properties:
+      agent:
+        type: string
+      checks:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentexec.PreflightCheck'
+        type: array
+      defaultExecutor:
+        type: string
+      issues:
+        items:
+          type: string
+        type: array
+      ready:
+        type: boolean
+    type: object
   github_com_ash-repwiki_ash_internal_alerts.EvaluationResult:
     properties:
       evaluatedAt:
@@ -571,6 +597,26 @@ definitions:
         type: integer
       updatedAt:
         type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.RetentionApplyRequest:
+    properties:
+      dryRun:
+        type: boolean
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.RetentionApplyResponse:
+    properties:
+      archived:
+        type: integer
+      decayed:
+        type: integer
+      dryRun:
+        type: boolean
+      matched:
+        type: integer
+      reviewRequired:
+        type: integer
+      spaceId:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_memory.ReviewRequest:
     properties:
@@ -2352,6 +2398,17 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.RepoConnection'
         type: array
     type: object
+  internal_api.RepoConnectionTestResponse:
+    properties:
+      checkedAt:
+        type: string
+      message:
+        type: string
+      ok:
+        type: boolean
+      provider:
+        type: string
+    type: object
   internal_api.ResourceScopeListResponse:
     properties:
       items:
@@ -2394,6 +2451,8 @@ definitions:
     properties:
       auditLogRows:
         type: integer
+      autoMigrateEnabled:
+        type: boolean
       databaseDialect:
         type: string
       dualWriteEnabled:
@@ -2440,8 +2499,16 @@ definitions:
         type: integer
       runtimeDsnHint:
         type: string
+      schemaMode:
+        type: string
       spaceId:
         type: string
+      sqlMigrationExpected:
+        type: integer
+      sqlMigrationVersion:
+        type: integer
+      sqlMigrationsEnabled:
+        type: boolean
       sqlitePath:
         type: string
       workerConnectionRole:
@@ -3903,6 +3970,14 @@ paths:
         in: query
         name: repo
         type: string
+      - description: filter records expiring within 14 days
+        in: query
+        name: expiring
+        type: boolean
+      - description: filter records due for review
+        in: query
+        name: reviewDue
+        type: boolean
       - default: 50
         description: page size
         in: query
@@ -4055,6 +4130,35 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Get memory record by id
+      tags:
+      - memory
+  /api/v1/memory/retention/apply:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: retention options
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.RetentionApplyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.RetentionApplyResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Apply memory TTL and review governance
       tags:
       - memory
   /api/v1/metrics/overview:
@@ -4855,6 +4959,36 @@ paths:
       summary: Create a GitHub repository connection
       tags:
       - repo
+  /api/v1/repo/connections/{connectionId}/test:
+    post:
+      parameters:
+      - description: repo connection id
+        in: path
+        name: connectionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.RepoConnectionTestResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Test a repository connection without leaking its secret
+      tags:
+      - repo
   /api/v1/runs:
     get:
       parameters:
@@ -5344,6 +5478,23 @@ paths:
       summary: List run tool calls
       tags:
       - runs
+  /api/v1/runtime/preflight:
+    get:
+      parameters:
+      - description: agent executor
+        in: query
+        name: agent
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentexec.PreflightResult'
+      summary: Check runtime readiness for agent execution
+      tags:
+      - runtime
   /api/v1/scale/readiness:
     get:
       produces:

@@ -9,6 +9,7 @@ import {
   listCIJobs,
   listCIRuns,
   listRepoConnections,
+  testRepoConnection,
   type CIDiagnosis,
 } from "@/modules/closure/api/closure.api";
 
@@ -18,6 +19,7 @@ export function CIPage() {
   const [runId, setRunId] = useState("");
   const [jobId, setJobId] = useState("");
   const [decisionStatus, setDecisionStatus] = useState("");
+  const [connectionTestMessage, setConnectionTestMessage] = useState("");
 
   const connectionsQuery = useQuery({ queryKey: ["repo-connections"], queryFn: listRepoConnections });
   const activeConnectionId = connectionId || connectionsQuery.data?.items[0]?.id || "";
@@ -52,6 +54,13 @@ export function CIPage() {
   const syncJobsMut = useMutation({
     mutationFn: () => listCIJobs({ runId: activeRunId, sync: true, limit: 50 }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ci-jobs", activeRunId] }),
+  });
+  const testConnectionMut = useMutation({
+    mutationFn: () => testRepoConnection(activeConnectionId),
+    onSuccess: (res) => {
+      setConnectionTestMessage(`${res.ok ? "ok" : "failed"} · ${res.message || res.provider} · ${res.checkedAt}`);
+    },
+    onError: (error) => setConnectionTestMessage(error instanceof Error ? error.message : "connection test failed"),
   });
   const diagnoseMut = useMutation({
     mutationFn: (body: { logText?: string }) =>
@@ -103,6 +112,10 @@ export function CIPage() {
             <RefreshCcw size={16} strokeWidth={1.8} />
             同步 runs
           </button>
+          <button className="btn icon-btn" onClick={() => testConnectionMut.mutate()} disabled={!activeConnectionId || testConnectionMut.isPending}>
+            <SearchCheck size={16} strokeWidth={1.8} />
+            测试连接
+          </button>
           <button className="btn icon-btn" onClick={() => syncJobsMut.mutate()} disabled={!activeRunId || syncJobsMut.isPending}>
             <RefreshCcw size={16} strokeWidth={1.8} />
             同步 jobs
@@ -110,11 +123,25 @@ export function CIPage() {
         </div>
       </div>
 
-      {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error) && (
+      {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error || testConnectionMut.error) && (
         <p className="error-text">
-          {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error as Error)?.message}
+          {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error || testConnectionMut.error as Error)?.message}
         </p>
       )}
+
+      <div className="readiness-card">
+        <div>
+          <strong>Repo connection</strong>
+          <StatusPill value={connectionsQuery.data?.items.find((conn) => conn.id === activeConnectionId)?.status || "idle"} />
+        </div>
+        <p>
+          {(connectionsQuery.data?.items.find((conn) => conn.id === activeConnectionId)?.provider || "-")} ·{" "}
+          {(connectionsQuery.data?.items.find((conn) => conn.id === activeConnectionId)?.owner || "-")}/
+          {(connectionsQuery.data?.items.find((conn) => conn.id === activeConnectionId)?.repo || "-")} · secret{" "}
+          {connectionsQuery.data?.items.find((conn) => conn.id === activeConnectionId)?.secretId || "-"}
+        </p>
+        <p>{connectionTestMessage || "同步或测试连接后会显示最近结果。"}</p>
+      </div>
 
       <div className="split ops-split">
         <div className="pane">
@@ -174,7 +201,7 @@ export function CIPage() {
                   <td>
                     <StatusPill value={job.conclusion || job.status} />
                   </td>
-                  <td>{job.logDigest ? "已记录" : "-"}</td>
+                  <td title={job.logDigest}>{job.logDigest ? job.logDigest.replace("sha256:", "").slice(0, 12) : "-"}</td>
                 </tr>
               ))}
             </tbody>

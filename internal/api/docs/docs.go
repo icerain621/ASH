@@ -1614,6 +1614,18 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
+                        "type": "boolean",
+                        "description": "filter records expiring within 14 days",
+                        "name": "expiring",
+                        "in": "query"
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "filter records due for review",
+                        "name": "reviewDue",
+                        "in": "query"
+                    },
+                    {
                         "type": "integer",
                         "default": 50,
                         "description": "page size",
@@ -1838,6 +1850,51 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/memory/retention/apply": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memory"
+                ],
+                "summary": "Apply memory TTL and review governance",
+                "parameters": [
+                    {
+                        "description": "retention options",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.RetentionApplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.RetentionApplyResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -3071,6 +3128,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/repo/connections/{connectionId}/test": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "repo"
+                ],
+                "summary": "Test a repository connection without leaking its secret",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "repo connection id",
+                        "name": "connectionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.RepoConnectionTestResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs": {
             "get": {
                 "produces": [
@@ -3808,6 +3911,33 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runtime/preflight": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runtime"
+                ],
+                "summary": "Check runtime readiness for agent execution",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "agent executor",
+                        "name": "agent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentexec.PreflightResult"
                         }
                     }
                 }
@@ -4553,6 +4683,46 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_ash-repwiki_ash_internal_agentexec.PreflightCheck": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_agentexec.PreflightResult": {
+            "type": "object",
+            "properties": {
+                "agent": {
+                    "type": "string"
+                },
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentexec.PreflightCheck"
+                    }
+                },
+                "defaultExecutor": {
+                    "type": "string"
+                },
+                "issues": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ready": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_alerts.EvaluationResult": {
             "type": "object",
             "properties": {
@@ -5422,6 +5592,37 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.RetentionApplyRequest": {
+            "type": "object",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.RetentionApplyResponse": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "integer"
+                },
+                "decayed": {
+                    "type": "integer"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "matched": {
+                    "type": "integer"
+                },
+                "reviewRequired": {
+                    "type": "integer"
+                },
+                "spaceId": {
+                    "type": "string"
                 }
             }
         },
@@ -8148,6 +8349,23 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.RepoConnectionTestResponse": {
+            "type": "object",
+            "properties": {
+                "checkedAt": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "provider": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.ResourceScopeListResponse": {
             "type": "object",
             "properties": {
@@ -8212,6 +8430,9 @@ const docTemplate = `{
             "properties": {
                 "auditLogRows": {
                     "type": "integer"
+                },
+                "autoMigrateEnabled": {
+                    "type": "boolean"
                 },
                 "databaseDialect": {
                     "type": "string"
@@ -8282,8 +8503,20 @@ const docTemplate = `{
                 "runtimeDsnHint": {
                     "type": "string"
                 },
+                "schemaMode": {
+                    "type": "string"
+                },
                 "spaceId": {
                     "type": "string"
+                },
+                "sqlMigrationExpected": {
+                    "type": "integer"
+                },
+                "sqlMigrationVersion": {
+                    "type": "integer"
+                },
+                "sqlMigrationsEnabled": {
+                    "type": "boolean"
                 },
                 "sqlitePath": {
                     "type": "string"

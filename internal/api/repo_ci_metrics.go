@@ -34,6 +34,8 @@ type RepoConnectionListResponse struct {
 	Items []store.RepoConnection `json:"items"`
 }
 
+type RepoConnectionTestResponse = ci.ConnectionTestResponse
+
 type CIRunListResponse struct {
 	Items []store.CIRun `json:"items"`
 }
@@ -123,6 +125,32 @@ func (h *Handler) listRepoConnections(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, RepoConnectionListResponse{Items: rows})
+}
+
+// TestRepoConnection godoc
+// @Summary Test a repository connection without leaking its secret
+// @Tags repo
+// @Produce json
+// @Param connectionId path string true "repo connection id"
+// @Success 200 {object} RepoConnectionTestResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/repo/connections/{connectionId}/test [post]
+func (h *Handler) testRepoConnection(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permRepoRead, space) {
+		return
+	}
+	resp, err := h.ciFor(c).TestConnection(c.Request.Context(), space, c.Param("connectionId"))
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("REPO_CONNECTION_TEST_FAILED", err.Error()))
+		return
+	}
+	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "repo.connection_tested", map[string]any{
+		"connectionId": c.Param("connectionId"), "ok": resp.OK, "provider": resp.Provider, "checkedAt": resp.CheckedAt,
+	}))
+	c.JSON(http.StatusOK, resp)
 }
 
 // ListCIRuns godoc

@@ -53,6 +53,13 @@ type DiagnoseRequest struct {
 	LogText      string
 }
 
+type ConnectionTestResponse struct {
+	OK        bool   `json:"ok"`
+	Provider  string `json:"provider"`
+	Message   string `json:"message,omitempty"`
+	CheckedAt string `json:"checkedAt"`
+}
+
 type DiagnosisResponse struct {
 	ID             string   `json:"id"`
 	SpaceID        string   `json:"spaceId"`
@@ -176,6 +183,29 @@ func (s *Service) ListConnections(spaceID string) ([]store.RepoConnection, error
 	var rows []store.RepoConnection
 	err := s.q(nil).Where("space_id = ?", firstNonEmpty(spaceID, "local")).Order("created_at desc").Find(&rows).Error
 	return rows, err
+}
+
+func (s *Service) TestConnection(ctx context.Context, spaceID, connectionID string) (ConnectionTestResponse, error) {
+	spaceID = firstNonEmpty(spaceID, "local")
+	conn, err := s.connection(spaceID, connectionID)
+	if err != nil {
+		return ConnectionTestResponse{}, err
+	}
+	providerName := normalizeProvider(conn.Provider)
+	provider, ok := s.providers[providerName]
+	if !ok || provider == nil {
+		return ConnectionTestResponse{}, fmt.Errorf("provider %q is not configured", conn.Provider)
+	}
+	token, err := s.resolveSecret(conn.SpaceID, conn.SecretID)
+	if err != nil {
+		return ConnectionTestResponse{}, err
+	}
+	_, err = provider.ListWorkflowRuns(ctx, conn, token, 1)
+	checkedAt := time.Now().UTC().Format(time.RFC3339)
+	if err != nil {
+		return ConnectionTestResponse{OK: false, Provider: providerName, Message: err.Error(), CheckedAt: checkedAt}, nil
+	}
+	return ConnectionTestResponse{OK: true, Provider: providerName, Message: "connection ok", CheckedAt: checkedAt}, nil
 }
 
 func (s *Service) ListRuns(ctx context.Context, spaceID, connectionID string, limit int, sync bool) ([]store.CIRun, error) {

@@ -85,7 +85,20 @@ func AbsRepoRoot(root string) (string, error) {
 	if root == "" {
 		return "", fmt.Errorf("repoRoot is required")
 	}
-	return filepath.Abs(root)
+	abs, err := filepath.Abs(root)
+	if err != nil {
+		return "", err
+	}
+	return normalizeMacPrivatePath(abs), nil
+}
+
+func normalizeMacPrivatePath(path string) string {
+	for _, prefix := range []string{"/private/var/", "/private/tmp/"} {
+		if strings.HasPrefix(path, prefix) {
+			return strings.TrimPrefix(path, "/private")
+		}
+	}
+	return path
 }
 
 func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {

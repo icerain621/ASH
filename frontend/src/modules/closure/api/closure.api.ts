@@ -37,12 +37,20 @@ function qs(params: Record<string, string | number | boolean | undefined>) {
 
 export type RepoConnection = {
   id: string;
+  secretId?: string;
   provider: string;
   owner: string;
   repo: string;
   status: string;
   defaultBranch: string;
   lastSyncAt?: string;
+};
+
+export type RepoConnectionTest = {
+  ok: boolean;
+  provider: string;
+  message?: string;
+  checkedAt: string;
 };
 
 export type CIRun = {
@@ -226,6 +234,13 @@ export function listRepoConnections() {
   return api<{ items?: RepoConnection[]; Items?: RepoConnection[] }>("/repo/connections").then((res) => ({
     items: itemsFrom(res),
   }));
+}
+
+export function testRepoConnection(connectionId: string) {
+  return api<RepoConnectionTest>(`/repo/connections/${encodeURIComponent(connectionId)}/test`, {
+    method: "POST",
+    body: "{}",
+  });
 }
 
 export function listCIRuns(params: { connectionId?: string; sync?: boolean; limit?: number } = {}) {

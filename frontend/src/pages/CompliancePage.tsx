@@ -2,7 +2,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { Download, EyeOff, Play, ScanSearch, ShieldCheck } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DoctorReportView } from "@/components/DoctorReportView";
 import { exportComplianceBundle, scanSecrets } from "@/modules/compliance/api/compliance.api";
 import { getDoctorReport, runDoctor, type DoctorReport } from "@/modules/doctor/api/doctor.api";
@@ -11,6 +11,7 @@ import {
   getAuditPolicy,
   getAuthMe,
   getPermissionMatrix,
+  applyAuditRetention,
   updateAuditPolicy,
   getPluginABIProfile,
   getStorageProfile,
@@ -96,6 +97,9 @@ export function CompliancePage() {
   const [reportId, setReportId] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState("");
   const [exportSuite, setExportSuite] = useState<"TR2" | "TR3" | "ALL">("TR2");
+  const [policyMsg, setPolicyMsg] = useState("");
+  const [retentionDays, setRetentionDays] = useState("365");
+  const [redactPayload, setRedactPayload] = useState(false);
 
   const meQuery = useQuery({ queryKey: ["auth-me", activeSpaceId], queryFn: getAuthMe });
   const scopesQuery = useQuery({
@@ -148,6 +152,30 @@ export function CompliancePage() {
     },
   });
 
+  const policyMut = useMutation({
+    mutationFn: () => updateAuditPolicy({ retentionDays: Number(retentionDays || 365), redactPayload }),
+    onSuccess: async (policy) => {
+      setPolicyMsg(`policy saved ${policy.retentionDays}d`);
+      await queryClient.invalidateQueries({ queryKey: ["audit-policy", activeSpaceId] });
+    },
+    onError: (err) => setPolicyMsg((err as Error).message),
+  });
+
+  const retentionMut = useMutation({
+    mutationFn: (dryRun: boolean) => applyAuditRetention({ dryRun }),
+    onSuccess: async (res) => {
+      setPolicyMsg(res.dryRun ? `dry-run matched ${res.matched}` : `deleted ${res.deleted} of ${res.matched}`);
+      await queryClient.invalidateQueries({ queryKey: ["audit-policy", activeSpaceId] });
+    },
+    onError: (err) => setPolicyMsg((err as Error).message),
+  });
+
+  useEffect(() => {
+    if (!auditQuery.data) return;
+    setRetentionDays(String(auditQuery.data.retentionDays || 365));
+    setRedactPayload(auditQuery.data.redactPayload);
+  }, [auditQuery.data]);
+
   const exportWithReportMut = useMutation({
     mutationFn: async () => {
       let id = reportId ?? undefined;
@@ -167,8 +195,10 @@ export function CompliancePage() {
     onError: (err) => setExportMsg((err as Error).message),
   });
 
+  const permissions = meQuery.data?.permissions ?? [];
+  const secretFindings = scanQuery.data?.findings ?? [];
   const identityOk =
-    Boolean(meQuery.data?.permissions.length) &&
+    Boolean(permissions.length) &&
     (activeSpaceId === "local" || (scopesQuery.data?.items.length ?? 0) > 0);
   const isolationOk = runsQuery.data?.items.every((run) => (run.spaceId || "local") === activeSpaceId) ?? true;
   const storageOk = Boolean(storageQuery.data?.artifactStore.ready);
@@ -310,17 +340,53 @@ export function CompliancePage() {
       <div className="split">
         <div className="pane">
           <div className="pane-title">
+            <h2>Data Policy</h2>
+            <span>{policyMsg || `${auditQuery.data?.retentionDays ?? 365}d`}</span>
+          </div>
+          <div className="audit-policy">
+            <label>
+              Retention
+              <input
+                min={1}
+                max={3650}
+                type="number"
+                value={retentionDays}
+                onChange={(event) => setRetentionDays(event.target.value)}
+              />
+            </label>
+            <label className="check-row">
+              <input
+                checked={redactPayload}
+                type="checkbox"
+                onChange={(event) => setRedactPayload(event.target.checked)}
+              />
+              Redact
+            </label>
+            <button className="btn mini" type="button" disabled={policyMut.isPending} onClick={() => policyMut.mutate()}>
+              保存策略
+            </button>
+            <button className="btn mini" type="button" disabled={retentionMut.isPending} onClick={() => retentionMut.mutate(true)}>
+              Dry run
+            </button>
+            <button className="btn mini err" type="button" disabled={retentionMut.isPending} onClick={() => retentionMut.mutate(false)}>
+              Apply
+            </button>
+            <span>{auditQuery.data?.locked ? "locked" : "editable"}</span>
+          </div>
+        </div>
+        <div className="pane">
+          <div className="pane-title">
             <h2>身份与权限</h2>
             <span>{meQuery.data?.role || "-"}</span>
           </div>
           <p className="muted-line">
             用户 {meQuery.data?.user.displayName || meQuery.data?.user.id || "-"} ·{" "}
-            {meQuery.data?.permissions.length ?? 0} 项权限 · 审计保留{" "}
+            {permissions.length} 项权限 · 审计保留{" "}
             {auditQuery.data?.retentionDays ?? 365} 天
             {auditQuery.data?.redactPayload ? " · 脱敏开启" : ""}
           </p>
           <pre className="code-block compact">
-            {(meQuery.data?.permissions ?? []).join("\n") || "无权限列表（dev 模式可能为空）"}
+            {permissions.join("\n") || "无权限列表（dev 模式可能为空）"}
           </pre>
           <div className="pane-title subhead">
             <h3>成员</h3>
@@ -492,7 +558,7 @@ export function CompliancePage() {
             </tr>
           </thead>
           <tbody>
-            {(scanQuery.data?.findings ?? []).slice(0, 20).map((item, idx) => (
+            {secretFindings.slice(0, 20).map((item, idx) => (
               <tr key={`${item.ref}-${idx}`}>
                 <td>{item.source}</td>
                 <td title={item.ref}>{shortId(item.ref)}</td>
@@ -501,7 +567,7 @@ export function CompliancePage() {
                 </td>
               </tr>
             ))}
-            {!scanQuery.data?.findings.length && (
+            {!secretFindings.length && (
               <tr className="empty-row">
                 <td colSpan={3}>未发现明文 secret 模式（或尚未扫描）。</td>
               </tr>

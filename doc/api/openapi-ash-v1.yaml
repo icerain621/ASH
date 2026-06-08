@@ -336,6 +336,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
+  /api/v1/repo/connections/{connectionId}/test:
+    post:
+      tags: [Repo]
+      summary: Test repo connection without exposing its secret
+      parameters:
+        - in: path
+          name: connectionId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
   /api/v1/ci/runs:
     get:
       tags: [CI]
@@ -1057,6 +1072,25 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
 
+  /api/v1/memory/retention/apply:
+    post:
+      tags: [Memory]
+      summary: Apply memory TTL and review governance
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                dryRun: { type: boolean }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
   /api/v1/memory/hit-used:
     post:
       tags: [Memory]
@@ -1263,6 +1297,21 @@ paths:
     post:
       tags: [Rag]
       summary: Query repository retrieval index
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/runtime/preflight:
+    get:
+      tags: [Runtime]
+      summary: Check runtime readiness for agent execution
+      parameters:
+        - in: query
+          name: agent
+          schema: { type: string, default: execgo_codex }
       responses:
         "200":
           description: ok
