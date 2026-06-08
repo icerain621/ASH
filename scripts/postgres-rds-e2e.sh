@@ -19,13 +19,20 @@ export ASH_SQLITE_PATH="${ASH_SQLITE_PATH:-$ASH_DATA_DIR/ash.db}"
 export ASH_MIGRATE_E2E="${ASH_MIGRATE_E2E:-1}"
 export ASH_POSTGRES_RLS="${ASH_POSTGRES_RLS:-1}"
 export ASH_POSTGRES_RLS_FORCE="${ASH_POSTGRES_RLS_FORCE:-1}"
+export ASH_SCHEMA_MODE="${ASH_SCHEMA_MODE:-sql}"
 
 echo "== postgres RDS e2e (checklist appendix A) =="
 echo "ASH_DATABASE_URL=${ASH_DATABASE_URL}"
 echo "ASH_DATABASE_APP_URL=${ASH_DATABASE_APP_URL:-<unset>}"
 echo "ASH_SQLITE_PATH=${ASH_SQLITE_PATH}"
+echo "ASH_SCHEMA_MODE=${ASH_SCHEMA_MODE}"
 
 bash scripts/postgres-smoke.sh
+
+echo "== golang-migrate schema (expected revision 14) =="
+go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
+go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
+
 bash scripts/postgres-ensure-app-role.sh
 
 go run ./cmd/cli migrate plan  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"

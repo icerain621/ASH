@@ -1,6 +1,7 @@
 package alerts
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -114,5 +115,53 @@ func TestTraceViewLinksRunRecords(t *testing.T) {
 	}
 	if len(view.Runs) != 1 || len(view.Events) != 1 || len(view.ToolCalls) != 1 || len(view.AgentTasks) != 1 || len(view.AuditLogs) != 1 {
 		t.Fatalf("view=%+v want linked records", view)
+	}
+}
+
+func TestEvaluateMemoryBacklogAlert(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	for i := 0; i < 3; i++ {
+		row := store.MemoryRecord{
+			ID: fmt.Sprintf("mem_cand_%d", i), SpaceID: "local", Layer: "L1",
+			Title: "t", Body: "b", Status: "candidate", CreatedAt: now, UpdatedAt: now,
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	rules, err := svc.ListRules("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rule := range rules {
+		if rule.Metric != "memory_unreviewed_backlog" {
+			continue
+		}
+		if err := db.Model(&store.AlertRule{}).Where("id = ?", rule.ID).
+			Update("threshold", 2).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	resp, err := svc.Evaluate("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range resp.Results {
+		if item.Metric == "memory_unreviewed_backlog" && item.Status == "alert" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("resp=%+v want memory backlog alert", resp)
+	}
+	text, err := svc.PrometheusTextWith(PrometheusOptions{SpaceID: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text, "ash_memory_unreviewed_backlog_live") {
+		t.Fatalf("prometheus missing governance metrics:\n%s", text)
 	}
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
+	"github.com/ash-repwiki/ash/internal/observability/derive"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
@@ -100,8 +101,10 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 	case "TR3":
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
+		rep.Results = append(rep.Results, s.tr3PostgresRAGFTS())
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
+		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -127,8 +130,10 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m3SuiteCases()...)
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
+		rep.Results = append(rep.Results, s.tr3PostgresRAGFTS())
 		rep.Results = append(rep.Results, s.tr3CostLatencySLO())
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
+		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -1600,9 +1605,15 @@ func (s *Service) tr3MemoryMigration() CaseResult {
 		res.Message = "approved v1 record not returned by memory query"
 		return res
 	}
+	mig, err := mem.RunMigrations(memory.RunMigrationRequest{})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "memorySchema", Ref: fmt.Sprintf("v%d", memory.CurrentSchemaVersion)},
 		Evidence{Kind: "memoryQuery", Ref: cand.CandidateID},
+		Evidence{Kind: "memoryMigration", Ref: fmt.Sprintf("catalog=%d pending=%t", mig.ToVersion, mig.AlreadyCurrent)},
 	)
 	res.Status = "pass"
 	return res
@@ -1638,6 +1649,50 @@ func (s *Service) tr3RAGFallback() CaseResult {
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "ragFallback", Ref: resp.Items[0].Path},
 		Evidence{Kind: "ragIndex", Ref: repo},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3PostgresRAGFTS() CaseResult {
+	res := CaseResult{ID: "TR3-06", Status: "fail"}
+	if s.runs.DB().Dialect() != "postgres" {
+		res.Status = "pass"
+		res.Message = "skipped: postgres dialect required for tsvector FTS"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: s.runs.DB().Dialect()})
+		return res
+	}
+	repo := filepath.Join(s.dataDir, "doctor_tr3_pgfts_"+fmt.Sprintf("%d", time.Now().UnixNano()))
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	content := "postgres tsvector doctor evidence line\n"
+	if err := os.WriteFile(filepath.Join(repo, "pgfts.md"), []byte(content), 0o644); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	ragSvc := rag.NewService(s.runs.DB())
+	if _, err := ragSvc.Index(rag.IndexRequest{RepoRoot: repo, SpaceID: "local"}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if ragSvc.FtsEngine() != "postgres-tsvector" {
+		res.Message = fmt.Sprintf("engine=%q want postgres-tsvector", ragSvc.FtsEngine())
+		return res
+	}
+	resp, err := ragSvc.Query(rag.QueryRequest{RepoRoot: repo, Text: "tsvector evidence", TopK: 3, SpaceID: "local"})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if resp.RetrievalMode != rag.RetrievalModeFTS || len(resp.Items) == 0 || resp.Items[0].Path != "pgfts.md" {
+		res.Message = fmt.Sprintf("postgres FTS query: mode=%s items=%+v", resp.RetrievalMode, resp.Items)
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "ragPostgresFTS", Ref: resp.Items[0].Path},
+		Evidence{Kind: "ftsEngine", Ref: ragSvc.FtsEngine()},
 	)
 	res.Status = "pass"
 	return res
@@ -1691,6 +1746,44 @@ func (s *Service) tr3CostLatencySLO() CaseResult {
 	} else {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "modelUsage", Ref: fmt.Sprintf("rows:%d", usageCount)})
 	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3MetricsReplayParity() CaseResult {
+	res := CaseResult{ID: "TR3-05", Status: "fail"}
+	create, _, err := s.createProbeRun("TR3-05")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+
+	var rows []store.RunEvent
+	if err := s.runs.DB().Where("run_id = ?", create.RunID).Order("seq asc").Find(&rows).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if len(rows) == 0 {
+		res.Message = "no run_events for replay parity"
+		return res
+	}
+	events := make([]derive.Event, len(rows))
+	for i, row := range rows {
+		events[i] = derive.Event{
+			RunID:       row.RunID,
+			Type:        row.Type,
+			PayloadJSON: row.PayloadJSON,
+		}
+	}
+	if err := derive.ValidateReplayParity(events); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "eventReplay", Ref: fmt.Sprintf("events=%d", len(events))},
+		Evidence{Kind: "metricsParity", Ref: "ash_* replay tallies match"},
+	)
 	res.Status = "pass"
 	return res
 }

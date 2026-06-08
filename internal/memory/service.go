@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sort"
 	"strings"
 	"time"
 
@@ -244,7 +245,7 @@ func (s *Service) Review(candidateID string, req ReviewRequest) (*ReviewResponse
 	if err != nil {
 		return nil, fmt.Errorf("review: %w", err)
 	}
-	if err := s.emitReviewed(req.RunID, traceID, candidateID, req.Decision, req.Reason, req.PolicyProfile); err != nil {
+	if err := s.emitReviewed(req.RunID, traceID, candidateID, rec.Layer, req.Decision, req.Reason, req.PolicyProfile); err != nil {
 		return nil, fmt.Errorf("emit memory event: %w", err)
 	}
 	for _, edge := range governanceEdges {
@@ -263,6 +264,7 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 	if strings.TrimSpace(req.Text) == "" {
 		return nil, fmt.Errorf("text is required")
 	}
+	started := time.Now()
 	topK := req.TopK
 	if topK <= 0 || topK > 50 {
 		topK = 10
@@ -294,6 +296,13 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 	items, err := s.attachEvidence(rows)
 	if err != nil {
 		return nil, err
+	}
+	if req.RunID != "" {
+		traceID, err := s.validateRunRef(req.RunID, req.TraceID)
+		if err == nil {
+			latencyMs := time.Since(started).Milliseconds()
+			_ = s.emitQuery(req.RunID, traceID, memoryLayersKey(req.Layers), len(items), latencyMs)
+		}
 	}
 	return &QueryResponse{Items: items}, nil
 }
@@ -331,10 +340,34 @@ func (s *Service) HitUsed(req HitUsedRequest) (*HitUsedResponse, error) {
 	}).Error; err != nil {
 		return nil, err
 	}
-	if err := s.emitHitUsed(req.RunID, traceID, req.RecordIDs); err != nil {
+	if err := s.emitHitUsed(req.RunID, traceID, req.RecordIDs, s.hitsByLayerForIDs(req.RecordIDs)); err != nil {
 		return nil, fmt.Errorf("emit memory event: %w", err)
 	}
 	return &HitUsedResponse{OK: true}, nil
+}
+
+func memoryLayersKey(layers []string) string {
+	if len(layers) == 0 {
+		return "all"
+	}
+	cp := append([]string(nil), layers...)
+	sort.Strings(cp)
+	return strings.Join(cp, ",")
+}
+
+func (s *Service) hitsByLayerForIDs(ids []string) map[string]int {
+	if len(ids) == 0 {
+		return map[string]int{}
+	}
+	var rows []store.MemoryRecord
+	if err := s.gdb().Select("layer").Where("id IN ?", ids).Find(&rows).Error; err != nil || len(rows) == 0 {
+		return map[string]int{"unknown": len(ids)}
+	}
+	out := map[string]int{}
+	for _, r := range rows {
+		out[r.Layer]++
+	}
+	return out
 }
 
 func (s *Service) runSpaceID(runID string) (string, error) {

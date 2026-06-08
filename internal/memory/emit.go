@@ -87,9 +87,10 @@ func (s *Service) emitCandidateCreated(runID, traceID, candidateID, layer, sensi
 	})
 }
 
-func (s *Service) emitReviewed(runID, traceID, candidateID, decision, reason, policy string) error {
+func (s *Service) emitReviewed(runID, traceID, candidateID, layer, decision, reason, policy string) error {
 	if err := s.emitRunEvent(runID, traceID, "memory.reviewed", map[string]any{
 		"candidateId":   candidateID,
+		"layer":         layer,
 		"decision":      decision,
 		"reason":        reason,
 		"policyProfile": policy,
@@ -99,16 +100,47 @@ func (s *Service) emitReviewed(runID, traceID, candidateID, decision, reason, po
 	if decision == "deprecate" {
 		return s.emitRunEvent(runID, traceID, "memory.deprecated", map[string]any{
 			"memoryId": candidateID,
+			"layer":    layer,
 			"reason":   reason,
 		})
 	}
 	return nil
 }
 
-func (s *Service) emitHitUsed(runID, traceID string, recordIDs []string) error {
-	return s.emitRunEvent(runID, traceID, "memory.hit_used", map[string]any{
-		"recordIds": recordIDs,
-		"count":     len(recordIDs),
+func (s *Service) emitHitUsed(runID, traceID string, recordIDs []string, hitsByLayer map[string]int) error {
+	total := 0
+	for _, n := range hitsByLayer {
+		total += n
+	}
+	if total == 0 {
+		total = len(recordIDs)
+	}
+	payload := map[string]any{
+		"count":       total,
+		"hitsByLayer": hitsByLayer,
+	}
+	if len(recordIDs) > 0 {
+		payload["recordIds"] = recordIDs
+	}
+	return s.emitRunEvent(runID, traceID, "memory.hit_used", payload)
+}
+
+func (s *Service) emitMigrated(runID, traceID string, from, to int, ok bool, recordsUpdated int, summary string) error {
+	return s.emitRunEvent(runID, traceID, "memory.migrated", map[string]any{
+		"from":           from,
+		"to":             to,
+		"ok":             ok,
+		"recordsUpdated": recordsUpdated,
+		"summary":        summary,
+		"toolVersion":    MemoryToolVersion,
+	})
+}
+
+func (s *Service) emitQuery(runID, traceID, layersKey string, resultCount int, latencyMs int64) error {
+	return s.emitRunEvent(runID, traceID, "memory.query", map[string]any{
+		"layersKey":   layersKey,
+		"resultCount": resultCount,
+		"latencyMs":   latencyMs,
 	})
 }
 

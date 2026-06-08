@@ -1079,6 +1079,17 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
 
+  /api/v1/memory/migrate:
+    post:
+      tags: [Memory]
+      summary: Run memory catalog migration for current space
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
   /api/v1/memory/records/{recordId}:
     get:
       tags: [Memory]
@@ -1110,6 +1121,17 @@ paths:
     post:
       tags: [ModelRouter]
       summary: Route a non-coding model request
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/observability/otel/status:
+    get:
+      tags: [Observability]
+      summary: OTel trace export runtime status
       responses:
         "200":
           description: ok
@@ -1248,10 +1270,48 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiResponse" }
 
+  /api/v1/plugins/health:
+    get:
+      tags: [Plugins]
+      summary: Plugin export health snapshot for current space
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/plugins/{pluginId}/export-report:
+    post:
+      tags: [Plugins]
+      summary: Report plugin export outcome
+      parameters:
+        - in: path
+          name: pluginId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
   /api/v1/rag/index:
     post:
       tags: [Rag]
       summary: Index repository for retrieval
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiResponse" }
+
+  /api/v1/rag/profile:
+    get:
+      tags: [Rag]
+      summary: RAG retrieval profile for current space
       responses:
         "200":
           description: ok

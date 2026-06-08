@@ -22,7 +22,8 @@ cleanup() {
 trap cleanup EXIT
 
 echo "== start postgres =="
-bash scripts/postgres-up.sh
+# shellcheck source=postgres-up.sh
+source scripts/postgres-up.sh
 PORT="${ASH_POSTGRES_PORT:-5432}"
 export ASH_DATABASE_URL="postgres://ash:ash@127.0.0.1:${PORT}/ash?sslmode=disable"
 

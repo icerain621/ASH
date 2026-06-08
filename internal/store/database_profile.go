@@ -53,16 +53,16 @@ func DatabaseProfile(dataDir, databaseURL string) (DatabaseProfileInfo, error) {
 		PostgresAppURL:     strings.TrimSpace(os.Getenv("ASH_DATABASE_APP_URL")) != "",
 		MigrationReady:     target.Dialect == "sqlite" || target.Dialect == "postgres",
 	}
+	schema := SchemaProfile(target.Dialect, raw)
+	profile.SchemaMode = schema.Mode
+	profile.SQLMigrationsEnabled = schema.SQLMigrationsEnabled
+	profile.AutoMigrateEnabled = schema.AutoMigrateEnabled
+	profile.SQLMigrationExpected = schema.SQLMigrationExpected
 	if target.Dialect == "postgres" {
 		profile.DSNHint = redactDSN(target.DSN)
 		profile.PostgresRLSEnabled = PostgresRLSEnabled()
 		profile.PostgresRLSForce = PostgresRLSForce()
-		schema := SchemaProfile(target.Dialect, raw)
-		profile.SchemaMode = schema.Mode
-		profile.SQLMigrationsEnabled = schema.SQLMigrationsEnabled
-		profile.AutoMigrateEnabled = schema.AutoMigrateEnabled
 		profile.SQLMigrationVersion = schema.SQLMigrationVersion
-		profile.SQLMigrationExpected = schema.SQLMigrationExpected
 	}
 	return profile, nil
 }

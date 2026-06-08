@@ -81,6 +81,9 @@ func TestReplay_memoryAndModel(t *testing.T) {
 	if snap.Counters[`ash_memory_reviews_total{decision="approve",layer="L1"}`] != 1 {
 		t.Fatal(snap.Counters)
 	}
+	if snap.Gauges[`ash_memory_unreviewed_backlog{layer="L1"}`] != 0 {
+		t.Fatalf("backlog gauge=%v want 0 after review", snap.Gauges)
+	}
 	if snap.Counters[`ash_token_in_total{model="gpt",provider="openai"}`] != 10 {
 		t.Fatal(snap.Counters)
 	}
@@ -89,11 +92,75 @@ func TestReplay_memoryAndModel(t *testing.T) {
 	}
 }
 
+func TestReplay_memoryMissingEvidenceAndBacklog(t *testing.T) {
+	events := []Event{
+		{RunID: "r", Type: "memory.candidate_created", PayloadJSON: `{"candidateId":"c0","layer":"L2","evidenceCount":0,"sensitivity":"normal"}`},
+		{RunID: "r", Type: "memory.candidate_created", PayloadJSON: `{"candidateId":"c1","layer":"L2","evidenceCount":1,"sensitivity":"normal"}`},
+	}
+	snap := Replay(events)
+	if snap.Counters[`ash_memory_missing_evidence_total{layer="L2"}`] != 1 {
+		t.Fatalf("missing evidence=%v", snap.Counters)
+	}
+	if snap.Gauges[`ash_memory_unreviewed_backlog{layer="L2"}`] != 2 {
+		t.Fatalf("backlog=%v want 2", snap.Gauges)
+	}
+}
+
+func TestReplay_memoryHitDeprecatedQuery(t *testing.T) {
+	events := []Event{
+		{RunID: "r", Type: "memory.hit_used", PayloadJSON: `{"count":3,"hitsByLayer":{"L1":2,"L2":1}}`},
+		{RunID: "r", Type: "memory.deprecated", PayloadJSON: `{"memoryId":"m1","layer":"L1","reason":"stale"}`},
+		{RunID: "r", Type: "memory.query", PayloadJSON: `{"layersKey":"L1,L2","resultCount":2,"latencyMs":45}`},
+	}
+	snap := Replay(events)
+	if snap.Counters[`ash_memory_hit_used_total{layer="L1"}`] != 2 {
+		t.Fatalf("L1 hits=%v", snap.Counters)
+	}
+	if snap.Counters[`ash_memory_hit_used_total{layer="L2"}`] != 1 {
+		t.Fatalf("L2 hits=%v", snap.Counters)
+	}
+	if snap.Counters[`ash_memory_deprecated_total{layer="L1",reason="stale"}`] != 1 {
+		t.Fatalf("deprecated=%v", snap.Counters)
+	}
+	if snap.Counters[`ash_memory_queries_total{layersKey="L1,L2"}`] != 1 {
+		t.Fatalf("queries=%v", snap.Counters)
+	}
+	if len(snap.Histograms[`ash_memory_query_latency_ms{layersKey="L1,L2"}`]) != 1 {
+		t.Fatalf("query latency=%v", snap.Histograms)
+	}
+}
+
+func TestReplay_ragRetrievedFallback(t *testing.T) {
+	snap := Replay([]Event{{
+		RunID: "r", Type: "rag.retrieved",
+		PayloadJSON: `{"retrievalMode":"chunk","hits":2}`,
+	}})
+	if snap.Counters[`ash_rag_queries_total{mode="chunk"}`] != 1 {
+		t.Fatalf("queries counter=%v", snap.Counters)
+	}
+	if snap.Counters[`ash_rag_fts_fallback_total{mode="chunk"}`] != 1 {
+		t.Fatalf("fallback counter=%v", snap.Counters)
+	}
+}
+
+func TestReplay_memoryMigrated(t *testing.T) {
+	snap := Replay([]Event{{
+		RunID: "r", Type: "memory.migrated",
+		PayloadJSON: `{"from":0,"to":1,"ok":true,"recordsUpdated":3,"summary":"v0→v1"}`,
+	}})
+	key := `ash_memory_migration_runs_total{from="0",ok="true",to="1"}`
+	if snap.Counters[key] != 1 {
+		t.Fatalf("counter=%v want key %s", snap.Counters, key)
+	}
+}
+
 func TestCatalog_coversAppendixCoreEvents(t *testing.T) {
 	want := []string{
 		"run.started", "run.finished", "run.failed", "step.finished",
-		"tool.result", "policy.denied", "model.usage", "rag.results",
+		"tool.result", "policy.denied", "model.usage", "rag.results", "rag.retrieved",
 		"memory.candidate_created", "memory.reviewed",
+		"memory.hit_used", "memory.deprecated", "memory.query", "memory.migrated",
+		"plugin.export_failed",
 	}
 	seen := map[string]struct{}{}
 	for _, rule := range Catalog() {

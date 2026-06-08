@@ -70,8 +70,20 @@ export type PluginRegistry = {
   compatible: boolean;
   status: string;
   lastError?: string;
+  lastExportAt?: string;
+  exportErrors?: number;
+  dropCount?: number;
   createdAt?: string;
   updatedAt?: string;
+};
+
+export type PluginHealthSummary = {
+  spaceId: string;
+  pluginCount: number;
+  exportErrorsTotal: number;
+  dropCountTotal: number;
+  staleExportCount: number;
+  items: PluginRegistry[];
 };
 
 export type PluginABIProfile = {
@@ -288,6 +300,9 @@ function normalizePlugin(raw: RawRecord): PluginRegistry {
     compatible: bool(raw, "compatible", "Compatible"),
     status: str(raw, "status", "Status"),
     lastError: str(raw, "lastError", "LastError"),
+    lastExportAt: str(raw, "lastExportAt", "LastExportAt"),
+    exportErrors: num(raw, "exportErrors", "ExportErrors"),
+    dropCount: num(raw, "dropCount", "DropCount"),
     createdAt: str(raw, "createdAt", "CreatedAt"),
     updatedAt: str(raw, "updatedAt", "UpdatedAt"),
   };
@@ -480,6 +495,27 @@ export function listPlugins() {
   return api<{ items?: RawRecord[]; Items?: RawRecord[] }>("/plugins").then((res) => ({
     items: itemsFrom(res).map(normalizePlugin),
   }));
+}
+
+export function getPluginHealth() {
+  return api<RawRecord>("/plugins/health").then((raw) => {
+    const items = itemsFrom(raw as { items?: RawRecord[]; Items?: RawRecord[] });
+    return {
+      spaceId: str(raw, "spaceId", "SpaceID") ?? "",
+      pluginCount: num(raw, "pluginCount", "PluginCount") ?? 0,
+      exportErrorsTotal: num(raw, "exportErrorsTotal", "ExportErrorsTotal") ?? 0,
+      dropCountTotal: num(raw, "dropCountTotal", "DropCountTotal") ?? 0,
+      staleExportCount: num(raw, "staleExportCount", "StaleExportCount") ?? 0,
+      items: items.map(normalizePlugin),
+    } satisfies PluginHealthSummary;
+  });
+}
+
+export function reportPluginExport(pluginId: string, body: { ok?: boolean; dropped?: number } = {}) {
+  return api<RawRecord>(`/plugins/${pluginId}/export-report`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then(normalizePlugin);
 }
 
 export function verifyPlugin(pluginId: string) {

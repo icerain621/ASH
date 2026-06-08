@@ -677,6 +677,51 @@ func TestRegisterPluginValidatesABIAndListsCurrentSpace(t *testing.T) {
 	if len(list.Items) != 2 {
 		t.Fatalf("plugins=%+v want own compatible and incompatible entries", list.Items)
 	}
+
+	reportBody := []byte(`{"ok":false,"dropped":3}`)
+	reportResp := httptest.NewRecorder()
+	reportReq := httptest.NewRequest(http.MethodPost, "/api/v1/plugins/"+plugin.ID+"/export-report", bytes.NewReader(reportBody))
+	reportReq.Header.Set("Authorization", "Bearer "+token)
+	reportReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(reportResp, reportReq)
+	if reportResp.Code != http.StatusOK {
+		t.Fatalf("export-report status=%d want %d body=%s", reportResp.Code, http.StatusOK, reportResp.Body.String())
+	}
+	if err := json.Unmarshal(reportResp.Body.Bytes(), &plugin); err != nil {
+		t.Fatal(err)
+	}
+	if plugin.ExportErrors != 1 || plugin.DropCount != 3 || plugin.LastExportAt == nil {
+		t.Fatalf("plugin=%+v want exportErrors=1 dropCount=3 lastExportAt set", plugin)
+	}
+
+	healthResp := httptest.NewRecorder()
+	healthReq := httptest.NewRequest(http.MethodGet, "/api/v1/plugins/health", nil)
+	healthReq.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(healthResp, healthReq)
+	if healthResp.Code != http.StatusOK {
+		t.Fatalf("health status=%d want %d body=%s", healthResp.Code, http.StatusOK, healthResp.Body.String())
+	}
+	var health struct {
+		PluginCount       int                    `json:"pluginCount"`
+		ExportErrorsTotal int64                  `json:"exportErrorsTotal"`
+		DropCountTotal    int64                  `json:"dropCountTotal"`
+		Items             []store.PluginRegistry `json:"items"`
+	}
+	if err := json.Unmarshal(healthResp.Body.Bytes(), &health); err != nil {
+		t.Fatal(err)
+	}
+	if health.PluginCount != 2 || health.ExportErrorsTotal != 1 || health.DropCountTotal != 3 {
+		t.Fatalf("health=%+v want pluginCount=2 exportErrors=1 dropCount=3", health)
+	}
+	var auditCount int64
+	if err := db.Model(&store.AuditLog{}).
+		Where("space_id = ? AND event_type = ?", ownSpace.ID, "plugin.export_failed").
+		Count(&auditCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if auditCount != 1 {
+		t.Fatalf("audit export_failed=%d want 1", auditCount)
+	}
 }
 
 func TestPluginABIProfileReportsProtoDigests(t *testing.T) {

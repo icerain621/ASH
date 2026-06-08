@@ -112,6 +112,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/memory/candidates/:candidateId/review", h.reviewMemoryCandidate)
 		v1.GET("/memory/records/:recordId", h.getMemoryRecord)
 		v1.POST("/memory/query", h.queryMemory)
+		v1.POST("/memory/migrate", h.runMemoryMigration)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
 
 		v1.POST("/improve/proposals", h.createImproveProposal)
@@ -124,10 +125,12 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.POST("/rag/index", h.indexRAG)
 		v1.POST("/rag/query", h.queryRAG)
+		v1.GET("/rag/profile", h.getRAGProfile)
 
 		v1.GET("/model-router/providers", h.listModelProviders)
 		v1.POST("/model-router/route", h.routeModel)
 		v1.GET("/observability/waterfall/:runId", h.getWaterfall)
+		v1.GET("/observability/otel/status", h.getOtelStatus)
 		v1.GET("/observability/quality/:runId", h.getQualityMetrics)
 		v1.GET("/observability/alerts", h.listAlerts)
 		v1.GET("/observability/alert-rules", h.listAlertRules)
@@ -190,9 +193,11 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/audit/exports", h.listAuditExports)
 		v1.GET("/audit/exports/:exportId/access", h.getAuditExportAccess)
 		v1.GET("/plugins/abi", h.getPluginABIProfile)
+		v1.GET("/plugins/health", h.getPluginHealth)
 		v1.GET("/plugins", h.listPlugins)
 		v1.POST("/plugins", h.registerPlugin)
 		v1.POST("/plugins/:pluginId/verify", h.verifyPlugin)
+		v1.POST("/plugins/:pluginId/export-report", h.reportPluginExport)
 		v1.GET("/storage/profile", h.getStorageProfile)
 	}
 	registerWebUI(r, webDir)

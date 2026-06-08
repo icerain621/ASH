@@ -201,6 +201,19 @@ type MemoryEdge struct {
 
 func (MemoryEdge) TableName() string { return "memory_edges" }
 
+// MemoryMigration records one applied memory schema migration batch (appendix C).
+type MemoryMigration struct {
+	ID          string `gorm:"primaryKey;size:64"`
+	FromVersion int    `gorm:"not null"`
+	ToVersion   int    `gorm:"not null"`
+	ToolVersion string `gorm:"size:64;not null"`
+	Summary     string `gorm:"type:text;not null"`
+	MetaJSON    string `gorm:"type:text;not null;default:'{}'"`
+	AppliedAt   time.Time
+}
+
+func (MemoryMigration) TableName() string { return "memory_migrations" }
+
 // RAGDocument indexes a repo file for FTS/BM25-style retrieval.
 type RAGDocument struct {
 	ID        string `gorm:"primaryKey;size:64"`
@@ -648,10 +661,13 @@ type PluginRegistry struct {
 	Endpoint     string `gorm:"size:512"`
 	Capabilities string `gorm:"type:text;not null;default:'[]'"`
 	Compatible   bool   `gorm:"not null;default:false"`
-	Status       string `gorm:"size:32;not null;index"`
-	LastError    string `gorm:"type:text"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	Status        string `gorm:"size:32;not null;index"`
+	LastError     string `gorm:"type:text"`
+	LastExportAt  *time.Time
+	ExportErrors  int64 `gorm:"not null;default:0"`
+	DropCount     int64 `gorm:"not null;default:0"`
+	CreatedAt     time.Time
+	UpdatedAt     time.Time
 }
 
 func (PluginRegistry) TableName() string { return "plugin_registry" }

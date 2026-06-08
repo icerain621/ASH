@@ -516,7 +516,7 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		Repo:          meta.Repo,
 		SpaceID:       rec.SpaceID,
 	}
-	if err := s.executeSteps(&rec, createReq, doc, eng, rec.StartedAt); err != nil {
+	if err := s.executeSteps(context.Background(), &rec, createReq, doc, eng, rec.StartedAt); err != nil {
 		if errors.Is(err, ErrWaitingApproval) {
 			return &ApproveResponse{RunID: runID, OK: true}, nil
 		}

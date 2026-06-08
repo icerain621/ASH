@@ -73,6 +73,7 @@ func migrationEntities() []migrationEntity {
 		{table: "memory_evidence", model: &MemoryEvidence{}, pk: "id", incremental: true},
 		{table: "memory_reviews", model: &MemoryReview{}, pk: "id", incremental: true},
 		{table: "memory_edges", model: &MemoryEdge{}, pk: "id", incremental: true},
+		{table: "memory_migrations", model: &MemoryMigration{}, pk: "id", incremental: true},
 		{table: "rag_documents", model: &RAGDocument{}, pk: "id", incremental: true},
 		{table: "rag_chunks", model: &RAGChunk{}, pk: "id", incremental: true},
 		{table: "model_usage", model: &ModelUsage{}, pk: "id", incremental: false},

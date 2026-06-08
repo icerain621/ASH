@@ -1,6 +1,7 @@
 package runs
 
 import (
+	"context"
 	"errors"
 	"fmt"
 
@@ -100,7 +101,7 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 		return nil, err
 	}
 	eng := rules.NewEngine(doc)
-	if err := s.executeSteps(&rec, createReq, doc, eng, rec.StartedAt); err != nil {
+	if err := s.executeSteps(context.Background(), &rec, createReq, doc, eng, rec.StartedAt); err != nil {
 		return nil, err
 	}
 	return &ResumeResponse{RunID: runID, TraceID: rec.TraceID, Status: rec.Status}, nil

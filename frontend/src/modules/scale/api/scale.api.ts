@@ -33,6 +33,13 @@ export type ScaleReadiness = {
   autoMigrateEnabled?: boolean;
   sqlMigrationVersion?: number;
   sqlMigrationExpected?: number;
+  readinessWarnings?: string[];
+  memoryCatalogVersion?: number;
+  memoryPendingMigrationRecords?: number;
+  ragFtsAvailable?: boolean;
+  ragFtsEngine?: string;
+  ragDefaultRetrievalMode?: string;
+  ragFallbackQueryCount?: number;
 };
 
 export function getScaleReadiness() {

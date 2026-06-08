@@ -1,8 +1,10 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
-import { Gauge, Play } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Database, Gauge, Play } from "lucide-react";
 import { useState } from "react";
 import { DoctorReportView } from "@/components/DoctorReportView";
 import { getDoctorReport, runDoctor, type DoctorReport } from "@/modules/doctor/api/doctor.api";
+import { runMemoryMigration } from "@/modules/memory/api/memory.api";
+import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
@@ -22,15 +24,35 @@ const TR3_CHECKS = [
   { id: "TR3-02", title: "灾备降级", hint: "FTS 不可用时 RAG 降级到分块检索" },
   { id: "TR3-03", title: "成本/延迟 SLO", hint: "瀑布时长与 model_cost/tool_calls 质量指标" },
   { id: "TR3-04", title: "审计可追责", hint: "traceId、事件、产物与 tool/agent 链路" },
+  { id: "TR3-05", title: "指标回放一致", hint: "run_events 离线 replay 与 ash_* 计数口径一致" },
 ] as const;
 
 export function ScalePage() {
+  const qc = useQueryClient();
   const activeSpaceId = getCurrentSpaceId();
   const [report, setReport] = useState<DoctorReport | null>(null);
+  const [migrateMessage, setMigrateMessage] = useState("");
 
   const readinessQuery = useQuery({
     queryKey: ["scale", "readiness", activeSpaceId],
     queryFn: getScaleReadiness,
+  });
+  const pluginHealthQuery = useQuery({
+    queryKey: ["plugin-health", activeSpaceId],
+    queryFn: getPluginHealth,
+  });
+
+  const migrateMut = useMutation({
+    mutationFn: () => runMemoryMigration({ dryRun: false }),
+    onSuccess: (result) => {
+      setMigrateMessage(
+        result.alreadyCurrent
+          ? "记忆 catalog 已是最新版本。"
+          : `迁移完成 v${result.fromVersion}→v${result.toVersion}，更新 ${result.recordsUpdated} 条。`,
+      );
+      qc.invalidateQueries({ queryKey: ["scale", "readiness"] });
+    },
+    onError: (err: Error) => setMigrateMessage(err.message),
   });
 
   const doctorMut = useMutation({
@@ -72,6 +94,17 @@ export function ScalePage() {
             <Play size={16} strokeWidth={1.8} />
             {doctorMut.isPending ? "运行 TR3…" : "运行 TR3"}
           </button>
+          {(r?.memoryPendingMigrationRecords ?? 0) > 0 && (
+            <button
+              className="btn icon-btn"
+              disabled={migrateMut.isPending}
+              onClick={() => migrateMut.mutate()}
+              type="button"
+            >
+              <Database size={16} strokeWidth={1.8} />
+              {migrateMut.isPending ? "迁移中…" : `记忆迁移 (${r!.memoryPendingMigrationRecords})`}
+            </button>
+          )}
         </div>
       </div>
 
@@ -107,11 +140,29 @@ export function ScalePage() {
         {readinessQuery.isError && (
           <p className="error-text">{(readinessQuery.error as Error).message}</p>
         )}
+        {(r?.readinessWarnings?.length ?? 0) > 0 && (
+          <ul className="muted-line">
+            {r!.readinessWarnings!.map((msg) => (
+              <li key={msg} className="error-text">
+                {msg}
+              </li>
+            ))}
+          </ul>
+        )}
+        {migrateMessage && <p className="muted-line">{migrateMessage}</p>}
         <table className="table">
           <tbody>
             <tr>
               <td>记忆 Schema</td>
-              <td>v{r?.memorySchemaVersion ?? "-"}</td>
+              <td>
+                v{r?.memorySchemaVersion ?? "-"}
+                {r?.memoryCatalogVersion != null
+                  ? ` · catalog v${r.memoryCatalogVersion}`
+                  : null}
+                {(r?.memoryPendingMigrationRecords ?? 0) > 0
+                  ? ` · 待迁移 ${r!.memoryPendingMigrationRecords}`
+                  : null}
+              </td>
             </tr>
             <tr>
               <td>已批准记忆</td>
@@ -121,6 +172,30 @@ export function ScalePage() {
               <td>RAG 文档 / 分块</td>
               <td>
                 {r ? `${r.ragDocumentCount} / ${r.ragChunkCount}` : "-"}
+              </td>
+            </tr>
+            <tr>
+              <td>RAG 检索模式</td>
+              <td>
+                {r?.ragDefaultRetrievalMode ?? "-"}
+                {r?.ragFtsEngine
+                  ? ` · ${r.ragFtsEngine}`
+                  : r?.ragFtsAvailable != null
+                    ? ` · FTS ${r.ragFtsAvailable ? "可用" : "不可用（chunk 降级）"}`
+                    : null}
+                {(r?.ragFallbackQueryCount ?? 0) > 0
+                  ? ` · 历史降级 ${r!.ragFallbackQueryCount} 次`
+                  : null}
+              </td>
+            </tr>
+            <tr>
+              <td>插件导出健康</td>
+              <td>
+                {pluginHealthQuery.data
+                  ? `${pluginHealthQuery.data.pluginCount} 个 · 错误 ${pluginHealthQuery.data.exportErrorsTotal} · 丢弃 ${pluginHealthQuery.data.dropCountTotal} · 过期 ${pluginHealthQuery.data.staleExportCount}`
+                  : pluginHealthQuery.isLoading
+                    ? "加载中"
+                    : "-"}
               </td>
             </tr>
             <tr>

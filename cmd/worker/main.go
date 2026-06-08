@@ -23,6 +23,7 @@
 package main
 
 import (
+	"context"
 	"log"
 	"net/http"
 	"os"
@@ -34,6 +35,7 @@ import (
 	_ "github.com/ash-repwiki/ash/internal/api/docs" // swag OpenAPI
 	"github.com/ash-repwiki/ash/internal/config"
 	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
+	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -45,8 +47,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("observability config: %v", err)
 	}
-	log.Printf("observability: redaction=%v outbound=%v prometheus=%v",
-		obsCfg.Redaction.Enabled, obsCfg.Export.AllowOutbound, pluginEnabled(obsCfg.Plugins.Prometheus))
+	otelShutdown, err := ashotel.Init(obsCfg.Plugins.Otel, "ash-worker")
+	if err != nil {
+		log.Fatalf("otel: %v", err)
+	}
+	defer func() {
+		if err := otelShutdown(context.Background()); err != nil {
+			log.Printf("otel shutdown: %v", err)
+		}
+	}()
+
+	log.Printf("observability: redaction=%v outbound=%v prometheus=%v otel=%v",
+		obsCfg.Redaction.Enabled, obsCfg.Export.AllowOutbound, pluginEnabled(obsCfg.Plugins.Prometheus), ashotel.Enabled())
 
 	db, err := store.Open(cfg.DataDir)
 	if err != nil {

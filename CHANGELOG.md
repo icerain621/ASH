@@ -8,6 +8,20 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint M: `postgres-sql-schema-e2e` runs Postgres RAG FTS integration test; `postgres-e2e-migrate` sources `postgres-up.sh` for port export; Doctor **TR3-06** validates `postgres-tsvector` retrieval (skipped on SQLite).
+- Postgres RAG full-text search: `rag_chunks.search_vector` tsvector + GIN index (SQL rev 17), `postgres-tsvector` retrieval path alongside SQLite FTS5.
+- Observability governance alert rules panel; Scale page plugin export health summary.
+- Governance alert rules and live Prometheus gauges: memory backlog, RAG FTS fallback rate, plugin export failures; `GET /api/v1/rag/profile`; Observability RAG retrieval card.
+- RAG degradation observability: query `retrievalMode` / `ftsAvailable`, `rag.retrieved` run events, derive `ash_rag_queries_total` and `ash_rag_fts_fallback_total`, Scale readiness RAG retrieval snapshot.
+- Plugin export failure events: `plugin.export_failed` audit + optional run event (`runId` on export-report), derive `ash_plugin_export_failures_total`.
+- Plugin export health: `plugin_registry` columns `last_export_at` / `export_errors` / `drop_count` (SQL rev 16), `POST /api/v1/plugins/{pluginId}/export-report`, `GET /api/v1/plugins/health`, Automation UI health columns.
+- OTel traces skeleton: `internal/observability/otel` (OTLP provider, live run/step/gate/rag/model/tool spans, waterfall batch export), Worker init, `GET /api/v1/observability/otel/status`.
+- Memory schema migration runner: `memory_migrations` table (SQL rev 15), `POST /api/v1/memory/migrate`, `memory.migrated` event, `ash_memory_migration_runs_total` derive; Scale exposes `memoryCatalogVersion` / `memoryPendingMigrationRecords`.
+- Memory P1 derive metrics: `ash_memory_hit_used_total`, `ash_memory_deprecated_total`, `ash_memory_queries_total`, `ash_memory_query_latency_ms`; `memory.query` run event when query includes `runId`.
+- Memory governance derive metrics: `ash_memory_unreviewed_backlog`, `ash_memory_missing_evidence_total`; `memory.reviewed` events include `layer` for replay labels.
+- Scale readiness `readinessWarnings` when `ASH_SCHEMA_MODE=sql` conflicts with dual-write shadow Postgres.
+- Event-derived metrics parity: `derive.ValidateReplayParity`, Doctor **TR3-05**, nightly `make postgres-sql-schema-e2e` CI job.
+- Production Postgres template `doc/checklists/postgres-production-config.md`; RDS checklist aligned to SQL revision 14 and M3 8 / ALL 34.
 - TR0 event payload JSON Schema validation (`ASH_VALIDATE_EVENT_PAYLOADS=1`) and Postgres SQL revision `000003` for `runs` / `run_events`.
 - Postgres `golang-migrate` skeleton (`internal/store/sqlmigrations`), `ash migrate schema up|down|version`, `ASH_SCHEMA_MODE` / `ASH_DISABLE_AUTOMIGRATE`, and `make migrate-schema`.
 - Observability config JSON Schema (`ash.obs/v0.1`): `config/ash-observability.yaml`, `obsconfig.Load()` at Worker startup, outbound-export requires redaction.

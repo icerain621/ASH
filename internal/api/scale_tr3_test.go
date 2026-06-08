@@ -53,6 +53,33 @@ func TestScaleReadiness(t *testing.T) {
 	}
 }
 
+func TestScaleReadinessSchemaSqlDualWriteWarning(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	if err := store.SaveDualWriteConfig(db.DataDir(), &store.DualWriteConfig{
+		Enabled:     true,
+		PostgresURL: "postgres://ash:ash@127.0.0.1:5432/ash_shadow?sslmode=disable",
+	}); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("ASH_SCHEMA_MODE", "sql")
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/readiness", nil)
+	req.Header.Set("X-ASH-Space-ID", "local")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp ScaleReadinessResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.ReadinessWarnings) == 0 {
+		t.Fatalf("expected readinessWarnings, got %+v", resp)
+	}
+}
+
 func TestScaleReadinessMigrationSyncError(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	r, db := newPlatformTestRouter(t)

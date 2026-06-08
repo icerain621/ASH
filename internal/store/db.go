@@ -159,6 +159,7 @@ func (db *DB) migrate() error {
 		&MemoryEvidence{},
 		&MemoryReview{},
 		&MemoryEdge{},
+		&MemoryMigration{},
 		&RAGDocument{},
 		&RAGChunk{},
 		&ModelUsage{},

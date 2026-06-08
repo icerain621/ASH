@@ -71,3 +71,18 @@ func (h *Handler) queryRAG(c *gin.Context) {
 	}
 	c.JSON(http.StatusOK, resp)
 }
+
+// GetRAGProfile godoc
+// @Summary RAG retrieval profile for current space
+// @Tags rag
+// @Produce json
+// @Success 200 {object} rag.Profile
+// @Failure 403 {object} APIErrorResponse
+// @Router /api/v1/rag/profile [get]
+func (h *Handler) getRAGProfile(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permRAGQuery, space) {
+		return
+	}
+	c.JSON(http.StatusOK, h.runsFor(c).RAG().Profile(space))
+}

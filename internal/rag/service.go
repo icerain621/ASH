@@ -75,8 +75,16 @@ type Hit struct {
 	Snippet   string  `json:"snippet"`
 }
 
+const (
+	RetrievalModeFTS   = "fts"
+	RetrievalModeChunk = "chunk"
+	RetrievalModeEmpty = "empty"
+)
+
 type QueryResponse struct {
-	Items []Hit `json:"items"`
+	Items         []Hit  `json:"items"`
+	RetrievalMode string `json:"retrievalMode"`
+	FtsAvailable  bool   `json:"ftsAvailable"`
 }
 
 // AbsRepoRoot returns the canonical absolute path used when persisting RAG rows.
@@ -142,11 +150,12 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	}
 	var rows []store.RAGChunk
 	terms := queryTerms(text)
+	ftsAvailable := s.FTSAvailable()
 	if len(terms) == 0 {
-		return &QueryResponse{Items: []Hit{}}, nil
+		return &QueryResponse{Items: []Hit{}, RetrievalMode: RetrievalModeEmpty, FtsAvailable: ftsAvailable}, nil
 	}
 	if hits, ok := s.queryFTS(req, terms, topK, space); ok {
-		return &QueryResponse{Items: hits}, nil
+		return &QueryResponse{Items: hits, RetrievalMode: RetrievalModeFTS, FtsAvailable: ftsAvailable}, nil
 	}
 	likeQ := q
 	for _, term := range terms {
@@ -164,7 +173,39 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	if len(hits) > topK {
 		hits = hits[:topK]
 	}
-	return &QueryResponse{Items: hits}, nil
+	return &QueryResponse{Items: hits, RetrievalMode: RetrievalModeChunk, FtsAvailable: ftsAvailable}, nil
+}
+
+// FTSAvailable reports whether dialect-native FTS retrieval is wired.
+func (s *Service) FTSAvailable() bool {
+	if s.db == nil {
+		return false
+	}
+	switch s.db.Dialect() {
+	case "postgres":
+		return s.ensurePostgresFTS() == nil
+	default:
+		return s.ensureSQLiteFTS() == nil
+	}
+}
+
+// FtsEngine returns the active FTS backend when available.
+func (s *Service) FtsEngine() string {
+	if !s.FTSAvailable() {
+		return ""
+	}
+	if s.db.Dialect() == "postgres" {
+		return "postgres-tsvector"
+	}
+	return "sqlite-fts5"
+}
+
+// DefaultRetrievalMode returns the primary retrieval path for the active dialect.
+func (s *Service) DefaultRetrievalMode() string {
+	if s.FTSAvailable() {
+		return RetrievalModeFTS
+	}
+	return RetrievalModeChunk
 }
 
 func (s *Service) indexFile(space, root, path string) (int, error) {
@@ -180,13 +221,14 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 	rel = filepath.ToSlash(rel)
 	digest := digestBytes(b)
 	now := time.Now().UTC()
-	ftsAvailable := s.ensureFTS() == nil
+	ftsAvailable := s.FTSAvailable()
+	sqliteFTS := ftsAvailable && s.db.Dialect() == "sqlite"
 
 	var doc store.RAGDocument
 	err = s.gdb().Transaction(func(tx *gorm.DB) error {
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGDocument{}).Error
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGChunk{}).Error
-		if ftsAvailable {
+		if sqliteFTS {
 			if err := tx.Exec("DELETE FROM rag_chunks_fts WHERE space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Error; err != nil {
 				return err
 			}
@@ -222,7 +264,7 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 		if err := s.gdb().Create(&chunk).Error; err != nil {
 			return chunkCount, err
 		}
-		if ftsAvailable {
+		if sqliteFTS {
 			if err := s.insertFTS(chunk); err != nil {
 				return chunkCount, err
 			}
@@ -232,9 +274,9 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 	return chunkCount, nil
 }
 
-func (s *Service) ensureFTS() error {
+func (s *Service) ensureSQLiteFTS() error {
 	if s.db.Dialect() != "sqlite" {
-		return fmt.Errorf("fts is only available for sqlite")
+		return fmt.Errorf("sqlite fts5 requires sqlite dialect")
 	}
 	db := s.gdb().Session(&gorm.Session{Logger: logger.Default.LogMode(logger.Silent)})
 	return db.Exec(`CREATE VIRTUAL TABLE IF NOT EXISTS rag_chunks_fts USING fts5(
@@ -260,7 +302,10 @@ func (s *Service) insertFTS(chunk store.RAGChunk) error {
 }
 
 func (s *Service) queryFTS(req QueryRequest, terms []string, topK int, space string) ([]Hit, bool) {
-	if err := s.ensureFTS(); err != nil {
+	if s.db != nil && s.db.Dialect() == "postgres" {
+		return s.queryPostgresFTS(req, terms, topK, space)
+	}
+	if err := s.ensureSQLiteFTS(); err != nil {
 		return nil, false
 	}
 	match := ftsMatch(terms)

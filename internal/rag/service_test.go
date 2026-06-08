@@ -15,7 +15,7 @@ func TestIndexAndQueryUsesFTSWithSymbolRefs(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewService(db)
-	if err := svc.ensureFTS(); err != nil {
+	if err := svc.ensureSQLiteFTS(); err != nil {
 		t.Skipf("sqlite fts5 unavailable: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func TestQueryFallsBackToChunkSearchWhenFTSUnavailable(t *testing.T) {
 	if _, err := svc.Index(IndexRequest{RepoRoot: repo}); err != nil {
 		t.Fatal(err)
 	}
-	if err := svc.ensureFTS(); err == nil {
+	if err := svc.ensureSQLiteFTS(); err == nil {
 		if err := db.Exec("DROP TABLE rag_chunks_fts").Error; err != nil {
 			t.Fatal(err)
 		}
@@ -100,6 +100,9 @@ func TestQueryFallsBackToChunkSearchWhenFTSUnavailable(t *testing.T) {
 	}
 	if len(resp.Items) != 1 || resp.Items[0].Path != "note.md" {
 		t.Fatalf("hits=%+v want note.md fallback hit", resp.Items)
+	}
+	if resp.RetrievalMode != RetrievalModeChunk {
+		t.Fatalf("retrievalMode=%q want chunk", resp.RetrievalMode)
 	}
 }
 

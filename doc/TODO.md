@@ -2,6 +2,35 @@
 
 > 记录尚未完成或需人工环境验证的项。完成请移入 CHANGELOG 并删除对应条目。
 
+## 测试验收
+
+> **状态**：Sprint I/H 完成后恢复执行；以下项以本地 `go test` 为准（T-05/T-06 仍需 Postgres）。
+> **关联**：derive parity、Doctor TR3-05、`postgres-sql-schema-e2e` CI job
+
+| # | 项 | 命令 / 入口 | 验收 |
+|---|-----|-------------|------|
+| T-01 | derive 回放 parity 单测 | `go test ./internal/observability/derive/... -run Parity -count=1` | ✅ 2026-06-03 本地 pass |
+| T-02 | derive 记忆 backlog 单测 | `go test ./internal/observability/derive/... -run Replay_memory -count=1` | ✅ 2026-06-03 本地 pass |
+| T-03 | Doctor TR3-05/06 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **6/6**（TR3-06 sqlite skip） |
+| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **35/35** pass |
+| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **17**、M3 **8/8**（M3-04 skip） |
+| T-06 | CI nightly job | GitHub Actions `postgres-sql-schema-e2e` | 与 T-05 同等断言 + RAG FTS 集成测试 |
+| T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
+| T-07 | 记忆 emit layer | `go test ./internal/memory/... -count=1 -short` | ✅ 断言 pass（Windows 偶发 TempDir 清理警告） |
+| T-08 | Scale 双写冲突告警 | `go test ./internal/api/... -run ScaleReadinessSchemaSql -count=1` | ✅ 2026-06-03 本地 pass |
+| T-09 | 记忆 P1 derive 单测 | `go test ./internal/observability/derive/... -run Replay_memoryHit -count=1` | ✅ 2026-06-03 本地 pass |
+| T-10 | 记忆 schema 迁移 | `go test ./internal/memory/... -run RunMigrations -count=1` | ✅ 断言 pass（Windows TempDir 清理警告） |
+| T-11 | OTel 骨架单测 | `go test ./internal/observability/otel/... -count=1` | ✅ 2026-06-03 本地 pass |
+| T-12 | RAG 降级 derive | `go test ./internal/rag/... ./internal/observability/derive/... -run 'Fallback|ragRetrieved' -count=1` | ✅ Sprint I：`retrievalMode=chunk` replay |
+
+```bash
+# 一键回归（网络正常时）
+go test ./internal/observability/derive/... ./internal/doctor/... ./internal/memory/... ./internal/api/... -count=1 -short
+make postgres-sql-schema-e2e
+```
+
+---
+
 ## 人工验证（暂缓）
 
 > **状态**：依赖云 RDS / 真实 GitHub token / live ExecGo，当前迭代**暂不执行**，保留清单待发布窗口统一验收。
@@ -9,7 +38,7 @@
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate verify` + Doctor M3 8/8 + ALL 33/33 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 8/8 + ALL 34/34 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
@@ -84,12 +113,25 @@ make postgres-roles
 
 ## 代码待办（可继续开发）
 
-- 新表 DDL 修订需同步追加 RLS policy（`000013` DO 块）与 `ash_app` GRANT
+- 新表 DDL 修订需同步追加 RLS policy（`000013` DO 块）与 `ash_app` GRANT（`memory_migrations` 为全局审计表、无 `space_id`， intentionally 不纳入租户 RLS）
 
 ---
 
 ## 已完成（近期）
 
+- Sprint M：`postgres-e2e-migrate` 复用 `source postgres-up.sh`；`postgres-sql-schema-e2e` 追加 `TestPostgresRAGFTSQuery`；Doctor **TR3-06**（Postgres `tsvector` FTS，sqlite skip）
+- Sprint L：Observability 治理指标告警表；Scale 插件导出健康摘要
+- Sprint K：Postgres RAG `tsvector` + GIN（SQL **17**）；`postgres-tsvector` FTS 引擎；集成测试 `TestPostgresRAGFTSQuery`
+- Sprint J：治理告警规则（记忆积压 / RAG FTS 降级率 / 插件导出失败）；Prometheus live 治理指标；`GET /api/v1/rag/profile`；Observability RAG 卡片
+- Sprint H：`plugin.export_failed` / `plugin.export_reported` 审计事件；可选 `runId` 写 run 事件；derive `ash_plugin_export_failures_total`
+- Sprint I：RAG `retrievalMode`（fts/chunk/empty）、`rag.retrieved` 事件、derive `ash_rag_queries_total` / `ash_rag_fts_fallback_total`、Scale RAG 检索模式行
+- Sprint G：插件导出健康（`plugin_registry` 列 + SQL **16**、`pluginhealth.RecordExport`、`POST /plugins/{id}/export-report`、`GET /plugins/health`、Automation UI 健康列）
+- Sprint F：OTel 骨架（`internal/observability/otel`、Worker `Init`、Run live span + waterfall OTLP 导出、`GET /observability/otel/status`、Observability UI OTel 卡片）
+- Sprint E：`memory_migrations` 表 + `POST /api/v1/memory/migrate`；`memory.migrated` → `ash_memory_migration_runs_total`；Scale 记忆迁移按钮；SQL revision **15**
+- Sprint D：记忆 P1 derive（`hit_used` / `deprecated` / `query`）；`memory.query` 事件（`runId` 可选）；TR0 payload schema 补全
+- Sprint C：记忆治理 derive 指标 `ash_memory_unreviewed_backlog` / `ash_memory_missing_evidence_total`；`memory.reviewed` emit 补 `layer`；Scale `readinessWarnings`（`ASH_SCHEMA_MODE=sql` + 双写冲突）
+- 测试验收 T-01..T-08 写入 **测试验收（暂缓）**，不阻塞后续开发
+- Sprint A/B：CI `postgres-sql-schema-e2e`、derive `ValidateReplayParity`、Doctor **TR3-05**、生产配置模板与 RDS 清单对齐 revision 14
 - RLS SQL 化：`000013` 租户策略（`ash_rls_*` 函数 + `ash_space_*` policies）、`000014` `ash_app`/`ash_rls_tester` 授权；运行时仅 backfill/FORCE
 - `ASH_SCHEMA_MODE=sql` 试点：`make postgres-sql-schema-e2e`、Doctor **M3-08**、Scale readiness 暴露 schema 模式与 SQL 修订版本
 - SQL 修订 `000009`–`000012` 完成迁移目录全表覆盖（CI/告警/发布/密钥/审批/插件/improve）；`expectedVersion=12`

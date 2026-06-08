@@ -23,6 +23,7 @@ import {
   getAuditPolicy,
   getAuditExportAccess,
   getPluginABIProfile,
+  getPluginHealth,
   getStorageProfile,
   listApprovals,
   listAuditExports,
@@ -83,6 +84,10 @@ export function AutomationPage() {
   const pluginABIQuery = useQuery({
     queryKey: ["plugin-abi", activeSpaceId],
     queryFn: getPluginABIProfile,
+  });
+  const pluginHealthQuery = useQuery({
+    queryKey: ["plugin-health", activeSpaceId],
+    queryFn: getPluginHealth,
   });
   const storageQuery = useQuery({
     queryKey: ["storage-profile", activeSpaceId],
@@ -323,7 +328,12 @@ export function AutomationPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Plugins</h2>
-            <span>{pluginABIQuery.data?.currentAbi ?? `${pluginsQuery.data?.items.length ?? 0} 个插件`}</span>
+            <span>
+              {pluginABIQuery.data?.currentAbi ?? `${pluginsQuery.data?.items.length ?? 0} 个插件`}
+              {pluginHealthQuery.data
+                ? ` · 导出错误 ${pluginHealthQuery.data.exportErrorsTotal} · 丢弃 ${pluginHealthQuery.data.dropCountTotal} · 过期 ${pluginHealthQuery.data.staleExportCount}`
+                : null}
+            </span>
           </div>
           <div className="abi-strip">
             <span>{pluginABIQuery.data?.supportedProtocols.join("/") ?? "-"}</span>
@@ -338,6 +348,9 @@ export function AutomationPage() {
                 <th>Name</th>
                 <th>ABI</th>
                 <th>Status</th>
+                <th>Last export</th>
+                <th>Errors</th>
+                <th>Drops</th>
                 <th>Capability</th>
                 <th>Action</th>
               </tr>
@@ -355,6 +368,11 @@ export function AutomationPage() {
                       {plugin.status || (plugin.compatible ? "verified" : "incompatible")}
                     </span>
                   </td>
+                  <td>
+                    {plugin.lastExportAt ? new Date(plugin.lastExportAt).toLocaleString() : "-"}
+                  </td>
+                  <td>{plugin.exportErrors ?? 0}</td>
+                  <td>{plugin.dropCount ?? 0}</td>
                   <td title={plugin.capabilities}>{capabilitySummary(plugin.capabilities)}</td>
                   <td>
                     <button
@@ -370,7 +388,7 @@ export function AutomationPage() {
               ))}
               {!pluginsQuery.data?.items.length && (
                 <tr className="empty-row">
-                  <td colSpan={5}>暂无插件注册。</td>
+                  <td colSpan={8}>暂无插件注册。</td>
                 </tr>
               )}
             </tbody>

@@ -26,3 +26,6 @@ plugins:
     level: info
   otel:
     enabled: false
+    # endpoint: localhost:4317
+    # insecure: true
+    # Or set ASH_OTEL_ENABLED=1 and ASH_OTEL_ENDPOINT=localhost:4317

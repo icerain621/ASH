@@ -21,3 +21,19 @@ jobs:
 
       - name: Run Postgres E2E
         run: make postgres-e2e
+
+  postgres-sql-schema-e2e:
+    name: Postgres SQL-only schema E2E
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run SQL schema E2E
+        run: make postgres-sql-schema-e2e

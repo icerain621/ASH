@@ -20,7 +20,10 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
+	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
+	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/security"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -168,6 +171,21 @@ func (h *Handler) getWaterfall(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, waterfall)
+}
+
+// GetOtelStatus godoc
+// @Summary OTel trace export status
+// @Tags observability
+// @Produce json
+// @Success 200 {object} otel.Status
+// @Router /api/v1/observability/otel/status [get]
+func (h *Handler) getOtelStatus(c *gin.Context) {
+	obsCfg, err := obsconfig.Load()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("OBS_CONFIG_LOAD_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, ashotel.RuntimeStatus(obsCfg.Plugins.Otel))
 }
 
 // GetQualityMetrics godoc
@@ -1277,6 +1295,120 @@ func (h *Handler) verifyPlugin(c *gin.Context) {
 		"compatible": row.Compatible, "lastError": row.LastError,
 	})).Error
 	c.JSON(http.StatusOK, row)
+}
+
+type pluginExportReportRequest struct {
+	OK      *bool  `json:"ok"`
+	Dropped int64  `json:"dropped"`
+	RunID   string `json:"runId,omitempty"`
+}
+
+// ReportPluginExport godoc
+// @Summary Report plugin export outcome
+// @Tags plugins
+// @Accept json
+// @Produce json
+// @Param pluginId path string true "plugin id"
+// @Param body body pluginExportReportRequest true "export report"
+// @Success 200 {object} store.PluginRegistry
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/plugins/{pluginId}/export-report [post]
+func (h *Handler) reportPluginExport(c *gin.Context) {
+	var req pluginExportReportRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	var row store.PluginRegistry
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("pluginId")).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("PLUGIN_NOT_FOUND", "plugin not found"))
+		return
+	}
+	if !h.requireRequestSpace(c, row.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permPluginWrite, row.SpaceID) {
+		return
+	}
+	ok := true
+	if req.OK != nil {
+		ok = *req.OK
+	}
+	if err := pluginhealth.RecordExport(h.dbFor(c), row.SpaceID, row.ID, ok, req.Dropped); err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_EXPORT_REPORT_FAILED", err.Error()))
+		return
+	}
+	if err := pluginhealth.WriteExportAudit(h.dbFor(c), row.SpaceID, row.ID, row.Name, ok, req.Dropped); err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_EXPORT_AUDIT_FAILED", err.Error()))
+		return
+	}
+	runID := strings.TrimSpace(req.RunID)
+	if runID != "" {
+		if !h.requireRunAccess(c, runID) {
+			return
+		}
+		severity := "info"
+		eventType := "plugin.export_reported"
+		if !ok {
+			severity = "warn"
+			eventType = "plugin.export_failed"
+		}
+		if _, err := h.eventsFor(c).Append(runID, "", eventType, severity, map[string]any{
+			"pluginId": row.ID, "pluginName": row.Name, "dropped": req.Dropped, "ok": ok,
+		}); err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_EXPORT_EVENT_FAILED", err.Error()))
+			return
+		}
+	}
+	if err := h.dbFor(c).First(&row, "id = ?", row.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_EXPORT_REPORT_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, row)
+}
+
+type PluginHealthSummary struct {
+	SpaceID           string                 `json:"spaceId"`
+	PluginCount       int                    `json:"pluginCount"`
+	ExportErrorsTotal int64                  `json:"exportErrorsTotal"`
+	DropCountTotal    int64                  `json:"dropCountTotal"`
+	StaleExportCount  int                    `json:"staleExportCount"`
+	Items             []store.PluginRegistry `json:"items"`
+}
+
+// GetPluginHealth godoc
+// @Summary Plugin export health snapshot
+// @Tags plugins
+// @Produce json
+// @Success 200 {object} PluginHealthSummary
+// @Failure 403 {object} APIErrorResponse
+// @Router /api/v1/plugins/health [get]
+func (h *Handler) getPluginHealth(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permPluginRead, space) {
+		return
+	}
+	var rows []store.PluginRegistry
+	if err := h.dbFor(c).Where("space_id = ?", space).Order("export_errors desc, drop_count desc").Find(&rows).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("PLUGIN_HEALTH_FAILED", err.Error()))
+		return
+	}
+	staleCutoff := time.Now().UTC().Add(-24 * time.Hour)
+	var exportErrors, dropCount int64
+	stale := 0
+	for _, row := range rows {
+		exportErrors += row.ExportErrors
+		dropCount += row.DropCount
+		if row.LastExportAt == nil || row.LastExportAt.Before(staleCutoff) {
+			stale++
+		}
+	}
+	c.JSON(http.StatusOK, PluginHealthSummary{
+		SpaceID: space, PluginCount: len(rows),
+		ExportErrorsTotal: exportErrors, DropCountTotal: dropCount,
+		StaleExportCount: stale, Items: rows,
+	})
 }
 
 func (h *Handler) auditPolicy(c *gin.Context, space string) (*store.AuditPolicy, error) {

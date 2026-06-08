@@ -12,6 +12,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/observability/derive"
+	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -304,6 +305,7 @@ func (s *Service) PrometheusTextWith(opts PrometheusOptions) (string, error) {
 	} else {
 		b.WriteString(fmt.Sprintf("alerts_active %d\n", activeAlerts))
 	}
+	s.writeGovernancePrometheus(&b, opts)
 	if os.Getenv("ASH_METRICS_EVENT_REPLAY") == "1" {
 		events, err := derive.LoadFromDB(s.gdb(), derive.LoadOptions{SpaceID: opts.SpaceID})
 		if err == nil && len(events) > 0 {
@@ -388,8 +390,71 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 		return s.liveGateValue(rule.SpaceID, window, "postgres.e2e_completed", "Postgres live gate 最近窗口无通过证据")
 	case "execgo_live_gate":
 		return s.liveGateValue(rule.SpaceID, window, "execgo.live_smoke", "ExecGo live gate 最近窗口无通过证据")
+	case "memory_unreviewed_backlog":
+		var pending int64
+		if err := s.gdb().Model(&store.MemoryRecord{}).
+			Where("space_id = ? AND status = ?", rule.SpaceID, "candidate").Count(&pending).Error; err != nil {
+			return 0, false, nil, "", err
+		}
+		return float64(pending), true, []string{fmt.Sprintf("memory:candidates=%d", pending)}, "未评审记忆候选超过阈值", nil
+	case "rag_fts_fallback_rate":
+		rate, total, chunk := rag.FallbackRateInWindow(s.gdb(), rule.SpaceID, window)
+		return rate, total > 0, []string{fmt.Sprintf("rag:chunk=%d,total=%d", chunk, total)}, "RAG FTS 降级占比超过阈值", nil
+	case "plugin_export_failures":
+		var failed int64
+		if err := s.gdb().Model(&store.AuditLog{}).
+			Where("space_id = ? AND event_type = ? AND created_at >= ?", rule.SpaceID, "plugin.export_failed", window).
+			Count(&failed).Error; err != nil {
+			return 0, false, nil, "", err
+		}
+		return float64(failed), true, []string{fmt.Sprintf("audit:plugin_export_failed=%d", failed)}, "插件导出失败次数超过阈值", nil
 	default:
 		return 0, false, nil, "未知指标，规则暂不可评估", nil
+	}
+}
+
+func (s *Service) writeGovernancePrometheus(b *strings.Builder, opts PrometheusOptions) {
+	writeHelp := func(name, help, typ string) {
+		b.WriteString("# HELP " + name + " " + help + "\n")
+		b.WriteString("# TYPE " + name + " " + typ + "\n")
+	}
+	var pending int64
+	memQ := s.gdb().Model(&store.MemoryRecord{}).Where("status = ?", "candidate")
+	if opts.scoped() {
+		memQ = memQ.Where("space_id = ?", opts.SpaceID)
+	}
+	_ = memQ.Count(&pending).Error
+	writeHelp("ash_memory_unreviewed_backlog_live", "Pending memory candidates awaiting review.", "gauge")
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("ash_memory_unreviewed_backlog_live{space_id=%q} %d\n", label(opts.SpaceID), pending))
+	} else {
+		b.WriteString(fmt.Sprintf("ash_memory_unreviewed_backlog_live %d\n", pending))
+	}
+	var exportErrors int64
+	plugQ := s.gdb().Model(&store.PluginRegistry{})
+	if opts.scoped() {
+		plugQ = plugQ.Where("space_id = ?", opts.SpaceID)
+	}
+	_ = plugQ.Select("COALESCE(SUM(export_errors),0)").Scan(&exportErrors).Error
+	writeHelp("ash_plugin_export_errors_live", "Cumulative plugin export errors from registry.", "counter")
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("ash_plugin_export_errors_live{space_id=%q} %d\n", label(opts.SpaceID), exportErrors))
+	} else {
+		b.WriteString(fmt.Sprintf("ash_plugin_export_errors_live %d\n", exportErrors))
+	}
+	var fallback int64
+	if opts.scoped() {
+		fallback = rag.CountChunkFallbackQueries(s.gdb(), opts.SpaceID)
+	} else {
+		_ = s.gdb().Model(&store.RunEvent{}).
+			Where("type = ? AND payload_json LIKE ?", "rag.retrieved", `%retrievalMode":"chunk"%`).
+			Count(&fallback).Error
+	}
+	writeHelp("ash_rag_fts_fallback_live", "Historical RAG chunk-mode retrieval events.", "counter")
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("ash_rag_fts_fallback_live{space_id=%q} %d\n", label(opts.SpaceID), fallback))
+	} else {
+		b.WriteString(fmt.Sprintf("ash_rag_fts_fallback_live %d\n", fallback))
 	}
 }
 
@@ -455,6 +520,9 @@ func defaultRules(spaceID string, now time.Time) []store.AlertRule {
 		rule(spaceID, "低分反馈率", "low_feedback_rate", 0.35, 60, "warn", "最近窗口低分反馈占比超过阈值", now),
 		rule(spaceID, "Postgres live gate", "postgres_live_gate", 0, 1440, "warn", "读取 Postgres e2e live gate 审计证据", now),
 		rule(spaceID, "ExecGo live gate", "execgo_live_gate", 0, 1440, "warn", "读取 ExecGo live smoke 审计证据", now),
+		rule(spaceID, "记忆未评审积压", "memory_unreviewed_backlog", 50, 60, "warn", "候选记忆（status=candidate）数量超过阈值", now),
+		rule(spaceID, "RAG FTS 降级率", "rag_fts_fallback_rate", 0.5, 60, "warn", "窗口内 rag.retrieved chunk 模式占比超过阈值", now),
+		rule(spaceID, "插件导出失败", "plugin_export_failures", 3, 60, "warn", "窗口内 plugin.export_failed 审计事件超过阈值", now),
 	}
 }
 

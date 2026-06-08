@@ -6,7 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/memory"
+	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
 
 type ScaleReadinessResponse struct {
@@ -40,8 +42,15 @@ type ScaleReadinessResponse struct {
 	SchemaMode               string `json:"schemaMode,omitempty"`
 	SQLMigrationsEnabled     bool   `json:"sqlMigrationsEnabled,omitempty"`
 	AutoMigrateEnabled       bool   `json:"autoMigrateEnabled,omitempty"`
-	SQLMigrationVersion      uint   `json:"sqlMigrationVersion,omitempty"`
-	SQLMigrationExpected     uint   `json:"sqlMigrationExpected,omitempty"`
+	SQLMigrationVersion      uint     `json:"sqlMigrationVersion,omitempty"`
+	SQLMigrationExpected     uint     `json:"sqlMigrationExpected,omitempty"`
+	ReadinessWarnings              []string `json:"readinessWarnings,omitempty"`
+	MemoryCatalogVersion           int      `json:"memoryCatalogVersion,omitempty"`
+	MemoryPendingMigrationRecords  int64    `json:"memoryPendingMigrationRecords,omitempty"`
+	RAGFTSAvailable                bool     `json:"ragFtsAvailable,omitempty"`
+	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
+	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
+	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -78,6 +87,11 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		}
 	}
 	migSnap, _ := store.MigrationSnapshotFor(h.db.DataDir())
+	memCatalog, _ := memory.CatalogVersion(h.db)
+	memPending, _ := memory.PendingMigrationRecords(h.db, space)
+	ragSvc := h.runsFor(c).RAG()
+	ragFts := ragSvc.FTSAvailable()
+	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
 	var lastSyncMs, lastSyncErrMs *int64
 	if migSnap.LastSyncAt != nil {
 		ms := migSnap.LastSyncAt.UnixMilli()
@@ -121,5 +135,28 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		AutoMigrateEnabled:         dbProfile.AutoMigrateEnabled,
 		SQLMigrationVersion:        dbProfile.SQLMigrationVersion,
 		SQLMigrationExpected:       dbProfile.SQLMigrationExpected,
+		ReadinessWarnings:             scaleReadinessWarnings(dbProfile.SchemaMode, migSnap),
+		MemoryCatalogVersion:          memCatalog,
+		MemoryPendingMigrationRecords: memPending,
+		RAGFTSAvailable:               ragFts,
+		RAGFtsEngine:                  ragSvc.FtsEngine(),
+		RAGDefaultRetrievalMode:       ragSvc.DefaultRetrievalMode(),
+		RAGFallbackQueryCount:         ragFallbacks,
 	})
+}
+
+func scaleReadinessWarnings(schemaMode string, mig store.MigrationSnapshot) []string {
+	mode := schemaMode
+	if mode == "" {
+		mode = sqlmigrations.Mode()
+	}
+	if mode != sqlmigrations.SchemaModeSQL {
+		return nil
+	}
+	if !mig.DualWriteEnabled && !mig.DualWriteRuntime {
+		return nil
+	}
+	return []string{
+		"ASH_SCHEMA_MODE=sql 与双写（SQLite→Postgres 影子库）不应同时启用：SQL 修订仅保证主库 schema，影子库可能不一致",
+	}
 }

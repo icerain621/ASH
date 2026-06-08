@@ -128,10 +128,12 @@ type ReviewResponse struct {
 
 // QueryRequest searches approved memory.
 type QueryRequest struct {
-	Text   string            `json:"text" binding:"required"`
-	Layers []string          `json:"layers,omitempty"`
-	Scope  map[string]string `json:"scope,omitempty"`
-	TopK   int               `json:"topK,omitempty"`
+	Text    string            `json:"text" binding:"required"`
+	Layers  []string          `json:"layers,omitempty"`
+	Scope   map[string]string `json:"scope,omitempty"`
+	TopK    int               `json:"topK,omitempty"`
+	RunID   string            `json:"runId,omitempty"`
+	TraceID string            `json:"traceId,omitempty"`
 }
 
 // QueryResponse returns matching records.

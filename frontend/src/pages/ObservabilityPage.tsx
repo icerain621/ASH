@@ -10,7 +10,20 @@ import {
   putAlertRules,
   type AlertRule,
 } from "@/modules/closure/api/closure.api";
+import { getOtelStatus, getRagProfile } from "@/modules/observability/api/observability.api";
 import { getCurrentSpaceId } from "@/services/http/client";
+
+const GOVERNANCE_METRIC_HINTS: Record<string, string> = {
+  memory_unreviewed_backlog: "未评审记忆候选（status=candidate）总数",
+  rag_fts_fallback_rate: "窗口内 RAG chunk 降级查询占比",
+  plugin_export_failures: "窗口内 plugin.export_failed 审计事件数",
+  run_failure_rate: "运行失败 / 取消占比",
+  api_error_rate: "审计日志中含 failed 的事件占比",
+  queue_backlog_minutes: "长时间未开始的运行步骤数",
+  low_feedback_rate: "低分反馈占比",
+  postgres_live_gate: "Postgres E2E 审计证据",
+  execgo_live_gate: "ExecGo live smoke 审计证据",
+};
 
 export function ObservabilityPage() {
   const qc = useQueryClient();
@@ -21,6 +34,14 @@ export function ObservabilityPage() {
   const metricsQuery = useQuery({
     queryKey: ["prometheus-text", activeSpaceId],
     queryFn: () => getPrometheusText(activeSpaceId),
+  });
+  const otelQuery = useQuery({
+    queryKey: ["otel-status"],
+    queryFn: getOtelStatus,
+  });
+  const ragQuery = useQuery({
+    queryKey: ["rag-profile", activeSpaceId],
+    queryFn: getRagProfile,
   });
   const traceQuery = useQuery({
     queryKey: ["trace", traceId],
@@ -66,6 +87,8 @@ export function ObservabilityPage() {
               alertsQuery.refetch();
               rulesQuery.refetch();
               metricsQuery.refetch();
+              otelQuery.refetch();
+              ragQuery.refetch();
             }}
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
@@ -74,11 +97,113 @@ export function ObservabilityPage() {
         </div>
       </div>
 
-      {(alertsQuery.error || rulesQuery.error || metricsQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error) && (
+      {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error) && (
         <p className="error-text">
-          {(alertsQuery.error || rulesQuery.error || metricsQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error as Error)?.message}
+          {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error as Error)?.message}
         </p>
       )}
+
+      <div className="split ops-split">
+      <div className="pane">
+        <div className="pane-title">
+          <h2>OTel 导出</h2>
+          <span className={"status-pill " + (otelQuery.data?.enabled ? "ok" : "idle")}>
+            <span className="status-dot" />
+            {otelQuery.data?.enabled ? "enabled" : "disabled"}
+          </span>
+        </div>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>Service</td>
+              <td>{otelQuery.data?.serviceName ?? "-"}</td>
+            </tr>
+            <tr>
+              <td>Endpoint</td>
+              <td>{otelQuery.data?.endpoint || "-"}</td>
+            </tr>
+            <tr>
+              <td>Insecure</td>
+              <td>{otelQuery.data?.insecure ? "yes" : "no"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>RAG 检索</h2>
+          <span className={"status-pill " + (ragQuery.data?.ftsAvailable ? "ok" : "idle")}>
+            <span className="status-dot" />
+            {ragQuery.data?.defaultRetrievalMode ?? "-"}
+          </span>
+        </div>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>FTS</td>
+              <td>
+                {ragQuery.data?.ftsAvailable ? "可用" : "不可用"}
+                {ragQuery.data?.ftsEngine ? ` (${ragQuery.data.ftsEngine})` : null}
+              </td>
+            </tr>
+            <tr>
+              <td>文档 / 分块</td>
+              <td>
+                {ragQuery.data ? `${ragQuery.data.documentCount} / ${ragQuery.data.chunkCount}` : "-"}
+              </td>
+            </tr>
+            <tr>
+              <td>历史降级</td>
+              <td>{ragQuery.data?.fallbackQueryCount ?? "-"}</td>
+            </tr>
+            <tr>
+              <td>方言</td>
+              <td>{ragQuery.data?.databaseDialect ?? "-"}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>治理指标告警</h2>
+          <span>记忆 / RAG / 插件</span>
+        </div>
+        <table className="table">
+          <thead>
+            <tr>
+              <th>metric</th>
+              <th>说明</th>
+              <th>threshold</th>
+              <th>enabled</th>
+            </tr>
+          </thead>
+          <tbody>
+            {(rulesQuery.data?.items ?? [])
+              .filter((rule) => rule.metric in GOVERNANCE_METRIC_HINTS)
+              .map((rule) => (
+                <tr key={`gov-${rule.id}`}>
+                  <td>{rule.metric}</td>
+                  <td title={rule.description}>{GOVERNANCE_METRIC_HINTS[rule.metric] ?? rule.description ?? "-"}</td>
+                  <td>
+                    {rule.condition} {rule.threshold}
+                  </td>
+                  <td>
+                    <button
+                      className={`btn mini ${rule.enabled ? "ok" : ""}`}
+                      onClick={() => toggleRule(rule)}
+                      disabled={rulesMut.isPending}
+                    >
+                      {rule.enabled ? "on" : "off"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+          </tbody>
+        </table>
+      </div>
 
       <div className="split ops-split">
         <div className="pane">

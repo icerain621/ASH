@@ -4,6 +4,8 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=_docker_compose.sh
+source "$ROOT/scripts/_docker_compose.sh"
 
 if ! command -v docker >/dev/null 2>&1; then
   echo "docker is required" >&2
@@ -34,7 +36,7 @@ if ! docker image inspect "$IMAGE" >/dev/null 2>&1; then
   fi
 fi
 
-ASH_POSTGRES_IMAGE="$IMAGE" docker compose -f docker-compose.postgres.yml up -d --wait
+ASH_POSTGRES_IMAGE="$IMAGE" docker_compose -f docker-compose.postgres.yml up -d --wait
 
 export ASH_DATABASE_URL="postgres://ash:ash@127.0.0.1:${PORT}/ash?sslmode=disable"
 echo "ASH_DATABASE_URL=${ASH_DATABASE_URL}"

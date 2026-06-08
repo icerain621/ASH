@@ -37,6 +37,23 @@ export function listCandidates(limit = 50) {
   return api<{ items: MemoryRecord[] }>(`/memory/candidates?limit=${limit}`);
 }
 
+export type MemoryMigrationResult = {
+  ok: boolean;
+  fromVersion: number;
+  toVersion: number;
+  recordsUpdated: number;
+  migrationId?: string;
+  alreadyCurrent?: boolean;
+  summary?: string;
+};
+
+export function runMemoryMigration(body: { dryRun?: boolean; runId?: string } = {}) {
+  return api<MemoryMigrationResult>("/memory/migrate", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function getMemoryRecord(recordId: string) {
   return api<MemoryRecord>(`/memory/records/${recordId}`);
 }

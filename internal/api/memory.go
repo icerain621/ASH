@@ -172,6 +172,41 @@ func (h *Handler) queryMemory(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// RunMemoryMigration godoc
+// @Summary Apply pending memory schema migrations
+// @Tags memory
+// @Accept json
+// @Produce json
+// @Param body body memory.RunMigrationRequest true "migration"
+// @Success 200 {object} memory.RunMigrationResponse
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/memory/migrate [post]
+func (h *Handler) runMemoryMigration(c *gin.Context) {
+	var req memory.RunMigrationRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	if req.RunID != "" {
+		if !h.requireRunAccess(c, req.RunID) {
+			return
+		}
+	}
+	if !h.requirePermission(c, permMemoryReview) {
+		return
+	}
+	resp, err := h.memory.WithContext(c.Request.Context()).RunMigrations(req)
+	if err != nil {
+		if errors.Is(err, memory.ErrRunNotFound) {
+			c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", err.Error()))
+			return
+		}
+		c.JSON(http.StatusBadRequest, errorBody("MEMORY_MIGRATION_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 // MemoryHitUsed godoc
 // @Summary Record memory usage in a run
 // @Tags memory

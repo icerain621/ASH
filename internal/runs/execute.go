@@ -16,6 +16,8 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
+	"github.com/ash-repwiki/ash/internal/observability"
+	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -125,13 +127,23 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 	}
 	_ = s.writeAudit(runID, traceID, "run.started", startedPayload)
 
-	if err := s.executeSteps(&rec, req, doc, eng, now); err != nil {
+	runCtx, runSpan := ashotel.StartRun(context.Background(), ashotel.RunInfo{
+		RunID: runID, TraceID: traceID,
+		ScenarioName: req.Scenario.Name, ScenarioVersion: req.Scenario.ScenarioVersion,
+		PolicyProfile: policy, SpaceID: rec.SpaceID,
+	})
+	defer runSpan.End()
+
+	if err := s.executeSteps(runCtx, &rec, req, doc, eng, now); err != nil {
+		ashotel.EndSpan(runSpan, err)
+		s.exportRunWaterfallOTel(runID)
 		resp := &CreateResponse{RunID: runID, TraceID: traceID}
 		if errors.Is(err, ErrWaitingApproval) {
 			return resp, nil
 		}
 		return resp, err
 	}
+	s.exportRunWaterfallOTel(runID)
 	return &CreateResponse{RunID: runID, TraceID: traceID}, nil
 }
 
@@ -139,7 +151,10 @@ func (s *Service) CreateWithOptions(req CreateRequest, opts createOptions) (*Cre
 	return s.createAndExecute(req, opts)
 }
 
-func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rules.Document, eng *rules.Engine, started time.Time) error {
+func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, req CreateRequest, doc *rules.Document, eng *rules.Engine, started time.Time) error {
+	if execCtx == nil {
+		execCtx = context.Background()
+	}
 	runID := rec.ID
 	traceID := rec.TraceID
 	runDir := s.db.RunDir(runID)
@@ -159,12 +174,17 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue)
 
 	for idx, step := range doc.Scenario.Steps {
+		stepCtx, stepSpan := ashotel.StartStep(execCtx, step.ID, step.Role, step.Kind)
 		for _, gate := range eng.GatesBeforeStep(step.ID) {
-			if denied, reason := s.evaluateGate(toolCtx, gate); denied {
+			_, gateSpan := ashotel.StartGate(stepCtx, gate.ID)
+			denied, reason := s.evaluateGate(toolCtx, gate)
+			gateSpan.End()
+			if denied {
 				_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 					"target": "gate", "reason": reason, "action": "deny", "ref": gate.ID,
 				})
 				if gate.Blocking {
+					stepSpan.End()
 					_, err := s.failRun(rec, runID, traceID, started, "GATE_BLOCKED", reason)
 					return err
 				}
@@ -255,8 +275,8 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 						"stepId": step.ID, "tool": item.Tool, "risk": risk, "policy": item.Policy,
 					})
 				}
-				ctx := map[string]any{"tool": item.Tool, "risk": risk}
-				if denied, reason := eng.EvaluateHooks("tool.called", ctx); denied {
+				hookCtx := map[string]any{"tool": item.Tool, "risk": risk}
+				if denied, reason := eng.EvaluateHooks("tool.called", hookCtx); denied {
 					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
 						"target": "tool", "reason": reason, "action": "deny", "ref": item.Tool,
 					})
@@ -273,6 +293,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			decision := modelrouter.NewFromEnv().Route(modelrouter.Request{
 				RunID: runID, StepID: step.ID, UseCase: step.Role, Prompt: issue,
 			})
+			_, modelSpan := ashotel.StartModelChat(stepCtx, decision.Provider.ID, decision.Provider.Model, step.ID)
 			usage := modelrouter.UsageRow(decision, modelrouter.Request{
 				RunID: runID, StepID: step.ID, UseCase: step.Role,
 				InputTokens: decision.InputTokens, OutputTokens: decision.OutputTokens,
@@ -284,6 +305,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 				"inputTokens": decision.InputTokens, "outputTokens": decision.OutputTokens,
 				"costMicros": decision.CostMicros,
 			})
+			modelSpan.End()
 			if refs := s.writeTemplateStepArtifact(runDir, step, issue, evidenceRefs); len(refs) > 0 {
 				evidenceRefs = append(evidenceRefs, refs...)
 			}
@@ -310,6 +332,7 @@ func (s *Service) executeSteps(rec *store.RunRecord, req CreateRequest, doc *rul
 			return err
 		}
 		s.finishStep(stepRow, "finished", stepStart, "", "")
+		stepSpan.End()
 
 		ckptID, snapshotDigest, checkpointURI := s.saveCheckpoint(runID, traceID, step.ID, runDir, checkpointStrategy(doc))
 		if _, err := s.eventsFor().Append(runID, traceID, "run.checkpoint_saved", "info", map[string]any{
@@ -396,11 +419,14 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 			})
 		}
 		if hits, err := s.rag.Query(ragQueryRequest(spaceID, repoRoot, issue)); err == nil {
+			_, ragSpan := ashotel.StartRAGQuery(context.Background(), runID, "prepare")
 			for _, hit := range hits.Items {
 				refs = append(refs, hit.Ref)
 			}
+			ragSpan.End()
 			_, _ = s.eventsFor().Append(runID, traceID, "rag.retrieved", "info", map[string]any{
 				"query": issue, "hits": len(hits.Items), "refs": refs,
+				"retrievalMode": hits.RetrievalMode, "ftsAvailable": hits.FtsAvailable,
 			})
 		}
 	}
@@ -415,16 +441,18 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 		if len(memories) > 0 {
 			recordIDs := make([]string, 0, len(memories))
 			memoryRefs := make([]string, 0, len(memories))
+			hitsByLayer := map[string]int{}
 			for _, mem := range memories {
 				recordIDs = append(recordIDs, mem.ID)
 				memoryRefs = append(memoryRefs, "memory:"+mem.ID)
+				hitsByLayer[mem.Layer]++
 			}
 			refs = appendUnique(refs, memoryRefs...)
 			_, _ = s.eventsFor().Append(runID, traceID, "memory.injected", "info", map[string]any{
 				"count": len(recordIDs), "recordIds": recordIDs,
 			})
 			_, _ = s.eventsFor().Append(runID, traceID, "memory.hit_used", "info", map[string]any{
-				"recordIds": recordIDs, "count": len(recordIDs),
+				"count": len(recordIDs), "recordIds": recordIDs, "hitsByLayer": hitsByLayer,
 			})
 			_ = s.writeAudit(runID, traceID, "memory.hit_used", map[string]any{
 				"recordIds": recordIDs, "actorId": "ash-runner",
@@ -628,6 +656,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 	backoff := retryBackoff(item.Retry)
 	var last toolbus.Result
 	for attempt := 1; attempt <= attempts; attempt++ {
+		_, toolSpan := ashotel.StartToolCall(context.Background(), item.Tool, stepID)
 		timeout := toolTimeoutMs(item)
 		_, _ = s.eventsFor().Append(runID, traceID, "tool.called", "info", map[string]any{
 			"tool": item.Tool, "risk": risk, "timeoutMs": timeout,
@@ -645,6 +674,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 			"attempt": attempt, "maxAttempts": attempts, "failureClass": failureClass,
 			"output": last.Output, "error": last.Error,
 		})
+		toolSpan.End()
 		if last.OK || attempt == attempts {
 			return last
 		}
@@ -1084,4 +1114,15 @@ func ragIndexRequest(spaceID, repoRoot string) rag.IndexRequest {
 
 func ragQueryRequest(spaceID, repoRoot, text string) rag.QueryRequest {
 	return rag.QueryRequest{RepoRoot: repoRoot, Text: text, TopK: 6, SpaceID: firstNonEmpty(spaceID, "local")}
+}
+
+func (s *Service) exportRunWaterfallOTel(runID string) {
+	if !ashotel.Enabled() {
+		return
+	}
+	wf, err := observability.BuildWaterfall(s.db, runID)
+	if err != nil {
+		return
+	}
+	_, _ = ashotel.ExportWaterfall(context.Background(), wf)
 }

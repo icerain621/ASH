@@ -222,6 +222,43 @@
         "citationsMissing": { "type": "boolean" }
       }
     },
+    "rag.retrieved": {
+      "type": "object",
+      "required": ["retrievalMode", "hits"],
+      "additionalProperties": true,
+      "properties": {
+        "query": { "type": "string" },
+        "hits": { "type": "number", "minimum": 0 },
+        "retrievalMode": { "type": "string", "enum": ["fts", "chunk", "empty"] },
+        "ftsAvailable": { "type": "boolean" },
+        "refs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "plugin.export_failed": {
+      "type": "object",
+      "required": ["pluginId", "dropped", "ok"],
+      "additionalProperties": false,
+      "properties": {
+        "pluginId": { "type": "string", "minLength": 1 },
+        "pluginName": { "type": "string" },
+        "dropped": { "type": "number", "minimum": 0 },
+        "ok": { "type": "boolean" }
+      }
+    },
+    "plugin.export_reported": {
+      "type": "object",
+      "required": ["pluginId", "dropped", "ok"],
+      "additionalProperties": false,
+      "properties": {
+        "pluginId": { "type": "string", "minLength": 1 },
+        "pluginName": { "type": "string" },
+        "dropped": { "type": "number", "minimum": 0 },
+        "ok": { "type": "boolean" }
+      }
+    },
     "policy.denied": {
       "type": "object",
       "required": ["target", "reason", "action"],
@@ -250,10 +287,61 @@
       "additionalProperties": false,
       "properties": {
         "candidateId": { "type": "string", "minLength": 1 },
+        "layer": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
         "decision": { "type": "string", "enum": ["approve", "reject", "deprecate"] },
         "reason": { "type": "string", "minLength": 1 },
         "policyProfile": { "type": "string", "minLength": 1 },
         "latencyMs": { "type": "number", "minimum": 0 }
+      }
+    },
+    "memory.hit_used": {
+      "type": "object",
+      "required": ["count"],
+      "additionalProperties": false,
+      "properties": {
+        "count": { "type": "number", "minimum": 1 },
+        "recordIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "hitsByLayer": {
+          "type": "object",
+          "additionalProperties": { "type": "number", "minimum": 1 }
+        }
+      }
+    },
+    "memory.deprecated": {
+      "type": "object",
+      "required": ["memoryId", "layer", "reason"],
+      "additionalProperties": false,
+      "properties": {
+        "memoryId": { "type": "string", "minLength": 1 },
+        "layer": { "type": "string", "enum": ["L0", "L1", "L2", "L3"] },
+        "reason": { "type": "string", "minLength": 1 }
+      }
+    },
+    "memory.query": {
+      "type": "object",
+      "required": ["layersKey", "resultCount", "latencyMs"],
+      "additionalProperties": false,
+      "properties": {
+        "layersKey": { "type": "string", "minLength": 1 },
+        "resultCount": { "type": "number", "minimum": 0 },
+        "latencyMs": { "type": "number", "minimum": 0 }
+      }
+    },
+    "memory.migrated": {
+      "type": "object",
+      "required": ["from", "to", "ok", "recordsUpdated", "summary"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "number", "minimum": 0 },
+        "to": { "type": "number", "minimum": 1 },
+        "ok": { "type": "boolean" },
+        "recordsUpdated": { "type": "number", "minimum": 0 },
+        "summary": { "type": "string", "minLength": 1 },
+        "toolVersion": { "type": "string", "minLength": 1 }
       }
     },
     "run.finished": {

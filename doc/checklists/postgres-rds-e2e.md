@@ -30,9 +30,11 @@ export ASH_SQLITE_PATH="$ASH_DATA_DIR/ash.db"
 export ASH_MIGRATE_E2E=1
 export ASH_POSTGRES_RLS=1
 export ASH_POSTGRES_RLS_FORCE=1
+export ASH_SCHEMA_MODE=sql
 ```
 
-> **生产密码**：勿使用 dev 默认 `ash` / `ash_app`。在 RDS 上设置强密码后，同步更新 URL；可基于 `01-ash-roles.sql` 定制 DDL。
+> **生产密码**：勿使用 dev 默认 `ash` / `ash_app`。在 RDS 上设置强密码后，同步更新 URL；角色与授权见 SQL 修订 `000014` 或 `01-ash-roles.sql`。  
+> **生产配置模板**：[`postgres-production-config.md`](postgres-production-config.md)
 
 ---
 
@@ -54,20 +56,25 @@ bash scripts/postgres-smoke.sh
 ## 2. Schema 与角色（约 10 分钟）
 
 ```bash
-# 建表（GORM AutoMigrate，空库）
+export ASH_SCHEMA_MODE=sql
+
+# 建表（golang-migrate 000001–000014，空库）
+go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
+go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
+# 期望 version=14 expected=14 mode=sql
+
 go run ./cmd/cli doctor --suite M3
 
-# 应用角色（需 migrator 权限；云上用 psql）
-export ASH_DATABASE_URL='...'
+# 应用角色（000014 已含 ash_app；或脚本兜底）
 bash scripts/postgres-ensure-app-role.sh
-# 或：psql "$ASH_DATABASE_URL" -f scripts/postgres-init/01-ash-roles.sql
 ```
 
 | # | 检查 | 通过标准 |
 |---|------|----------|
-| 2.1 | 表目录 | **M3-03** pass，catalog ≥25 表，含 `runs` / `audit_log` 等 |
-| 2.2 | `ash_app` 存在 | `\du ash_app` 或 M3-06 在 `RLS_FORCE=1` 时 evidence `appRole` |
-| 2.3 | 密码策略 | 生产强密码已轮换，`ASH_DATABASE_APP_URL` 已更新 |
+| 2.1 | 表目录 | **M3-03** pass，catalog ≥41 表；**M3-08** `sqlVersion=14` |
+| 2.2 | RLS SQL | **M3-06** pass，`rlsPolicies` ≥34（修订 000013） |
+| 2.3 | `ash_app` 存在 | `\du ash_app` 或 M3-07 ping ok |
+| 2.4 | 密码策略 | 生产强密码已轮换，`ASH_DATABASE_APP_URL` 已更新 |
 
 ---
 
@@ -168,8 +175,8 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 
 | 套件 | 项数 | 云 RDS 期望 |
 |------|------|-------------|
-| M3 | 7 | **全部 pass**（M3-04 / 06 / 07 非 skip） |
-| ALL | 32 | **全部 pass**（含 TR0–TR3、M2） |
+| M3 | 8 | **全部 pass**（M3-04 / 06 / 07 / 08 非 skip） |
+| ALL | 34 | **全部 pass**（含 TR0–TR3、M2、**TR3-05** 指标回放一致性） |
 | M3-05 ExecGo | 1 | 可选：`ASH_EXECGO_E2E=1` + live ExecGo；未启用可 skipped |
 
 ---
@@ -221,6 +228,7 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 | `make postgres-up` | RDS 实例 + 安全组 |
 | `docker exec … DROP SCHEMA` | 空库或审批后 `psql` 重置 |
 | `make postgres-e2e` | §1–§6 手工串联 |
+| `make postgres-sql-schema-e2e` | §2 SQL-only（`ASH_SCHEMA_MODE=sql`） |
 | `make postgres-roles` | `postgres-ensure-app-role.sh` + `psql` |
 | `make postgres-rls-e2e` | §4 集成测试 + M3 RLS 环境 |
 
@@ -229,8 +237,9 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 ## 10. 证据归档（发布门禁）
 
 - [ ] `migrate plan` / `verify` 输出日志
-- [ ] `doctor --suite M3` 报告（7/7 pass）
-- [ ] `doctor --suite ALL` 报告（32/32 pass）
+- [ ] `migrate schema version` 输出（version=14）
+- [ ] `doctor --suite M3` 报告（8/8 pass）
+- [ ] `doctor --suite ALL` 报告（34/34 pass）
 - [ ] RLS 集成测试日志
 - [ ] `readyz` 响应 + 切换时间戳
 - [ ] §7 业务抽样记录

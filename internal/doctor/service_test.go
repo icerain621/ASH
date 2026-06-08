@@ -146,13 +146,15 @@ func TestTR3Suite(t *testing.T) {
 		}
 		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 4 {
-		t.Fatalf("TR3 pass=%d want 4", rep.Summary.Pass)
+	if rep.Summary.Pass != 6 {
+		t.Fatalf("TR3 pass=%d want 6", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
 	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
+	assertCaseEvidence(t, rep, "TR3-06", "skipped")
 	assertCaseEvidence(t, rep, "TR3-03", "sloMetric")
 	assertCaseEvidence(t, rep, "TR3-04", "trace")
+	assertCaseEvidence(t, rep, "TR3-05", "metricsParity")
 }
 
 func TestM2Suite(t *testing.T) {
@@ -220,7 +222,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 33
+	want := 35
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

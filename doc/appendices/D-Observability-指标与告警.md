@@ -67,13 +67,19 @@
 - `policy.denied` → `ash_policy_denied_total++`
 - `model.usage` → tokens/cost 相关 counter 增量
 - `rag.results` → `ash_rag_latency_ms.observe`、`ash_rag_citation_missing_total`（若缺引用）
+- `rag.retrieved` → `ash_rag_queries_total{mode}`、`ash_rag_fts_fallback_total`（`retrievalMode=chunk` 时）
+- **RAG FTS 引擎**：SQLite `fts5` 虚拟表；Postgres `rag_chunks.search_vector`（`tsvector` + GIN，SQL rev **17**）
 - `memory.candidate_created` → candidates/missing_evidence/backlog
 - `memory.reviewed` → reviews/latency/backlog
+- `memory.hit_used` → `ash_memory_hit_used_total{layer}`（按 `hitsByLayer` 分层计数）
+- `memory.deprecated` → `ash_memory_deprecated_total{layer,reason}`
+- `memory.query` → `ash_memory_queries_total{layersKey}`、`ash_memory_query_latency_ms`（需 `runId` 写入 run_events）
+- `memory.migrated` → `ash_memory_migration_runs_total{from,to,ok}`
 
-**TODO（负责人：可观测性）**：补齐逐事件 payload 字段与指标标签映射（最终实现用表驱动）。  
-**验收方式**：对同一 run 的事件重放，离线重算指标与实时指标口径一致（误差可解释）。
+**状态**：TR0 核心 + 记忆 P1 事件已表驱动实现（`internal/observability/derive/catalog.go`）。  
+**验收方式**：对同一 run 的事件重放，离线重算指标与实时指标口径一致（Doctor **TR3-05**、`derive.ValidateReplayParity`）。
 
-## 5. Traces（P1+，OTel）
+## 5. Traces（OTel 骨架）
 建议 Span 树：
 - `run`（root）
   - `step:*`
@@ -83,6 +89,12 @@
     - `tool.call`
 
 关键 attributes：`runId/scenarioVersion/stepId/role/tool/provider/model/checkpointId`。
+
+**实现**：`internal/observability/otel`（Provider、Span 辅助、waterfall 批量导出）。  
+**配置**：`config/ash-observability.yaml` → `plugins.otel`；或 `ASH_OTEL_ENABLED=1` + `ASH_OTEL_ENDPOINT`。  
+**运行时**：Worker 启动 `otel.Init`；Run 执行 live span；Run 结束后 `ExportWaterfall` 将 DB waterfall 同步为 OTLP batch。  
+**API**：`GET /api/v1/observability/otel/status`。  
+**验收**：`go test ./internal/observability/otel/...`；启用 OTel 后 run 完成可在 collector 看到 span 树。
 
 ## 6. 告警建议（M0）
 ### 6.1 可用性
@@ -97,8 +109,14 @@
 - `ash_memory_unreviewed_backlog{layer=L1/L2}` 持续增长
 - `ash_memory_missing_evidence_total` 比例超过阈值
 - 评审 SLA 超时（P1 细化）
+- **默认告警规则**（`internal/alerts`）：`memory_unreviewed_backlog`、`rag_fts_fallback_rate`、`plugin_export_failures`
+- **Prometheus live 段**：`ash_memory_unreviewed_backlog_live`、`ash_rag_fts_fallback_live`、`ash_plugin_export_errors_live`
 
-## 7. 插件健康与自监控（建议）
-- 每插件记录 `lastExportAt/exportErrors/dropCount`（内部指标）
-- 插件导出失败不影响 run 主流程，但必须 emit 事件并可在 UI 看到
+## 7. 插件健康与自监控
+- `plugin_registry` 列：`last_export_at`、`export_errors`、`drop_count`（SQL revision **16**）
+- 插件侧或 Worker 通过 `POST /api/v1/plugins/{pluginId}/export-report` 上报 `{ ok?, dropped? }`
+- 运维快照：`GET /api/v1/plugins/health`（汇总 export 错误、丢弃计数、24h 未导出插件数）
+- UI：**Automation → Plugins** 表格展示每插件导出健康列
+- 插件导出失败不影响 run 主流程，但必须可观测
+- `plugin.export_failed` / `plugin.export_reported` 写入 `audit_log`；可选 `runId` 关联 run 事件 → `ash_plugin_export_failures_total`
 

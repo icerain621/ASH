@@ -45,14 +45,52 @@ func Replay(events []Event) Snapshot {
 			}
 		}
 		enriched := enrichPayload(payload, scenarioByRun[ev.RunID], stepByRun[ev.RunID])
-		for _, rule := range rules {
-			if rule.EventType != ev.Type {
-				continue
+		payloads := []map[string]any{enriched}
+		if ev.Type == "memory.hit_used" {
+			payloads = expandHitsByLayer(enriched)
+		}
+		for _, p := range payloads {
+			for _, rule := range rules {
+				if rule.EventType != ev.Type {
+					continue
+				}
+				applyRule(&snap, rule, p)
 			}
-			applyRule(&snap, rule, enriched)
 		}
 	}
 	return snap
+}
+
+func expandHitsByLayer(payload map[string]any) []map[string]any {
+	raw, ok := payload["hitsByLayer"].(map[string]any)
+	if !ok || len(raw) == 0 {
+		layer := stringField(payload, "layer")
+		if layer == "" {
+			layer = "mixed"
+		}
+		count := numberField(payload, "count")
+		if count <= 0 {
+			count = 1
+		}
+		return []map[string]any{{"layer": layer, "count": count}}
+	}
+	keys := make([]string, 0, len(raw))
+	for layer := range raw {
+		keys = append(keys, layer)
+	}
+	sort.Strings(keys)
+	out := make([]map[string]any, 0, len(keys))
+	for _, layer := range keys {
+		count := numberField(map[string]any{"n": raw[layer]}, "n")
+		if count <= 0 {
+			continue
+		}
+		out = append(out, map[string]any{"layer": layer, "count": count})
+	}
+	if len(out) == 0 {
+		return []map[string]any{{"layer": "mixed", "count": float64(1)}}
+	}
+	return out
 }
 
 func enrichPayload(payload map[string]any, scenario, stepID string) map[string]any {
@@ -77,6 +115,15 @@ func enrichPayload(payload map[string]any, scenario, stepID string) map[string]a
 	}
 	if missing, ok := out["citationsMissing"].(bool); ok && missing {
 		out["_citation_missing"] = float64(1)
+	}
+	if _, hasEvidence := out["evidenceCount"]; hasEvidence && numberField(out, "evidenceCount") == 0 {
+		out["_missing_evidence"] = float64(1)
+	}
+	if ok, exists := out["ok"].(bool); exists {
+		out["_migration_ok"] = strconv.FormatBool(ok)
+	}
+	if mode := stringField(out, "retrievalMode"); mode == "chunk" {
+		out["_fts_fallback"] = float64(1)
 	}
 	return out
 }
