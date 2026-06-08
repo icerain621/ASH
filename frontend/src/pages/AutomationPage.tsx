@@ -13,7 +13,7 @@ import {
   Trash2,
   Workflow,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   applyAuditRetention,
   approveApproval,
@@ -31,6 +31,8 @@ import {
   listModelProviders,
   listPlugins,
   listSecrets,
+  registerMCPTool,
+  registerPlugin,
   rejectApproval,
   rotateSecret,
   updateAuditPolicy,
@@ -68,6 +70,10 @@ export function AutomationPage() {
   const [secretDescription, setSecretDescription] = useState("");
   const [secretMessage, setSecretMessage] = useState("");
   const [rotateValues, setRotateValues] = useState<Record<string, string>>({});
+  const [approvalReasons, setApprovalReasons] = useState<Record<string, string>>({});
+  const [approvalMessage, setApprovalMessage] = useState("");
+  const [toolMessage, setToolMessage] = useState("");
+  const [pluginMessage, setPluginMessage] = useState("");
   const providersQuery = useQuery({
     queryKey: ["model-providers", activeSpaceId],
     queryFn: listModelProviders,
@@ -130,21 +136,47 @@ export function AutomationPage() {
   };
 
   const approveMut = useMutation({
-    mutationFn: (approvalId: string) =>
+    mutationFn: ({ approvalId, reason }: { approvalId: string; reason: string }) =>
       approveApproval(approvalId, {
         actorId: "console",
-        reason: "approved from automation console",
+        reason,
       }),
-    onSuccess: refreshGovernance,
+    onSuccess: async () => {
+      setApprovalMessage("approval accepted");
+      await refreshGovernance();
+    },
+    onError: (error) => setApprovalMessage(error instanceof Error ? error.message : "approval failed"),
   });
 
   const cancelMut = useMutation({
-    mutationFn: (approvalId: string) =>
+    mutationFn: ({ approvalId, reason }: { approvalId: string; reason: string }) =>
       rejectApproval(approvalId, {
         actorId: "console",
-        reason: "rejected from automation console",
+        reason,
       }),
-    onSuccess: refreshGovernance,
+    onSuccess: async () => {
+      setApprovalMessage("approval rejected");
+      await refreshGovernance();
+    },
+    onError: (error) => setApprovalMessage(error instanceof Error ? error.message : "rejection failed"),
+  });
+
+  const registerToolMut = useMutation({
+    mutationFn: registerMCPTool,
+    onSuccess: async (tool) => {
+      setToolMessage(`registered ${tool.name}`);
+      await refreshGovernance();
+    },
+    onError: (error) => setToolMessage(error instanceof Error ? error.message : "mcp register failed"),
+  });
+
+  const registerPluginMut = useMutation({
+    mutationFn: registerPlugin,
+    onSuccess: async (plugin) => {
+      setPluginMessage(`registered ${plugin.name}`);
+      await refreshGovernance();
+    },
+    onError: (error) => setPluginMessage(error instanceof Error ? error.message : "plugin register failed"),
   });
 
   const updatePolicyMut = useMutation({
@@ -242,6 +274,47 @@ export function AutomationPage() {
     setRotateValues((current) => ({ ...current, [secretId]: value }));
   };
 
+  const setApprovalReason = (approvalId: string, value: string) => {
+    setApprovalReasons((current) => ({ ...current, [approvalId]: value }));
+  };
+
+  const decideApproval = (approvalId: string, decision: "approve" | "reject") => {
+    const reason = (approvalReasons[approvalId] || "").trim();
+    if (!reason) {
+      setApprovalMessage("reason required");
+      return;
+    }
+    if (decision === "approve") approveMut.mutate({ approvalId, reason });
+    else cancelMut.mutate({ approvalId, reason });
+  };
+
+  const submitMCPTool = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    registerToolMut.mutate({
+      name: String(formData.get("name") || ""),
+      server: String(formData.get("server") || ""),
+      risk: String(formData.get("risk") || "medium"),
+    });
+  };
+
+  const submitPlugin = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const capabilities = String(formData.get("capabilities") || "")
+      .split(/[\n,]/)
+      .map((item) => item.trim())
+      .filter(Boolean);
+    registerPluginMut.mutate({
+      name: String(formData.get("name") || ""),
+      version: String(formData.get("version") || ""),
+      protocol: String(formData.get("protocol") || "http"),
+      abi: String(formData.get("abi") || "") || undefined,
+      endpoint: String(formData.get("endpoint") || ""),
+      capabilities,
+    });
+  };
+
   return (
     <section className="panel active">
       <div className="page-kicker">
@@ -292,6 +365,29 @@ export function AutomationPage() {
             <h2>MCP Tools</h2>
             <span>{toolsQuery.data?.items.length ?? 0} 个工具</span>
           </div>
+          <form className="form-grid compact-form" onSubmit={submitMCPTool}>
+            <label>
+              Name
+              <input name="name" required placeholder="repo.search" />
+            </label>
+            <label>
+              Server
+              <input name="server" required placeholder="https://mcp.example.com/rpc" />
+            </label>
+            <label>
+              Risk
+              <select name="risk" defaultValue="medium">
+                <option value="low">low</option>
+                <option value="medium">medium</option>
+                <option value="high">high</option>
+              </select>
+            </label>
+            <button className="btn primary" type="submit" disabled={registerToolMut.isPending}>
+              <Plus size={15} strokeWidth={1.8} />
+              Register
+            </button>
+            <span className="form-message">{toolMessage || activeSpaceId}</span>
+          </form>
           <table className="table">
             <thead>
               <tr>
@@ -332,6 +428,41 @@ export function AutomationPage() {
               {pluginABIQuery.data?.protoFiles.length ?? 0} proto
             </span>
           </div>
+          <form className="form-grid compact-form" onSubmit={submitPlugin}>
+            <label>
+              Name
+              <input name="name" required placeholder="delivery-observer" />
+            </label>
+            <label>
+              Version
+              <input name="version" required placeholder="0.1.0" />
+            </label>
+            <label>
+              Protocol
+              <select name="protocol" defaultValue="http">
+                <option value="http">http</option>
+                <option value="grpc">grpc</option>
+                <option value="mcp">mcp</option>
+              </select>
+            </label>
+            <label>
+              ABI
+              <input name="abi" placeholder={pluginABIQuery.data?.currentAbi ?? "ash.plugin/v0.1"} />
+            </label>
+            <label className="wide-field">
+              Endpoint
+              <input name="endpoint" required placeholder="http://127.0.0.1:19091" />
+            </label>
+            <label className="wide-field">
+              Capabilities
+              <input name="capabilities" placeholder="observability, release.gate" />
+            </label>
+            <button className="btn primary" type="submit" disabled={registerPluginMut.isPending}>
+              <Plus size={15} strokeWidth={1.8} />
+              Register
+            </button>
+            <span className="form-message">{pluginMessage || activeSpaceId}</span>
+          </form>
           <table className="table">
             <thead>
               <tr>
@@ -536,7 +667,7 @@ export function AutomationPage() {
               <ShieldCheck size={15} strokeWidth={1.8} />
               Approval Queue
             </h2>
-            <span>{approvalsQuery.data?.items.length ?? 0} 个待处理</span>
+            <span>{approvalMessage || `${approvalsQuery.data?.items.length ?? 0} 个待处理`}</span>
           </div>
           <table className="table">
             <thead>
@@ -545,6 +676,7 @@ export function AutomationPage() {
                 <th>Run</th>
                 <th>Gate</th>
                 <th>Reason</th>
+                <th>Decision reason</th>
                 <th>Created</th>
                 <th>Action</th>
               </tr>
@@ -561,6 +693,14 @@ export function AutomationPage() {
                     </span>
                   </td>
                   <td title={approval.reason}>{approval.reason || approval.stepId}</td>
+                  <td>
+                    <input
+                      className="inline-secret-input"
+                      placeholder="审批理由"
+                      value={approvalReasons[approval.id] ?? ""}
+                      onChange={(event) => setApprovalReason(approval.id, event.target.value)}
+                    />
+                  </td>
                   <td>{approval.createdAt ? new Date(approval.createdAt).toLocaleString() : "-"}</td>
                   <td>
                     <div className="row-actions">
@@ -569,7 +709,7 @@ export function AutomationPage() {
                         type="button"
                         title="Approve"
                         disabled={approveMut.isPending || cancelMut.isPending}
-                        onClick={() => approveMut.mutate(approval.id)}
+                        onClick={() => decideApproval(approval.id, "approve")}
                       >
                         <CheckCircle size={14} strokeWidth={1.8} />
                       </button>
@@ -578,7 +718,7 @@ export function AutomationPage() {
                         type="button"
                         title="Reject"
                         disabled={approveMut.isPending || cancelMut.isPending}
-                        onClick={() => cancelMut.mutate(approval.id)}
+                        onClick={() => decideApproval(approval.id, "reject")}
                       >
                         <Square size={13} strokeWidth={1.8} />
                       </button>
@@ -588,7 +728,7 @@ export function AutomationPage() {
               ))}
               {!approvalsQuery.data?.items.length && (
                 <tr className="empty-row">
-                  <td colSpan={6}>暂无待审批请求。</td>
+                  <td colSpan={7}>暂无待审批请求。</td>
                 </tr>
               )}
             </tbody>
