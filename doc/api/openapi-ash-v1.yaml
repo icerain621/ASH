@@ -297,6 +297,20 @@ components:
         alertsEvalInterval:
           type: string
           description: ASH_ALERTS_EVAL_INTERVAL duration (e.g. 5m0s).
+        memoryTTLSweepInterval:
+          type: string
+          description: ASH_MEMORY_TTL_SWEEP_INTERVAL duration (e.g. 24h0m0s).
+        memoryTTLReviewDueCount:
+          type: integer
+          format: int64
+          description: Approved records in TTL review window for this space.
+        memoryTTLExpiredPendingCount:
+          type: integer
+          format: int64
+          description: Approved records past TTL awaiting sweep.
+        memoryTTLReviewLeadDays:
+          type: integer
+          description: Days before expiry when records enter review queue.
         metricsEventReplayEnabled:
           type: boolean
           description: ASH_METRICS_EVENT_REPLAY=1 appends derive replay segment to Prometheus text.
@@ -477,6 +491,7 @@ components:
           description: Enabled ASH_* live gates (M3-04..08, CI fixture); no secret values.
         otelEnabled: { type: boolean }
         alertsEvalInterval: { type: string, example: 5m0s }
+        memoryTTLSweepInterval: { type: string, example: 24h0m0s }
         metricsEventReplayEnabled: { type: boolean }
     RepoRef:
       type: object
@@ -1297,6 +1312,40 @@ components:
         toVersion: { type: integer }
         recordsUpdated: { type: integer }
         alreadyCurrent: { type: boolean }
+        summary: { type: string }
+    MemoryTTLQueueItem:
+      type: object
+      properties:
+        recordId: { type: string }
+        layer: { type: string }
+        title: { type: string }
+        status: { type: string }
+        daysRemaining: { type: integer }
+        expiresAtMs: { type: integer, format: int64 }
+    MemoryTTLQueueResponse:
+      type: object
+      properties:
+        reviewDue:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryTTLQueueItem" }
+        reviewDueCount: { type: integer, format: int64 }
+        expiredPendingCount: { type: integer, format: int64 }
+        reviewLeadDays: { type: integer }
+    MemorySweepTTLRequest:
+      type: object
+      properties:
+        spaceId: { type: string }
+        runId: { type: string }
+        traceId: { type: string }
+        actorId: { type: string }
+        dryRun: { type: boolean }
+    MemorySweepTTLResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        deprecated: { type: integer }
+        reviewDue: { type: integer }
+        dryRun: { type: boolean }
         summary: { type: string }
     OrgItem:
       type: object
@@ -3080,6 +3129,36 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MemoryRecordView" }
+
+  /api/v1/memory/ttl-queue:
+    get:
+      tags: [Memory]
+      summary: List memory records due for TTL review
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemoryTTLQueueResponse" }
+
+  /api/v1/memory/ttl-sweep:
+    post:
+      tags: [Memory]
+      summary: Deprecate TTL-expired approved memory records
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemorySweepTTLRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MemorySweepTTLResponse" }
 
   /api/v1/model-router/providers:
     get:

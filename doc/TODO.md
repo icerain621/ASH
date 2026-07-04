@@ -44,8 +44,8 @@ make postgres-sql-schema-e2e
 | H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 43/43 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
-| H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`** 联调 |
-| H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + diagnose | job log 落库与 rootCause；fixture 覆盖见 `TestCISyncRunsWithFixture` |
+| H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`**（`TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05`） |
+| H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + `POST /ci/failures/diagnose`（仅 `jobId`） | job log 经 fixture 拉取、`logDigest` 落库、`rootCause` 分类；`TestFixtureProviderSyncRunsAndJobs` |
 | H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1` + Doctor M3-05 | live 执行链路通过 |
 | H-07 | 密钥轮换策略 | repo connection `secretId` | 见 `postgres-production-config.md` §密钥轮换；轮换后 Doctor + `/readyz` 归档 |
 | H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) | Postgres e2e + ALL/M3 + §7 证据归档 |
@@ -124,7 +124,9 @@ make postgres-roles
 
 ## 已完成（近期）
 
-- Sprint AL：记忆 TTL 复核队列 + sweep API；`memory.ttl_expired` derive；Doctor **TR1-06**；ALL **43/43**
+- Sprint AO：CI fixture H-04/H-05 全链路扩展（双 job：test_failure + docker）；`jobId` 诊断拉日志 + `logDigest` 落库 + adopt；`TestReleaseSamplingCIFixtureH04H05`。
+- Sprint AN：OpenAPI 契约补全 TTL 端点/schema；`memoryTTLSweepInterval` 与 Scale TTL 字段对齐；`TestMemoryTTLQueueAndSweepAPI`；derive `memory.ttl_expired` replay；H-09 抽样含 `ttl-queue`。
+- Sprint AM：Worker 后台记忆 TTL sweep（`ASH_MEMORY_TTL_SWEEP_INTERVAL`）；`/readyz` 与 Scale 暴露 `memoryTTLSweepInterval`。
 - Sprint AJ：记忆 catalog v1→v2；`release-window-audit.md`；`release-sampling.sh` + API 抽样测试
 - Sprint AD：Scale `/readyz` 运维面板；Postgres readyz+RLS 集成测试；CI PR `postgres-rls-e2e`
 - Sprint AC：Doctor **TR3-10** readyz HealthResponse 契约；M3-09 SQL 修订预期校验；RDS 脚本 rev 20；ALL **42/42**

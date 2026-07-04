@@ -82,7 +82,7 @@
 | 导出含 Secret 扫描 | ✅ TR2 | 合规导出 JSON 内嵌 `secretScan` 摘要 |
 | Runs 溯源面板 | ✅ TR3 | 运行详情展示 `/runs/:id/provenance` 链路 |
 | OpenAPI 合规/规模化/迭代 | ✅ | `bash scripts/regenerate-swagger.sh` 含 improve/compliance/scale/provenance |
-| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（**42** 项，非 `-short`；M3 **11** + TR3 **10**） |
+| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（**43** 项，非 `-short`；M3 **11** + TR3 **10** + TR1 **6**） |
 | Runs 控制台 actorRole | ✅ | 创建运行可选角色；API 返回 `executionError` |
 | 跨空间访问 403 | ✅ | `requireRequestSpace` 统一 runs/space-param/secrets/RAG/MCP/审批等 |
 | M2 权限矩阵 | ✅ 基础 | `internal/authz` + API/UI + 场景工具 enforcement + Doctor M2-01 |

@@ -106,6 +106,17 @@ func TestReplay_memoryMissingEvidenceAndBacklog(t *testing.T) {
 	}
 }
 
+func TestReplay_memoryTTLExpired(t *testing.T) {
+	events := []Event{{
+		RunID: "r", Type: "memory.ttl_expired",
+		PayloadJSON: `{"memoryId":"m1","layer":"L1","reason":"ttl_expired"}`,
+	}}
+	snap := Replay(events)
+	if snap.Counters[`ash_memory_ttl_expired_total{layer="L1",reason="ttl_expired"}`] != 1 {
+		t.Fatalf("ttl expired=%v", snap.Counters)
+	}
+}
+
 func TestReplay_memoryHitDeprecatedQuery(t *testing.T) {
 	events := []Event{
 		{RunID: "r", Type: "memory.hit_used", PayloadJSON: `{"count":3,"hitsByLayer":{"L1":2,"L2":1}}`},
@@ -160,6 +171,7 @@ func TestCatalog_coversAppendixCoreEvents(t *testing.T) {
 		"tool.result", "policy.denied", "model.usage", "rag.results", "rag.retrieved",
 		"memory.candidate_created", "memory.reviewed",
 		"memory.hit_used", "memory.deprecated", "memory.query", "memory.migrated",
+		"memory.ttl_expired",
 		"plugin.export_failed",
 	}
 	seen := map[string]struct{}{}

@@ -252,7 +252,7 @@ bash scripts/release-sampling.sh
 - [ ] `migrate plan` / `verify` 输出日志
 - [ ] `migrate schema version` 输出（version=20）
 - [ ] `doctor --suite M3` 报告（11/11 pass）
-- [ ] `doctor --suite ALL` 报告（42/42 pass）
+- [ ] `doctor --suite ALL` 报告（43/43 pass）
 - [ ] RLS 集成测试日志
 - [ ] `readyz` 响应 + 切换时间戳
 - [ ] §7 业务抽样记录

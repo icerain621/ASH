@@ -44,9 +44,17 @@ func DefaultFixtureProvider() FixtureProvider {
 			Conclusion:    "failure",
 			StartedAt:     &now,
 			CompletedAt:   &completed,
+		}, {
+			ProviderJobID: "fixture-job-9102",
+			Name:          "Postgres E2E",
+			Status:        "completed",
+			Conclusion:    "failure",
+			StartedAt:     &now,
+			CompletedAt:   &completed,
 		}},
 		Logs: map[string]string{
 			"fixture-job-9101": "go test ./...\n--- FAIL: TestAPI (0.02s)\nFAIL\tgithub.com/ash-repwiki/ash/internal/api\t0.2s\n",
+			"fixture-job-9102": "Starting postgres service\nCannot connect to the Docker daemon at unix:///var/run/docker.sock\n",
 		},
 	}
 }

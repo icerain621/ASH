@@ -26,5 +26,11 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 			return fmt.Errorf("rlsExpected readyz=%d scale=%d", readyz.PostgresRLSPolicyExpected, scale.PostgresRLSPolicyExpected)
 		}
 	}
+	if readyz.AlertsEvalInterval != scale.AlertsEvalInterval {
+		return fmt.Errorf("alertsInterval readyz=%q scale=%q", readyz.AlertsEvalInterval, scale.AlertsEvalInterval)
+	}
+	if readyz.MemoryTTLSweepInterval != scale.MemoryTTLSweepInterval {
+		return fmt.Errorf("ttlSweepInterval readyz=%q scale=%q", readyz.MemoryTTLSweepInterval, scale.MemoryTTLSweepInterval)
+	}
 	return nil
 }

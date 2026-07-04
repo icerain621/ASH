@@ -17,7 +17,7 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		swagger  string
 		minProps int
 	}{
-		{"ScaleReadinessResponse", "internal_api.ScaleReadinessResponse", 32},
+		{"ScaleReadinessResponse", "internal_api.ScaleReadinessResponse", 37},
 		{"ProvenanceResponse", "internal_api.ProvenanceResponse", 8},
 		{"SecretScanResponse", "internal_api.SecretScanResponse", 4},
 		{"ComplianceExportResponse", "internal_api.ComplianceExportResponse", 3},
@@ -62,6 +62,8 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		{"MemoryReviewResponse", "github_com_ash-repwiki_ash_internal_memory.ReviewResponse", 2},
 		{"MemoryHitUsedResponse", "github_com_ash-repwiki_ash_internal_memory.HitUsedResponse", 1},
 		{"MemoryRunMigrationResponse", "github_com_ash-repwiki_ash_internal_memory.RunMigrationResponse", 6},
+		{"MemoryTTLQueueResponse", "github_com_ash-repwiki_ash_internal_memory.TTLQueueResponse", 4},
+		{"MemorySweepTTLResponse", "github_com_ash-repwiki_ash_internal_memory.SweepTTLResponse", 5},
 		{"MemoryRecordView", "github_com_ash-repwiki_ash_internal_memory.RecordView", 15},
 		{"MemberListResponse", "internal_api.MemberListResponse", 1},
 		{"RoleListResponse", "internal_api.RoleListResponse", 1},
@@ -178,6 +180,8 @@ func TestNestedContractSchemasMatchSwagger(t *testing.T) {
 		{"MemoryHitUsedRequest", "github_com_ash-repwiki_ash_internal_memory.HitUsedRequest"},
 		{"MemoryQueryRequest", "github_com_ash-repwiki_ash_internal_memory.QueryRequest"},
 		{"MemoryRunMigrationRequest", "github_com_ash-repwiki_ash_internal_memory.RunMigrationRequest"},
+		{"MemorySweepTTLRequest", "github_com_ash-repwiki_ash_internal_memory.SweepTTLRequest"},
+		{"MemoryTTLQueueItem", "github_com_ash-repwiki_ash_internal_memory.TTLQueueItem"},
 		{"OrgItem", "github_com_ash-repwiki_ash_internal_store.Org"},
 		{"CreateOrgRequest", "internal_api.createOrgRequest"},
 		{"SpaceItem", "github_com_ash-repwiki_ash_internal_store.Space"},

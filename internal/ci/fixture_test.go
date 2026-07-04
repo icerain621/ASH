@@ -38,8 +38,8 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs) != 1 || jobs[0].ProviderJobID != "fixture-job-9101" {
-		t.Fatalf("jobs=%+v want fixture-job-9101", jobs)
+	if len(jobs) != 2 || jobs[0].ProviderJobID != "fixture-job-9101" {
+		t.Fatalf("jobs=%+v want 2 fixture jobs starting with fixture-job-9101", jobs)
 	}
 
 	logs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", jobs[0].ProviderJobID)
@@ -48,6 +48,37 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 	}
 	if logs == "" || !strings.Contains(logs, "FAIL: TestAPI") {
 		t.Fatalf("logs=%q want test failure excerpt", logs)
+	}
+
+	diag, err := svc.Diagnose(context.Background(), DiagnoseRequest{
+		SpaceID: "local", JobID: jobs[0].ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if diag.RootCause != "test_failure" || diag.LogDigest == "" {
+		t.Fatalf("diag=%+v want test_failure with digest", diag)
+	}
+	var jobRow store.CIJob
+	if err := db.First(&jobRow, "id = ?", jobs[0].ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if jobRow.LogDigest == "" || jobRow.LogDigest != diag.LogDigest {
+		t.Fatalf("job logDigest=%q want %q", jobRow.LogDigest, diag.LogDigest)
+	}
+
+	dockerLogs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", jobs[1].ProviderJobID)
+	if err != nil || !strings.Contains(dockerLogs, "Docker daemon") {
+		t.Fatalf("docker logs=%q err=%v", dockerLogs, err)
+	}
+	dockerDiag, err := svc.Diagnose(context.Background(), DiagnoseRequest{
+		SpaceID: "local", JobID: jobs[1].ID,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dockerDiag.RootCause != "docker_or_postgres_unavailable" {
+		t.Fatalf("dockerDiag=%+v want docker_or_postgres_unavailable", dockerDiag)
 	}
 }
 

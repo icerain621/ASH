@@ -8,7 +8,7 @@
 |---|-----|-------------|------|
 | 1 | 云 RDS 全链路 | `make postgres-rds-e2e`（需 `ASH_DATABASE_URL`） | 脚本 stdout；Doctor M3/TR3/ALL md |
 | 2 | 本地四门 Postgres（对照） | `make postgres-e2e` + `postgres-sql-schema-e2e` + `postgres-rls-e2e` | CI workflow 绿或本地日志 |
-| 3 | 静态 Doctor | `go run ./cmd/cli doctor --suite ALL --agent static --format md` | **42/42** |
+| 3 | 静态 Doctor | `go run ./cmd/cli doctor --suite ALL --agent static --format md` | **43/43** |
 | 4 | 契约 | `make openapi-check` + `make regression-short` | openapicheck pass |
 | 5 | Worker 配置核对 | `doc/checklists/postgres-production-config.md` | env 清单签字 |
 | 6 | 密钥轮换（如适用） | §密钥轮换 SOP | 轮换前后 `/readyz` JSON |

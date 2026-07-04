@@ -1884,6 +1884,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/memory/ttl-queue": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memory"
+                ],
+                "summary": "List memory records due for TTL review",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max review items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.TTLQueueResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/memory/ttl-sweep": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "memory"
+                ],
+                "summary": "Deprecate TTL-expired approved memory records",
+                "parameters": [
+                    {
+                        "description": "sweep",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.SweepTTLRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.SweepTTLResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/metrics/overview": {
             "get": {
                 "produces": [
@@ -5691,6 +5764,89 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_memory.SweepTTLRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "traceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.SweepTTLResponse": {
+            "type": "object",
+            "properties": {
+                "deprecated": {
+                    "type": "integer"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "reviewDue": {
+                    "type": "integer"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.TTLQueueItem": {
+            "type": "object",
+            "properties": {
+                "daysRemaining": {
+                    "type": "integer"
+                },
+                "expiresAtMs": {
+                    "type": "integer"
+                },
+                "layer": {
+                    "type": "string"
+                },
+                "recordId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_memory.TTLQueueResponse": {
+            "type": "object",
+            "properties": {
+                "expiredPendingCount": {
+                    "type": "integer"
+                },
+                "reviewDue": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_memory.TTLQueueItem"
+                    }
+                },
+                "reviewDueCount": {
+                    "type": "integer"
+                },
+                "reviewLeadDays": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_metrics.BreakdownItem": {
             "type": "object",
             "properties": {
@@ -8219,6 +8375,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "memoryTTLSweepInterval": {
+                    "type": "string",
+                    "example": "24h0m0s"
+                },
                 "metricsEventReplayEnabled": {
                     "type": "boolean"
                 },
@@ -8591,6 +8751,18 @@ const docTemplate = `{
                 },
                 "memorySchemaVersion": {
                     "type": "integer"
+                },
+                "memoryTTLExpiredPendingCount": {
+                    "type": "integer"
+                },
+                "memoryTTLReviewDueCount": {
+                    "type": "integer"
+                },
+                "memoryTTLReviewLeadDays": {
+                    "type": "integer"
+                },
+                "memoryTTLSweepInterval": {
+                    "type": "string"
                 },
                 "metricsEventReplayEnabled": {
                     "type": "boolean"

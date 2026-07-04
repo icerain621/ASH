@@ -642,6 +642,60 @@ definitions:
       toVersion:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_memory.SweepTTLRequest:
+    properties:
+      actorId:
+        type: string
+      dryRun:
+        type: boolean
+      runId:
+        type: string
+      spaceId:
+        type: string
+      traceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.SweepTTLResponse:
+    properties:
+      deprecated:
+        type: integer
+      dryRun:
+        type: boolean
+      ok:
+        type: boolean
+      reviewDue:
+        type: integer
+      summary:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.TTLQueueItem:
+    properties:
+      daysRemaining:
+        type: integer
+      expiresAtMs:
+        type: integer
+      layer:
+        type: string
+      recordId:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_memory.TTLQueueResponse:
+    properties:
+      expiredPendingCount:
+        type: integer
+      reviewDue:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.TTLQueueItem'
+        type: array
+      reviewDueCount:
+        type: integer
+      reviewLeadDays:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_metrics.BreakdownItem:
     properties:
       key:
@@ -2296,6 +2350,9 @@ definitions:
         items:
           type: string
         type: array
+      memoryTTLSweepInterval:
+        example: 24h0m0s
+        type: string
       metricsEventReplayEnabled:
         type: boolean
       otelEnabled:
@@ -2539,6 +2596,14 @@ definitions:
         type: integer
       memorySchemaVersion:
         type: integer
+      memoryTTLExpiredPendingCount:
+        type: integer
+      memoryTTLReviewDueCount:
+        type: integer
+      memoryTTLReviewLeadDays:
+        type: integer
+      memoryTTLSweepInterval:
+        type: string
       metricsEventReplayEnabled:
         type: boolean
       migrationReady:
@@ -4242,6 +4307,53 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Get memory record by id
+      tags:
+      - memory
+  /api/v1/memory/ttl-queue:
+    get:
+      parameters:
+      - default: 50
+        description: max review items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.TTLQueueResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List memory records due for TTL review
+      tags:
+      - memory
+  /api/v1/memory/ttl-sweep:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: sweep
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.SweepTTLRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_memory.SweepTTLResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Deprecate TTL-expired approved memory records
       tags:
       - memory
   /api/v1/metrics/overview:

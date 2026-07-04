@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AO：CI fixture H-04/H-05 全链路（双 job 日志、仅 `jobId` 诊断、`logDigest` 落库、adopt）；`TestReleaseSamplingCIFixtureH04H05`。
+- Sprint AN：OpenAPI 契约补全 TTL 端点（`GET /memory/ttl-queue`、`POST /memory/ttl-sweep`）与 `memoryTTLSweepInterval`；API/derive 单测；H-09 抽样含 ttl-queue；`make swagger` 再生。
 - Sprint AM：Worker 后台记忆 TTL sweep（`ASH_MEMORY_TTL_SWEEP_INTERVAL`，最短 1m）；`/readyz` 与 Scale 暴露 `memoryTTLSweepInterval`。
 - Sprint AL（P4+）：记忆 TTL 复核队列（`GET /memory/ttl-queue`）+ 到期 sweep（`POST /memory/ttl-sweep`）；`memory.ttl_expired` derive；Doctor **TR1-06**；Scale TTL 指标与 sweep 按钮；ALL **43/43**。
 - Sprint AJ（P3）：记忆 catalog **v1→v2**（L1=90d / L2=365d 默认 TTL）；`RunMigrations` 多步升至 `CurrentSchemaVersion=2`；H-08 `release-window-audit.md`；H-09 `TestReleaseSamplingH09` + `scripts/release-sampling.sh`；`postgres-rds-e2e` 可选 Worker 抽样。

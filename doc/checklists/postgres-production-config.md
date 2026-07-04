@@ -50,7 +50,7 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 # 3. 门禁
 go run ./cmd/cli doctor --suite M3 --format md
 go run ./cmd/cli doctor --suite ALL --agent static --format md
-# 期望：M3 11/11，ALL 42/42（M3-09 readyz 契约，M3-10 RLS 全局表，M3-11 RLS 目录，TR3-05..10）
+# 期望：M3 11/11，ALL 43/43（M3-09 readyz 契约，M3-10 RLS 全局表，M3-11 RLS 目录，TR3-05..10，TR1-06 TTL）
 ```
 
 ## 可观测性（可选）
