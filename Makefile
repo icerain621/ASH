@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify regression-short
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke web web-build web-dev verify regression-short
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -48,6 +48,9 @@ execgo-bootstrap:
 
 execgo-health:
 	bash scripts/execgo-health.sh
+
+execgo-live-smoke:
+	bash scripts/execgo-live-smoke.sh
 
 doctor:
 	cd $(BACKEND_DIR) && go run ./cmd/cli doctor --suite TR0 --format md

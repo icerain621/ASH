@@ -1,8 +1,10 @@
 package doctor
 
 import (
+	"context"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
@@ -268,6 +270,93 @@ func TestALLSuite(t *testing.T) {
 	if len(rep.Results) != want {
 		t.Fatalf("results=%d want %d", len(rep.Results), want)
 	}
+}
+
+func TestM3ExecGoLiveSmoke(t *testing.T) {
+	t.Setenv("ASH_EXECGO_E2E", "1")
+	svc := newTestDoctorWithAgent(t, fakeExecGoExecutor{})
+	rep, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m305 CaseResult
+	for _, r := range rep.Results {
+		if r.ID == "M3-05" {
+			m305 = r
+			break
+		}
+	}
+	if m305.ID == "" {
+		t.Fatal("missing M3-05 case")
+	}
+	if m305.Status != "pass" {
+		t.Fatalf("M3-05 status=%s message=%s", m305.Status, m305.Message)
+	}
+	assertCaseEvidence(t, rep, "M3-05", "execgoTask")
+}
+
+func TestM3ExecGoLiveSmokeRequiresExecGoAgent(t *testing.T) {
+	t.Setenv("ASH_EXECGO_E2E", "1")
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m305 CaseResult
+	for _, r := range rep.Results {
+		if r.ID == "M3-05" {
+			m305 = r
+			break
+		}
+	}
+	if m305.Status != "fail" {
+		t.Fatalf("M3-05 with static agent status=%s want fail", m305.Status)
+	}
+	if !strings.Contains(m305.Message, "ASH_EXECGO_E2E=1 requires --agent execgo_codex") {
+		t.Fatalf("M3-05 message=%q want execgo_codex requirement", m305.Message)
+	}
+}
+
+func newTestDoctorWithAgent(t *testing.T, exec agentexec.Executor) *Service {
+	t.Helper()
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join("..", "..", "scenarios")
+	if _, err := os.Stat(scenariosDir); err != nil {
+		scenariosDir = filepath.Join("scenarios")
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	ev := events.NewService(db)
+	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus()).WithAgentExecutor(exec)
+	return NewService(runsSvc, ev, loader, dir)
+}
+
+// fakeExecGoExecutor simulates execgo_codex success for M3-05 without a live ExecGo bridge.
+type fakeExecGoExecutor struct {
+	agentexec.StaticExecutor
+}
+
+func (fakeExecGoExecutor) AdapterName() string {
+	return "execgo_codex"
+}
+
+func (f fakeExecGoExecutor) Execute(ctx context.Context, req agentexec.Request) (*agentexec.Result, error) {
+	if req.RunDir != "" {
+		artDir := filepath.Join(req.RunDir, "artifacts")
+		_ = os.MkdirAll(artDir, 0o755)
+		_ = os.WriteFile(filepath.Join(artDir, "diff.patch"), []byte("diff --git a/README.md b/README.md\n"), 0o644)
+	}
+	res, err := f.StaticExecutor.Execute(ctx, req)
+	if err != nil {
+		return nil, err
+	}
+	res.ExecGoTaskID = "task_fake_" + req.StepID
+	res.Adapter = "execgo_codex"
+	res.AgentID = "fake-execgo"
+	return res, nil
 }
 
 func newTestDoctor(t *testing.T) *Service {

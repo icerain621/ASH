@@ -46,7 +46,7 @@ make postgres-sql-schema-e2e
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`**（`TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05`） |
 | H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + `POST /ci/failures/diagnose`（仅 `jobId`） | job log 经 fixture 拉取、`logDigest` 落库、`rootCause` 分类；`TestFixtureProviderSyncRunsAndJobs` |
-| H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1` + Doctor M3-05 | live 执行链路通过 |
+| H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 Doctor M3-05 | `execgo-health` + live 执行链路；本地静态 `TestM3ExecGoLiveSmoke` |
 | H-07 | 密钥轮换策略 | repo connection `secretId` | 见 `postgres-production-config.md` §密钥轮换；轮换后 Doctor + `/readyz` 归档 |
 | H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) | Postgres e2e + ALL/M3 + §7 证据归档 |
 | H-09 | 业务抽样 §7 | `go test -run TestReleaseSampling` 或 `scripts/release-sampling.sh` | Run/SSE/Memory/KPI/CI/合规/Scale（§7.2 SSE 含 `TestReleaseSamplingSSE`） |
@@ -82,7 +82,7 @@ make test-integration   # 需 ASH_DATABASE_URL + ASH_MIGRATE_E2E=1
 
 ---
 
-## 2. CI / ExecGo / KPI（MVP 已完成，待 H-04–H-06）
+## 2. CI / ExecGo / KPI（MVP 已完成，H-04/H-05/H-06 本地自动化已就绪）
 
 **状态**：API 与控制台 MVP 已交付；外部依赖验证见 **人工验证（暂缓）**
 **优先级**：P0 自动化回归 / P1 人工闭环
@@ -124,6 +124,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。
 - Sprint AP：`scripts/ci-fixture-smoke.sh`  live Worker H-04/H-05；`release-sampling.sh` §7.3b ttl-queue；CI 页 fixture 提示 +「诊断选中 job」。
 - Sprint AO：CI fixture H-04/H-05 全链路扩展（双 job：test_failure + docker）；`jobId` 诊断拉日志 + `logDigest` 落库 + adopt；`TestReleaseSamplingCIFixtureH04H05`。
 - Sprint AN：OpenAPI 契约补全 TTL 端点/schema；`memoryTTLSweepInterval` 与 Scale TTL 字段对齐；`TestMemoryTTLQueueAndSweepAPI`；derive `memory.ttl_expired` replay；H-09 抽样含 `ttl-queue`。

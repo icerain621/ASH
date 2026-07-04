@@ -19,6 +19,9 @@ go test ./internal/api/ -run 'TestReleaseSampling' -count=1
 echo "== ci fixture api smoke =="
 go test ./internal/api/ -run 'TestCISyncRunsWithFixture|TestReleaseSamplingCIFixture' -count=1
 
+echo "== execgo M3-05 static smoke =="
+go test ./internal/doctor/ -run TestM3ExecGoLiveSmoke -count=1
+
 echo "== doctor M2 + M3 + TR3 + ALL (static) =="
 go run ./cmd/cli doctor --suite M2
 go run ./cmd/cli doctor --suite M3
