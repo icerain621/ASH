@@ -20,6 +20,7 @@
 3. `curl -s $ASH_WORKER_URL/readyz | jq .` — `dialect=postgres`，`liveGateHints` 含预期门禁
 4. `go run ./cmd/cli doctor --suite M3 --require M3-04,M3-06,M3-07`（live）
 5. 业务抽样 §7：`bash scripts/release-sampling.sh` 或 `go test ./internal/api/ -run TestReleaseSamplingH09`
+6. CI fixture（可选）：Worker `ASH_CI_FIXTURE=1` + `bash scripts/ci-fixture-smoke.sh`
 
 ## 切换后（T+0～T+1）
 

@@ -11,6 +11,7 @@ import {
   listRepoConnections,
   type CIDiagnosis,
 } from "@/modules/closure/api/closure.api";
+import { getReadyz } from "@/modules/health/api/health.api";
 
 export function CIPage() {
   const qc = useQueryClient();
@@ -20,6 +21,8 @@ export function CIPage() {
   const [decisionStatus, setDecisionStatus] = useState("");
 
   const connectionsQuery = useQuery({ queryKey: ["repo-connections"], queryFn: listRepoConnections });
+  const readyzQuery = useQuery({ queryKey: ["readyz"], queryFn: getReadyz, staleTime: 60_000 });
+  const ciFixtureMode = (readyzQuery.data?.liveGateHints ?? []).some((h) => h.includes("ASH_CI_FIXTURE"));
   const activeConnectionId = connectionId || connectionsQuery.data?.items[0]?.id || "";
   const runsQuery = useQuery({
     queryKey: ["ci-runs", activeConnectionId],
@@ -86,6 +89,11 @@ export function CIPage() {
         <div>
           <h1>CI 诊断控制台</h1>
           <p>同步 GitHub Actions 运行，拉取 job 日志诊断失败，并记录采纳或驳回证据。</p>
+          {ciFixtureMode && (
+            <p className="muted-line">
+              Worker 已启用 <code>ASH_CI_FIXTURE=1</code>：sync 使用内置 fixture 数据，无需真实 GitHub token。
+            </p>
+          )}
         </div>
         <div className="toolbar metrics-toolbar">
           <label className="scenario-picker">
@@ -209,10 +217,21 @@ export function CIPage() {
               Log Text
               <textarea name="logText" rows={6} placeholder={jobId ? "已选 job 时可留空，由后端拉取日志。" : "粘贴 CI 失败日志。"} />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={diagnoseMut.isPending || (!jobId && !activeConnectionId)}>
-              <SearchCheck size={16} strokeWidth={1.8} />
-              诊断失败
-            </button>
+            <div className="row-actions">
+              <button className="btn primary icon-btn" type="submit" disabled={diagnoseMut.isPending || (!jobId && !activeConnectionId)}>
+                <SearchCheck size={16} strokeWidth={1.8} />
+                诊断失败
+              </button>
+              <button
+                className="btn icon-btn"
+                type="button"
+                disabled={diagnoseMut.isPending || !jobId}
+                onClick={() => diagnoseMut.mutate({})}
+              >
+                <SearchCheck size={16} strokeWidth={1.8} />
+                诊断选中 job
+              </button>
+            </div>
           </form>
         </div>
         <div className="pane">

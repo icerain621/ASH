@@ -52,6 +52,10 @@ curl_json POST "/api/v1/memory/candidates/${CID}/review" '{"decision":"approve",
 curl_json POST /api/v1/memory/query '{"text":"H09 live","topK":3}' | head -c 200
 echo ""
 
+echo "== 7.3b memory ttl-queue =="
+curl_json GET /api/v1/memory/ttl-queue?limit=5 | head -c 200
+echo ""
+
 echo "== 7.4 metrics overview =="
 curl_json GET "/api/v1/metrics/overview?spaceId=${SPACE}" | head -c 200
 echo ""
@@ -59,6 +63,7 @@ echo ""
 echo "== 7.5 ci diagnose =="
 curl_json POST /api/v1/ci/failures/diagnose '{"logText":"go test ./...\n--- FAIL: TestH09\nFAIL\tpkg\t0.1s"}' | head -c 200
 echo ""
+echo "Tip: Worker ASH_CI_FIXTURE=1 → bash scripts/ci-fixture-smoke.sh (H-04/H-05 jobId 诊断)"
 
 echo "== 7.6 compliance export =="
 curl_json POST /api/v1/compliance/export '{"suite":"TR2"}' | head -c 200

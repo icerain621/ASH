@@ -124,6 +124,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AP：`scripts/ci-fixture-smoke.sh`  live Worker H-04/H-05；`release-sampling.sh` §7.3b ttl-queue；CI 页 fixture 提示 +「诊断选中 job」。
 - Sprint AO：CI fixture H-04/H-05 全链路扩展（双 job：test_failure + docker）；`jobId` 诊断拉日志 + `logDigest` 落库 + adopt；`TestReleaseSamplingCIFixtureH04H05`。
 - Sprint AN：OpenAPI 契约补全 TTL 端点/schema；`memoryTTLSweepInterval` 与 Scale TTL 字段对齐；`TestMemoryTTLQueueAndSweepAPI`；derive `memory.ttl_expired` replay；H-09 抽样含 `ttl-queue`。
 - Sprint AM：Worker 后台记忆 TTL sweep（`ASH_MEMORY_TTL_SWEEP_INTERVAL`）；`/readyz` 与 Scale 暴露 `memoryTTLSweepInterval`。

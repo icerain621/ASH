@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AP：`scripts/ci-fixture-smoke.sh`（live Worker + `ASH_CI_FIXTURE=1`）；`release-sampling.sh` ttl-queue §7.3b；CI 页 fixture 模式提示。
 - Sprint AO：CI fixture H-04/H-05 全链路（双 job 日志、仅 `jobId` 诊断、`logDigest` 落库、adopt）；`TestReleaseSamplingCIFixtureH04H05`。
 - Sprint AN：OpenAPI 契约补全 TTL 端点（`GET /memory/ttl-queue`、`POST /memory/ttl-sweep`）与 `memoryTTLSweepInterval`；API/derive 单测；H-09 抽样含 ttl-queue；`make swagger` 再生。
 - Sprint AM：Worker 后台记忆 TTL sweep（`ASH_MEMORY_TTL_SWEEP_INTERVAL`，最短 1m）；`/readyz` 与 Scale 暴露 `memoryTTLSweepInterval`。

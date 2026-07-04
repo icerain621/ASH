@@ -202,7 +202,7 @@ bash scripts/release-sampling.sh
 | 7.2 | SSE | `GET /runs/{id}/stream` | 事件流正常；审计 `stream.session_opened`（`TestReleaseSamplingSSE`） |
 | 7.3 | Memory | 候选 → 评审 → query | 跨 space 读 → 403 |
 | 7.4 | KPI | `GET /api/v1/metrics/overview?spaceId=...` | 与 SQLite 同期数据量级一致 |
-| 7.5 | CI 诊断 | `POST /ci/failures/diagnose` | 落库 `ci_diagnoses` |
+| 7.5 | CI 诊断 | `POST /ci/failures/diagnose` | 落库 `ci_diagnoses`；Worker `ASH_CI_FIXTURE=1` 时用 `scripts/ci-fixture-smoke.sh` 或 `TestReleaseSamplingCIFixtureH04H05` |
 | 7.6 | 合规导出 | `POST /compliance/export` | 含 audit + doctor 报告 |
 | 7.7 | Scale 页 | `/ui/scale` | Postgres / RLS / app URL 状态正确 |
 

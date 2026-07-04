@@ -86,6 +86,9 @@ postgres-rls-e2e:
 postgres-rds-e2e:
 	bash scripts/postgres-rds-e2e.sh
 
+ci-fixture-smoke:
+	bash scripts/ci-fixture-smoke.sh
+
 verify:
 	bash scripts/verify-local.sh
 
