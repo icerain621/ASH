@@ -78,3 +78,38 @@ export function queryMemory(body: { text: string; layers?: string[]; topK?: numb
     body: JSON.stringify(body),
   });
 }
+
+export type MemoryTTLSweepResult = {
+  ok: boolean;
+  deprecated: number;
+  reviewDue: number;
+  dryRun?: boolean;
+  summary?: string;
+};
+
+export type MemoryTTLQueueItem = {
+  recordId: string;
+  layer: string;
+  title: string;
+  status: string;
+  daysRemaining: number;
+  expiresAtMs: number;
+};
+
+export type MemoryTTLQueueResponse = {
+  reviewDue: MemoryTTLQueueItem[];
+  reviewDueCount: number;
+  expiredPendingCount: number;
+  reviewLeadDays: number;
+};
+
+export function getMemoryTTLQueue(limit = 50) {
+  return api<MemoryTTLQueueResponse>(`/memory/ttl-queue?limit=${limit}`);
+}
+
+export function sweepMemoryTTL(body: { dryRun?: boolean } = {}) {
+  return api<MemoryTTLSweepResult>("/memory/ttl-sweep", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}

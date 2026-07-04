@@ -11,10 +11,10 @@
 |---|-----|-------------|------|
 | T-01 | derive 回放 parity 单测 | `go test ./internal/observability/derive/... -run Parity -count=1` | ✅ 2026-06-03 本地 pass |
 | T-02 | derive 记忆 backlog 单测 | `go test ./internal/observability/derive/... -run Replay_memory -count=1` | ✅ 2026-06-03 本地 pass |
-| T-03 | Doctor TR3-05..09 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **9/9**（TR3-06/08 默认 skip） |
-| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **41/41** pass |
-| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **20**、M3 **11/11**（M3-04 skip） |
-| T-06 | CI job | GitHub Actions `ci.yml` + `postgres-e2e.yml`（含 `postgres-rls-e2e`） | PR `postgres-sql-schema-e2e` + `regression-short`；push main 全量 e2e |
+| T-03 | Doctor TR3-05..10 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **10/10**（TR3-06/08 默认 skip） |
+| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **43/43** pass |
+| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ sql rev **20**；TR3-06/10 live 断言（M3-04 skip by design） |
+| T-06 | CI job | GitHub Actions `ci.yml`（`regression-short` + 三门 Postgres + **`postgres-e2e` PR**）+ `postgres-e2e.yml` nightly | PR 四门 Postgres + 全量 migrate e2e |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
 | T-14 | Memory 子表 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryChildren` | 已并入 `postgres-rls-e2e` / `postgres-sql-schema-e2e` |
 | T-15 | Org 身份 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnOrgIdentity` | 已并入 `postgres-rls-e2e`；`verify-local` Docker 可用时自动跑 |
@@ -41,15 +41,15 @@ make postgres-sql-schema-e2e
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 41/41 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 43/43 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
-| H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
-| H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + diagnose | job log 落库与 rootCause |
+| H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`** 联调 |
+| H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + diagnose | job log 落库与 rootCause；fixture 覆盖见 `TestCISyncRunsWithFixture` |
 | H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1` + Doctor M3-05 | live 执行链路通过 |
-| H-07 | 密钥轮换策略 | repo connection `secretId` | 接入团队 Secrets 轮换 SOP |
-| H-08 | 发布窗口 audit gate | 真实发布 checklist | Postgres e2e + ALL/M3 + ExecGo 证据归档 |
-| H-09 | 业务抽样 §7 | 清单 §7.1–7.7 | Run/SSE/Memory/KPI/CI/合规/Scale |
+| H-07 | 密钥轮换策略 | repo connection `secretId` | 见 `postgres-production-config.md` §密钥轮换；轮换后 Doctor + `/readyz` 归档 |
+| H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) | Postgres e2e + ALL/M3 + §7 证据归档 |
+| H-09 | 业务抽样 §7 | `go test -run TestReleaseSampling` 或 `scripts/release-sampling.sh` | Run/SSE/Memory/KPI/CI/合规/Scale（§7.2 SSE 含 `TestReleaseSamplingSSE`） |
 
 本地自动化（无需云环境，CI 可跑）：
 
@@ -96,6 +96,8 @@ make web-build
 
 **已实现（自动化可验）**：
 
+- `ASH_CI_FIXTURE=1`：`TestCISyncRunsWithFixture` + `internal/ci` fixture provider（无需 GitHub token）
+- `/readyz` `liveGateHints`：M3-04/05/06/07/08 与 CI fixture 状态
 - GitHub Actions PR/main：Go + Doctor static + Web build
 - Postgres e2e：nightly/manual workflow
 - Repo `secretId` only；CI diagnose API；KPI overview；控制台 feedback/ci/observability/releases
@@ -122,6 +124,10 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AL：记忆 TTL 复核队列 + sweep API；`memory.ttl_expired` derive；Doctor **TR1-06**；ALL **43/43**
+- Sprint AJ：记忆 catalog v1→v2；`release-window-audit.md`；`release-sampling.sh` + API 抽样测试
+- Sprint AD：Scale `/readyz` 运维面板；Postgres readyz+RLS 集成测试；CI PR `postgres-rls-e2e`
+- Sprint AC：Doctor **TR3-10** readyz HealthResponse 契约；M3-09 SQL 修订预期校验；RDS 脚本 rev 20；ALL **42/42**
 - Sprint AB：`/readyz` RLS/SQL 漂移信号；Doctor **M3-09** RLS catalog 证据；CI `postgres-rls-e2e` job
 - Sprint AA：Scale RLS 预期策略数 + catalog 摘要 + readiness 漂移告警；RLS 新表清单；`regression-short` store 冒烟
 - Sprint Y：memory 子表 RLS 集成测试 + e2e 脚本接入

@@ -18,6 +18,7 @@ export:
   allowOutbound: false
 
 # Background governance alert evaluation: ASH_ALERTS_EVAL_INTERVAL=5m (min 1m; off when unset)
+# Background memory TTL sweep: ASH_MEMORY_TTL_SWEEP_INTERVAL=24h (min 1m; off when unset)
 
 plugins:
   prometheus:

@@ -8213,6 +8213,12 @@ const docTemplate = `{
                 "error": {
                     "type": "string"
                 },
+                "liveGateHints": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "metricsEventReplayEnabled": {
                     "type": "boolean"
                 },

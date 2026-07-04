@@ -61,7 +61,10 @@ go run ./cmd/cli migrate verify \
   --postgres "$ASH_DATABASE_URL"
 
 echo "== doctor M3 (incl. M3-04 when ASH_MIGRATE_E2E=1) =="
-go run ./cmd/cli doctor --suite M3
+go run ./cmd/cli doctor --suite M3 --agent static
+
+echo "== assert M3-04 live migrate verify =="
+bash scripts/postgres-doctor-assert.sh M3 M3-04
 
 echo "== worker readyz on postgres =="
 go test -tags=integration ./internal/api/ -run TestPostgresReadyzProbe -count=1
@@ -75,11 +78,20 @@ export ASH_POSTGRES_RLS=1
 export ASH_POSTGRES_RLS_FORCE=1
 bash scripts/postgres-rls-e2e.sh
 
+echo "== readyz + scale ops parity on postgres =="
+go test -tags=integration ./internal/api/ -run TestPostgresReadyzWithRLS -count=1
+go test -tags=integration ./internal/api/ -run TestPostgresReadyzScaleParity -count=1
+
 echo "== doctor M3 with RLS env =="
 ASH_POSTGRES_RLS=1 ASH_POSTGRES_RLS_FORCE=1 ASH_DATABASE_APP_URL="$ASH_DATABASE_APP_URL" \
-  go run ./cmd/cli doctor --suite M3
+  go run ./cmd/cli doctor --suite M3 --agent static
 
-echo "== doctor TR3 on postgres (TR3-06 fts) =="
+echo "== assert M3-06/07 live RLS + ash_app =="
+bash scripts/postgres-doctor-assert.sh M3 M3-06,M3-07
+
+echo "== doctor TR3 on postgres (TR3-06 fts; TR3-10 readyz contract) =="
 env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite TR3 --agent static
+
+bash scripts/postgres-doctor-assert.sh TR3 TR3-06,TR3-10
 
 echo "OK postgres e2e migrate (data dir: $E2E_DIR)"

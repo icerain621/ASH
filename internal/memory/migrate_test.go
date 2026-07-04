@@ -33,20 +33,20 @@ func TestRunMigrations_v0ToV1Backfill(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.RecordsUpdated != 1 {
-		t.Fatalf("dry-run updated=%d want 1", resp.RecordsUpdated)
+	if resp.RecordsUpdated != 2 {
+		t.Fatalf("dry-run updated=%d want 2 (v0→v1 + v1→v2)", resp.RecordsUpdated)
 	}
 
 	resp, err = svc.RunMigrations(RunMigrationRequest{RunID: runID})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if resp.RecordsUpdated != 1 || resp.ToVersion != 1 {
-		t.Fatalf("resp=%+v", resp)
+	if resp.RecordsUpdated != 2 || resp.ToVersion != 2 {
+		t.Fatalf("resp=%+v want v2 migration", resp)
 	}
 	catalog, err := CatalogVersion(svc.db)
-	if err != nil || catalog != 1 {
-		t.Fatalf("catalog=%d err=%v", catalog, err)
+	if err != nil || catalog != 2 {
+		t.Fatalf("catalog=%d err=%v want 2", catalog, err)
 	}
 	var row store.MemoryRecord
 	if err := svc.gdb().First(&row, "id = ?", legacyID).Error; err != nil {
@@ -54,6 +54,9 @@ func TestRunMigrations_v0ToV1Backfill(t *testing.T) {
 	}
 	if row.SchemaVersion != CurrentSchemaVersion || row.DedupeKey == "" {
 		t.Fatalf("row=%+v", row)
+	}
+	if row.TTLDays == nil || *row.TTLDays != DefaultTTLDaysL1 {
+		t.Fatalf("ttl=%v want L1 default %d", row.TTLDays, DefaultTTLDaysL1)
 	}
 
 	envelopes, err := ev.ListAfter(runID, 0, 200)

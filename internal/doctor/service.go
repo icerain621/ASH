@@ -90,6 +90,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr1MemoryConflict())
 		rep.Results = append(rep.Results, s.tr1MCPIsolation())
 		rep.Results = append(rep.Results, s.tr1DSLSchemaValidation())
+		rep.Results = append(rep.Results, s.tr1MemoryTTLGovernance())
 	case "TR2":
 		rep.Results = append(rep.Results, s.tr2IdentityScopeModel())
 		rep.Results = append(rep.Results, s.tr2SpaceScopedRuns())
@@ -112,6 +113,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
 		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
 		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
+		rep.Results = append(rep.Results, s.tr3ReadyzContract())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -126,6 +128,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr1MemoryConflict())
 		rep.Results = append(rep.Results, s.tr1MCPIsolation())
 		rep.Results = append(rep.Results, s.tr1DSLSchemaValidation())
+		rep.Results = append(rep.Results, s.tr1MemoryTTLGovernance())
 		rep.Results = append(rep.Results, s.tr2IdentityScopeModel())
 		rep.Results = append(rep.Results, s.tr2SpaceScopedRuns())
 		rep.Results = append(rep.Results, s.tr2ArtifactStoreProfile())
@@ -144,6 +147,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
 		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
 		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
+		rep.Results = append(rep.Results, s.tr3ReadyzContract())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -786,6 +790,68 @@ scenario:
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "rulesValidation", Ref: "invalid:" + code},
 		Evidence{Kind: "rulesValidation", Ref: "valid:ok"},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr1MemoryTTLGovernance() CaseResult {
+	res := CaseResult{ID: "TR1-06", Status: "fail"}
+	mem := memory.NewService(s.runs.DB(), s.events)
+	ttl := 1
+	cand, err := mem.CreateCandidate(memory.CreateCandidateRequest{
+		Layer: "L1", Title: "TR1 TTL expired probe", Body: "should deprecate on sweep",
+		ScopeRepo: "ash", Evidence: []memory.EvidenceInput{{Kind: "file", Ref: "doc/tr1-ttl.md"}},
+	})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if _, err := mem.Review(cand.CandidateID, memory.ReviewRequest{
+		Decision: "approve", Reason: "tr1 ttl", ReviewerID: "doctor", PolicyProfile: "default",
+	}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	old := time.Now().UTC().Add(-72 * time.Hour)
+	if err := s.runs.DB().Model(&store.MemoryRecord{}).Where("id = ?", cand.CandidateID).
+		Updates(map[string]any{"created_at": old, "updated_at": old, "ttl_days": ttl}).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	reviewDue, expiredPending, err := memory.TTLCounts(s.runs.DB(), "local")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if expiredPending < 1 {
+		res.Message = fmt.Sprintf("expiredPending=%d want >=1", expiredPending)
+		return res
+	}
+	sweep, err := mem.SweepTTL(memory.SweepTTLRequest{SpaceID: "local", ActorID: "doctor"})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if sweep.Deprecated < 1 {
+		res.Message = fmt.Sprintf("sweep=%+v want deprecated>=1", sweep)
+		return res
+	}
+	q, err := mem.Query(memory.QueryRequest{Text: "TR1 TTL expired", TopK: 5})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	for _, hit := range q.Items {
+		if hit.ID == cand.CandidateID {
+			res.Message = "expired record still queryable"
+			return res
+		}
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "memoryTTL", Ref: fmt.Sprintf("reviewDue=%d expiredPending=%d leadDays=%d", reviewDue, expiredPending, memory.EffectiveTTLReviewLeadDays())},
+		Evidence{Kind: "memoryTTL", Ref: fmt.Sprintf("sweepDeprecated=%d", sweep.Deprecated)},
+		Evidence{Kind: "memory", Ref: cand.CandidateID},
 	)
 	res.Status = "pass"
 	return res
@@ -1507,6 +1573,10 @@ func (s *Service) m3WorkerOpsContract() CaseResult {
 	}
 	if profile.SQLMigrationExpected > 0 {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "sqlExpected", Ref: fmt.Sprintf("%d", profile.SQLMigrationExpected)})
+		if profile.SQLMigrationExpected != sqlmigrations.ExpectedVersion() {
+			res.Message = fmt.Sprintf("sqlMigrationExpected=%d want %d", profile.SQLMigrationExpected, sqlmigrations.ExpectedVersion())
+			return res
+		}
 	}
 	if store.PostgresRLSEnabled() {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "rlsCatalog", Ref: store.FormatRLSCatalogSummary()})
@@ -1732,7 +1802,7 @@ func (s *Service) tr3MemoryMigration() CaseResult {
 		}
 	}
 	if !found {
-		res.Message = "approved v1 record not returned by memory query"
+		res.Message = "approved record not returned by memory query"
 		return res
 	}
 	mig, err := mem.RunMigrations(memory.RunMigrationRequest{})
@@ -1740,8 +1810,9 @@ func (s *Service) tr3MemoryMigration() CaseResult {
 		res.Message = err.Error()
 		return res
 	}
+	catalog, _ := memory.CatalogVersion(s.runs.DB())
 	res.Evidence = append(res.Evidence,
-		Evidence{Kind: "memorySchema", Ref: fmt.Sprintf("v%d", memory.CurrentSchemaVersion)},
+		Evidence{Kind: "memorySchema", Ref: fmt.Sprintf("record=v%d catalog=v%d expected=v%d", memory.CurrentSchemaVersion, catalog, memory.CurrentSchemaVersion)},
 		Evidence{Kind: "memoryQuery", Ref: cand.CandidateID},
 		Evidence{Kind: "memoryMigration", Ref: fmt.Sprintf("catalog=%d pending=%t", mig.ToVersion, mig.AlreadyCurrent)},
 	)
@@ -2014,6 +2085,27 @@ func (s *Service) tr3OpenAPIContract() CaseResult {
 		Evidence{Kind: "openapiContract", Ref: "doc/api/openapi-ash-v1.yaml"},
 		Evidence{Kind: "swaggerSoT", Ref: "internal/api/docs/swagger.yaml"},
 		Evidence{Kind: "legacyPlanned", Ref: fmt.Sprintf("paths=%d", rep.LegacyPlanned)},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3ReadyzContract() CaseResult {
+	res := CaseResult{ID: "TR3-10", Status: "fail"}
+	root, err := openapicheck.DefaultRepoRoot()
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if err := openapicheck.ValidateReadyzContract(root); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	expected := sqlmigrations.ExpectedVersion()
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "readyzHealth", Ref: "HealthResponse"},
+		Evidence{Kind: "sqlExpected", Ref: fmt.Sprintf("%d", expected)},
+		Evidence{Kind: "rlsPolicies", Ref: fmt.Sprintf("expected=%d", store.PostgresRLSExpectedPolicyCount())},
 	)
 	res.Status = "pass"
 	return res

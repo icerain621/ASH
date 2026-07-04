@@ -28,6 +28,7 @@ const CASE_LABELS: Record<string, string> = {
   "TR3-07": "插件导出健康",
   "TR3-08": "Prometheus replay 段",
   "TR3-09": "OpenAPI 契约对齐",
+  "TR3-10": "Readyz 健康契约",
   "M2-01": "权限矩阵",
   "M2-02": "场景策略更新",
   "M2-03": "运行期策略拒绝",

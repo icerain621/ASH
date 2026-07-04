@@ -47,6 +47,7 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 2. **契约子集**：`go test ./internal/openapicheck -count=1`，确保手写草稿中每个 `/api/v1/*` 的 HTTP 方法在 `swagger.yaml` 中均存在、2xx JSON 无泛型 `ApiResponse`、精选 schema 字段名与 swag 一致。
 3. **Schema 子集**（精选对外类型）：`TestContractSchemasMatchSwagger` / `TestNestedContractSchemasMatchSwagger` 校验手写 `components.schemas` 与 swag `definitions` 字段名一致（含 `RunSummaryResponse`、`DoctorReportResponse`、`HealthResponse` 等）。
 4. **Doctor TR3-09**：`ash doctor --suite TR3` 内嵌 `openapicheck.ValidateContract`（路径 + envelope）；schema 深度对齐仍由 `openapicheck` 测试保障。
+5. **Doctor TR3-10**：`openapicheck.ValidateReadyzContract` 校验 `GET /readyz` 与 `HealthResponse` RLS/SQL 漂移字段在契约与 swag 中一致。
 
 手写草稿应覆盖全部已实现的 `/api/v1/*` 端点；若 swag 新增路由而草稿未更新，`TestContractMatchesSwagger` 会失败。补草稿时可运行：
 

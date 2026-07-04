@@ -1,17 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
+import { Check, Clock, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
 import { FormEvent, useState } from "react";
 import {
   createCandidate,
   getMemoryRecord,
+  getMemoryTTLQueue,
   listCandidates,
   queryMemory,
   reviewCandidate,
+  sweepMemoryTTL,
   type GovernanceHints,
   type MemoryRecord,
 } from "@/modules/memory/api/memory.api";
 import { getCurrentSpaceId } from "@/services/http/client";
-import { shortId } from "@/shared/utils/format";
+import { fmtTime, shortId } from "@/shared/utils/format";
 
 function memoryStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -52,11 +54,17 @@ export function MemoryPage() {
   const [runId, setRunId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [governanceMsg, setGovernanceMsg] = useState("");
+  const [ttlMsg, setTtlMsg] = useState("");
   const [queryText, setQueryText] = useState("doctor release");
 
   const candidatesQuery = useQuery({
     queryKey: ["memory", "candidates", activeSpaceId],
     queryFn: () => listCandidates(50),
+  });
+
+  const ttlQueueQuery = useQuery({
+    queryKey: ["memory", "ttl-queue", activeSpaceId],
+    queryFn: () => getMemoryTTLQueue(50),
   });
 
   const detailQuery = useQuery({
@@ -88,8 +96,24 @@ export function MemoryPage() {
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["memory", "candidates"] });
+      qc.invalidateQueries({ queryKey: ["memory", "ttl-queue"] });
       if (selectedId) qc.invalidateQueries({ queryKey: ["memory", "record", selectedId] });
     },
+  });
+
+  const ttlSweepMut = useMutation({
+    mutationFn: () => sweepMemoryTTL({ dryRun: false }),
+    onSuccess: (res) => {
+      setTtlMsg(
+        res.deprecated > 0
+          ? `已弃用 ${res.deprecated} 条到期记忆；复核队列 ${res.reviewDue} 条。`
+          : `无到期记录需弃用；复核队列 ${res.reviewDue} 条。`,
+      );
+      qc.invalidateQueries({ queryKey: ["memory", "ttl-queue"] });
+      qc.invalidateQueries({ queryKey: ["memory", "candidates"] });
+      if (selectedId) qc.invalidateQueries({ queryKey: ["memory", "record", selectedId] });
+    },
+    onError: (err: Error) => setTtlMsg(err.message),
   });
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
@@ -115,6 +139,8 @@ export function MemoryPage() {
 
   const items = candidatesQuery.data?.items ?? [];
   const selected = detailQuery.data;
+  const ttlQueue = ttlQueueQuery.data;
+  const ttlReviewItems = ttlQueue?.reviewDue ?? [];
 
   return (
     <section className="panel active">
@@ -125,13 +151,17 @@ export function MemoryPage() {
       <div className="page-heading">
         <div>
           <h1>记忆</h1>
-          <p>审核记忆候选、查看治理边关系，并检索已批准记忆。</p>
+          <p>审核记忆候选、查看治理边关系，并检索已批准记忆；TTL 到期前进入复核队列。</p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar">
           <button className="btn icon-btn" onClick={() => candidatesQuery.refetch()}>
             <RefreshCw size={16} strokeWidth={1.8} />
             刷新候选
+          </button>
+          <button className="btn icon-btn" onClick={() => ttlQueueQuery.refetch()}>
+            <Clock size={16} strokeWidth={1.8} />
+            刷新 TTL
           </button>
         </div>
       </div>
@@ -267,6 +297,73 @@ export function MemoryPage() {
         </div>
       </div>
       <div className="split">
+        <div className="pane">
+          <div className="pane-title">
+            <h2>
+              <Clock size={15} strokeWidth={1.8} />
+              TTL 复核队列
+            </h2>
+            <span>
+              {ttlQueueQuery.isFetching
+                ? "加载中"
+                : `${ttlQueue?.reviewDueCount ?? 0} 待复核 · ${ttlQueue?.expiredPendingCount ?? 0} 待 sweep`}
+            </span>
+          </div>
+          {ttlQueueQuery.isError && (
+            <p className="error-text">{(ttlQueueQuery.error as Error).message}</p>
+          )}
+          {(ttlQueue?.expiredPendingCount ?? 0) > 0 && (
+            <p className="warn-text">
+              有 {ttlQueue!.expiredPendingCount} 条已过期记忆待弃用。
+              <button
+                className="btn mini"
+                type="button"
+                disabled={ttlSweepMut.isPending}
+                onClick={() => ttlSweepMut.mutate()}
+                style={{ marginLeft: "0.5rem" }}
+              >
+                {ttlSweepMut.isPending ? "处理中…" : "执行 TTL sweep"}
+              </button>
+            </p>
+          )}
+          {ttlMsg && <p className="muted-line">{ttlMsg}</p>}
+          <p className="muted-line">
+            到期前 {ttlQueue?.reviewLeadDays ?? 7} 天内进入复核；过期后需 sweep 弃用且不可检索。
+          </p>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>层级</th>
+                <th>标题</th>
+                <th>剩余天数</th>
+                <th>到期时间</th>
+              </tr>
+            </thead>
+            <tbody>
+              {ttlReviewItems.map((row) => (
+                <tr
+                  key={row.recordId}
+                  className={row.recordId === selectedId ? "selected" : ""}
+                  onClick={() => setSelectedId(row.recordId)}
+                >
+                  <td title={row.recordId}>{shortId(row.recordId)}</td>
+                  <td>{row.layer}</td>
+                  <td>{row.title}</td>
+                  <td className={row.daysRemaining <= 3 ? "error-text" : undefined}>
+                    {row.daysRemaining} 天
+                  </td>
+                  <td>{fmtTime(row.expiresAtMs)}</td>
+                </tr>
+              ))}
+              {!ttlReviewItems.length && (
+                <tr className="empty-row">
+                  <td colSpan={5}>暂无 TTL 复核项。</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
         <div className="pane">
           <div className="pane-title">
             <h2>

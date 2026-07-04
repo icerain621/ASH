@@ -13,6 +13,9 @@ go test ./internal/authz ./internal/doctor ./internal/api ./internal/security -c
 echo "== regression-short =="
 make regression-short
 
+echo "== release sampling api smoke =="
+go test ./internal/api/ -run 'TestReleaseSampling' -count=1
+
 echo "== doctor M2 + M3 + TR3 + ALL (static) =="
 go run ./cmd/cli doctor --suite M2
 go run ./cmd/cli doctor --suite M3
@@ -30,6 +33,16 @@ if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx ash-postgres-dev; then
   make postgres-rls-e2e
 else
   echo "== skip postgres-rls-e2e (start docker: make postgres-up) =="
+fi
+
+LOCAL_EXECGO="$ROOT/.ash/execgo/execgo/bin/execgocli"
+if command -v execgocli >/dev/null 2>&1 || [[ -x "$LOCAL_EXECGO" ]]; then
+  echo "== execgo-health (optional) =="
+  if ! make execgo-health; then
+    echo "WARN: execgo-health failed (optional; see doc/checklists/execgo-live-smoke.md)"
+  fi
+else
+  echo "== skip execgo-health (make execgo-bootstrap or install execgocli) =="
 fi
 
 echo "== frontend build =="

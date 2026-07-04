@@ -2292,6 +2292,10 @@ definitions:
         type: string
       error:
         type: string
+      liveGateHints:
+        items:
+          type: string
+        type: array
       metricsEventReplayEnabled:
         type: boolean
       otelEnabled:

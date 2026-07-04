@@ -155,6 +155,18 @@ func (s *Service) emitGovernanceEdge(runID, traceID string, edge store.MemoryEdg
 	})
 }
 
+func (s *Service) emitTTLExpired(runID, traceID, memoryID, layer, reason string) error {
+	payload := map[string]any{
+		"memoryId": memoryID,
+		"layer":    layer,
+		"reason":   reason,
+	}
+	if err := s.emitRunEvent(runID, traceID, "memory.ttl_expired", payload); err != nil {
+		return err
+	}
+	return s.emitRunEvent(runID, traceID, "memory.deprecated", payload)
+}
+
 func (s *Service) validateRunRef(runID, traceID string) (string, error) {
 	resolved, err := s.requireRunIfSet(runID)
 	if err != nil {

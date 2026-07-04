@@ -118,8 +118,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_run ON audit_log(run_id);
   - `memory.ttl_expired`（检测到到期）
   - `memory.deprecated`（人工或规则废弃）
 
-**TODO（负责人：知识管理员）**：定义 L1/L2 默认 TTL 与复核周期。  
-**验收方式**：建立自动队列：到期前 7 天提醒复核，过期后禁止作为强约束引用。
+**TODO（负责人：知识管理员）**：~~L1/L2 默认 TTL 与复核周期~~ → **已实现**（默认 90/365d；`ASH_MEMORY_TTL_REVIEW_DAYS` 复核窗口；`ttl-sweep` 到期弃用）。  
+**验收方式**：到期前 7 天进入复核队列；过期后 sweep 弃用且不可检索；TR1-06 回归通过。
 
 ## 5. 去重、冲突与替代（P1+ 深化）
 - `dedupe_key`：确定性哈希（例如 scope+title+归一化 body 的 hash）
@@ -137,6 +137,6 @@ CREATE INDEX IF NOT EXISTS idx_audit_run ON audit_log(run_id);
   - 旧记录：保持只读可检索（compat layer 映射到当前内部表示）
   - 新写入：强制使用当前 schema_version
 
-**TODO（负责人：后端）**：定义 v1→v2 的示例迁移（至少 1 个字段变更）与回归集。  
+**TODO（负责人：后端）**：~~定义 v1→v2 的示例迁移~~ → **已实现**（`internal/memory/migrate.go` v1→v2：L1/L2 默认 TTL；`CurrentSchemaVersion=2`）。  
 **验收方式**：迁移后旧记录可读、检索语义不变；TR3-01 回归通过。
 

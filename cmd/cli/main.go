@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/artifacts"
@@ -42,7 +43,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n")
 }
 
 func runScenario(args []string) {
@@ -115,6 +116,7 @@ func runDoctor(args []string) {
 	format := fs.String("format", "json", "output format: json|md")
 	out := fs.String("out", "", "write report to file")
 	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
+	require := fs.String("require", "", "comma-separated case IDs that must pass without skip evidence")
 	_ = fs.Parse(args)
 
 	cfg := config.Load()
@@ -162,6 +164,15 @@ func runDoctor(args []string) {
 
 	if rep.Summary.Fail > 0 {
 		os.Exit(1)
+	}
+	if strings.TrimSpace(*require) != "" {
+		ids := strings.Split(*require, ",")
+		for i := range ids {
+			ids[i] = strings.TrimSpace(ids[i])
+		}
+		if err := doctor.RequireCases(rep, ids, true); err != nil {
+			log.Fatal(err)
+		}
 	}
 }
 

@@ -154,6 +154,10 @@ export function ObservabilityPage() {
               <td>{scaleQuery.data?.alertsEvalInterval || "未配置"}</td>
             </tr>
             <tr>
+              <td>后台 TTL sweep</td>
+              <td>{scaleQuery.data?.memoryTTLSweepInterval || "未配置"}</td>
+            </tr>
+            <tr>
               <td>指标 replay</td>
               <td>{scaleQuery.data?.metricsEventReplayEnabled ? "ASH_METRICS_EVENT_REPLAY=1" : "off"}</td>
             </tr>

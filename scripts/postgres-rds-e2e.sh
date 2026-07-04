@@ -29,7 +29,7 @@ echo "ASH_SCHEMA_MODE=${ASH_SCHEMA_MODE}"
 
 bash scripts/postgres-smoke.sh
 
-echo "== golang-migrate schema (expected revision 14) =="
+echo "== golang-migrate schema (expected revision 20) =="
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
 
@@ -40,7 +40,25 @@ go run ./cmd/cli migrate copy  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_
 go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
 
 go run ./cmd/cli doctor --suite M3 --format md
+bash scripts/postgres-doctor-assert.sh M3 M3-04
+
 go test -tags=integration ./internal/store/ -run TestPostgresRLS -count=1
+
+if [[ -n "${ASH_DATABASE_APP_URL:-}" ]]; then
+  bash scripts/postgres-doctor-assert.sh M3 M3-06,M3-07
+fi
+
+go run ./cmd/cli doctor --suite TR3 --format md
+bash scripts/postgres-doctor-assert.sh TR3 TR3-06,TR3-10
+
 go run ./cmd/cli doctor --suite ALL --agent static --format md
 
-echo "OK cloud RDS e2e (see doc/checklists/postgres-rds-e2e.md for manual §7 sampling)"
+if [[ -n "${ASH_WORKER_URL:-}" ]]; then
+  echo "== H-09 release sampling (ASH_WORKER_URL set) =="
+  bash scripts/release-sampling.sh
+else
+  echo "== H-09 release sampling (api tests) =="
+  go test ./internal/api/ -run 'TestReleaseSamplingH09|TestReleaseSamplingSSE|TestReleaseSamplingH09CrossSpaceMemoryDenied' -count=1
+fi
+
+echo "OK cloud RDS e2e (see doc/checklists/postgres-rds-e2e.md §7 manual SSE)"

@@ -35,6 +35,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/api"
 	_ "github.com/ash-repwiki/ash/internal/api/docs" // swag OpenAPI
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/memory"
 	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
@@ -109,6 +110,12 @@ func main() {
 		stopAlerts := alerts.StartBackgroundEvaluator(db, interval)
 		defer stopAlerts()
 		log.Printf("alerts: background evaluation every %s", interval)
+	}
+
+	if interval, ok := memory.ParseSweepInterval(os.Getenv("ASH_MEMORY_TTL_SWEEP_INTERVAL")); ok {
+		stopTTL := memory.StartBackgroundTTLSweep(db, interval)
+		defer stopTTL()
+		log.Printf("memory ttl: background sweep every %s", interval)
 	}
 
 	log.Printf("ASH worker listening on %s (data dir: %s)", cfg.HTTPAddr, cfg.DataDir)

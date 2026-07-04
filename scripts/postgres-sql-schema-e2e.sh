@@ -36,7 +36,12 @@ export ASH_POSTGRES_RLS_FORCE=1
 bash scripts/postgres-ensure-app-role.sh
 go test -tags=integration ./internal/store/ -run 'TestPostgresRLSPoliciesInstalled|TestPostgresRLSSpaceIsolationOnMemoryChildren|TestPostgresRLSSpaceIsolationOnOrgIdentity' -count=1
 
+echo "== readyz probe with RLS on live postgres =="
+go test -tags=integration ./internal/api/ -run TestPostgresReadyzWithRLS -count=1
+
 echo "== doctor TR3 on live postgres (TR3-06 fts; TR3-02 fallback sqlite-only) =="
 env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite TR3 --agent static
+
+bash scripts/postgres-doctor-assert.sh TR3 TR3-06,TR3-10
 
 echo "OK postgres sql-schema e2e (mode=sql, data dir: $E2E_DIR)"

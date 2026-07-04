@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AM：Worker 后台记忆 TTL sweep（`ASH_MEMORY_TTL_SWEEP_INTERVAL`，最短 1m）；`/readyz` 与 Scale 暴露 `memoryTTLSweepInterval`。
+- Sprint AL（P4+）：记忆 TTL 复核队列（`GET /memory/ttl-queue`）+ 到期 sweep（`POST /memory/ttl-sweep`）；`memory.ttl_expired` derive；Doctor **TR1-06**；Scale TTL 指标与 sweep 按钮；ALL **43/43**。
+- Sprint AJ（P3）：记忆 catalog **v1→v2**（L1=90d / L2=365d 默认 TTL）；`RunMigrations` 多步升至 `CurrentSchemaVersion=2`；H-08 `release-window-audit.md`；H-09 `TestReleaseSamplingH09` + `scripts/release-sampling.sh`；`postgres-rds-e2e` 可选 Worker 抽样。
+- Sprint AH：`ASH_CI_FIXTURE=1` CI sync fixture（runs/jobs/logs 全链路单测）；`/readyz` `liveGateHints`（M3-04..08）；Scale 面板；`doc/checklists/execgo-live-smoke.md`；`verify-local` 可选 `execgo-health`；生产配置密钥轮换 SOP 摘要。
+- Sprint AD：Scale 页 **Worker /readyz** 面板（与 Scale 一致性对照）；`TestPostgresReadyzWithRLS` 并入 `postgres-sql-schema-e2e`；`ci.yml` PR 跑 `postgres-rls-e2e`；RDS 脚本补 `doctor TR3`。
+- Sprint AC: Doctor **TR3-10** `/readyz` HealthResponse 契约（`openapicheck.ValidateReadyzContract`）；M3-09 校验 `sqlMigrationExpected` 与嵌入修订一致；`postgres-rds-e2e.sh` 同步 rev **20**；ALL **42/42**。
 - Sprint AB: `/readyz` 暴露 RLS/SQL 漂移字段（`postgresRLSPolicyExpected`、`rlsCatalogSummary`、`readinessWarnings`）；Doctor **M3-09** 补 `rlsCatalog`/`rlsPolicies`/`sqlExpected` 证据；`postgres-e2e.yml` 新增 `postgres-rls-e2e` job。
 - Sprint AA: Scale readiness `postgresRLSPolicyExpected` / `rlsCatalogSummary` + RLS/SQL 漂移 `readinessWarnings`；`regression-short` RLS catalog 冒烟；`doc/checklists/postgres-rls-new-table.md`；RDS 清单同步 rev 20 / 41 policies。
 - Sprint Z: SQL rev **20** org identity RLS (`users`/`orgs`/`roles`/`members` via `app.ash_org_id`); Worker RLS middleware resolves `spaces.org_id`; policy count **41**; `PostgresRLSDeferredTables()` empty.

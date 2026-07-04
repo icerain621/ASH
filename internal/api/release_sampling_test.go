@@ -1,0 +1,230 @@
+package api
+
+import (
+	"bytes"
+	"context"
+	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/memory"
+	"github.com/ash-repwiki/ash/internal/store"
+)
+
+// TestReleaseSamplingH09 exercises postgres-rds-e2e.md §7 API paths without a live worker.
+func TestReleaseSamplingH09(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	space := "space_h09"
+
+	run := store.RunRecord{
+		ID: "run_h09", TraceID: "trace_h09", ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "completed", SpaceID: space,
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	getRun := httptest.NewRecorder()
+	getReq := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+run.ID, nil)
+	getReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(getRun, getReq)
+	if getRun.Code != http.StatusOK {
+		t.Fatalf("7.1 run status=%d body=%s", getRun.Code, getRun.Body.String())
+	}
+
+	candBody := []byte(`{"layer":"L1","title":"H09 probe","body":"release sampling memory","scopeRepo":"ash","evidence":[{"kind":"file","ref":"doc/h09.md"}]}`)
+	candResp := httptest.NewRecorder()
+	candReq := httptest.NewRequest(http.MethodPost, "/api/v1/memory/candidates", bytes.NewReader(candBody))
+	candReq.Header.Set("Content-Type", "application/json")
+	candReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(candResp, candReq)
+	if candResp.Code != http.StatusCreated {
+		t.Fatalf("7.3 candidate status=%d body=%s", candResp.Code, candResp.Body.String())
+	}
+	var cand struct {
+		CandidateID string `json:"candidateId"`
+	}
+	if err := json.Unmarshal(candResp.Body.Bytes(), &cand); err != nil {
+		t.Fatal(err)
+	}
+	reviewBody := []byte(`{"decision":"approve","reason":"h09","policyProfile":"default"}`)
+	reviewResp := httptest.NewRecorder()
+	reviewReq := httptest.NewRequest(http.MethodPost, "/api/v1/memory/candidates/"+cand.CandidateID+"/review", bytes.NewReader(reviewBody))
+	reviewReq.Header.Set("Content-Type", "application/json")
+	reviewReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(reviewResp, reviewReq)
+	if reviewResp.Code != http.StatusOK {
+		t.Fatalf("7.3 review status=%d body=%s", reviewResp.Code, reviewResp.Body.String())
+	}
+	queryBody := []byte(`{"text":"H09 probe","topK":5}`)
+	queryResp := httptest.NewRecorder()
+	queryReq := httptest.NewRequest(http.MethodPost, "/api/v1/memory/query", bytes.NewReader(queryBody))
+	queryReq.Header.Set("Content-Type", "application/json")
+	queryReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(queryResp, queryReq)
+	if queryResp.Code != http.StatusOK {
+		t.Fatalf("7.3 query status=%d body=%s", queryResp.Code, queryResp.Body.String())
+	}
+
+	kpiResp := httptest.NewRecorder()
+	kpiReq := httptest.NewRequest(http.MethodGet, "/api/v1/metrics/overview?spaceId="+space, nil)
+	kpiReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(kpiResp, kpiReq)
+	if kpiResp.Code != http.StatusOK {
+		t.Fatalf("7.4 metrics status=%d body=%s", kpiResp.Code, kpiResp.Body.String())
+	}
+
+	diagBody := []byte(`{"logText":"go test ./...\n--- FAIL: TestH09 (0.01s)\nFAIL\tpkg\t0.1s"}`)
+	diagResp := httptest.NewRecorder()
+	diagReq := httptest.NewRequest(http.MethodPost, "/api/v1/ci/failures/diagnose", bytes.NewReader(diagBody))
+	diagReq.Header.Set("Content-Type", "application/json")
+	diagReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(diagResp, diagReq)
+	if diagResp.Code != http.StatusOK {
+		t.Fatalf("7.5 diagnose status=%d body=%s", diagResp.Code, diagResp.Body.String())
+	}
+	var diagCount int64
+	if err := db.Model(&store.CIDiagnosis{}).Where("space_id = ?", space).Count(&diagCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if diagCount != 1 {
+		t.Fatalf("7.5 diagnoses=%d want 1", diagCount)
+	}
+
+	_ = db.Create(&store.AuditPolicy{SpaceID: space, RetentionDays: 30, CreatedAt: now, UpdatedAt: now}).Error
+	exportBody := []byte(`{"suite":"TR2"}`)
+	exportResp := httptest.NewRecorder()
+	exportReq := httptest.NewRequest(http.MethodPost, "/api/v1/compliance/export", bytes.NewReader(exportBody))
+	exportReq.Header.Set("Content-Type", "application/json")
+	exportReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(exportResp, exportReq)
+	if exportResp.Code != http.StatusAccepted {
+		t.Fatalf("7.6 export status=%d body=%s", exportResp.Code, exportResp.Body.String())
+	}
+
+	scaleResp := httptest.NewRecorder()
+	scaleReq := httptest.NewRequest(http.MethodGet, "/api/v1/scale/readiness", nil)
+	scaleReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(scaleResp, scaleReq)
+	if scaleResp.Code != http.StatusOK {
+		t.Fatalf("7.7 scale status=%d body=%s", scaleResp.Code, scaleResp.Body.String())
+	}
+	var scale ScaleReadinessResponse
+	if err := json.Unmarshal(scaleResp.Body.Bytes(), &scale); err != nil {
+		t.Fatal(err)
+	}
+	if scale.MemorySchemaVersion != memory.CurrentSchemaVersion {
+		t.Fatalf("memorySchemaVersion=%d want %d", scale.MemorySchemaVersion, memory.CurrentSchemaVersion)
+	}
+
+	migResp, err := memory.NewService(db, nil).RunMigrations(memory.RunMigrationRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !migResp.OK {
+		t.Fatalf("memory migrate=%+v", migResp)
+	}
+}
+
+// TestReleaseSamplingSSE covers postgres-rds-e2e.md §7.2 (stream + audit).
+func TestReleaseSamplingSSE(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	space := "space_sse_h09"
+	runID := "run_sse_h09"
+	traceID := "trace_sse_h09"
+
+	if err := db.Create(&store.RunRecord{
+		ID: runID, TraceID: traceID, ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "completed", SpaceID: space,
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	ev := events.NewService(db)
+	if _, err := ev.Append(runID, traceID, "run.started", "info", map[string]any{"probe": "h09"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ev.Append(runID, traceID, "step.completed", "info", map[string]any{"step": "arch.design"}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+runID+"/stream", nil)
+	req = req.WithContext(ctx)
+	req.Header.Set("X-ASH-Space-ID", space)
+
+	done := make(chan struct{})
+	w := httptest.NewRecorder()
+	go func() {
+		r.ServeHTTP(w, req)
+		close(done)
+	}()
+	time.Sleep(300 * time.Millisecond)
+	cancel()
+	<-done
+
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
+		t.Fatalf("content-type=%q want text/event-stream", ct)
+	}
+	body := w.Body.String()
+	if !strings.Contains(body, "data:") || !strings.Contains(body, "run.started") {
+		t.Fatalf("body=%q want SSE data with run.started", body)
+	}
+
+	var opened int64
+	if err := db.Model(&store.AuditLog{}).
+		Where("space_id = ? AND event_type = ?", space, "stream.session_opened").
+		Count(&opened).Error; err != nil {
+		t.Fatal(err)
+	}
+	if opened != 1 {
+		t.Fatalf("stream.session_opened audits=%d want 1", opened)
+	}
+}
+
+// TestReleaseSamplingH09CrossSpaceMemoryDenied is §7.3 cross-space isolation adjunct.
+func TestReleaseSamplingH09CrossSpaceMemoryDenied(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	other := "space_h09_other"
+	if err := db.Create(&store.MemoryRecord{
+		ID: "mem_h09_other", Layer: "L0", Status: "approved", SpaceID: other,
+		SchemaVersion: 2, Title: "secret", Body: "other tenant", TagsJSON: "[]",
+		Sensitivity: "normal", CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	body := []byte(`{"text":"secret","topK":5}`)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/memory/query", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("X-ASH-Space-ID", "space_h09")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range resp.Items {
+		if item.ID == "mem_h09_other" {
+			t.Fatalf("cross-space memory leaked: %+v", resp.Items)
+		}
+	}
+}

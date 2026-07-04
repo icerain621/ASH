@@ -96,14 +96,15 @@ func TestTR1Suite(t *testing.T) {
 		}
 		t.Fatalf("TR1 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 5 {
-		t.Fatalf("TR1 pass=%d want 5", rep.Summary.Pass)
+	if rep.Summary.Pass != 6 {
+		t.Fatalf("TR1 pass=%d want 6", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR1-01", "modelRouter")
 	assertCaseEvidence(t, rep, "TR1-02", "waterfallSpan")
 	assertCaseEvidence(t, rep, "TR1-03", "memoryEdge")
 	assertCaseEvidence(t, rep, "TR1-04", "mcpIsolation")
 	assertCaseEvidence(t, rep, "TR1-05", "rulesValidation")
+	assertCaseEvidence(t, rep, "TR1-06", "memoryTTL")
 }
 
 func TestTR2Suite(t *testing.T) {
@@ -146,8 +147,8 @@ func TestTR3Suite(t *testing.T) {
 		}
 		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 9 {
-		t.Fatalf("TR3 pass=%d want 9", rep.Summary.Pass)
+	if rep.Summary.Pass != 10 {
+		t.Fatalf("TR3 pass=%d want 10", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
 	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
@@ -158,6 +159,7 @@ func TestTR3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "TR3-07", "pluginExport")
 	assertCaseEvidence(t, rep, "TR3-08", "skipped")
 	assertCaseEvidence(t, rep, "TR3-09", "openapiContract")
+	assertCaseEvidence(t, rep, "TR3-10", "readyzHealth")
 }
 
 func TestTR3PrometheusReplaySegmentWhenEnabled(t *testing.T) {
@@ -254,7 +256,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 41
+	want := 43
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

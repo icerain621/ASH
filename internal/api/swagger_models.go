@@ -34,8 +34,10 @@ type HealthResponse struct {
 	PostgresRLSPolicyExpected int64    `json:"postgresRLSPolicyExpected,omitempty"`
 	RLSCatalogSummary         string   `json:"rlsCatalogSummary,omitempty"`
 	ReadinessWarnings         []string `json:"readinessWarnings,omitempty"`
+	LiveGateHints             []string `json:"liveGateHints,omitempty"`
 	OtelEnabled               bool     `json:"otelEnabled,omitempty"`
 	AlertsEvalInterval        string   `json:"alertsEvalInterval,omitempty" example:"5m0s"`
+	MemoryTTLSweepInterval    string   `json:"memoryTTLSweepInterval,omitempty" example:"24h0m0s"`
 	MetricsEventReplayEnabled bool     `json:"metricsEventReplayEnabled,omitempty"`
 }
 

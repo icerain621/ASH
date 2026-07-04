@@ -38,12 +38,16 @@ export type ScaleReadiness = {
   readinessWarnings?: string[];
   memoryCatalogVersion?: number;
   memoryPendingMigrationRecords?: number;
+  memoryTTLReviewDueCount?: number;
+  memoryTTLExpiredPendingCount?: number;
+  memoryTTLReviewLeadDays?: number;
   ragFtsAvailable?: boolean;
   ragFtsEngine?: string;
   ragDefaultRetrievalMode?: string;
   ragFallbackQueryCount?: number;
   otelEnabled?: boolean;
   alertsEvalInterval?: string;
+  memoryTTLSweepInterval?: string;
   metricsEventReplayEnabled?: boolean;
 };
 

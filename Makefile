@@ -92,9 +92,12 @@ verify:
 regression-short:
 	cd $(BACKEND_DIR) && go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled' -count=1
 	cd $(BACKEND_DIR) && go test ./internal/alerts/... -count=1
-	cd $(BACKEND_DIR) && go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestReleaseSampling' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/memory/... -run 'TestRunMigrations|TestDefaultTTLForLayer|TestEffectiveTTL|TestTTLQueue|TestClassifyTTL' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/ci/... -run 'TestFixtureProvider|TestDiagnoseLogClassifiesTestFailure' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/opsenv/... -count=1
 	cd $(BACKEND_DIR) && go test ./internal/memory/... -count=1 -short
-	cd $(BACKEND_DIR) && go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract|TestValidateReadyzContract' -count=1
 	cd $(BACKEND_DIR) && go test ./internal/store -run 'TestMigrationCatalog_RLSCoverage|TestVerifyRLSMigrationSQL|TestRLSExpectedPolicyCount' -count=1
 
 web-build:

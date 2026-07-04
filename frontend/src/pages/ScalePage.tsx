@@ -3,8 +3,9 @@ import { Database, Gauge, Play } from "lucide-react";
 import { useState } from "react";
 import { DoctorReportView } from "@/components/DoctorReportView";
 import { getDoctorReport, runDoctor, type DoctorReport } from "@/modules/doctor/api/doctor.api";
-import { runMemoryMigration } from "@/modules/memory/api/memory.api";
+import { runMemoryMigration, sweepMemoryTTL } from "@/modules/memory/api/memory.api";
 import { getPluginHealth } from "@/modules/platform/api/platform.api";
+import { getReadyz } from "@/modules/health/api/health.api";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
@@ -23,7 +24,7 @@ const M3_CHECKS = [
 ] as const;
 
 const TR3_CHECKS = [
-  { id: "TR3-01", title: "记忆迁移兼容", hint: "Schema v1 记录可读且检索语义不变" },
+  { id: "TR3-01", title: "记忆迁移兼容", hint: "catalog v2；L1/L2 默认 TTL（ASH_MEMORY_TTL_L1_DAYS / L2_DAYS 可覆盖）" },
   { id: "TR3-02", title: "灾备降级", hint: "FTS 不可用时 RAG 降级到分块检索" },
   { id: "TR3-03", title: "成本/延迟 SLO", hint: "瀑布时长与 model_cost/tool_calls 质量指标" },
   { id: "TR3-04", title: "审计可追责", hint: "traceId、事件、产物与 tool/agent 链路" },
@@ -32,6 +33,7 @@ const TR3_CHECKS = [
   { id: "TR3-07", title: "插件导出健康", hint: "pluginhealth 注册表 + plugin.export_failed 审计" },
   { id: "TR3-08", title: "Prometheus replay 段", hint: "ASH_METRICS_EVENT_REPLAY=1 时 /metrics 含 derive ash_* replay" },
   { id: "TR3-09", title: "OpenAPI 契约对齐", hint: "手写 /api/v1 路径与 swag 一致；2xx 无泛型 ApiResponse" },
+  { id: "TR3-10", title: "Readyz 健康契约", hint: "/readyz HealthResponse 含 RLS/SQL 漂移字段；与 swag 一致" },
 ] as const;
 
 export function ScalePage() {
@@ -48,6 +50,11 @@ export function ScalePage() {
     queryKey: ["plugin-health", activeSpaceId],
     queryFn: getPluginHealth,
   });
+  const readyzQuery = useQuery({
+    queryKey: ["health", "readyz"],
+    queryFn: getReadyz,
+    refetchInterval: 30_000,
+  });
 
   const migrateMut = useMutation({
     mutationFn: () => runMemoryMigration({ dryRun: false }),
@@ -56,6 +63,19 @@ export function ScalePage() {
         result.alreadyCurrent
           ? "记忆 catalog 已是最新版本。"
           : `迁移完成 v${result.fromVersion}→v${result.toVersion}，更新 ${result.recordsUpdated} 条。`,
+      );
+      qc.invalidateQueries({ queryKey: ["scale", "readiness"] });
+    },
+    onError: (err: Error) => setMigrateMessage(err.message),
+  });
+
+  const ttlSweepMut = useMutation({
+    mutationFn: () => sweepMemoryTTL({ dryRun: false }),
+    onSuccess: (result) => {
+      setMigrateMessage(
+        result.deprecated > 0
+          ? `TTL sweep：已弃用 ${result.deprecated} 条；复核队列 ${result.reviewDue} 条。`
+          : `TTL sweep：无到期记录；复核队列 ${result.reviewDue} 条。`,
       );
       qc.invalidateQueries({ queryKey: ["scale", "readiness"] });
     },
@@ -71,6 +91,7 @@ export function ScalePage() {
   });
 
   const r = readinessQuery.data;
+  const z = readyzQuery.data;
 
   return (
     <section className="panel active">
@@ -110,6 +131,20 @@ export function ScalePage() {
             >
               <Database size={16} strokeWidth={1.8} />
               {migrateMut.isPending ? "迁移中…" : `记忆迁移 (${r!.memoryPendingMigrationRecords})`}
+            </button>
+          )}
+          {((r?.memoryTTLExpiredPendingCount ?? 0) > 0 ||
+            (r?.memoryTTLReviewDueCount ?? 0) > 0) && (
+            <button
+              className="btn icon-btn"
+              disabled={ttlSweepMut.isPending}
+              onClick={() => ttlSweepMut.mutate()}
+              type="button"
+            >
+              <Database size={16} strokeWidth={1.8} />
+              {ttlSweepMut.isPending
+                ? "TTL 处理中…"
+                : `TTL sweep (${r!.memoryTTLExpiredPendingCount ?? 0}/${r!.memoryTTLReviewDueCount ?? 0})`}
             </button>
           )}
         </div>
@@ -169,6 +204,12 @@ export function ScalePage() {
                 {(r?.memoryPendingMigrationRecords ?? 0) > 0
                   ? ` · 待迁移 ${r!.memoryPendingMigrationRecords}`
                   : null}
+                {(r?.memoryTTLReviewDueCount ?? 0) > 0
+                  ? ` · TTL 复核 ${r!.memoryTTLReviewDueCount}（${r!.memoryTTLReviewLeadDays ?? 7}d 窗口）`
+                  : null}
+                {(r?.memoryTTLExpiredPendingCount ?? 0) > 0
+                  ? ` · TTL 待 sweep ${r!.memoryTTLExpiredPendingCount}`
+                  : null}
               </td>
             </tr>
             <tr>
@@ -199,7 +240,7 @@ export function ScalePage() {
               <td>可观测性</td>
               <td>
                 {r
-                  ? `OTel ${r.otelEnabled ? "启用" : "关闭"}${r.alertsEvalInterval ? ` · 告警评估 ${r.alertsEvalInterval}` : ""}${r.metricsEventReplayEnabled ? " · 指标 replay" : ""}`
+                  ? `OTel ${r.otelEnabled ? "启用" : "关闭"}${r.alertsEvalInterval ? ` · 告警评估 ${r.alertsEvalInterval}` : ""}${r.memoryTTLSweepInterval ? ` · TTL sweep ${r.memoryTTLSweepInterval}` : ""}${r.metricsEventReplayEnabled ? " · 指标 replay" : ""}`
                   : "-"}
               </td>
             </tr>
@@ -346,6 +387,94 @@ export function ScalePage() {
           Postgres 迁移见 <code>doc/05-M3-多租户与Postgres演进.md</code>；云 RDS 验收见{" "}
           <code>doc/checklists/postgres-rds-e2e.md</code>（<code>make postgres-rds-e2e</code>）；本地{" "}
           <code>make postgres-e2e</code>；CLI <code>ash migrate plan|copy|verify|sync</code>。
+        </p>
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>Worker /readyz</h2>
+          <span>{readyzQuery.isFetching ? "刷新中" : z?.status ?? "—"}</span>
+        </div>
+        {readyzQuery.isError && (
+          <p className="error-text">{(readyzQuery.error as Error).message}</p>
+        )}
+        {(z?.readinessWarnings?.length ?? 0) > 0 && (
+          <ul className="muted-line">
+            {z!.readinessWarnings!.map((msg) => (
+              <li key={msg} className="error-text">
+                {msg}
+              </li>
+            ))}
+          </ul>
+        )}
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>状态 / 方言</td>
+              <td>
+                {z ? `${z.status} · ${z.dialect ?? "—"}` : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>Schema / SQL 修订</td>
+              <td>
+                {z?.schemaMode
+                  ? `${z.schemaMode} · v${z.sqlMigrationVersion ?? "?"} / ${z.sqlMigrationExpected ?? "?"}`
+                  : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>Postgres RLS</td>
+              <td>
+                {z
+                  ? `${z.postgresRLSEnabled ? "active" : "off"} · ${z.postgresRLSPolicyCount ?? 0} / ${z.postgresRLSPolicyExpected ?? "—"}`
+                  : "—"}
+                {z?.rlsCatalogSummary ? (
+                  <>
+                    <br />
+                    <span className="muted-line">{z.rlsCatalogSummary}</span>
+                  </>
+                ) : null}
+              </td>
+            </tr>
+            <tr>
+              <td>Live gates (M3)</td>
+              <td>
+                {(z?.liveGateHints?.length ?? 0) > 0 ? (
+                  <ul className="muted-line" style={{ margin: 0, paddingLeft: "1.2rem" }}>
+                    {z!.liveGateHints!.map((hint) => (
+                      <li key={hint}>{hint}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <span className="muted-line">未启用 live 门禁（静态 Doctor 默认 skip M3-04/05/06/07）</span>
+                )}
+              </td>
+            </tr>
+            <tr>
+              <td>可观测性</td>
+              <td>
+                {z
+                  ? `OTel ${z.otelEnabled ? "启用" : "关闭"}${z.alertsEvalInterval ? ` · 告警 ${z.alertsEvalInterval}` : ""}${z.memoryTTLSweepInterval ? ` · TTL sweep ${z.memoryTTLSweepInterval}` : ""}${z.metricsEventReplayEnabled ? " · replay" : ""}`
+                  : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>与 Scale 一致性</td>
+              <td>
+                {r && z
+                  ? [
+                      r.databaseDialect === z.dialect ? "dialect ✓" : `dialect ✗ (${r.databaseDialect} vs ${z.dialect})`,
+                      r.otelEnabled === z.otelEnabled ? "otel ✓" : "otel ✗",
+                      (r.sqlMigrationExpected ?? 0) === (z.sqlMigrationExpected ?? 0) ? "sqlExpected ✓" : "sqlExpected ✗",
+                    ].join(" · ")
+                  : "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+        <p className="muted-line">
+          无需认证的 Worker 探针；与 M3-09 / TR3-10 契约对齐。K8s 就绪探针请使用 <code>GET /readyz</code>。
         </p>
       </div>
 

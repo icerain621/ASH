@@ -289,6 +289,74 @@ func (h *Handler) getMemoryRecord(c *gin.Context) {
 	c.JSON(http.StatusOK, rec)
 }
 
+// GetMemoryTTLQueue godoc
+// @Summary List memory records due for TTL review
+// @Tags memory
+// @Produce json
+// @Param limit query int false "max review items" default(50)
+// @Success 200 {object} memory.TTLQueueResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/memory/ttl-queue [get]
+func (h *Handler) getMemoryTTLQueue(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permMemoryRead, space) {
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	resp, err := memory.TTLQueue(h.db, space, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_TTL_QUEUE_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// SweepMemoryTTL godoc
+// @Summary Deprecate TTL-expired approved memory records
+// @Tags memory
+// @Accept json
+// @Produce json
+// @Param body body memory.SweepTTLRequest true "sweep"
+// @Success 200 {object} memory.SweepTTLResponse
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/memory/ttl-sweep [post]
+func (h *Handler) sweepMemoryTTL(c *gin.Context) {
+	var req memory.SweepTTLRequest
+	if err := c.ShouldBindJSON(&req); err != nil && c.Request.ContentLength > 0 {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	space := currentSpace(c)
+	if req.RunID != "" {
+		if !h.requireRunAccess(c, req.RunID) {
+			return
+		}
+		var err error
+		space, err = h.runSpaceID(c, req.RunID)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody("RUN_SCOPE_CHECK_FAILED", err.Error()))
+			return
+		}
+	}
+	if !h.requirePermission(c, permMemoryReview, space) {
+		return
+	}
+	req.SpaceID = space
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
+	}
+	resp, err := h.memory.WithContext(c.Request.Context()).SweepTTL(req)
+	if err != nil {
+		if errors.Is(err, memory.ErrRunNotFound) {
+			c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", err.Error()))
+			return
+		}
+		c.JSON(http.StatusBadRequest, errorBody("MEMORY_TTL_SWEEP_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 func (h *Handler) memoryRecordSpace(c *gin.Context, id string) (string, error) {
 	var row store.MemoryRecord
 	if err := h.dbFor(c).Select("space_id").First(&row, "id = ?", id).Error; err != nil {

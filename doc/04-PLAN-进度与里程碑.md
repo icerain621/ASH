@@ -75,21 +75,21 @@
 | TR2-05 Doctor | ✅ TR2 | 泄漏探测 + 载荷脱敏校验 |
 | 合规审计导出 | ✅ TR2 | `POST /api/v1/compliance/export`（日志 + Doctor 报告） |
 | Doctor ALL 套件 | ✅ 修复 | `suite=ALL` 运行 TR0+TR1+TR2+TR3 全量用例 |
-| Doctor TR3 | ✅ GA 基础 | TR3-01..04（记忆迁移/RAG 降级/SLO/审计溯源） |
-| TR3 规模化控制台 | ✅ GA 基础 | `/ui/scale` + `GET /api/v1/scale/readiness` |
+| Doctor TR3 | ✅ GA | TR3-01..10（含 OpenAPI TR3-09、Readyz 契约 TR3-10） |
+| TR3 规模化控制台 | ✅ GA | `/ui/scale` + `GET /api/v1/scale/readiness` + Worker `/readyz` 面板 |
 | Run 溯源 API | ✅ TR3 | `GET /api/v1/runs/:runId/provenance` |
 | 合规 Redact 快捷操作 | ✅ TR2 | 合规页一键 `PUT /audit/policy` 开启脱敏 |
 | 导出含 Secret 扫描 | ✅ TR2 | 合规导出 JSON 内嵌 `secretScan` 摘要 |
 | Runs 溯源面板 | ✅ TR3 | 运行详情展示 `/runs/:id/provenance` 链路 |
 | OpenAPI 合规/规模化/迭代 | ✅ | `bash scripts/regenerate-swagger.sh` 含 improve/compliance/scale/provenance |
-| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（32 项，非 `-short`，含 M3-06 RLS / M3-07 ash_app / M3-05 ExecGo live smoke 门禁） |
+| Doctor ALL 回归测试 | ✅ | `TestALLSuite`（**42** 项，非 `-short`；M3 **11** + TR3 **10**） |
 | Runs 控制台 actorRole | ✅ | 创建运行可选角色；API 返回 `executionError` |
 | 跨空间访问 403 | ✅ | `requireRequestSpace` 统一 runs/space-param/secrets/RAG/MCP/审批等 |
 | M2 权限矩阵 | ✅ 基础 | `internal/authz` + API/UI + 场景工具 enforcement + Doctor M2-01 |
 | M2 场景策略 API | ✅ | `PUT /spaces/:id/resource-scopes/:scopeId` + 审计；M2-02/03 |
 | M2 运行期 enforcement | ✅ | `m2_policy_enforce` 场景 + `POLICY_DENIED` + `policy.denied` 事件 |
-| M3 多租户 / Postgres | ✅ 展望 | Doctor M3-01..07；`make postgres-e2e` / `postgres-rds-e2e`；RLS + `ash_app`；`ash migrate` CLI |
-| GitHub Actions CI 门禁 | ✅ PRD 前四项 | PR/main 执行 Go + Doctor static + Web build；manual/nightly 执行 Postgres e2e |
+| M3 多租户 / Postgres | ✅ | SQL rev **20**、RLS **41**；Doctor M3-01..11；`make postgres-e2e` / `postgres-rds-e2e` |
+| GitHub Actions CI 门禁 | ✅ | PR：Go + Doctor + `regression-short` + `postgres-sql-schema-e2e` + `postgres-rls-e2e` + **`postgres-e2e`** |
 | ExecGo/Codex 执行面稳定化 | ✅ PRD 前四项 | `make execgo-health` 分类失败；`ASH_EXECGO_E2E=1` 触发 Doctor M3-05 live smoke |
 | Repo/CI 连接与诊断 | ✅ PRD 前四项 | GitHub Actions provider；`/api/v1/repo/connections`、`/api/v1/ci/runs`、`/api/v1/ci/failures/diagnose` |
 | KPI 指标看板 | ✅ PRD 前四项 | `/api/v1/metrics/overview` + `/ui/metrics`；KPI-08 由 `stream.session_*` 审计聚合 |

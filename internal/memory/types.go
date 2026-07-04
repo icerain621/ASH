@@ -2,7 +2,27 @@ package memory
 
 import "time"
 
-const CurrentSchemaVersion = 1
+const CurrentSchemaVersion = 2
+
+// Default TTL policy for long-term layers (appendix C §4); applied by v1→v2 migration when unset.
+const (
+	DefaultTTLDaysL1 = BuiltinTTLDaysL1
+	DefaultTTLDaysL2 = BuiltinTTLDaysL2
+)
+
+// DefaultTTLForLayer returns the catalog default ttl for L1/L2 approved records.
+func DefaultTTLForLayer(layer string) *int {
+	switch layer {
+	case "L1":
+		d := EffectiveTTLDaysL1()
+		return &d
+	case "L2":
+		d := EffectiveTTLDaysL2()
+		return &d
+	default:
+		return nil
+	}
+}
 
 var (
 	validLayers       = map[string]struct{}{"L0": {}, "L1": {}, "L2": {}, "L3": {}}

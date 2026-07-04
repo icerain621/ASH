@@ -110,6 +110,58 @@ func TestRepoConnectionAndCIDiagnoseAPI(t *testing.T) {
 	}
 }
 
+func TestCISyncRunsWithFixture(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_CI_FIXTURE", "1")
+	r, _ := newPlatformTestRouter(t)
+	secretID := createGitHubSecret(t, r)
+
+	connBody := []byte(`{"provider":"github","owner":"iammm0","repo":"ASH","secretId":"` + secretID + `"}`)
+	connResp := httptest.NewRecorder()
+	connReq := httptest.NewRequest(http.MethodPost, "/api/v1/repo/connections", bytes.NewReader(connBody))
+	connReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(connResp, connReq)
+	if connResp.Code != http.StatusCreated {
+		t.Fatalf("status=%d want 201 body=%s", connResp.Code, connResp.Body.String())
+	}
+	var conn store.RepoConnection
+	if err := json.Unmarshal(connResp.Body.Bytes(), &conn); err != nil {
+		t.Fatal(err)
+	}
+
+	runsResp := httptest.NewRecorder()
+	runsReq := httptest.NewRequest(http.MethodGet, "/api/v1/ci/runs?connectionId="+conn.ID+"&sync=true", nil)
+	r.ServeHTTP(runsResp, runsReq)
+	if runsResp.Code != http.StatusOK {
+		t.Fatalf("runs status=%d want 200 body=%s", runsResp.Code, runsResp.Body.String())
+	}
+	var runs struct {
+		Items []store.CIRun `json:"items"`
+	}
+	if err := json.Unmarshal(runsResp.Body.Bytes(), &runs); err != nil {
+		t.Fatal(err)
+	}
+	if len(runs.Items) != 1 || runs.Items[0].ProviderRunID != "fixture-run-9001" {
+		t.Fatalf("runs=%+v want fixture-run-9001", runs.Items)
+	}
+
+	jobsResp := httptest.NewRecorder()
+	jobsReq := httptest.NewRequest(http.MethodGet, "/api/v1/ci/jobs?runId="+runs.Items[0].ID+"&sync=true", nil)
+	r.ServeHTTP(jobsResp, jobsReq)
+	if jobsResp.Code != http.StatusOK {
+		t.Fatalf("jobs status=%d want 200 body=%s", jobsResp.Code, jobsResp.Body.String())
+	}
+	var jobs struct {
+		Items []store.CIJob `json:"items"`
+	}
+	if err := json.Unmarshal(jobsResp.Body.Bytes(), &jobs); err != nil {
+		t.Fatal(err)
+	}
+	if len(jobs.Items) != 1 || jobs.Items[0].ProviderJobID != "fixture-job-9101" {
+		t.Fatalf("jobs=%+v want fixture-job-9101", jobs.Items)
+	}
+}
+
 func createGitHubSecret(t *testing.T, r http.Handler) string {
 	t.Helper()
 	body := []byte(`{"name":"GITHUB_TOKEN","value":"ghp_test","scope":{"provider":"github"}}`)

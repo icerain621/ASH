@@ -17,6 +17,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
+	"github.com/ash-repwiki/ash/internal/opsenv"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
@@ -44,13 +45,13 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	ev := events.NewService(db)
 	tools := toolbus.DefaultBus()
 	runsSvc := runs.NewService(db, ev, scenarios, tools)
-	ciSvc := ci.NewService(db, func(spaceID, secretID string) (string, error) {
+	ciSvc := ci.ApplyFixtureProvider(ci.NewService(db, func(spaceID, secretID string) (string, error) {
 		var row store.SecretRecord
 		if err := db.First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
 			return "", err
 		}
 		return secrets.Open(row.ValueCiphertext, config.Load().SecretKey)
-	})
+	}))
 	return &Handler{
 		db:        db,
 		events:    ev,
@@ -113,6 +114,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/memory/records/:recordId", h.getMemoryRecord)
 		v1.POST("/memory/query", h.queryMemory)
 		v1.POST("/memory/migrate", h.runMemoryMigration)
+		v1.GET("/memory/ttl-queue", h.getMemoryTTLQueue)
+		v1.POST("/memory/ttl-sweep", h.sweepMemoryTTL)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
 
 		v1.POST("/improve/proposals", h.createImproveProposal)
@@ -259,8 +262,10 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 		PostgresRLSPolicyExpected: profile.PostgresRLSPolicyExpected,
 		RLSCatalogSummary:         rlsCatalogSummary(profile),
 		ReadinessWarnings:         scaleReadinessWarnings(profile, migSnap),
+		LiveGateHints:             opsenv.LiveGateHints(),
 		OtelEnabled:               ops.OtelEnabled,
 		AlertsEvalInterval:        ops.AlertsEvalInterval,
+		MemoryTTLSweepInterval:    ops.MemoryTTLSweepInterval,
 		MetricsEventReplayEnabled: ops.MetricsEventReplayEnabled,
 	}
 	if rlsEnv && resp.PostgresRLSPolicyExpected == 0 {

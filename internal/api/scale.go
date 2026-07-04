@@ -50,12 +50,16 @@ type ScaleReadinessResponse struct {
 	ReadinessWarnings              []string `json:"readinessWarnings,omitempty"`
 	MemoryCatalogVersion           int      `json:"memoryCatalogVersion,omitempty"`
 	MemoryPendingMigrationRecords  int64    `json:"memoryPendingMigrationRecords,omitempty"`
+	MemoryTTLReviewDueCount        int64    `json:"memoryTTLReviewDueCount,omitempty"`
+	MemoryTTLExpiredPendingCount   int64    `json:"memoryTTLExpiredPendingCount,omitempty"`
+	MemoryTTLReviewLeadDays        int      `json:"memoryTTLReviewLeadDays,omitempty"`
 	RAGFTSAvailable                bool     `json:"ragFtsAvailable,omitempty"`
 	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
 	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
 	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
 	OtelEnabled                    bool     `json:"otelEnabled,omitempty"`
 	AlertsEvalInterval             string   `json:"alertsEvalInterval,omitempty"`
+	MemoryTTLSweepInterval         string   `json:"memoryTTLSweepInterval,omitempty"`
 	MetricsEventReplayEnabled      bool     `json:"metricsEventReplayEnabled,omitempty"`
 }
 
@@ -95,6 +99,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	migSnap, _ := store.MigrationSnapshotFor(h.db.DataDir())
 	memCatalog, _ := memory.CatalogVersion(h.db)
 	memPending, _ := memory.PendingMigrationRecords(h.db, space)
+	memReviewDue, memExpiredPending, _ := memory.TTLCounts(h.db, space)
 	ragSvc := h.runsFor(c).RAG()
 	ragFts := ragSvc.FTSAvailable()
 	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
@@ -149,12 +154,16 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		ReadinessWarnings:             scaleReadinessWarnings(dbProfile, migSnap),
 		MemoryCatalogVersion:          memCatalog,
 		MemoryPendingMigrationRecords: memPending,
+		MemoryTTLReviewDueCount:       memReviewDue,
+		MemoryTTLExpiredPendingCount:  memExpiredPending,
+		MemoryTTLReviewLeadDays:       memory.EffectiveTTLReviewLeadDays(),
 		RAGFTSAvailable:               ragFts,
 		RAGFtsEngine:                  ragSvc.FtsEngine(),
 		RAGDefaultRetrievalMode:       ragSvc.DefaultRetrievalMode(),
 		RAGFallbackQueryCount:         ragFallbacks,
 		OtelEnabled:                   ops.OtelEnabled,
 		AlertsEvalInterval:            ops.AlertsEvalInterval,
+		MemoryTTLSweepInterval:        ops.MemoryTTLSweepInterval,
 		MetricsEventReplayEnabled:     ops.MetricsEventReplayEnabled,
 		PostgresRLSPolicyExpected:     dbProfile.PostgresRLSPolicyExpected,
 		RLSCatalogSummary:             rlsCatalogSummary(dbProfile),

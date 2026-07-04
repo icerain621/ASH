@@ -28,7 +28,7 @@
 - [ ] JWT、RBAC 配置正确
 - [ ] 高风险接口权限校验通过
 - [ ] 审计日志记录完整
-- [ ] Postgres 生产切换已完成 `doc/checklists/postgres-rds-e2e.md`（如适用）
+- [ ] Postgres 生产切换已完成 `doc/checklists/postgres-rds-e2e.md` + `doc/checklists/release-window-audit.md`（如适用）
 - [ ] 默认密钥/测试账号已移除或替换
 
 ## 6. 数据与迁移

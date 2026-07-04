@@ -269,6 +269,16 @@ func Catalog() []Rule {
 			},
 		},
 		{
+			EventType: "memory.ttl_expired",
+			Metric:    "ash_memory_ttl_expired_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels: []LabelSpec{
+				{Name: "layer", JSONField: "layer"},
+				{Name: "reason", JSONField: "reason"},
+			},
+		},
+		{
 			EventType: "memory.query",
 			Metric:    "ash_memory_queries_total",
 			Kind:      MetricCounter,

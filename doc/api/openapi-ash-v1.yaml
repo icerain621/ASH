@@ -471,6 +471,10 @@ components:
         readinessWarnings:
           type: array
           items: { type: string }
+        liveGateHints:
+          type: array
+          items: { type: string }
+          description: Enabled ASH_* live gates (M3-04..08, CI fixture); no secret values.
         otelEnabled: { type: boolean }
         alertsEvalInterval: { type: string, example: 5m0s }
         metricsEventReplayEnabled: { type: boolean }
