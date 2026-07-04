@@ -5,9 +5,9 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
-echo "== go test (authz, doctor, api, security, store migration, pluginhealth) =="
+echo "== go test (authz, doctor, api, security, store migration, pluginhealth, opsenv) =="
 go test ./internal/authz ./internal/doctor ./internal/api ./internal/security ./internal/store -run 'TestMigration|TestMigrator|TestDualWrite|TestMigrationCatalog' -count=1
-go test ./internal/pluginhealth ./internal/alerts -count=1
+go test ./internal/pluginhealth ./internal/alerts ./internal/opsenv -count=1
 go test ./internal/authz ./internal/doctor ./internal/api ./internal/security -count=1
 
 echo "== doctor M2 + M3 + TR3 + ALL (static) =="

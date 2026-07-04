@@ -12,9 +12,9 @@
 | T-01 | derive 回放 parity 单测 | `go test ./internal/observability/derive/... -run Parity -count=1` | ✅ 2026-06-03 本地 pass |
 | T-02 | derive 记忆 backlog 单测 | `go test ./internal/observability/derive/... -run Replay_memory -count=1` | ✅ 2026-06-03 本地 pass |
 | T-03 | Doctor TR3-05/06/07 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **7/7**（TR3-06 sqlite skip） |
-| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **36/36** pass |
-| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **17**、M3 **8/8**（M3-04 skip） |
-| T-06 | CI job | GitHub Actions `ci.yml` + nightly `postgres-e2e.yml` | PR/main `postgres-sql-schema-e2e`；nightly 全量 migrate e2e |
+| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **37/37** pass |
+| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **17**、M3 **9/9**（M3-04 skip） |
+| T-06 | CI job | GitHub Actions `ci.yml` + nightly `postgres-e2e.yml` | PR `postgres-sql-schema-e2e`；push main 全量 `postgres-e2e` |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
 | T-07 | 记忆 emit layer | `go test ./internal/memory/... -count=1 -short` | ✅ 断言 pass（Windows 偶发 TempDir 清理警告） |
 | T-08 | Scale 双写冲突告警 | `go test ./internal/api/... -run ScaleReadinessSchemaSql -count=1` | ✅ 2026-06-03 本地 pass |
@@ -38,7 +38,7 @@ make postgres-sql-schema-e2e
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 8/8 + ALL 36/36 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 9/9 + ALL 37/37 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |

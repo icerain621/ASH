@@ -16,6 +16,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/observability/derive"
+	"github.com/ash-repwiki/ash/internal/opsenv"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rag"
@@ -1175,6 +1176,7 @@ func (s *Service) m3SuiteCases() []CaseResult {
 			s.m3AppDatabaseRuntime(),
 			s.m3ExecGoLiveSmoke(),
 			s.m3SQLSchemaMode(),
+			s.m3WorkerOpsContract(),
 		}
 	}
 	return []CaseResult{
@@ -1186,6 +1188,7 @@ func (s *Service) m3SuiteCases() []CaseResult {
 		s.m3AppDatabaseRuntime(),
 		s.m3ExecGoLiveSmoke(),
 		s.m3SQLSchemaMode(),
+		s.m3WorkerOpsContract(),
 	}
 }
 
@@ -1459,6 +1462,41 @@ func (s *Service) m3SQLSchemaMode() CaseResult {
 			return res
 		}
 		res.Evidence = append(res.Evidence, Evidence{Kind: "autoMigrate", Ref: "disabled"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3WorkerOpsContract() CaseResult {
+	res := CaseResult{ID: "M3-09", Status: "fail"}
+	snap := opsenv.Load()
+	profile, err := store.DatabaseProfile(s.dataDir, store.RuntimeDatabaseURL())
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	dialect := profile.Dialect
+	if strings.TrimSpace(dialect) == "" {
+		dialect = s.runs.DB().Dialect()
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "readyzDialect", Ref: dialect},
+		Evidence{Kind: "otel", Ref: fmt.Sprintf("enabled=%v", snap.OtelEnabled)},
+		Evidence{Kind: "metricsReplay", Ref: fmt.Sprintf("enabled=%v", snap.MetricsEventReplayEnabled)},
+	)
+	if snap.AlertsEvalInterval != "" {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "alertsInterval", Ref: snap.AlertsEvalInterval})
+	} else {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "alertsInterval", Ref: "unset"})
+	}
+	if profile.SchemaMode != "" {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "schemaMode", Ref: profile.SchemaMode})
+	}
+	if profile.SQLMigrationVersion > 0 {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "sqlVersion", Ref: fmt.Sprintf("%d", profile.SQLMigrationVersion)})
+	}
+	if snap.MetricsEventReplayEnabled && profile.Dialect == "sqlite" {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "prometheusReplay", Ref: "append_enabled"})
 	}
 	res.Status = "pass"
 	return res

@@ -31,4 +31,4 @@ bash scripts/verify-local.sh
 
 - 新 HTTP 端点：handler 注释 → `make swagger` → `doc/api/openapi-ash-v1.yaml` → `make openapi-check`。
 - 新 Postgres 表：SQL 修订 + `expectedVersion`；有 `space_id` 的表同步 RLS（`000013`）；全局审计表单独说明。
-- Doctor 新用例：同步更新 `TestTR3Suite` / `TestALLSuite` 计数与 `DoctorReportView` / Scale 卡片。
+- Doctor 新用例：同步更新 `TestTR3Suite` / `TestALLSuite` / `TestM3Suite` 计数与 Scale 卡片。

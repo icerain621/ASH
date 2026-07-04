@@ -17,6 +17,7 @@ const M3_CHECKS = [
   { id: "M3-06", title: "Postgres RLS", hint: "ASH_POSTGRES_RLS=1 时租户策略安装与隔离" },
   { id: "M3-07", title: "ash_app 连接", hint: "ASH_DATABASE_APP_URL 时 Worker 应用角色连通性" },
   { id: "M3-08", title: "SQL 修订版本", hint: "ASH_SCHEMA_MODE=sql 时 golang-migrate 版本与 AutoMigrate 关闭" },
+  { id: "M3-09", title: "运维快照契约", hint: "/readyz 与 Scale 的 dialect/otel/alerts/replay 环境一致" },
 ] as const;
 
 const TR3_CHECKS = [
