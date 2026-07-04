@@ -463,6 +463,14 @@ components:
         error: { type: string }
         schemaMode: { type: string, enum: [automigrate, sql] }
         sqlMigrationVersion: { type: integer }
+        sqlMigrationExpected: { type: integer }
+        postgresRLSEnabled: { type: boolean }
+        postgresRLSPolicyCount: { type: integer, format: int64 }
+        postgresRLSPolicyExpected: { type: integer, format: int64 }
+        rlsCatalogSummary: { type: string }
+        readinessWarnings:
+          type: array
+          items: { type: string }
         otelEnabled: { type: boolean }
         alertsEvalInterval: { type: string, example: 5m0s }
         metricsEventReplayEnabled: { type: boolean }

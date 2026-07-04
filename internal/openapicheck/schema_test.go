@@ -24,7 +24,7 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		{"PluginHealthSummary", "internal_api.PluginHealthSummary", 5},
 		{"RAGProfileResponse", "github_com_ash-repwiki_ash_internal_rag.Profile", 6},
 		{"OtelStatusResponse", "github_com_ash-repwiki_ash_internal_observability_otel.Status", 3},
-		{"HealthResponse", "internal_api.HealthResponse", 5},
+		{"HealthResponse", "internal_api.HealthResponse", 11},
 		{"RunSummaryResponse", "github_com_ash-repwiki_ash_internal_runs.Summary", 8},
 		{"RunListResponse", "internal_api.RunListResponse", 1},
 		{"RunCreateResponse", "github_com_ash-repwiki_ash_internal_runs.CreateResponse", 2},

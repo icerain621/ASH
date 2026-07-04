@@ -1505,6 +1505,23 @@ func (s *Service) m3WorkerOpsContract() CaseResult {
 	if profile.SQLMigrationVersion > 0 {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "sqlVersion", Ref: fmt.Sprintf("%d", profile.SQLMigrationVersion)})
 	}
+	if profile.SQLMigrationExpected > 0 {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "sqlExpected", Ref: fmt.Sprintf("%d", profile.SQLMigrationExpected)})
+	}
+	if store.PostgresRLSEnabled() {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "rlsCatalog", Ref: store.FormatRLSCatalogSummary()})
+		if profile.PostgresRLSPolicyExpected == 0 {
+			profile.PostgresRLSPolicyExpected = int64(store.PostgresRLSExpectedPolicyCount())
+		}
+		if s.runs.DB().Dialect() == "postgres" {
+			if n, err := store.CountPostgresRLSPolicies(s.runs.DB()); err == nil {
+				profile.PostgresRLSPolicyCount = n
+			}
+		}
+		if profile.PostgresRLSPolicyExpected > 0 {
+			res.Evidence = append(res.Evidence, Evidence{Kind: "rlsPolicies", Ref: fmt.Sprintf("%d/%d", profile.PostgresRLSPolicyCount, profile.PostgresRLSPolicyExpected)})
+		}
+	}
 	if snap.MetricsEventReplayEnabled && profile.Dialect == "sqlite" {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "prometheusReplay", Ref: "append_enabled"})
 	}

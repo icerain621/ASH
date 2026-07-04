@@ -8219,9 +8219,30 @@ const docTemplate = `{
                 "otelEnabled": {
                     "type": "boolean"
                 },
+                "postgresRLSEnabled": {
+                    "type": "boolean"
+                },
+                "postgresRLSPolicyCount": {
+                    "type": "integer"
+                },
+                "postgresRLSPolicyExpected": {
+                    "type": "integer"
+                },
+                "readinessWarnings": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "rlsCatalogSummary": {
+                    "type": "string"
+                },
                 "schemaMode": {
                     "type": "string",
                     "example": "sql"
+                },
+                "sqlMigrationExpected": {
+                    "type": "integer"
                 },
                 "sqlMigrationVersion": {
                     "type": "integer"

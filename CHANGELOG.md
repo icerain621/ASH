@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AB: `/readyz` 暴露 RLS/SQL 漂移字段（`postgresRLSPolicyExpected`、`rlsCatalogSummary`、`readinessWarnings`）；Doctor **M3-09** 补 `rlsCatalog`/`rlsPolicies`/`sqlExpected` 证据；`postgres-e2e.yml` 新增 `postgres-rls-e2e` job。
 - Sprint AA: Scale readiness `postgresRLSPolicyExpected` / `rlsCatalogSummary` + RLS/SQL 漂移 `readinessWarnings`；`regression-short` RLS catalog 冒烟；`doc/checklists/postgres-rls-new-table.md`；RDS 清单同步 rev 20 / 41 policies。
 - Sprint Z: SQL rev **20** org identity RLS (`users`/`orgs`/`roles`/`members` via `app.ash_org_id`); Worker RLS middleware resolves `spaces.org_id`; policy count **41**; `PostgresRLSDeferredTables()` empty.
 - Sprint Y: Postgres integration `TestPostgresRLSSpaceIsolationOnMemoryChildren`（rev 19）；`postgres-rls-e2e` / `postgres-sql-schema-e2e` 接入 RLS 子表校验；附录 C memory 子表 RLS 说明。

@@ -240,15 +240,31 @@ func (h *Handler) readyz(c *gin.Context) {
 func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 	ops := workerOpsSnapshot()
 	profile, _ := store.DatabaseProfile(h.db.DataDir(), store.RuntimeDatabaseURL())
+	if profile.PostgresRLSEnabled && h.db.Dialect() == "postgres" {
+		if n, err := store.CountPostgresRLSPolicies(h.db); err == nil {
+			profile.PostgresRLSPolicyCount = n
+		}
+	}
+	migSnap, _ := store.MigrationSnapshotFor(h.db.DataDir())
+	rlsEnv := store.PostgresRLSEnabled()
 	resp := HealthResponse{
 		Status:                    status,
 		Dialect:                   h.db.Dialect(),
 		Error:                     errMsg,
 		SchemaMode:                profile.SchemaMode,
 		SQLMigrationVersion:       profile.SQLMigrationVersion,
+		SQLMigrationExpected:      profile.SQLMigrationExpected,
+		PostgresRLSEnabled:        profile.PostgresRLSEnabled,
+		PostgresRLSPolicyCount:    profile.PostgresRLSPolicyCount,
+		PostgresRLSPolicyExpected: profile.PostgresRLSPolicyExpected,
+		RLSCatalogSummary:         rlsCatalogSummary(profile),
+		ReadinessWarnings:         scaleReadinessWarnings(profile, migSnap),
 		OtelEnabled:               ops.OtelEnabled,
 		AlertsEvalInterval:        ops.AlertsEvalInterval,
 		MetricsEventReplayEnabled: ops.MetricsEventReplayEnabled,
+	}
+	if rlsEnv && resp.PostgresRLSPolicyExpected == 0 {
+		resp.PostgresRLSPolicyExpected = int64(store.PostgresRLSExpectedPolicyCount())
 	}
 	return resp
 }

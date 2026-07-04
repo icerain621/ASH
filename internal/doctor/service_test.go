@@ -233,6 +233,13 @@ func TestM3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M3-05", "skipped")
 	assertCaseEvidence(t, rep, "M3-08", "skipped")
 	assertCaseEvidence(t, rep, "M3-09", "readyzDialect")
+	assertCaseEvidence(t, rep, "M3-09", "sqlExpected")
+	t.Setenv("ASH_POSTGRES_RLS", "1")
+	repRLS, err := svc.RunSuite("M3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	assertCaseEvidence(t, repRLS, "M3-09", "rlsCatalog")
 	assertCaseEvidence(t, rep, "M3-10", "globalTable")
 	assertCaseEvidence(t, rep, "M3-11", "rlsOrg")
 }

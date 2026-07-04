@@ -109,6 +109,10 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		lastSyncErrMs = &ms
 	}
 
+	if dbProfile.PostgresRLSPolicyExpected == 0 && store.PostgresRLSEnabled() {
+		dbProfile.PostgresRLSPolicyExpected = int64(store.PostgresRLSExpectedPolicyCount())
+	}
+
 	c.JSON(http.StatusOK, ScaleReadinessResponse{
 		SpaceID:              space,
 		MemorySchemaVersion:  memory.CurrentSchemaVersion,
@@ -158,10 +162,10 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 }
 
 func rlsCatalogSummary(profile store.DatabaseProfileInfo) string {
-	if profile.Dialect != "postgres" || !profile.PostgresRLSEnabled {
-		return ""
+	if profile.PostgresRLSEnabled || store.PostgresRLSEnabled() {
+		return store.FormatRLSCatalogSummary()
 	}
-	return store.FormatRLSCatalogSummary()
+	return ""
 }
 
 func scaleReadinessWarnings(profile store.DatabaseProfileInfo, mig store.MigrationSnapshot) []string {

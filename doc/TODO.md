@@ -14,7 +14,7 @@
 | T-03 | Doctor TR3-05..09 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **9/9**（TR3-06/08 默认 skip） |
 | T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **41/41** pass |
 | T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **20**、M3 **11/11**（M3-04 skip） |
-| T-06 | CI job | GitHub Actions `ci.yml` + nightly `postgres-e2e.yml` | PR `postgres-sql-schema-e2e`；push main 全量 `postgres-e2e` |
+| T-06 | CI job | GitHub Actions `ci.yml` + `postgres-e2e.yml`（含 `postgres-rls-e2e`） | PR `postgres-sql-schema-e2e` + `regression-short`；push main 全量 e2e |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
 | T-14 | Memory 子表 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryChildren` | 已并入 `postgres-rls-e2e` / `postgres-sql-schema-e2e` |
 | T-15 | Org 身份 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnOrgIdentity` | 已并入 `postgres-rls-e2e`；`verify-local` Docker 可用时自动跑 |
@@ -122,6 +122,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AB：`/readyz` RLS/SQL 漂移信号；Doctor **M3-09** RLS catalog 证据；CI `postgres-rls-e2e` job
 - Sprint AA：Scale RLS 预期策略数 + catalog 摘要 + readiness 漂移告警；RLS 新表清单；`regression-short` store 冒烟
 - Sprint Y：memory 子表 RLS 集成测试 + e2e 脚本接入
 - Sprint W：SQL rev **18** `model_usage` run-scoped RLS；`PostgresRLSDeferredTables()` / `VerifyRLSMigrationSQL()`；Doctor **M3-11**；附录 G §9 OpenAPI

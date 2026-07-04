@@ -2296,9 +2296,23 @@ definitions:
         type: boolean
       otelEnabled:
         type: boolean
+      postgresRLSEnabled:
+        type: boolean
+      postgresRLSPolicyCount:
+        type: integer
+      postgresRLSPolicyExpected:
+        type: integer
+      readinessWarnings:
+        items:
+          type: string
+        type: array
+      rlsCatalogSummary:
+        type: string
       schemaMode:
         example: sql
         type: string
+      sqlMigrationExpected:
+        type: integer
       sqlMigrationVersion:
         type: integer
       status:

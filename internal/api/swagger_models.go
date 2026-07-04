@@ -23,14 +23,20 @@ type APIErrorResponse struct {
 
 // HealthResponse for liveness/readiness probes.
 type HealthResponse struct {
-	Status                    string `json:"status" example:"ok"`
-	Dialect                   string `json:"dialect,omitempty" example:"postgres"`
-	Error                     string `json:"error,omitempty"`
-	SchemaMode                string `json:"schemaMode,omitempty" example:"sql"`
-	SQLMigrationVersion       uint   `json:"sqlMigrationVersion,omitempty"`
-	OtelEnabled               bool   `json:"otelEnabled,omitempty"`
-	AlertsEvalInterval        string `json:"alertsEvalInterval,omitempty" example:"5m0s"`
-	MetricsEventReplayEnabled bool   `json:"metricsEventReplayEnabled,omitempty"`
+	Status                    string   `json:"status" example:"ok"`
+	Dialect                   string   `json:"dialect,omitempty" example:"postgres"`
+	Error                     string   `json:"error,omitempty"`
+	SchemaMode                string   `json:"schemaMode,omitempty" example:"sql"`
+	SQLMigrationVersion       uint     `json:"sqlMigrationVersion,omitempty"`
+	SQLMigrationExpected      uint     `json:"sqlMigrationExpected,omitempty"`
+	PostgresRLSEnabled        bool     `json:"postgresRLSEnabled,omitempty"`
+	PostgresRLSPolicyCount    int64    `json:"postgresRLSPolicyCount,omitempty"`
+	PostgresRLSPolicyExpected int64    `json:"postgresRLSPolicyExpected,omitempty"`
+	RLSCatalogSummary         string   `json:"rlsCatalogSummary,omitempty"`
+	ReadinessWarnings         []string `json:"readinessWarnings,omitempty"`
+	OtelEnabled               bool     `json:"otelEnabled,omitempty"`
+	AlertsEvalInterval        string   `json:"alertsEvalInterval,omitempty" example:"5m0s"`
+	MetricsEventReplayEnabled bool     `json:"metricsEventReplayEnabled,omitempty"`
 }
 
 type AuthSessionResponse struct {
