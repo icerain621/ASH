@@ -146,8 +146,8 @@ func TestTR3Suite(t *testing.T) {
 		}
 		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 7 {
-		t.Fatalf("TR3 pass=%d want 7", rep.Summary.Pass)
+	if rep.Summary.Pass != 9 {
+		t.Fatalf("TR3 pass=%d want 9", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
 	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
@@ -156,6 +156,27 @@ func TestTR3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "TR3-04", "trace")
 	assertCaseEvidence(t, rep, "TR3-05", "metricsParity")
 	assertCaseEvidence(t, rep, "TR3-07", "pluginExport")
+	assertCaseEvidence(t, rep, "TR3-08", "skipped")
+	assertCaseEvidence(t, rep, "TR3-09", "openapiContract")
+}
+
+func TestTR3PrometheusReplaySegmentWhenEnabled(t *testing.T) {
+	t.Setenv("ASH_METRICS_EVENT_REPLAY", "1")
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("TR3")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, r := range rep.Results {
+		if r.ID == "TR3-08" {
+			if r.Status != "pass" {
+				t.Fatalf("TR3-08: %s", r.Message)
+			}
+			assertCaseEvidence(t, rep, "TR3-08", "prometheusReplay")
+			return
+		}
+	}
+	t.Fatal("TR3-08 missing from TR3 suite")
 }
 
 func TestM2Suite(t *testing.T) {
@@ -195,13 +216,13 @@ func TestM3Suite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.Summary.Pass != 9 {
+	if rep.Summary.Pass != 11 {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
 				t.Errorf("%s: %s", r.ID, r.Message)
 			}
 		}
-		t.Fatalf("M3 pass=%d fail=%d want pass=9", rep.Summary.Pass, rep.Summary.Fail)
+		t.Fatalf("M3 pass=%d fail=%d want pass=11", rep.Summary.Pass, rep.Summary.Fail)
 	}
 	assertCaseEvidence(t, rep, "M3-01", "tenantScope")
 	assertCaseEvidence(t, rep, "M3-02", "databaseDialect")
@@ -212,6 +233,8 @@ func TestM3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M3-05", "skipped")
 	assertCaseEvidence(t, rep, "M3-08", "skipped")
 	assertCaseEvidence(t, rep, "M3-09", "readyzDialect")
+	assertCaseEvidence(t, rep, "M3-10", "globalTable")
+	assertCaseEvidence(t, rep, "M3-11", "rlsOrg")
 }
 
 func TestALLSuite(t *testing.T) {
@@ -224,7 +247,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 37
+	want := 41
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

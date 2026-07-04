@@ -8,6 +8,15 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AA: Scale readiness `postgresRLSPolicyExpected` / `rlsCatalogSummary` + RLS/SQL 漂移 `readinessWarnings`；`regression-short` RLS catalog 冒烟；`doc/checklists/postgres-rls-new-table.md`；RDS 清单同步 rev 20 / 41 policies。
+- Sprint Z: SQL rev **20** org identity RLS (`users`/`orgs`/`roles`/`members` via `app.ash_org_id`); Worker RLS middleware resolves `spaces.org_id`; policy count **41**; `PostgresRLSDeferredTables()` empty.
+- Sprint Y: Postgres integration `TestPostgresRLSSpaceIsolationOnMemoryChildren`（rev 19）；`postgres-rls-e2e` / `postgres-sql-schema-e2e` 接入 RLS 子表校验；附录 C memory 子表 RLS 说明。
+- Sprint X: SQL rev **19** memory-scoped RLS (`memory_evidence`/`memory_reviews` via `ash_rls_memory_visible`); `PostgresRLSMemoryScopedTables()`; policy count **37**; deferred catalog reduced to org identity tables.
+- Sprint W: SQL rev **18** run-scoped RLS for `model_usage`; `PostgresRLSDeferredTables()` + `VerifyRLSMigrationSQL()`; Doctor **M3-11** migration/RLS catalog parity; appendix G §9 OpenAPI/legacy `/v1/*`.
+- Sprint V: Doctor **TR3-09** OpenAPI contract alignment (`openapicheck.ValidateContract`); `make openapi-check` runs full `internal/openapicheck` suite (path + schema + envelope); `regression-short` adds contract smoke tests.
+- OpenAPI schemas for tool calls, agent tasks, quality metrics, M2 permission matrix, and KPI metrics overview.
+- Sprint U: Doctor **M3-10** RLS global table exclusions (`memory_migrations`, `schema_meta`); `PostgresRLSGlobalTables()` catalog; SQL rev 15 table comment; `verify-local` runs `regression-short`.
+- Sprint T: Doctor **TR3-08** Prometheus event-replay segment (`ASH_METRICS_EVENT_REPLAY=1`); `make regression-short` quick regression target; alerts `TestPrometheusEventReplaySegment`.
 - Sprint S: memory tests use `store.OpenTest` for reliable DB cleanup; Doctor report UI labels for M3-03..M3-09.
 - Sprint R: `internal/opsenv` shared worker ops snapshot; Doctor **M3-09** readyz/Scale contract; CI runs full `postgres-e2e` on push to main.
 - Sprint Q: `/readyz` exposes schema mode, SQL migration version, OTel, alerts eval interval, and metrics replay flags; production config observability section; CI PR job `postgres-sql-schema-e2e`.

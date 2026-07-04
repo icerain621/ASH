@@ -20,6 +20,7 @@ type DatabaseProfileInfo struct {
 	PostgresRLSEnabled bool   `json:"postgresRLSEnabled"`
 	PostgresRLSForce   bool   `json:"postgresRLSForce"`
 	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
+	PostgresRLSPolicyExpected int64 `json:"postgresRLSPolicyExpected,omitempty"`
 	DSNHint                string `json:"dsnHint,omitempty"`
 	SchemaMode             string `json:"schemaMode,omitempty"`
 	SQLMigrationsEnabled   bool   `json:"sqlMigrationsEnabled,omitempty"`
@@ -63,6 +64,9 @@ func DatabaseProfile(dataDir, databaseURL string) (DatabaseProfileInfo, error) {
 		profile.PostgresRLSEnabled = PostgresRLSEnabled()
 		profile.PostgresRLSForce = PostgresRLSForce()
 		profile.SQLMigrationVersion = schema.SQLMigrationVersion
+		if profile.PostgresRLSEnabled {
+			profile.PostgresRLSPolicyExpected = int64(PostgresRLSExpectedPolicyCount())
+		}
 	}
 	return profile, nil
 }

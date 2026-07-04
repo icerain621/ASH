@@ -29,6 +29,9 @@ jobs:
       - name: Make test
         run: make test
 
+      - name: Regression short
+        run: make regression-short
+
       - name: Doctor M3 static
         run: go run ./cmd/cli doctor --suite M3 --format md --agent static
 

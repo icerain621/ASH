@@ -59,3 +59,15 @@ func TestAlignContractSubset(t *testing.T) {
 		t.Fatalf("undocumented=%v", rep.Undocumented)
 	}
 }
+
+func TestApiV1SuccessResponsesAvoidGenericEnvelope(t *testing.T) {
+	root := repoRoot(t)
+	contract := filepath.Join(root, "doc/api/openapi-ash-v1.yaml")
+	hits, err := FindGenericSuccessEnvelopeOps(contract, "/api/v1/", "ApiResponse")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(hits) > 0 {
+		t.Fatalf("/api/v1/* must not use generic ApiResponse on 2xx JSON:\n%s", strings.Join(hits, "\n"))
+	}
+}

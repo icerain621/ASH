@@ -36,6 +36,9 @@ func TestHealthzAndReadyzSQLite(t *testing.T) {
 			if resp.Status != "ready" || resp.Dialect != "sqlite" {
 				t.Fatalf("readyz=%+v want ready/sqlite", resp)
 			}
+			if resp.OtelEnabled || resp.MetricsEventReplayEnabled || resp.AlertsEvalInterval != "" {
+				t.Fatalf("readyz=%+v want default ops flags unset", resp)
+			}
 		} else if resp.Status != "ok" {
 			t.Fatalf("healthz=%+v want ok", resp)
 		}

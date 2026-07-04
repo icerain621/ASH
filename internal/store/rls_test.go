@@ -15,6 +15,16 @@ func TestPostgresRLSPolicyExprIncludesBypassAndSpace(t *testing.T) {
 	}
 }
 
+func TestPostgresRLSMemoryPolicyExprJoinsMemoryRecords(t *testing.T) {
+	expr := postgresRLSMemoryPolicyExpr()
+	if !strings.Contains(expr, "memory_records") || !strings.Contains(expr, "memory_id") {
+		t.Fatalf("expr=%q missing memory join", expr)
+	}
+	if !strings.Contains(expr, RLSBypassSetting) || !strings.Contains(expr, RLSSpaceSetting) {
+		t.Fatalf("expr=%q missing bypass/space settings", expr)
+	}
+}
+
 func TestPostgresRLSTablesCoverCoreTenantData(t *testing.T) {
 	names := map[string]struct{}{}
 	for _, tbl := range PostgresRLSTables() {

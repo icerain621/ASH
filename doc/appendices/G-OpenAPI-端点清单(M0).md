@@ -20,8 +20,8 @@
 **验收方式**：TR0/1 失败路径返回 `{"error":{"code","message"}}` 统一形状。
 
 ## 2. Health / Docs / Metrics
-- `GET /healthz`：存活探针
-- `GET /readyz`：就绪探针（DB/关键依赖检查）
+- `GET /healthz`：存活探针 → `HealthResponse`
+- `GET /readyz`：就绪探针（DB/关键依赖检查）→ `HealthResponse`（含 `dialect`/`schemaMode`/`otelEnabled`/`alertsEvalInterval`/`metricsEventReplayEnabled`）
 - `GET /metrics`：Prometheus 指标（全局运维 scrape；RLS 开启时 bypass）
 - `GET /api/v1/metrics/prometheus`：租户范围 Prometheus 文本（需 `observability:read`）
 - `GET /docs`：Swagger UI（或 `/swagger/*any`）
@@ -109,20 +109,82 @@
 - `POST /compliance/export` — 审计包（含 Doctor 报告 + `secretScan` 摘要）
 
 ### 8.3 规模化（TR3）
-- `GET /scale/readiness` — 记忆/RAG/成本/审计就绪快照
-- `GET /runs/{runId}/provenance` — 交付溯源链（trace/事件/工具/产物）
+- `GET /scale/readiness` — `ScaleReadinessResponse`（见 §8.6）
+- `GET /runs/{runId}/provenance` — `ProvenanceResponse`（`runId`/`traceId`/`scenario`/计数/`links[]`）
+
+### 8.3.1 合规（TR2）OpenAPI schema
+- `GET /compliance/secret-scan` — `SecretScanResponse`（`findings[]`/`leakCount`/`redactEnabled`）
+- `POST /compliance/export` — `ComplianceExportResponse`（202；含 `DoctorReportResponse`）
+
+### 8.3.2 可观测 / RAG / 插件
+- `GET /rag/profile` — `RAGProfileResponse`
+- `GET /observability/otel/status` — `OtelStatusResponse`
+- `GET /plugins/health` — `PluginHealthSummary`
+
+### 8.3.3 Runs / Doctor
+- `GET /runs` — `RunListResponse`（`items[]` → `RunSummaryResponse`）
+- `POST /runs` — `RunCreateResponse`（201）
+- `GET /runs/{runId}` — `RunSummaryResponse`
+- `POST /doctor/run` — `DoctorRunRequest` → `DoctorRunResponse`
+- `GET /doctor/reports/{reportId}` — `DoctorReportResponse`
+
+### 8.3.4 Runs 检查 / 产物 / 场景
+- `GET /runs/{runId}/tool-calls` — `ToolCallListResponse`
+- `GET /runs/{runId}/agent-tasks` — `AgentTaskListResponse`
+- `GET /runs/{runId}/quality-metrics` — `QualityMetricListResponse`
+- `GET /runs/{runId}/artifacts` — `ArtifactsManifestResponse`
+- `GET /runs/{runId}/artifacts/{name}/access` — `ArtifactAccessResponse`
+- `GET /runs/{runId}/timeline` — `TimelineAPIResponse`
+- `GET /scenarios` — `ScenarioListResponse`
+- `GET /scenarios/{name}/{version}` — `ScenarioDetailResponse`
+- `POST /scenarios/validate` — `ValidateScenarioRequest` → `ValidationResponse`
+- `GET /storage/profile` — `StorageProfileResponse`
+
+### 8.3.5 KPI
+- `GET /metrics/overview` — `MetricsOverviewResponse`
 
 ### 8.4 平台（补充）
 - `GET /spaces/{spaceId}/resource-scopes` — 资源作用域列表
 - `PUT /spaces/{spaceId}/resource-scopes/{scopeId}` — 更新场景工具策略（`policyJson`）
 
 ### 8.5 M2 权限矩阵
-- `GET /permissions/matrix` — 当前空间的 RBAC + 场景工具矩阵
-- `GET /spaces/{spaceId}/permissions/matrix` — 指定空间矩阵
+- `GET /permissions/matrix` — `PermissionMatrixResponse`（`catalog`/`builtinRoles`/`scenarioTools`）
+- `GET /spaces/{spaceId}/permissions/matrix` — 同上
 - 创建空间时自动种子 `scenario` 资源作用域（三场景 × 角色工具 allow/deny）
 - 创建 Run 时写入 `actorRole`；工具链执行前按场景矩阵校验并发出 `policy.denied`
 - 更新场景策略写入 `scope.policy_updated` 审计
 
 ### 8.6 M3 规模化 / 数据库
-- `GET /scale/readiness` 含 `databaseDialect`、`postgresConfigured`、`migrationReady`
+- `GET /scale/readiness` 返回 `ScaleReadinessResponse`（手写契约 `doc/api/openapi-ash-v1.yaml` 与 swag 字段对齐）：
+  - **租户数据**：`spaceId`、`memoryApprovedCount`、`ragDocumentCount`、`ragChunkCount`、`qualityMetricRows`、`auditLogRows`
+  - **数据库 / 迁移**：`databaseDialect`、`postgresConfigured`、`migrationReady`、`migrationTableCount`、`sqlitePath`、`dualWrite*`、`lastMigrationSync*`
+  - **Postgres RLS / 角色**：`postgresRLSEnabled`、`postgresRLSForce`、`postgresRLSPolicyCount`、`postgresAppUrlConfigured`、`workerConnectionRole`、`runtimeDsnHint`
+  - **Schema 模式**：`schemaMode`、`sqlMigrationsEnabled`、`autoMigrateEnabled`、`sqlMigrationVersion`、`sqlMigrationExpected`、`readinessWarnings`
+  - **记忆 / RAG**：`memorySchemaVersion`、`memoryCatalogVersion`、`memoryPendingMigrationRecords`、`ragFtsAvailable`、`ragFtsEngine`、`ragDefaultRetrievalMode`、`ragFallbackQueryCount`
+  - **可观测 / 运维**：`modelUsageRows`、`modelCostMicrosTotal`、`otelEnabled`、`alertsEvalInterval`、`metricsEventReplayEnabled`
+
+## 9. OpenAPI 契约与规划路径（M0+）
+
+- **手写契约**：`doc/api/openapi-ash-v1.yaml`（产品承诺 + M0 规划）
+- **实现真源**：`internal/api/docs/swagger.yaml`（`make swagger` 再生）
+- **CI 校验**：`make openapi-check`（path 子集 + schema 字段对齐 + swag 确定性）
+- **Doctor TR3-09**：`openapicheck.ValidateContract`（`/api/v1` 路径覆盖 + 2xx 无泛型 `ApiResponse`）
+
+### 9.1 已实现 Base Path（`/api/v1/*`）
+
+全部 2xx JSON 成功响应绑定具体 `components.schemas`（见 `openapi-alignment.md`）。核心域包括：Runs/Doctor、Memory、Compliance/Scale、CI/KPI、Observability/RAG、Org/Auth、Releases/Approvals/Audit、Improve/Plugins。
+
+### 9.2 M0 规划路径（`/v1/*`，未实现）
+
+| 规划 | 实现对照 | 响应 schema |
+|------|----------|-------------|
+| `POST /v1/tasks` | `/api/v1/runs` + 编排 | `CreateTaskResponseData` |
+| `GET /v1/tasks/{taskId}` | 规划中 | `TaskDetailResponse` |
+| `POST /v1/memories` | `POST /api/v1/memory/candidates` | `LegacyMemoryCreateResponse` |
+| `POST /v1/memories/search` | `POST /api/v1/memory/query` | `MemoryQueryResponse` |
+| `GET /v1/agent-runs/{runId}` | `GET /api/v1/runs/{runId}` | `AgentRun` |
+| `GET /v1/runs/{runId}/stream` | `GET /api/v1/runs/{runId}/stream` | `text/event-stream` |
+| `POST /v1/spaces` | `POST /api/v1/spaces` | `SpaceItem` |
+| `POST /v1/spaces/{spaceId}/members` | `POST /api/v1/spaces/{spaceId}/members` | `MemberItem` |
+| `POST /v1/feedback` | `POST /api/v1/feedback` | `FeedbackItem` |
 

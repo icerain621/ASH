@@ -26,6 +26,8 @@ const CASE_LABELS: Record<string, string> = {
   "TR3-05": "指标回放一致",
   "TR3-06": "Postgres RAG FTS",
   "TR3-07": "插件导出健康",
+  "TR3-08": "Prometheus replay 段",
+  "TR3-09": "OpenAPI 契约对齐",
   "M2-01": "权限矩阵",
   "M2-02": "场景策略更新",
   "M2-03": "运行期策略拒绝",
@@ -38,6 +40,8 @@ const CASE_LABELS: Record<string, string> = {
   "M3-07": "ash_app 连接",
   "M3-08": "SQL 修订版本",
   "M3-09": "运维快照契约",
+  "M3-10": "RLS 全局表排除",
+  "M3-11": "RLS 迁移目录",
 };
 
 function caseLabel(id: string) {

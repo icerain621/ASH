@@ -2,6 +2,7 @@ package api
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -28,7 +29,11 @@ func (h *Handler) rlsMiddleware() gin.HandlerFunc {
 		if bypass {
 			ctx = store.WithRLSBypassContext(ctx)
 		} else {
-			ctx = store.WithRLSSpaceContext(ctx, currentSpace(c))
+			spaceID := currentSpace(c)
+			ctx = store.WithRLSSpaceContext(ctx, spaceID)
+			if orgID, err := h.lookupSpaceOrgID(c, spaceID); err == nil && orgID != "" {
+				ctx = store.WithRLSOrgContext(ctx, orgID)
+			}
 		}
 		c.Request = c.Request.WithContext(ctx)
 		c.Next()
@@ -129,4 +134,16 @@ func (h *Handler) metricsFor(c *gin.Context) *metricssvc.Service {
 		return h.metrics
 	}
 	return h.metrics.WithContext(c.Request.Context())
+}
+
+func (h *Handler) lookupSpaceOrgID(c *gin.Context, spaceID string) (string, error) {
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" || h == nil || h.db == nil {
+		return "", nil
+	}
+	var row struct {
+		OrgID string
+	}
+	err := h.dbBypass(c).Table("spaces").Select("org_id").Where("id = ?", spaceID).Scan(&row).Error
+	return strings.TrimSpace(row.OrgID), err
 }

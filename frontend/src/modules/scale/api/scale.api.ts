@@ -24,6 +24,8 @@ export type ScaleReadiness = {
   postgresRLSEnabled?: boolean;
   postgresRLSForce?: boolean;
   postgresRLSPolicyCount?: number;
+  postgresRLSPolicyExpected?: number;
+  rlsCatalogSummary?: string;
   postgresAppUrlConfigured?: boolean;
   workerConnectionRole?: string;
   runtimeDsnHint?: string;

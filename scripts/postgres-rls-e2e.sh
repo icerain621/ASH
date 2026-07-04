@@ -35,6 +35,8 @@ go test -tags=integration ./internal/store/ -run TestPostgresRLSPoliciesInstalle
 
 echo "== RLS isolation (ash_rls_tester) =="
 go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryRecords -count=1
+go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryChildren -count=1
+go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnOrgIdentity -count=1
 
 if [[ "${ASH_MIGRATE_E2E:-}" == "1" ]]; then
   echo "== RLS on migrated postgres (ash_app) =="

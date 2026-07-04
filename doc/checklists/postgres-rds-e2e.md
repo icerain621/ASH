@@ -58,10 +58,10 @@ bash scripts/postgres-smoke.sh
 ```bash
 export ASH_SCHEMA_MODE=sql
 
-# 建表（golang-migrate 000001–000014，空库）
+# 建表（golang-migrate 000001–000020，空库）
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
-# 期望 version=14 expected=14 mode=sql
+# 期望 version=20 expected=20 mode=sql
 
 go run ./cmd/cli doctor --suite M3
 
@@ -71,8 +71,8 @@ bash scripts/postgres-ensure-app-role.sh
 
 | # | 检查 | 通过标准 |
 |---|------|----------|
-| 2.1 | 表目录 | **M3-03** pass，catalog ≥41 表；**M3-08** `sqlVersion=14` |
-| 2.2 | RLS SQL | **M3-06** pass，`rlsPolicies` ≥34（修订 000013） |
+| 2.1 | 表目录 | **M3-03** pass，catalog ≥43 表；**M3-08** `sqlVersion=20` |
+| 2.2 | RLS SQL | **M3-06** pass，`rlsPolicies` ≥41（修订 000013–000020） |
 | 2.3 | `ash_app` 存在 | `\du ash_app` 或 M3-07 ping ok |
 | 2.4 | 密码策略 | 生产强密码已轮换，`ASH_DATABASE_APP_URL` 已更新 |
 
@@ -129,8 +129,8 @@ go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate 
 
 | # | 检查 | 通过标准 |
 |---|------|----------|
-| 4.1 | 策略数量 | **M3-06** pass，`rlsPolicies` ≥ 预期（约 34） |
-| 4.2 | `ash_rls_tester` 隔离 | `TestPostgresRLSSpaceIsolationOnMemoryRecords` pass |
+| 4.1 | 策略数量 | **M3-06** pass，`rlsPolicies` ≥ **41**（修订 000013–000020） |
+| 4.2 | `ash_rls_tester` 隔离 | `TestPostgresRLSSpaceIsolationOnMemoryRecords` + `MemoryChildren` + `OrgIdentity` pass |
 | 4.3 | `ash_app` 无 DDL | `TestPostgresRLSE2EAfterMigrate` pass |
 | 4.4 | 跨 space 不可见 | 无 `ash_app` 泄漏行 |
 
@@ -237,9 +237,9 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 ## 10. 证据归档（发布门禁）
 
 - [ ] `migrate plan` / `verify` 输出日志
-- [ ] `migrate schema version` 输出（version=14）
-- [ ] `doctor --suite M3` 报告（8/8 pass）
-- [ ] `doctor --suite ALL` 报告（37/37 pass）
+- [ ] `migrate schema version` 输出（version=20）
+- [ ] `doctor --suite M3` 报告（11/11 pass）
+- [ ] `doctor --suite ALL` 报告（41/41 pass）
 - [ ] RLS 集成测试日志
 - [ ] `readyz` 响应 + 切换时间戳
 - [ ] §7 业务抽样记录

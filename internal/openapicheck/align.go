@@ -94,6 +94,54 @@ func AlignContract(contract, swagger PathMethods, enforcedPrefix, legacyPlannedP
 	return rep
 }
 
+// FindGenericSuccessEnvelopeOps returns enforced-prefix operations whose 2xx
+// application/json response references genericSchema (e.g. ApiResponse).
+func FindGenericSuccessEnvelopeOps(contractPath, enforcedPrefix, genericSchema string) ([]string, error) {
+	data, err := os.ReadFile(contractPath)
+	if err != nil {
+		return nil, err
+	}
+	var root map[string]any
+	if err := yaml.Unmarshal(data, &root); err != nil {
+		return nil, err
+	}
+	rawPaths, _ := root["paths"].(map[string]any)
+	refSuffix := "#/components/schemas/" + genericSchema
+	var hits []string
+	for p, raw := range rawPaths {
+		if !strings.HasPrefix(p, enforcedPrefix) {
+			continue
+		}
+		ops, _ := raw.(map[string]any)
+		for method, rawOp := range ops {
+			kl := strings.ToLower(method)
+			if !httpMethods[kl] {
+				continue
+			}
+			op, _ := rawOp.(map[string]any)
+			responses, _ := op["responses"].(map[string]any)
+			for code, rawResp := range responses {
+				if len(code) == 0 || code[0] != '2' {
+					continue
+				}
+				resp, _ := rawResp.(map[string]any)
+				content, _ := resp["content"].(map[string]any)
+				jsonCt, _ := content["application/json"].(map[string]any)
+				if jsonCt == nil {
+					continue
+				}
+				schema, _ := jsonCt["schema"].(map[string]any)
+				ref, _ := schema["$ref"].(string)
+				if ref == refSuffix || strings.HasSuffix(ref, "/"+genericSchema) {
+					hits = append(hits, fmt.Sprintf("%s %s %s", p, strings.ToUpper(kl), code))
+				}
+			}
+		}
+	}
+	sort.Strings(hits)
+	return hits, nil
+}
+
 // FormatReport returns a human-readable summary.
 func FormatReport(rep AlignReport) string {
 	var b strings.Builder

@@ -1,4 +1,4 @@
-# Postgres 生产配置模板（revision 17）
+# Postgres 生产配置模板（revision 20）
 
 > 切换生产前复制本模板为环境变量/密钥配置。本地验证：`make postgres-sql-schema-e2e`、`make postgres-rls-e2e`。
 
@@ -50,7 +50,7 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 # 3. 门禁
 go run ./cmd/cli doctor --suite M3 --format md
 go run ./cmd/cli doctor --suite ALL --agent static --format md
-# 期望：M3 9/9，ALL 37/37（M3-09 readyz 契约，TR3-05..07）
+# 期望：M3 11/11，ALL 41/41（M3-09 readyz 契约，M3-10 RLS 全局表，M3-11 RLS 目录，TR3-05..09）
 ```
 
 ## 可观测性（可选）

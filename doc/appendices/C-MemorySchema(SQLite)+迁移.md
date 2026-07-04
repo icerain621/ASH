@@ -131,7 +131,8 @@ CREATE INDEX IF NOT EXISTS idx_audit_run ON audit_log(run_id);
 
 ## 6. 迁移与向后兼容
 - `schema_version`：每条 record 自带版本。
-- `memory_migrations`：记录迁移批次（from→to、工具版本、摘要）。
+- `memory_migrations`：记录迁移批次（from→to、工具版本、摘要）。**Postgres RLS**：全局审计表（无 `space_id`），见 `store.PostgresRLSGlobalTables()`，不纳入 `000013` 租户策略（Doctor **M3-10**）。
+- `memory_evidence` / `memory_reviews`：无 `space_id`，通过 `memory_id` 关联 `memory_records`。**Postgres RLS**：SQL rev **19** `ash_rls_memory_visible`（`PostgresRLSMemoryScopedTables()`）；集成测试 `TestPostgresRLSSpaceIsolationOnMemoryChildren`（`make postgres-rls-e2e`）。
 - **兼容策略**
   - 旧记录：保持只读可检索（compat layer 映射到当前内部表示）
   - 新写入：强制使用当前 schema_version

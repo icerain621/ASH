@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health web web-build web-dev verify regression-short
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -88,6 +88,14 @@ postgres-rds-e2e:
 
 verify:
 	bash scripts/verify-local.sh
+
+regression-short:
+	cd $(BACKEND_DIR) && go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/alerts/... -count=1
+	cd $(BACKEND_DIR) && go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/memory/... -count=1 -short
+	cd $(BACKEND_DIR) && go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract' -count=1
+	cd $(BACKEND_DIR) && go test ./internal/store -run 'TestMigrationCatalog_RLSCoverage|TestVerifyRLSMigrationSQL|TestRLSExpectedPolicyCount' -count=1
 
 web-build:
 	cd frontend && npm install && npm run build

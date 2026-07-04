@@ -18,6 +18,8 @@ const M3_CHECKS = [
   { id: "M3-07", title: "ash_app 连接", hint: "ASH_DATABASE_APP_URL 时 Worker 应用角色连通性" },
   { id: "M3-08", title: "SQL 修订版本", hint: "ASH_SCHEMA_MODE=sql 时 golang-migrate 版本与 AutoMigrate 关闭" },
   { id: "M3-09", title: "运维快照契约", hint: "/readyz 与 Scale 的 dialect/otel/alerts/replay 环境一致" },
+  { id: "M3-10", title: "RLS 全局表排除", hint: "memory_migrations/schema_meta 不纳入租户 RLS 策略" },
+  { id: "M3-11", title: "RLS 迁移目录", hint: "迁移表全覆盖；000013–000020 与 Go catalog 一致（含 org 身份表）" },
 ] as const;
 
 const TR3_CHECKS = [
@@ -28,6 +30,8 @@ const TR3_CHECKS = [
   { id: "TR3-05", title: "指标回放一致", hint: "run_events 离线 replay 与 ash_* 计数口径一致" },
   { id: "TR3-06", title: "Postgres RAG FTS", hint: "dialect=postgres 时 tsvector 检索；SQLite 自动 skip" },
   { id: "TR3-07", title: "插件导出健康", hint: "pluginhealth 注册表 + plugin.export_failed 审计" },
+  { id: "TR3-08", title: "Prometheus replay 段", hint: "ASH_METRICS_EVENT_REPLAY=1 时 /metrics 含 derive ash_* replay" },
+  { id: "TR3-09", title: "OpenAPI 契约对齐", hint: "手写 /api/v1 路径与 swag 一致；2xx 无泛型 ApiResponse" },
 ] as const;
 
 export function ScalePage() {
@@ -326,8 +330,14 @@ export function ScalePage() {
               <td>RLS 策略数</td>
               <td>
                 {r?.postgresRLSEnabled
-                  ? `${r.postgresRLSPolicyCount ?? 0} / 34`
+                  ? `${r.postgresRLSPolicyCount ?? 0} / ${r.postgresRLSPolicyExpected ?? 41}`
                   : "—"}
+                {r?.rlsCatalogSummary ? (
+                  <>
+                    <br />
+                    <span className="muted-line">{r.rlsCatalogSummary}</span>
+                  </>
+                ) : null}
               </td>
             </tr>
           </tbody>

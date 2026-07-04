@@ -2543,6 +2543,8 @@ definitions:
         type: boolean
       postgresRLSPolicyCount:
         type: integer
+      postgresRLSPolicyExpected:
+        type: integer
       qualityMetricRows:
         type: integer
       ragChunkCount:
@@ -2561,6 +2563,8 @@ definitions:
         items:
           type: string
         type: array
+      rlsCatalogSummary:
+        type: string
       runtimeDsnHint:
         type: string
       schemaMode:

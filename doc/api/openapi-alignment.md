@@ -14,9 +14,9 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 
 ## 2. 路径前缀约定
 
-- **`/api/v1/*`**：当前平台已实现的真实 Base Path（与 Gin 路由一致）。手写草稿中此前缀下的 path+method **受 `make openapi-check` 强制校验**。
-- **`/v1/*`**：M0 产品愿景（Tasks、AgentRuns、旧版 Memories/Spaces 等），**尚未实现或路径已迁移**。仅作规划参考，检查器会统计但不失败。
-- **运维面**：`GET /healthz`、`GET /readyz`、`GET /metrics` 等由 swag 覆盖，不要求出现在手写草稿中。
+- **`/api/v1/*`**：当前平台已实现的真实 Base Path（与 Gin 路由一致）。手写草稿中此前缀下的 path+method **受 `make openapi-check` 强制校验**；所有 2xx JSON 成功响应均已绑定具体 `components.schemas`（不再使用泛型 `ApiResponse`），并由 `TestApiV1SuccessResponsesAvoidGenericEnvelope` 防回归。
+- **`/v1/*`**：M0 产品愿景（Tasks、AgentRuns、旧版 Memories/Spaces 等），**尚未实现或路径已迁移**。仅作规划参考，检查器会统计但不失败；规划路径的成功响应已改为具体 schema 并注明实现对照（见 §2 迁移表）。
+- **运维面**：`GET /healthz`、`GET /readyz`、`GET /metrics` 由 swag 覆盖；手写草稿已补 `HealthResponse` schema 与 `/healthz`/`/readyz` path（不参与 `/api/v1/*` 强制校验）。
 
 常见迁移对照（规划 → 实现）：
 
@@ -33,7 +33,7 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 
 1. **实现**：在 `internal/api` 增加 handler，并补齐 swag 注释（`@Router`、`@Summary` 等）。
 2. **再生**：`make swagger`（或 `bash scripts/regenerate-swagger.sh`）。
-3. **契约**：若该端点属于对外承诺，在 `doc/api/openapi-ash-v1.yaml` 的 `/api/v1/*` 段补充 path/method（可只写摘要 schema，不必复制全部 swag 类型）。
+3. **契约**：若该端点属于对外承诺，在 `doc/api/openapi-ash-v1.yaml` 的 `/api/v1/*` 段补充 path/method（可只写摘要 schema，不必复制全部 swag 类型）。对外响应体建议定义 `components.schemas` 条目（例如 `ScaleReadinessResponse`），并由 `openapicheck` 校验与 swag 字段一致。
 4. **校验**：`make openapi-check`（见下节）。
 5. **清单**（可选）：更新 `doc/appendices/G-OpenAPI-端点清单(M0).md` 里程碑说明。
 
@@ -44,7 +44,9 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 `scripts/openapi-check.sh` 执行两项检查：
 
 1. **Swag 确定性**：复制 `internal/api/docs` → 临时目录 → 重新 `swag init` → `diff`，确保已提交的 swagger 与当前代码一致（防止忘记 `make swagger`）。
-2. **契约子集**：`go test ./internal/openapicheck -run TestContractMatchesSwagger`，确保手写草稿中每个 `/api/v1/*` 的 HTTP 方法在 `swagger.yaml` 中均存在。
+2. **契约子集**：`go test ./internal/openapicheck -count=1`，确保手写草稿中每个 `/api/v1/*` 的 HTTP 方法在 `swagger.yaml` 中均存在、2xx JSON 无泛型 `ApiResponse`、精选 schema 字段名与 swag 一致。
+3. **Schema 子集**（精选对外类型）：`TestContractSchemasMatchSwagger` / `TestNestedContractSchemasMatchSwagger` 校验手写 `components.schemas` 与 swag `definitions` 字段名一致（含 `RunSummaryResponse`、`DoctorReportResponse`、`HealthResponse` 等）。
+4. **Doctor TR3-09**：`ash doctor --suite TR3` 内嵌 `openapicheck.ValidateContract`（路径 + envelope）；schema 深度对齐仍由 `openapicheck` 测试保障。
 
 手写草稿应覆盖全部已实现的 `/api/v1/*` 端点；若 swag 新增路由而草稿未更新，`TestContractMatchesSwagger` 会失败。补草稿时可运行：
 

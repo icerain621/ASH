@@ -24,7 +24,7 @@ const (
 	SchemaModeDual     = "dual"
 	envSchemaMode      = "ASH_SCHEMA_MODE"
 	envDisableAuto     = "ASH_DISABLE_AUTOMIGRATE"
-	expectedVersion    = 17
+	expectedVersion    = 20
 	postgresDialect    = "postgres"
 )
 

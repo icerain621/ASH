@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/authz"
@@ -16,6 +17,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	"github.com/ash-repwiki/ash/internal/observability/derive"
+	"github.com/ash-repwiki/ash/internal/openapicheck"
 	"github.com/ash-repwiki/ash/internal/opsenv"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
@@ -108,6 +110,8 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
 		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
+		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
+		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -138,6 +142,8 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3AuditProvenance())
 		rep.Results = append(rep.Results, s.tr3MetricsReplayParity())
 		rep.Results = append(rep.Results, s.tr3PluginExportHealth())
+		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
+		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -1177,6 +1183,8 @@ func (s *Service) m3SuiteCases() []CaseResult {
 			s.m3ExecGoLiveSmoke(),
 			s.m3SQLSchemaMode(),
 			s.m3WorkerOpsContract(),
+			s.m3RLSGlobalTables(),
+			s.m3RLSMigrationCatalog(),
 		}
 	}
 	return []CaseResult{
@@ -1189,6 +1197,8 @@ func (s *Service) m3SuiteCases() []CaseResult {
 		s.m3ExecGoLiveSmoke(),
 		s.m3SQLSchemaMode(),
 		s.m3WorkerOpsContract(),
+		s.m3RLSGlobalTables(),
+		s.m3RLSMigrationCatalog(),
 	}
 }
 
@@ -1498,6 +1508,68 @@ func (s *Service) m3WorkerOpsContract() CaseResult {
 	if snap.MetricsEventReplayEnabled && profile.Dialect == "sqlite" {
 		res.Evidence = append(res.Evidence, Evidence{Kind: "prometheusReplay", Ref: "append_enabled"})
 	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3RLSGlobalTables() CaseResult {
+	res := CaseResult{ID: "M3-10", Status: "fail"}
+	global := store.PostgresRLSGlobalTables()
+	if len(global) == 0 {
+		res.Message = "global RLS exclusion catalog empty"
+		return res
+	}
+	protected := make(map[string]struct{})
+	for _, tbl := range store.PostgresRLSTables() {
+		protected[tbl.Table] = struct{}{}
+	}
+	for _, tbl := range store.PostgresRLSRunScopedTables() {
+		protected[tbl] = struct{}{}
+	}
+	for _, name := range global {
+		if _, ok := protected[name]; ok {
+			res.Message = fmt.Sprintf("global table %q must not be tenant RLS scoped", name)
+			return res
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "globalTable", Ref: name})
+	}
+	if s.runs.DB().Dialect() == "postgres" && store.PostgresRLSEnabled() {
+		for _, name := range global {
+			count, err := store.CountPostgresRLSPoliciesOnTable(s.runs.DB(), name)
+			if err != nil {
+				res.Message = err.Error()
+				return res
+			}
+			if count > 0 {
+				res.Message = fmt.Sprintf("global table %q has %d tenant RLS policies", name, count)
+				return res
+			}
+		}
+		res.Evidence = append(res.Evidence, Evidence{Kind: "rlsExclude", Ref: "no ash_space_* on global tables"})
+	} else {
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "live policy check requires postgres+ASH_POSTGRES_RLS=1"})
+	}
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) m3RLSMigrationCatalog() CaseResult {
+	res := CaseResult{ID: "M3-11", Status: "fail"}
+	if gaps := store.MigrationCatalogRLSGaps(); len(gaps) > 0 {
+		res.Message = fmt.Sprintf("migration catalog missing RLS classification: %s", strings.Join(gaps, ", "))
+		return res
+	}
+	if err := store.VerifyRLSMigrationSQL(); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "migrationCatalog", Ref: fmt.Sprintf("tables=%d", store.MigrationCatalogSize())},
+		Evidence{Kind: "rlsPolicies", Ref: fmt.Sprintf("expected=%d", store.PostgresRLSExpectedPolicyCount())},
+		Evidence{Kind: "rlsMemory", Ref: fmt.Sprintf("count=%d", len(store.PostgresRLSMemoryScopedTables()))},
+		Evidence{Kind: "rlsOrg", Ref: fmt.Sprintf("count=%d", len(store.PostgresRLSOrgScopedTables()))},
+		Evidence{Kind: "rlsDeferred", Ref: fmt.Sprintf("count=%d", len(store.PostgresRLSDeferredTables()))},
+	)
 	res.Status = "pass"
 	return res
 }
@@ -1863,6 +1935,68 @@ func (s *Service) tr3PluginExportHealth() CaseResult {
 	res.Evidence = append(res.Evidence,
 		Evidence{Kind: "pluginExport", Ref: row.ID},
 		Evidence{Kind: "exportAudit", Ref: fmt.Sprintf("failed=%d", failedAudits)},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3PrometheusReplaySegment() CaseResult {
+	res := CaseResult{ID: "TR3-08", Status: "fail"}
+	if os.Getenv("ASH_METRICS_EVENT_REPLAY") != "1" {
+		res.Status = "pass"
+		res.Message = "skipped: set ASH_METRICS_EVENT_REPLAY=1 for prometheus replay segment"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "ASH_METRICS_EVENT_REPLAY"})
+		return res
+	}
+	create, _, err := s.createProbeRun("TR3-08")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+	text, err := alerts.NewService(s.runs.DB()).PrometheusText()
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if !strings.Contains(text, "ash_run_total") {
+		res.Message = "prometheus text missing ash_run_total from event replay segment"
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "prometheusReplay", Ref: "ash_run_total"},
+		Evidence{Kind: "eventReplay", Ref: create.RunID},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3OpenAPIContract() CaseResult {
+	res := CaseResult{ID: "TR3-09", Status: "fail"}
+	root, err := openapicheck.DefaultRepoRoot()
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	rep, err := openapicheck.ValidateContract(root)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if len(rep.MissingPaths) > 0 {
+		res.Message = fmt.Sprintf("contract missing %d swagger ops", len(rep.MissingPaths))
+		res.Evidence = append(res.Evidence, Evidence{Kind: "openapiMissing", Ref: rep.MissingPaths[0]})
+		return res
+	}
+	if len(rep.GenericEnvelope) > 0 {
+		res.Message = fmt.Sprintf("%d /api/v1 2xx responses still use ApiResponse", len(rep.GenericEnvelope))
+		res.Evidence = append(res.Evidence, Evidence{Kind: "openapiEnvelope", Ref: rep.GenericEnvelope[0]})
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "openapiContract", Ref: "doc/api/openapi-ash-v1.yaml"},
+		Evidence{Kind: "swaggerSoT", Ref: "internal/api/docs/swagger.yaml"},
+		Evidence{Kind: "legacyPlanned", Ref: fmt.Sprintf("paths=%d", rep.LegacyPlanned)},
 	)
 	res.Status = "pass"
 	return res

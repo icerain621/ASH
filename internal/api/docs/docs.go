@@ -8598,6 +8598,9 @@ const docTemplate = `{
                 "postgresRLSPolicyCount": {
                     "type": "integer"
                 },
+                "postgresRLSPolicyExpected": {
+                    "type": "integer"
+                },
                 "qualityMetricRows": {
                     "type": "integer"
                 },
@@ -8624,6 +8627,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "rlsCatalogSummary": {
+                    "type": "string"
                 },
                 "runtimeDsnHint": {
                     "type": "string"

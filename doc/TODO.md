@@ -11,11 +11,13 @@
 |---|-----|-------------|------|
 | T-01 | derive 回放 parity 单测 | `go test ./internal/observability/derive/... -run Parity -count=1` | ✅ 2026-06-03 本地 pass |
 | T-02 | derive 记忆 backlog 单测 | `go test ./internal/observability/derive/... -run Replay_memory -count=1` | ✅ 2026-06-03 本地 pass |
-| T-03 | Doctor TR3-05/06/07 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **7/7**（TR3-06 sqlite skip） |
-| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **37/37** pass |
-| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **17**、M3 **9/9**（M3-04 skip） |
+| T-03 | Doctor TR3-05..09 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **9/9**（TR3-06/08 默认 skip） |
+| T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **41/41** pass |
+| T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **20**、M3 **11/11**（M3-04 skip） |
 | T-06 | CI job | GitHub Actions `ci.yml` + nightly `postgres-e2e.yml` | PR `postgres-sql-schema-e2e`；push main 全量 `postgres-e2e` |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
+| T-14 | Memory 子表 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryChildren` | 已并入 `postgres-rls-e2e` / `postgres-sql-schema-e2e` |
+| T-15 | Org 身份 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnOrgIdentity` | 已并入 `postgres-rls-e2e`；`verify-local` Docker 可用时自动跑 |
 | T-07 | 记忆 emit layer | `go test ./internal/memory/... -count=1 -short` | ✅ 断言 pass（OpenTest 关闭 DB） |
 | T-08 | Scale 双写冲突告警 | `go test ./internal/api/... -run ScaleReadinessSchemaSql -count=1` | ✅ 2026-06-03 本地 pass |
 | T-09 | 记忆 P1 derive 单测 | `go test ./internal/observability/derive/... -run Replay_memoryHit -count=1` | ✅ 2026-06-03 本地 pass |
@@ -25,6 +27,7 @@
 
 ```bash
 # 一键回归（网络正常时）
+make regression-short
 go test ./internal/observability/derive/... ./internal/doctor/... ./internal/memory/... ./internal/api/... -count=1 -short
 make postgres-sql-schema-e2e
 ```
@@ -38,7 +41,7 @@ make postgres-sql-schema-e2e
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v17 + Doctor M3 9/9 + ALL 37/37 |
+| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 41/41 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
 | H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要 |
@@ -113,13 +116,20 @@ make postgres-roles
 
 ## 代码待办（可继续开发）
 
-- 新表 DDL 修订需同步追加 RLS policy（`000013` DO 块）与 `ash_app` GRANT（`memory_migrations` 为全局审计表、无 `space_id`， intentionally 不纳入租户 RLS）
+- 新表 DDL 修订需同步追加 RLS policy（`000013` 租户 / `000018` run / `000019` memory / `000020` org 扩展）；迁移目录表已全覆盖（`PostgresRLSDeferredTables()` 为空）；Doctor **M3-11** 校验
 
 ---
 
 ## 已完成（近期）
 
-- Sprint Q：`/readyz` 运维快照（schema/otel/alerts/replay）；生产配置模板可观测性段；**CI PR** 接入 `postgres-sql-schema-e2e`
+- Sprint AA：Scale RLS 预期策略数 + catalog 摘要 + readiness 漂移告警；RLS 新表清单；`regression-short` store 冒烟
+- Sprint Y：memory 子表 RLS 集成测试 + e2e 脚本接入
+- Sprint W：SQL rev **18** `model_usage` run-scoped RLS；`PostgresRLSDeferredTables()` / `VerifyRLSMigrationSQL()`；Doctor **M3-11**；附录 G §9 OpenAPI
+- OpenAPI：补全 legacy `/v1/*` 规划路径具体 schema；`TestApiV1SuccessResponsesAvoidGenericEnvelope` 防回归；76+96 schema 字段对齐
+- Sprint U：Doctor **M3-10** RLS 全局表排除（`memory_migrations`/`schema_meta`）；`PostgresRLSGlobalTables()` 目录；`verify-local` 接入 `regression-short`
+- Sprint T：Doctor **TR3-08** Prometheus replay 段（`ASH_METRICS_EVENT_REPLAY=1`）；`make regression-short` 快捷回归；`/readyz` 默认运维标志断言
+- Sprint S：记忆测试 `store.OpenTest`；Doctor UI M3-03..M3-09 中文标签
+- Sprint R：`internal/opsenv` 共享运维快照；Doctor **M3-09** readyz/Scale 契约；CI push main 跑 `postgres-e2e`
 - Sprint P：Doctor **TR3-07** 插件导出健康；Scale `metricsEventReplayEnabled`；Observability OTel 导出器健康卡片；`verify-local` 补 pluginhealth/alerts
 - Sprint O：OTel waterfall 导出自动写入 `pluginhealth`（`ash-otel-exporter`）；Scale 暴露 `otelEnabled` / `alertsEvalInterval`；`postgres-e2e` 追加 live Postgres **TR3**
 - Sprint N：Worker 后台治理告警评估（`ASH_ALERTS_EVAL_INTERVAL`）；`postgres-sql-schema-e2e` 追加 live Postgres **TR3**；Scale TR3-06 卡片；swagger 再生

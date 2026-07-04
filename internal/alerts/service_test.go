@@ -165,3 +165,30 @@ func TestEvaluateMemoryBacklogAlert(t *testing.T) {
 		t.Fatalf("prometheus missing governance metrics:\n%s", text)
 	}
 }
+
+func TestPrometheusEventReplaySegment(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	t.Setenv("ASH_METRICS_EVENT_REPLAY", "1")
+	now := time.Now().UTC()
+	runID := "run_replay_prom"
+	if err := db.Create(&store.RunRecord{
+		ID: runID, TraceID: "trace_replay", SpaceID: "local",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		Status: "running", StartedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&store.RunEvent{
+		ID: "ev_replay_1", RunID: runID, Seq: 1, TS: now.UnixMilli(), Type: "run.started",
+		Severity: "info", PayloadJSON: `{}`, CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	text, err := NewService(db).PrometheusText()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text, "ash_run_total") {
+		t.Fatalf("prometheus missing replay segment ash_run_total:\n%s", text)
+	}
+}

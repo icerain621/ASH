@@ -19,7 +19,7 @@
 ### 2.1 后续强化
 
 - ✅ **API 租户边界**（v0.2）：`requireRequestSpace` / `requireTargetSpace`；`spaceForParam`、runs/secrets/RAG/MCP/审批等路径统一 `EnforceSpaceAccess` → `403 SPACE_ACCESS_DENIED`
-- Postgres **RLS**（行级安全）骨架（P2，可选启用）：`ASH_POSTGRES_RLS=1` 安装 `ash_space_*` 策略；`ASH_POSTGRES_RLS_FORCE=1` 对表 owner 也生效；迁移路径使用 `app.ash_rls_bypass=on`
+- Postgres **RLS**（行级安全）骨架（P2，可选启用）：`ASH_POSTGRES_RLS=1` 安装 `ash_space_*` 策略（rev **000013–000020**，共 **41** 条）；`app.ash_space_id` + `app.ash_org_id` session 变量；`ASH_POSTGRES_RLS_FORCE=1` 对表 owner 也生效
 - 跨空间管理操作显式 `org:admin` 权限 + 审计（P2）
 
 ## 3. Postgres 迁移路径

@@ -12,12 +12,15 @@ import (
 const (
 	// RLSSpaceSetting is the Postgres session variable holding the active space id.
 	RLSSpaceSetting = "app.ash_space_id"
+	// RLSOrgSetting is the Postgres session variable holding the active org id.
+	RLSOrgSetting = "app.ash_org_id"
 	// RLSBypassSetting allows migration/admin paths to bypass tenant policies when set to "on".
 	RLSBypassSetting = "app.ash_rls_bypass"
 	rlsPolicyPrefix  = "ash_space_"
 )
 
 type rlsSpaceContextKey struct{}
+type rlsOrgContextKey struct{}
 type rlsBypassContextKey struct{}
 
 // PostgresRLSEnabled reports whether tenant RLS policies should be applied (Postgres only).
@@ -44,6 +47,23 @@ func RLSSpaceFromContext(ctx context.Context) (string, bool) {
 		return "", false
 	}
 	v, ok := ctx.Value(rlsSpaceContextKey{}).(string)
+	return v, ok && v != ""
+}
+
+// WithRLSOrgContext attaches the request org for GORM RLS callbacks.
+func WithRLSOrgContext(ctx context.Context, orgID string) context.Context {
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	return context.WithValue(ctx, rlsOrgContextKey{}, strings.TrimSpace(orgID))
+}
+
+// RLSOrgFromContext returns the active org from context.
+func RLSOrgFromContext(ctx context.Context) (string, bool) {
+	if ctx == nil {
+		return "", false
+	}
+	v, ok := ctx.Value(rlsOrgContextKey{}).(string)
 	return v, ok && v != ""
 }
 
@@ -104,16 +124,56 @@ func PostgresRLSTables() []PostgresRLSTable {
 	}
 }
 
+// PostgresRLSRunScopedTables are child tables filtered via runs.space_id.
+func PostgresRLSRunScopedTables() []string {
+	return postgresRLSRunScopedTables()
+}
+
+// PostgresRLSGlobalTables are deployment-global tables intentionally excluded from tenant RLS.
+// memory_migrations has no space_id (global migration audit); schema_meta holds deployment keys.
+func PostgresRLSGlobalTables() []string {
+	return []string{
+		"memory_migrations",
+		"schema_meta",
+	}
+}
+
 // PostgresRLSExpectedPolicyCount returns installed policy cardinality when RLS is fully applied.
 func PostgresRLSExpectedPolicyCount() int {
-	return len(PostgresRLSTables()) + len(postgresRLSRunScopedTables())
+	return len(PostgresRLSTables()) + len(postgresRLSRunScopedTables()) + len(postgresRLSMemoryScopedTables()) + len(PostgresRLSOrgScopedTables())
+}
+
+// PostgresRLSOrgTable describes an org-identity table and its policy expression.
+type PostgresRLSOrgTable struct {
+	Table      string
+	PolicyExpr string
+}
+
+// PostgresRLSOrgScopedTables are org/membership tables filtered via app.ash_org_id.
+func PostgresRLSOrgScopedTables() []PostgresRLSOrgTable {
+	return []PostgresRLSOrgTable{
+		{Table: "orgs", PolicyExpr: "ash_rls_org_visible(id)"},
+		{Table: "roles", PolicyExpr: "ash_rls_role_visible(org_id)"},
+		{Table: "members", PolicyExpr: "ash_rls_member_visible(org_id, space_id)"},
+		{Table: "users", PolicyExpr: "ash_rls_user_visible(id)"},
+	}
+}
+
+// PostgresRLSMemoryScopedTables are child tables filtered via memory_records.space_id.
+func PostgresRLSMemoryScopedTables() []string {
+	return postgresRLSMemoryScopedTables()
 }
 
 // postgresRLSRunScopedTables are child tables filtered via runs.space_id (phase 2 skeleton).
 func postgresRLSRunScopedTables() []string {
 	return []string{
 		"run_steps", "tool_calls", "agent_tasks", "artifact_index", "checkpoints", "run_events",
+		"model_usage",
 	}
+}
+
+func postgresRLSMemoryScopedTables() []string {
+	return []string{"memory_evidence", "memory_reviews"}
 }
 
 func postgresRLSPolicyExpr(spaceColumn string) string {
@@ -134,6 +194,17 @@ func postgresRLSRunPolicyExpr() string {
     SELECT 1 FROM runs r
     WHERE r.id = run_id
       AND r.space_id = current_setting('%s', true)
+  )
+)`, RLSBypassSetting, RLSSpaceSetting)
+}
+
+func postgresRLSMemoryPolicyExpr() string {
+	return fmt.Sprintf(`(
+  current_setting('%s', true) = 'on'
+  OR EXISTS (
+    SELECT 1 FROM memory_records m
+    WHERE m.id = memory_id
+      AND m.space_id = current_setting('%s', true)
   )
 )`, RLSBypassSetting, RLSSpaceSetting)
 }
@@ -173,6 +244,16 @@ func ApplyPostgresRLSPolicies(db *DB) error {
 			return err
 		}
 	}
+	for _, table := range postgresRLSMemoryScopedTables() {
+		if err := applyPostgresRLSPolicy(db, table, "memory_id", postgresRLSMemoryPolicyExpr(), force); err != nil {
+			return err
+		}
+	}
+	for _, tbl := range PostgresRLSOrgScopedTables() {
+		if err := applyPostgresRLSPolicy(db, tbl.Table, "org", tbl.PolicyExpr, force); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -182,6 +263,10 @@ func applyPostgresRLSForceAll(db *DB) error {
 		tables = append(tables, tbl.Table)
 	}
 	tables = append(tables, postgresRLSRunScopedTables()...)
+	tables = append(tables, postgresRLSMemoryScopedTables()...)
+	for _, tbl := range PostgresRLSOrgScopedTables() {
+		tables = append(tables, tbl.Table)
+	}
 	for _, table := range tables {
 		qTable := quoteIdent(table)
 		if err := db.Exec(fmt.Sprintf("ALTER TABLE %s FORCE ROW LEVEL SECURITY", qTable)).Error; err != nil {
@@ -225,10 +310,27 @@ WHERE schemaname = 'public' AND policyname LIKE ?`, rlsPolicyPrefix+"%").Scan(&c
 	return count, err
 }
 
+// CountPostgresRLSPoliciesOnTable returns ash tenant policies on a single table.
+func CountPostgresRLSPoliciesOnTable(db *DB, table string) (int64, error) {
+	if db == nil || db.Dialect() != "postgres" {
+		return 0, nil
+	}
+	table = strings.TrimSpace(table)
+	if table == "" {
+		return 0, nil
+	}
+	var count int64
+	err := db.Raw(`
+SELECT COUNT(*) FROM pg_policies
+WHERE schemaname = 'public' AND tablename = ? AND policyname LIKE ?`,
+		table, rlsPolicyPrefix+"%").Scan(&count).Error
+	return count, err
+}
+
 const rlsSkipCallbackKey = "ash:rls_skip_callback"
 
-// SetRLSSession applies transaction-local space/bypass settings on tx.
-func SetRLSSession(tx *gorm.DB, spaceID string, bypass bool) error {
+// SetRLSSession applies transaction-local space/org/bypass settings on tx.
+func SetRLSSession(tx *gorm.DB, spaceID, orgID string, bypass bool) error {
 	if tx == nil {
 		return nil
 	}
@@ -238,6 +340,11 @@ func SetRLSSession(tx *gorm.DB, spaceID string, bypass bool) error {
 	}
 	if bypass {
 		return sess.Exec("SELECT set_config(?, ?, true)", RLSBypassSetting, "on").Error
+	}
+	if org := strings.TrimSpace(orgID); org != "" {
+		if err := sess.Exec("SELECT set_config(?, ?, true)", RLSOrgSetting, org).Error; err != nil {
+			return err
+		}
 	}
 	if strings.TrimSpace(spaceID) == "" {
 		return nil
@@ -252,7 +359,7 @@ func (db *DB) TransactionWithRLSSpace(spaceID string, fn func(tx *gorm.DB) error
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		if db.Dialect() == "postgres" && PostgresRLSEnabled() {
-			if err := SetRLSSession(tx, spaceID, false); err != nil {
+			if err := SetRLSSession(tx, spaceID, "", false); err != nil {
 				return err
 			}
 		}
@@ -267,7 +374,7 @@ func (db *DB) TransactionWithRLSBypass(fn func(tx *gorm.DB) error) error {
 	}
 	return db.Transaction(func(tx *gorm.DB) error {
 		if db.Dialect() == "postgres" && PostgresRLSEnabled() {
-			if err := SetRLSSession(tx, "", true); err != nil {
+			if err := SetRLSSession(tx, "", "", true); err != nil {
 				return err
 			}
 		}
@@ -288,11 +395,13 @@ func registerRLSCallbacks(gdb *gorm.DB) {
 			return
 		}
 		if RLSBypassFromContext(ctx) {
-			_ = SetRLSSession(tx, "", true)
+			_ = SetRLSSession(tx, "", "", true)
 			return
 		}
-		if space, ok := RLSSpaceFromContext(ctx); ok {
-			_ = SetRLSSession(tx, space, false)
+		space, hasSpace := RLSSpaceFromContext(ctx)
+		org, _ := RLSOrgFromContext(ctx)
+		if hasSpace || org != "" {
+			_ = SetRLSSession(tx, space, org, false)
 		}
 	}
 	cb := gdb.Callback()

@@ -10,8 +10,8 @@ source "$ROOT/scripts/_go_env.sh"
 source "$ROOT/scripts/_swag.sh"
 _ash_go_env_bootstrap "$ROOT"
 
-echo "== openapi: contract alignment (/api/v1 in doc/api/openapi-ash-v1.yaml) =="
-go test ./internal/openapicheck -run TestContractMatchesSwagger -count=1
+echo "== openapi: contract alignment + schema parity =="
+go test ./internal/openapicheck -count=1
 
 echo "== api: error code catalog parity =="
 go test ./internal/apicodes -count=1

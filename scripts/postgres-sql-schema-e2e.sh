@@ -30,6 +30,12 @@ env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3
 echo "== rag postgres fts integration test =="
 go test -tags=integration ./internal/rag/ -count=1 -run TestPostgresRAGFTSQuery
 
+echo "== postgres RLS memory child isolation =="
+export ASH_POSTGRES_RLS=1
+export ASH_POSTGRES_RLS_FORCE=1
+bash scripts/postgres-ensure-app-role.sh
+go test -tags=integration ./internal/store/ -run 'TestPostgresRLSPoliciesInstalled|TestPostgresRLSSpaceIsolationOnMemoryChildren|TestPostgresRLSSpaceIsolationOnOrgIdentity' -count=1
+
 echo "== doctor TR3 on live postgres (TR3-06 fts; TR3-02 fallback sqlite-only) =="
 env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite TR3 --agent static
 

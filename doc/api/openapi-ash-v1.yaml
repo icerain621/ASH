@@ -42,6 +42,7 @@ tags:
   - name: Metrics
   - name: Observability
   - name: Releases
+  - name: Health
 components:
   securitySchemes:
     bearerAuth:
@@ -158,6 +159,1864 @@ components:
         rating: { type: integer, minimum: 1, maximum: 5 }
         category: { type: string, enum: [accuracy, timeliness, executability, other] }
         comment: { type: string, maxLength: 1024 }
+    ScaleReadinessResponse:
+      type: object
+      description: TR3/M3 scale readiness snapshot for the active space (GET /api/v1/scale/readiness).
+      required: [spaceId, memorySchemaVersion, memoryApprovedCount, ragDocumentCount, ragChunkCount, modelUsageRows, modelCostMicrosTotal, qualityMetricRows, auditLogRows, databaseDialect, postgresConfigured, migrationReady, migrationTableCount, dualWriteEnabled, dualWriteRuntime, postgresRLSEnabled, postgresRLSForce]
+      properties:
+        spaceId:
+          type: string
+          description: Active tenant space id.
+        memorySchemaVersion:
+          type: integer
+          description: Current memory record schema version.
+        memoryApprovedCount:
+          type: integer
+          format: int64
+          description: Approved memory records in this space.
+        ragDocumentCount:
+          type: integer
+          format: int64
+        ragChunkCount:
+          type: integer
+          format: int64
+        modelUsageRows:
+          type: integer
+          format: int64
+          description: Deployment-global model usage rows (not space-filtered).
+        modelCostMicrosTotal:
+          type: integer
+          format: int64
+          description: Sum of model cost in micros (deployment-global).
+        qualityMetricRows:
+          type: integer
+          format: int64
+        auditLogRows:
+          type: integer
+          format: int64
+        databaseDialect:
+          type: string
+          enum: [sqlite, postgres]
+          description: Runtime database dialect.
+        postgresConfigured:
+          type: boolean
+          description: ASH_DATABASE_URL points at Postgres.
+        migrationReady:
+          type: boolean
+          description: Migration catalog tables exist and profile is consistent.
+        sqlitePath:
+          type: string
+          description: Local SQLite path when dialect is sqlite.
+        migrationTableCount:
+          type: integer
+          description: Tables in sqlite→postgres migration catalog.
+        dualWriteEnabled:
+          type: boolean
+        dualWriteRuntime:
+          type: boolean
+        dualWriteSource:
+          type: string
+          description: Dual-write config source (file/env).
+        lastMigrationSyncAtMs:
+          type: integer
+          format: int64
+          nullable: true
+        lastMigrationSyncError:
+          type: string
+        lastMigrationSyncErrorAtMs:
+          type: integer
+          format: int64
+          nullable: true
+        postgresRLSEnabled:
+          type: boolean
+          description: ASH_POSTGRES_RLS=1.
+        postgresRLSForce:
+          type: boolean
+          description: ASH_POSTGRES_RLS_FORCE=1.
+        postgresRLSPolicyCount:
+          type: integer
+          format: int64
+          description: Installed ash_space_* policies when Postgres RLS is active.
+        postgresRLSPolicyExpected:
+          type: integer
+          format: int64
+          description: Expected ash_space_* policy count from store.PostgresRLSExpectedPolicyCount() (rev 000013–000020).
+        rlsCatalogSummary:
+          type: string
+          description: Compact RLS classification summary when Postgres RLS is active.
+        postgresAppUrlConfigured:
+          type: boolean
+          description: ASH_DATABASE_APP_URL is set (worker app role).
+        workerConnectionRole:
+          type: string
+          description: Effective worker DB role hint (sqlite/postgres/ash_app).
+        runtimeDsnHint:
+          type: string
+          description: Redacted runtime DSN hint.
+        dualWriteShadowUrlHint:
+          type: string
+          description: Redacted shadow Postgres URL when dual-write is configured.
+        schemaMode:
+          type: string
+          enum: [automigrate, sql]
+          description: ASH_SCHEMA_MODE value.
+        sqlMigrationsEnabled:
+          type: boolean
+        autoMigrateEnabled:
+          type: boolean
+        sqlMigrationVersion:
+          type: integer
+          description: Applied golang-migrate version on Postgres.
+        sqlMigrationExpected:
+          type: integer
+          description: Expected golang-migrate version embedded in the binary.
+        readinessWarnings:
+          type: array
+          items: { type: string }
+          description: Config conflicts (e.g. ASH_SCHEMA_MODE=sql with dual-write).
+        memoryCatalogVersion:
+          type: integer
+        memoryPendingMigrationRecords:
+          type: integer
+          format: int64
+        ragFtsAvailable:
+          type: boolean
+        ragFtsEngine:
+          type: string
+          description: FTS engine id (sqlite-fts5, postgres-tsvector, etc.).
+        ragDefaultRetrievalMode:
+          type: string
+          enum: [fts, chunk, empty]
+        ragFallbackQueryCount:
+          type: integer
+          format: int64
+          description: RAG queries that fell back from FTS to chunk retrieval.
+        otelEnabled:
+          type: boolean
+          description: Worker OTel export enabled.
+        alertsEvalInterval:
+          type: string
+          description: ASH_ALERTS_EVAL_INTERVAL duration (e.g. 5m0s).
+        metricsEventReplayEnabled:
+          type: boolean
+          description: ASH_METRICS_EVENT_REPLAY=1 appends derive replay segment to Prometheus text.
+    ScenarioRef:
+      type: object
+      required: [name, scenarioVersion]
+      properties:
+        name: { type: string }
+        scenarioVersion: { type: string }
+    ProvenanceLink:
+      type: object
+      required: [kind, ref]
+      properties:
+        kind:
+          type: string
+          description: Link kind (run, trace, events, artifacts, toolCalls).
+        ref: { type: string }
+    ProvenanceResponse:
+      type: object
+      description: TR3-04 delivery provenance chain for a run.
+      required: [runId, traceId, scenario, status, toolCalls, agentTasks, artifacts, events, modelUsage, links]
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+        scenario: { $ref: "#/components/schemas/ScenarioRef" }
+        status: { type: string }
+        toolCalls: { type: integer }
+        agentTasks: { type: integer }
+        artifacts: { type: integer }
+        events: { type: integer }
+        modelUsage: { type: integer }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/ProvenanceLink" }
+    LeakFinding:
+      type: object
+      properties:
+        source: { type: string, description: audit_log or run_event }
+        ref: { type: string }
+        pattern: { type: string }
+        snippet: { type: string }
+    SecretScanResponse:
+      type: object
+      description: TR2-05 secret pattern scan over audit logs and run events.
+      required: [spaceId, scanned, leakCount, redactEnabled, findings]
+      properties:
+        spaceId: { type: string }
+        scanned: { type: integer }
+        leakCount: { type: integer }
+        redactEnabled: { type: boolean }
+        findings:
+          type: array
+          items: { $ref: "#/components/schemas/LeakFinding" }
+    DoctorEvidence:
+      type: object
+      properties:
+        kind: { type: string }
+        ref: { type: string }
+        digest: { type: string }
+    DoctorCaseResult:
+      type: object
+      properties:
+        id: { type: string }
+        status: { type: string, enum: [pass, fail] }
+        runId: { type: string }
+        message: { type: string }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/DoctorEvidence" }
+    DoctorReportSummary:
+      type: object
+      properties:
+        pass: { type: integer }
+        fail: { type: integer }
+    DoctorReportResponse:
+      type: object
+      properties:
+        suite: { type: string }
+        startedAt: { type: integer, format: int64 }
+        finishedAt: { type: integer, format: int64 }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/DoctorCaseResult" }
+        summary: { $ref: "#/components/schemas/DoctorReportSummary" }
+    ComplianceExportRequest:
+      type: object
+      properties:
+        suite: { type: string, example: TR2 }
+        reportId: { type: string }
+    ComplianceExportResponse:
+      type: object
+      required: [exportId, suite]
+      properties:
+        exportId: { type: string }
+        reportId: { type: string }
+        suite: { type: string }
+        report:
+          allOf:
+            - { $ref: "#/components/schemas/DoctorReportResponse" }
+          nullable: true
+    PluginRegistryItem:
+      type: object
+      description: plugin_registry row (list, health summary, and registration responses).
+      properties:
+        id: { type: string }
+        spaceID: { type: string }
+        name: { type: string }
+        version: { type: string }
+        protocol: { type: string }
+        abi: { type: string }
+        endpoint: { type: string }
+        capabilities: { type: string }
+        status: { type: string }
+        compatible: { type: boolean }
+        dropCount: { type: integer }
+        exportErrors: { type: integer }
+        lastError: { type: string }
+        lastExportAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    PluginHealthSummary:
+      type: object
+      description: Plugin export health aggregate for the active space.
+      required: [spaceId, pluginCount, exportErrorsTotal, dropCountTotal, staleExportCount, items]
+      properties:
+        spaceId: { type: string }
+        pluginCount: { type: integer }
+        exportErrorsTotal: { type: integer, format: int64 }
+        dropCountTotal: { type: integer, format: int64 }
+        staleExportCount: { type: integer }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PluginRegistryItem" }
+    RAGProfileResponse:
+      type: object
+      description: Tenant-scoped RAG retrieval profile (GET /api/v1/rag/profile).
+      required: [spaceId, ftsAvailable, defaultRetrievalMode, databaseDialect, documentCount, chunkCount, fallbackQueryCount]
+      properties:
+        spaceId: { type: string }
+        ftsAvailable: { type: boolean }
+        ftsEngine: { type: string }
+        defaultRetrievalMode: { type: string, enum: [fts, chunk, empty] }
+        databaseDialect: { type: string }
+        documentCount: { type: integer, format: int64 }
+        chunkCount: { type: integer, format: int64 }
+        fallbackQueryCount: { type: integer, format: int64 }
+    OtelStatusResponse:
+      type: object
+      description: OTel trace export runtime status.
+      properties:
+        enabled: { type: boolean }
+        endpoint: { type: string }
+        insecure: { type: boolean }
+        serviceName: { type: string }
+    HealthResponse:
+      type: object
+      description: Liveness/readiness probe payload (/healthz, /readyz).
+      required: [status]
+      properties:
+        status:
+          type: string
+          enum: [ok, ready, not_ready]
+        dialect: { type: string, example: postgres }
+        error: { type: string }
+        schemaMode: { type: string, enum: [automigrate, sql] }
+        sqlMigrationVersion: { type: integer }
+        otelEnabled: { type: boolean }
+        alertsEvalInterval: { type: string, example: 5m0s }
+        metricsEventReplayEnabled: { type: boolean }
+    RepoRef:
+      type: object
+      properties:
+        root: { type: string }
+        revision: { type: string }
+        branch: { type: string }
+    RunSummaryResponse:
+      type: object
+      description: Run list/detail summary (runs.Summary).
+      required: [runId, traceId, scenario, policyProfile, status, startedAt, recovered]
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+        scenario: { $ref: "#/components/schemas/ScenarioRef" }
+        policyProfile: { type: string }
+        status: { type: string }
+        startedAt: { type: integer, format: int64 }
+        finishedAt: { type: integer, format: int64, nullable: true }
+        recovered: { type: boolean }
+        inputsDigest: { type: string }
+        repo: { $ref: "#/components/schemas/RepoRef" }
+        spaceId: { type: string }
+        actorRole: { type: string }
+    RunListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RunSummaryResponse" }
+    RunCreateResponse:
+      type: object
+      required: [runId, traceId]
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+    DoctorRunRequest:
+      type: object
+      required: [suite]
+      properties:
+        suite:
+          type: string
+          enum: [TR0, TR1, TR2, TR3, M2, M3, ALL]
+        format:
+          type: string
+          enum: [json, md]
+    DoctorRunResponse:
+      type: object
+      required: [reportId]
+      properties:
+        reportId: { type: string }
+    ArtifactEntry:
+      type: object
+      properties:
+        id: { type: string }
+        type: { type: string }
+        name: { type: string }
+        uri: { type: string }
+        storeKey: { type: string }
+        digest: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+        producer: { type: object, additionalProperties: true }
+    ArtifactManifest:
+      type: object
+      properties:
+        runId: { type: string }
+        scenario: { type: object, additionalProperties: true }
+        createdAt: { type: integer, format: int64 }
+        artifacts:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactEntry" }
+    ArtifactsManifestResponse:
+      type: object
+      description: Run artifacts manifest and flattened artifact list.
+      properties:
+        manifest: { $ref: "#/components/schemas/ArtifactManifest" }
+        artifacts:
+          type: array
+          items: { $ref: "#/components/schemas/ArtifactEntry" }
+    ArtifactAccessResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        name: { type: string }
+        uri: { type: string }
+        signedUrl: { type: string }
+        expiresAt: { type: integer, format: int64 }
+        digest: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer, format: int64 }
+    TimelineItem:
+      type: object
+      properties:
+        seq: { type: integer, format: int64 }
+        ts: { type: integer, format: int64 }
+        type: { type: string }
+        severity: { type: string }
+        stepId: { type: string }
+        status: { type: string }
+        payload: { type: object, additionalProperties: true }
+    TimelineAPIResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/TimelineItem" }
+    DatabaseProfile:
+      type: object
+      properties:
+        dataDir: { type: string }
+        dialect: { type: string }
+        urlConfigured: { type: boolean }
+        postgresRLSEnabled: { type: boolean }
+        postgresRLSForce: { type: boolean }
+        postgresRLSPolicyCount: { type: integer }
+    ArtifactStoreProfile:
+      type: object
+      properties:
+        kind: { type: string }
+        uri: { type: string }
+        ready: { type: boolean }
+        objectStore: { type: boolean }
+        supportsSignedUrl: { type: boolean }
+        error: { type: string }
+    StorageProfileResponse:
+      type: object
+      required: [artifactStore, database]
+      properties:
+        artifactStore: { $ref: "#/components/schemas/ArtifactStoreProfile" }
+        database: { $ref: "#/components/schemas/DatabaseProfile" }
+    ValidationIssue:
+      type: object
+      properties:
+        code: { type: string }
+        message: { type: string }
+        path: { type: string }
+    ValidationResponse:
+      type: object
+      required: [ok]
+      properties:
+        ok: { type: boolean }
+        issues:
+          type: array
+          items: { $ref: "#/components/schemas/ValidationIssue" }
+    ValidateScenarioRequest:
+      type: object
+      required: [yaml]
+      properties:
+        yaml: { type: string, example: "version: ash.rules/v0.1" }
+    ScenarioSummaryItem:
+      type: object
+      properties:
+        name: { type: string }
+        scenarioVersion: { type: string }
+        description: { type: string }
+        policyProfile: { type: string }
+        stepCount: { type: integer }
+        gateCount: { type: integer }
+    ScenarioListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ScenarioSummaryItem" }
+    ScenarioDetailResponse:
+      type: object
+      properties:
+        version: { type: string, example: ash.rules/v0.1 }
+        valid: { type: boolean }
+        yaml: { type: string }
+        scenario: { type: object, additionalProperties: true }
+        hooks:
+          type: array
+          items: { type: object, additionalProperties: true }
+    ToolCallItem:
+      type: object
+      properties:
+        id: { type: string }
+        runID: { type: string }
+        stepID: { type: string }
+        traceID: { type: string }
+        tool: { type: string }
+        risk: { type: string }
+        status: { type: string }
+        attempt: { type: integer }
+        timeoutMs: { type: integer }
+        durationMs: { type: integer }
+        argsDigest: { type: string }
+        outputJSON: { type: string }
+        error: { type: string }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    ToolCallListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ToolCallItem" }
+    AgentTaskItem:
+      type: object
+      properties:
+        id: { type: string }
+        runID: { type: string }
+        stepID: { type: string }
+        traceID: { type: string }
+        agentID: { type: string }
+        actionID: { type: string }
+        adapter: { type: string }
+        status: { type: string }
+        sessionID: { type: string }
+        execGoTaskID: { type: string }
+        promptDigest: { type: string }
+        exitCode: { type: integer }
+        durationMs: { type: integer }
+        errorCode: { type: string }
+        errorMessage: { type: string }
+        stderrSummary: { type: string }
+        stdoutSummary: { type: string }
+        timeoutMs: { type: integer }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    AgentTaskListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AgentTaskItem" }
+    QualityMetricItem:
+      type: object
+      properties:
+        id: { type: string }
+        runID: { type: string }
+        spaceID: { type: string }
+        name: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        createdAt: { type: string, format: date-time }
+    QualityMetricListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/QualityMetricItem" }
+    PermissionDefItem:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        group: { type: string }
+    BuiltinRoleItem:
+      type: object
+      properties:
+        name: { type: string }
+        label: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    OrgRoleRow:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    ToolRule:
+      type: object
+      properties:
+        allow:
+          type: array
+          items: { type: string }
+        deny:
+          type: array
+          items: { type: string }
+        denyMode:
+          type: string
+          enum: [block, skip]
+    ScenarioMatrixRow:
+      type: object
+      properties:
+        scenario: { type: string }
+        scenarioKey: { type: string }
+        version: { type: string }
+        toolMatrix:
+          type: object
+          additionalProperties: { $ref: "#/components/schemas/ToolRule" }
+    PermissionMatrixResponse:
+      type: object
+      description: M2 RBAC + scenario tool matrix for a space.
+      properties:
+        spaceId: { type: string }
+        currentActor: { type: string }
+        currentRole: { type: string }
+        catalog:
+          type: array
+          items: { $ref: "#/components/schemas/PermissionDefItem" }
+        builtinRoles:
+          type: array
+          items: { $ref: "#/components/schemas/BuiltinRoleItem" }
+        orgRoles:
+          type: array
+          items: { $ref: "#/components/schemas/OrgRoleRow" }
+        scenarioTools:
+          type: array
+          items: { $ref: "#/components/schemas/ScenarioMatrixRow" }
+    MetricCard:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        description: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        status: { type: string }
+        numerator: { type: integer }
+        denominator: { type: integer }
+    BreakdownItem:
+      type: object
+      properties:
+        key: { type: string }
+        label: { type: string }
+        value: { type: number }
+        unit: { type: string }
+    MetricBreakdown:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/BreakdownItem" }
+    MetricPoint:
+      type: object
+      properties:
+        periodStart: { type: string, format: date-time }
+        value: { type: number }
+        status: { type: string }
+    MetricTrend:
+      type: object
+      properties:
+        metricId: { type: string }
+        points:
+          type: array
+          items: { $ref: "#/components/schemas/MetricPoint" }
+    DataQualityNote:
+      type: object
+      properties:
+        metricId: { type: string }
+        status: { type: string }
+        message: { type: string }
+    MetricsOverviewResponse:
+      type: object
+      description: KPI dashboard overview for a space/project window.
+      properties:
+        spaceId: { type: string }
+        projectId: { type: string }
+        period: { type: string, enum: [day, week] }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        generatedAt: { type: string, format: date-time }
+        summary:
+          type: array
+          items: { $ref: "#/components/schemas/MetricCard" }
+        trends:
+          type: array
+          items: { $ref: "#/components/schemas/MetricTrend" }
+        breakdowns:
+          type: array
+          items: { $ref: "#/components/schemas/MetricBreakdown" }
+        dataQuality:
+          type: array
+          items: { $ref: "#/components/schemas/DataQualityNote" }
+    DiagnosisResponse:
+      type: object
+      description: CI failure diagnosis with root cause, suggestions, and decision state.
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        connectionId: { type: string }
+        runId: { type: string }
+        jobId: { type: string }
+        status: { type: string }
+        rootCause: { type: string }
+        fixSuggestions:
+          type: array
+          items: { type: string }
+        evidenceRefs:
+          type: array
+          items: { type: string }
+        confidence: { type: number }
+        logDigest: { type: string }
+        adopted: { type: boolean }
+        decisionStatus: { type: string }
+        decisionReason: { type: string }
+        decidedBy: { type: string }
+        decidedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+    CIDiagnosisListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DiagnosisResponse" }
+    DiagnoseCIFailureRequest:
+      type: object
+      properties:
+        connectionId: { type: string }
+        runId: { type: string }
+        jobId: { type: string }
+        logText: { type: string }
+    DecideCIDiagnosisRequest:
+      type: object
+      properties:
+        reason: { type: string }
+    CIRunItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        connectionId: { type: string }
+        providerRunId: { type: string }
+        workflow: { type: string }
+        branch: { type: string }
+        commitSha: { type: string }
+        status: { type: string }
+        conclusion: { type: string }
+        attempt: { type: integer }
+        runUrl: { type: string }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CIRunListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CIRunItem" }
+    CIJobItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        connectionId: { type: string }
+        ciRunId: { type: string }
+        providerJobId: { type: string }
+        name: { type: string }
+        status: { type: string }
+        conclusion: { type: string }
+        attempt: { type: integer }
+        logDigest: { type: string }
+        startedAt: { type: string, format: date-time, nullable: true }
+        completedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CIJobListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CIJobItem" }
+    FeedbackItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceID: { type: string }
+        targetType: { type: string }
+        targetID: { type: string }
+        rating: { type: integer }
+        category: { type: string }
+        status: { type: string }
+        severity: { type: string }
+        source: { type: string }
+        comment: { type: string }
+        actorID: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    FeedbackListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/FeedbackItem" }
+    PluginProtoFile:
+      type: object
+      properties:
+        path: { type: string }
+        digest: { type: string }
+        bytes: { type: integer }
+    PluginABIProfileResponse:
+      type: object
+      description: Plugin ABI/proto profile for compatibility checks.
+      properties:
+        currentAbi: { type: string }
+        supportedAbis:
+          type: array
+          items: { type: string }
+        supportedProtocols:
+          type: array
+          items: { type: string }
+        breakingPolicy: { type: string }
+        goPackage: { type: string }
+        protoPackage: { type: string }
+        protoFiles:
+          type: array
+          items: { $ref: "#/components/schemas/PluginProtoFile" }
+        grpcEnabled: { type: boolean }
+        pluginGrpcAddr: { type: string }
+    MCPToolItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceID: { type: string }
+        name: { type: string }
+        server: { type: string }
+        risk: { type: string }
+        status: { type: string }
+        schemaJSON: { type: string }
+        lastError: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    MCPToolListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MCPToolItem" }
+    ModelProviderItem:
+      type: object
+      properties:
+        id: { type: string }
+        provider: { type: string }
+        role: { type: string }
+        model: { type: string }
+        status: { type: string }
+        apiKeyConfigured: { type: boolean }
+        baseUrlConfigured: { type: boolean }
+        inputMicrosPer1K: { type: integer }
+        outputMicrosPer1K: { type: integer }
+    ModelProviderListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ModelProviderItem" }
+    ModelRouterRequest:
+      type: object
+      properties:
+        useCase: { type: string }
+        prompt: { type: string }
+        runId: { type: string }
+        stepId: { type: string }
+        inputTokens: { type: integer }
+        outputTokens: { type: integer }
+    ModelRouterDecision:
+      type: object
+      properties:
+        status: { type: string }
+        reason: { type: string }
+        fallbackUsed: { type: boolean }
+        inputTokens: { type: integer }
+        outputTokens: { type: integer }
+        costMicros: { type: integer }
+        provider: { $ref: "#/components/schemas/ModelProviderItem" }
+    PluginRegistryListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/PluginRegistryItem" }
+    ImproveArtifactCompare:
+      type: object
+      properties:
+        baselineRunId: { type: string }
+        experimentRunId: { type: string }
+        matched: { type: integer }
+        changed: { type: integer }
+        missing: { type: integer }
+        byType:
+          type: object
+          additionalProperties: { type: string }
+    ImproveProposalView:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        description: { type: string }
+        changeSummary: { type: string }
+        baselineRunId: { type: string }
+        experimentRunId: { type: string }
+        status: { type: string }
+        canaryPercent: { type: integer }
+        compare: { $ref: "#/components/schemas/ImproveArtifactCompare" }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+    ImproveListProposalsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ImproveProposalView" }
+    ImproveCreateProposalRequest:
+      type: object
+      required: [title, baselineRunId]
+      properties:
+        title: { type: string }
+        description: { type: string }
+        changeSummary: { type: string }
+        baselineRunId: { type: string }
+        spaceId: { type: string }
+        actorId: { type: string }
+    ImproveCanaryRequest:
+      type: object
+      required: [percent]
+      properties:
+        percent: { type: integer }
+        actorId: { type: string }
+    ImproveStartExperimentResponse:
+      type: object
+      properties:
+        proposalId: { type: string }
+        experimentRunId: { type: string }
+        compare: { $ref: "#/components/schemas/ImproveArtifactCompare" }
+    ImproveStatusResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        status: { type: string }
+    MemoryEvidenceInput:
+      type: object
+      required: [kind, ref]
+      properties:
+        kind: { type: string }
+        ref: { type: string }
+        digest: { type: string }
+        meta: { type: object, additionalProperties: true }
+    MemoryEvidenceView:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        ref: { type: string }
+        digest: { type: string }
+    MemoryEdgeView:
+      type: object
+      properties:
+        id: { type: string }
+        fromId: { type: string }
+        toId: { type: string }
+        kind: { type: string }
+        reason: { type: string }
+        confidence: { type: number }
+        createdAt: { type: integer, format: int64 }
+    MemoryGovernanceHint:
+      type: object
+      properties:
+        kind: { type: string }
+        memoryId: { type: string }
+        title: { type: string }
+        status: { type: string }
+        reason: { type: string }
+    MemoryGovernanceHints:
+      type: object
+      properties:
+        duplicates:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryGovernanceHint" }
+        conflicts:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryGovernanceHint" }
+    MemoryRecordView:
+      type: object
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        layer: { type: string }
+        status: { type: string }
+        schemaVersion: { type: integer }
+        confidence: { type: number }
+        sensitivity: { type: string }
+        scopeRepo: { type: string }
+        scopeTeam: { type: string }
+        dedupeKey: { type: string }
+        ttlDays: { type: integer }
+        tags:
+          type: array
+          items: { type: string }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryEvidenceView" }
+        edges:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryEdgeView" }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+    MemoryListCandidatesResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryRecordView" }
+        total: { type: integer }
+        limit: { type: integer }
+        offset: { type: integer }
+    MemoryCreateCandidateRequest:
+      type: object
+      required: [title, body, layer]
+      properties:
+        title: { type: string }
+        body: { type: string }
+        layer: { type: string }
+        scopeRepo: { type: string }
+        scopeTeam: { type: string }
+        sensitivity: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+        ttlDays: { type: integer }
+        evidence:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryEvidenceInput" }
+        runId: { type: string }
+        traceId: { type: string }
+        actorId: { type: string }
+        spaceId: { type: string }
+    MemoryCreateCandidateResponse:
+      type: object
+      properties:
+        candidateId: { type: string }
+        governance: { $ref: "#/components/schemas/MemoryGovernanceHints" }
+    MemoryReviewRequest:
+      type: object
+      required: [decision, policyProfile, reason]
+      properties:
+        decision: { type: string }
+        policyProfile: { type: string }
+        reason: { type: string }
+        reviewerId: { type: string }
+        actorId: { type: string }
+        confidence: { type: number }
+        duplicateOf: { type: string }
+        conflictsWith:
+          type: array
+          items: { type: string }
+        replaces:
+          type: array
+          items: { type: string }
+        runId: { type: string }
+        traceId: { type: string }
+    MemoryReviewResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        status: { type: string }
+    MemoryHitUsedRequest:
+      type: object
+      required: [runId, recordIds]
+      properties:
+        runId: { type: string }
+        recordIds:
+          type: array
+          items: { type: string }
+        traceId: { type: string }
+        actorId: { type: string }
+    MemoryHitUsedResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+    MemoryQueryRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        topK: { type: integer }
+        layers:
+          type: array
+          items: { type: string }
+        scope:
+          type: object
+          additionalProperties: { type: string }
+        runId: { type: string }
+        traceId: { type: string }
+    MemoryQueryResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MemoryRecordView" }
+    MemoryRunMigrationRequest:
+      type: object
+      properties:
+        dryRun: { type: boolean }
+        runId: { type: string }
+        traceId: { type: string }
+    MemoryRunMigrationResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        migrationId: { type: string }
+        fromVersion: { type: integer }
+        toVersion: { type: integer }
+        recordsUpdated: { type: integer }
+        alreadyCurrent: { type: boolean }
+        summary: { type: string }
+    OrgItem:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateOrgRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        slug: { type: string }
+    SpaceItem:
+      type: object
+      properties:
+        id: { type: string }
+        orgID: { type: string }
+        name: { type: string }
+        slug: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateSpaceRequest:
+      type: object
+      required: [orgId, name]
+      properties:
+        orgId: { type: string }
+        name: { type: string }
+        slug: { type: string }
+    MemberItem:
+      type: object
+      properties:
+        id: { type: string }
+        orgID: { type: string }
+        spaceID: { type: string }
+        userID: { type: string }
+        roleID: { type: string }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    MemberListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/MemberItem" }
+    CreateMemberRequest:
+      type: object
+      required: [roleId]
+      properties:
+        userId: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+        password: { type: string }
+        roleId: { type: string }
+        status: { type: string }
+    RoleItem:
+      type: object
+      properties:
+        id: { type: string }
+        orgID: { type: string }
+        name: { type: string }
+        permissions: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RoleListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RoleItem" }
+    CreateRoleRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    ResourceScopeView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        resourceType: { type: string }
+        resourceId: { type: string }
+        policyJson: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+    ResourceScopeListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ResourceScopeView" }
+    UpdateResourceScopeRequest:
+      type: object
+      required: [policyJson]
+      properties:
+        policyJson: { type: string }
+    AlertRuleItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        metric: { type: string }
+        condition: { type: string }
+        threshold: { type: number }
+        windowMinutes: { type: integer }
+        severity: { type: string }
+        enabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AlertRuleListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AlertRuleItem" }
+    AlertRuleInput:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        metric: { type: string }
+        condition: { type: string }
+        threshold: { type: number }
+        windowMinutes: { type: integer }
+        severity: { type: string }
+        enabled: { type: boolean }
+    PutAlertRulesRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AlertRuleInput" }
+    AlertEventItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        ruleId: { type: string }
+        ruleName: { type: string }
+        severity: { type: string }
+        status: { type: string }
+        message: { type: string }
+        targetType: { type: string }
+        targetId: { type: string }
+        fingerprint: { type: string }
+        evidenceRefsJson: { type: string }
+        triggeredAt: { type: string, format: date-time, nullable: true }
+        resolvedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    AlertEventListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AlertEventItem" }
+    AlertRuleEvaluation:
+      type: object
+      properties:
+        ruleId: { type: string }
+        ruleName: { type: string }
+        metric: { type: string }
+        status: { type: string }
+        message: { type: string }
+        threshold: { type: number }
+        value: { type: number }
+        evidenceRefs:
+          type: array
+          items: { type: string }
+    AlertEvaluationResult:
+      type: object
+      properties:
+        spaceId: { type: string }
+        evaluatedAt: { type: string, format: date-time }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/AlertRuleEvaluation" }
+        events:
+          type: array
+          items: { $ref: "#/components/schemas/AlertEventItem" }
+    WaterfallSpan:
+      type: object
+      properties:
+        id: { type: string }
+        parentId: { type: string }
+        runId: { type: string }
+        name: { type: string }
+        type: { type: string }
+        status: { type: string }
+        startTs: { type: integer, format: int64 }
+        endTs: { type: integer, format: int64 }
+        durationMs: { type: integer }
+        attributes: { type: object, additionalProperties: true }
+    WaterfallMetric:
+      type: object
+      properties:
+        name: { type: string }
+        value: { type: number }
+        unit: { type: string }
+    FailureAttributionItem:
+      type: object
+      properties:
+        type: { type: string }
+        code: { type: string }
+        message: { type: string }
+        ref: { type: string }
+    WaterfallResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+        status: { type: string }
+        generatedAt: { type: integer, format: int64 }
+        spans:
+          type: array
+          items: { $ref: "#/components/schemas/WaterfallSpan" }
+        metrics:
+          type: array
+          items: { $ref: "#/components/schemas/WaterfallMetric" }
+        failures:
+          type: array
+          items: { $ref: "#/components/schemas/FailureAttributionItem" }
+    TraceViewResponse:
+      type: object
+      properties:
+        traceId: { type: string }
+        spaceId: { type: string }
+        runs:
+          type: array
+          items: { type: object, additionalProperties: true }
+        events:
+          type: array
+          items: { type: object, additionalProperties: true }
+        toolCalls:
+          type: array
+          items: { $ref: "#/components/schemas/ToolCallItem" }
+        agentTasks:
+          type: array
+          items: { $ref: "#/components/schemas/AgentTaskItem" }
+        auditLogs:
+          type: array
+          items: { type: object, additionalProperties: true }
+    PluginExportReportRequest:
+      type: object
+      properties:
+        ok: { type: boolean }
+        runId: { type: string }
+        dropped: { type: integer }
+    ReleaseRecordItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        title: { type: string }
+        version: { type: string }
+        status: { type: string }
+        gateStatus: { type: string }
+        canaryStrategy: { type: string }
+        evidenceRefsJson: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ReleaseListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ReleaseRecordItem" }
+    CreateReleaseRequest:
+      type: object
+      required: [version]
+      properties:
+        version: { type: string }
+        title: { type: string }
+        canaryStrategy: { type: string }
+        spaceId: { type: string }
+    ReleaseChecklistItem:
+      type: object
+      properties:
+        id: { type: string }
+        releaseId: { type: string }
+        spaceId: { type: string }
+        itemKey: { type: string }
+        label: { type: string }
+        status: { type: string }
+        evidenceRef: { type: string }
+        updatedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    ReleaseChecklistResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ReleaseChecklistItem" }
+    ChecklistUpdateItem:
+      type: object
+      properties:
+        id: { type: string }
+        itemKey: { type: string }
+        status: { type: string }
+        evidenceRef: { type: string }
+    PatchReleaseChecklistRequest:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ChecklistUpdateItem" }
+    ReleaseGateResultItem:
+      type: object
+      properties:
+        id: { type: string }
+        releaseId: { type: string }
+        spaceId: { type: string }
+        gateKey: { type: string }
+        status: { type: string }
+        message: { type: string }
+        evidenceRefsJson: { type: string }
+        createdAt: { type: string, format: date-time }
+    ReleaseGateEvaluation:
+      type: object
+      properties:
+        releaseId: { type: string }
+        spaceId: { type: string }
+        overall: { type: string }
+        evaluatedAt: { type: string, format: date-time }
+        evidenceRefs:
+          type: array
+          items: { type: string }
+        results:
+          type: array
+          items: { $ref: "#/components/schemas/ReleaseGateResultItem" }
+    RollbackDrillItem:
+      type: object
+      properties:
+        id: { type: string }
+        releaseId: { type: string }
+        spaceId: { type: string }
+        scenario: { type: string }
+        status: { type: string }
+        durationMs: { type: integer }
+        notes: { type: string }
+        evidenceRefsJson: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    CreateRollbackDrillRequest:
+      type: object
+      required: [scenario]
+      properties:
+        scenario: { type: string }
+        status: { type: string }
+        durationMs: { type: integer }
+        notes: { type: string }
+        evidenceRefs:
+          type: array
+          items: { type: string }
+    ApprovalRequestItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceID: { type: string }
+        runID: { type: string }
+        stepID: { type: string }
+        traceID: { type: string }
+        gate: { type: string }
+        risk: { type: string }
+        status: { type: string }
+        reason: { type: string }
+        requestedBy: { type: string }
+        decidedBy: { type: string }
+        decisionReason: { type: string }
+        evidenceJSON: { type: string }
+        createdAt: { type: string, format: date-time }
+        decidedAt: { type: string, format: date-time, nullable: true }
+        updatedAt: { type: string, format: date-time }
+    ApprovalRequestListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ApprovalRequestItem" }
+    ApproveRequest:
+      type: object
+      properties:
+        actorId: { type: string }
+        reason: { type: string }
+    ApproveResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        runId: { type: string }
+    RejectApprovalRequest:
+      type: object
+      properties:
+        actorId: { type: string }
+        reason: { type: string }
+    CancelResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        status: { type: string }
+    AuditExportItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        status: { type: string }
+        digest: { type: string }
+        uri: { type: string }
+        storeKey: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer }
+        requestedBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        completedAt: { type: string, format: date-time, nullable: true }
+    AuditExportListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditExportItem" }
+    AuditExportAccessResponse:
+      type: object
+      properties:
+        exportId: { type: string }
+        signedUrl: { type: string }
+        uri: { type: string }
+        contentType: { type: string }
+        digest: { type: string }
+        sizeBytes: { type: integer }
+        expiresAt: { type: integer, format: int64 }
+    AuditLogItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceID: { type: string }
+        runID: { type: string }
+        traceID: { type: string }
+        actorID: { type: string }
+        eventType: { type: string }
+        payloadJSON: { type: string }
+        createdAt: { type: string, format: date-time }
+    AuditLogListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuditLogItem" }
+    AuditPolicyItem:
+      type: object
+      properties:
+        spaceID: { type: string }
+        retentionDays: { type: integer }
+        redactPayload: { type: boolean }
+        locked: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    UpdateAuditPolicyRequest:
+      type: object
+      properties:
+        retentionDays: { type: integer }
+        redactPayload: { type: boolean }
+    ApplyAuditRetentionRequest:
+      type: object
+      properties:
+        dryRun: { type: boolean }
+    AuditRetentionApplyResponse:
+      type: object
+      properties:
+        spaceId: { type: string }
+        retentionDays: { type: integer }
+        dryRun: { type: boolean }
+        matched: { type: integer }
+        deleted: { type: integer }
+        cutoff: { type: string, format: date-time }
+    AuthUser:
+      type: object
+      properties:
+        id: { type: string }
+        email: { type: string }
+        displayName: { type: string }
+    AuthSpace:
+      type: object
+      properties:
+        id: { type: string }
+        name: { type: string }
+    AuthLoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email: { type: string }
+        password: { type: string }
+        spaceId: { type: string }
+    AuthSessionResponse:
+      type: object
+      properties:
+        token: { type: string }
+        user: { $ref: "#/components/schemas/AuthUser" }
+        space: { $ref: "#/components/schemas/AuthSpace" }
+    AuthMeResponse:
+      type: object
+      properties:
+        user: { $ref: "#/components/schemas/AuthUser" }
+        space: { $ref: "#/components/schemas/AuthSpace" }
+        role: { type: string }
+        permissions:
+          type: array
+          items: { type: string }
+    ChangePasswordRequest:
+      type: object
+      required: [currentPassword, newPassword]
+      properties:
+        currentPassword: { type: string }
+        newPassword: { type: string }
+    PasswordChangeResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+    RepoConnectionItem:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        provider: { type: string }
+        owner: { type: string }
+        repo: { type: string }
+        defaultBranch: { type: string }
+        secretId: { type: string }
+        status: { type: string }
+        lastSyncAt: { type: string, format: date-time, nullable: true }
+        createdBy: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    RepoConnectionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RepoConnectionItem" }
+    CreateRepoConnectionRequest:
+      type: object
+      required: [owner, repo, secretId]
+      properties:
+        provider: { type: string, enum: [github], default: github }
+        owner: { type: string }
+        repo: { type: string }
+        defaultBranch: { type: string, default: main }
+        secretId: { type: string }
+        spaceId: { type: string }
+    SecretResponse:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        name: { type: string }
+        description: { type: string }
+        status: { type: string }
+        scope: { type: object, additionalProperties: true }
+        redactedValue: { type: string }
+        valueDigest: { type: string }
+        createdBy: { type: string }
+        updatedBy: { type: string }
+        lastUsedAt: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    SecretListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SecretResponse" }
+    CreateSecretRequest:
+      type: object
+      required: [name, value]
+      properties:
+        name: { type: string }
+        value: { type: string }
+        description: { type: string }
+        spaceId: { type: string }
+        scope: { type: object, additionalProperties: true }
+    RotateSecretRequest:
+      type: object
+      required: [value]
+      properties:
+        value: { type: string }
+        description: { type: string }
+    RAGIndexRequest:
+      type: object
+      required: [repoRoot]
+      properties:
+        repoRoot: { type: string }
+        spaceId: { type: string }
+    RAGIndexResponse:
+      type: object
+      properties:
+        documents: { type: integer }
+        chunks: { type: integer }
+    RAGQueryRequest:
+      type: object
+      required: [text]
+      properties:
+        text: { type: string }
+        topK: { type: integer }
+        repoRoot: { type: string }
+        spaceId: { type: string }
+    RAGHit:
+      type: object
+      properties:
+        ref: { type: string }
+        path: { type: string }
+        symbol: { type: string }
+        snippet: { type: string }
+        digest: { type: string }
+        score: { type: number }
+        startLine: { type: integer }
+        endLine: { type: integer }
+    RAGQueryResponse:
+      type: object
+      properties:
+        retrievalMode: { type: string }
+        ftsAvailable: { type: boolean }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RAGHit" }
+    RunReplayRequest:
+      type: object
+      required: [mode]
+      properties:
+        mode:
+          type: string
+          description: exact | latest_memory
+        overrides:
+          type: object
+          additionalProperties: true
+    RunReplayResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+    RunResumeResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        traceId: { type: string }
+        status: { type: string }
+    CheckpointItem:
+      type: object
+      properties:
+        id: { type: string }
+        runID: { type: string }
+        stepID: { type: string }
+        strategy: { type: string }
+        uri: { type: string }
+        storeKey: { type: string }
+        snapshotDigest: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer }
+        createdAt: { type: string, format: date-time }
+    CheckpointListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/CheckpointItem" }
+    CheckpointAccessResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        checkpointId: { type: string }
+        stepId: { type: string }
+        uri: { type: string }
+        signedUrl: { type: string }
+        snapshotDigest: { type: string }
+        contentType: { type: string }
+        sizeBytes: { type: integer }
+        expiresAt: { type: integer, format: int64 }
+    TaskDetailResponse:
+      type: object
+      description: M0 legacy task detail (planned /v1/tasks; not implemented).
+      properties:
+        taskId: { type: integer, format: int64 }
+        title: { type: string }
+        goal: { type: string }
+        projectId: { type: string }
+        mode: { type: string, enum: [assist, auto] }
+        status: { type: string }
+        createdAt: { type: string, format: date-time }
+    TaskCancelResponse:
+      type: object
+      description: M0 legacy task cancel ack.
+      properties:
+        status: { type: string, example: CANCELLED }
+    LegacyMemoryCreateResponse:
+      type: object
+      description: M0 legacy memory create ack (maps to /api/v1/memory/candidates in implementation).
+      properties:
+        memoryId: { type: string }
+    LegacySpaceCreateRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, maxLength: 128 }
+        description: { type: string, maxLength: 512 }
+    LegacySpaceMemberRequest:
+      type: object
+      required: [userId, role]
+      properties:
+        userId: { type: integer, format: int64 }
+        role: { type: string, enum: [owner, developer, viewer] }
 security:
   - bearerAuth: []
 paths:
@@ -165,6 +2024,7 @@ paths:
     post:
       tags: [Tasks]
       summary: Create task
+      description: M0 legacy planned path. Implementation uses /api/v1/runs and task orchestration APIs.
       requestBody:
         required: true
         content:
@@ -175,16 +2035,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data: { $ref: "#/components/schemas/CreateTaskResponseData" }
+              schema: { $ref: "#/components/schemas/CreateTaskResponseData" }
   /v1/tasks/{taskId}:
     get:
       tags: [Tasks]
       summary: Get task detail
+      description: M0 legacy planned path.
       parameters:
         - in: path
           name: taskId
@@ -195,11 +2051,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/TaskDetailResponse" }
   /v1/tasks/{taskId}/start:
     post:
       tags: [Tasks]
       summary: Start task
+      description: M0 legacy planned path.
       parameters:
         - in: path
           name: taskId
@@ -215,16 +2072,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data: { $ref: "#/components/schemas/StartTaskResponseData" }
+              schema: { $ref: "#/components/schemas/StartTaskResponseData" }
   /v1/tasks/{taskId}/cancel:
     post:
       tags: [Tasks]
       summary: Cancel task
+      description: M0 legacy planned path.
       parameters:
         - in: path
           name: taskId
@@ -235,11 +2088,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/TaskCancelResponse" }
   /v1/agent-runs/{runId}:
     get:
       tags: [AgentRuns]
       summary: Get agent run detail
+      description: M0 legacy planned path. Use GET /api/v1/runs/{runId} in implementation.
       parameters:
         - in: path
           name: runId
@@ -250,12 +2104,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema:
-                allOf:
-                  - $ref: "#/components/schemas/ApiResponse"
-                  - type: object
-                    properties:
-                      data: { $ref: "#/components/schemas/AgentRun" }
+              schema: { $ref: "#/components/schemas/AgentRun" }
   /v1/runs/{runId}/stream:
     get:
       tags: [AgentRuns]
@@ -276,6 +2125,7 @@ paths:
     post:
       tags: [Memories]
       summary: Create memory
+      description: M0 legacy planned path. Use POST /api/v1/memory/candidates in implementation.
       requestBody:
         required: true
         content:
@@ -286,11 +2136,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/LegacyMemoryCreateResponse" }
   /v1/memories/search:
     post:
       tags: [Memories]
       summary: Search memories
+      description: M0 legacy planned path. Use POST /api/v1/memory/query in implementation.
       requestBody:
         required: true
         content:
@@ -301,7 +2152,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryQueryResponse" }
   /api/v1/repo/connections:
     post:
       tags: [Repo]
@@ -311,22 +2162,13 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [owner, repo, secretId]
-              properties:
-                provider: { type: string, enum: [github], default: github }
-                owner: { type: string }
-                repo: { type: string }
-                defaultBranch: { type: string, default: main }
-                secretId: { type: string }
-                spaceId: { type: string }
+            schema: { $ref: "#/components/schemas/CreateRepoConnectionRequest" }
       responses:
         "201":
           description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RepoConnectionItem" }
     get:
       tags: [Repo]
       summary: List repo connections
@@ -335,7 +2177,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RepoConnectionListResponse" }
   /api/v1/ci/runs:
     get:
       tags: [CI]
@@ -355,7 +2197,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CIRunListResponse" }
   /api/v1/ci/failures/diagnose:
     post:
       tags: [CI]
@@ -365,43 +2207,34 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              properties:
-                connectionId: { type: string }
-                runId: { type: string }
-                jobId: { type: string }
-                logText: { type: string }
+            schema: { $ref: "#/components/schemas/DiagnoseCIFailureRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/DiagnosisResponse" }
   /v1/spaces:
     post:
       tags: [Spaces]
       summary: Create space
+      description: M0 legacy planned path. Use POST /api/v1/spaces in implementation.
       requestBody:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [name]
-              properties:
-                name: { type: string, maxLength: 128 }
-                description: { type: string, maxLength: 512 }
+            schema: { $ref: "#/components/schemas/LegacySpaceCreateRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SpaceItem" }
   /v1/spaces/{spaceId}/members:
     post:
       tags: [Spaces]
       summary: Add space member
+      description: M0 legacy planned path. Use POST /api/v1/spaces/{spaceId}/members in implementation.
       parameters:
         - in: path
           name: spaceId
@@ -411,22 +2244,18 @@ paths:
         required: true
         content:
           application/json:
-            schema:
-              type: object
-              required: [userId, role]
-              properties:
-                userId: { type: integer, format: int64 }
-                role: { type: string, enum: [owner, developer, viewer] }
+            schema: { $ref: "#/components/schemas/LegacySpaceMemberRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemberItem" }
   /v1/feedback:
     post:
       tags: [Feedback]
       summary: Submit feedback
+      description: M0 legacy planned path. Use POST /api/v1/feedback in implementation.
       requestBody:
         required: true
         content:
@@ -437,7 +2266,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/FeedbackItem" }
   /api/v1/metrics/prometheus:
     get:
       tags: [Metrics]
@@ -456,7 +2285,7 @@ paths:
           description: forbidden
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/metrics/overview:
     get:
       tags: [Metrics]
@@ -482,7 +2311,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MetricsOverviewResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/ci/jobs:
     get:
       tags: [CI]
@@ -499,7 +2333,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CIJobListResponse" }
   /api/v1/ci/diagnoses:
     get:
       tags: [CI]
@@ -509,7 +2343,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CIDiagnosisListResponse" }
   /api/v1/ci/diagnoses/{diagnosisId}/adopt:
     post:
       tags: [CI]
@@ -519,12 +2353,16 @@ paths:
           name: diagnosisId
           required: true
           schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DecideCIDiagnosisRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/DiagnosisResponse" }
   /api/v1/ci/diagnoses/{diagnosisId}/dismiss:
     post:
       tags: [CI]
@@ -534,12 +2372,16 @@ paths:
           name: diagnosisId
           required: true
           schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DecideCIDiagnosisRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/DiagnosisResponse" }
   /api/v1/feedback/{feedbackId}:
     patch:
       tags: [Feedback]
@@ -554,7 +2396,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/FeedbackItem" }
   /api/v1/observability/alerts:
     get:
       tags: [Observability]
@@ -564,7 +2406,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AlertEventListResponse" }
   /api/v1/observability/alert-rules:
     get:
       tags: [Observability]
@@ -574,16 +2416,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AlertRuleListResponse" }
     put:
       tags: [Observability]
       summary: Update alert rules
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PutAlertRulesRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AlertRuleListResponse" }
   /api/v1/observability/alerts/evaluate:
     post:
       tags: [Observability]
@@ -593,7 +2440,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AlertEvaluationResult" }
   /api/v1/observability/trace/{traceId}:
     get:
       tags: [Observability]
@@ -608,7 +2455,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/TraceViewResponse" }
   /api/v1/releases:
     get:
       tags: [Releases]
@@ -618,16 +2465,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ReleaseListResponse" }
     post:
       tags: [Releases]
       summary: Create release
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateReleaseRequest" }
       responses:
         "201":
           description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ReleaseRecordItem" }
   /api/v1/releases/{releaseId}/checklist:
     get:
       tags: [Releases]
@@ -642,7 +2494,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ReleaseChecklistResponse" }
     patch:
       tags: [Releases]
       summary: Update release checklist
@@ -651,12 +2503,17 @@ paths:
           name: releaseId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatchReleaseChecklistRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ReleaseChecklistResponse" }
   /api/v1/releases/{releaseId}/gate:
     post:
       tags: [Releases]
@@ -671,7 +2528,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ReleaseGateEvaluation" }
   /api/v1/releases/{releaseId}/rollback-drills:
     post:
       tags: [Releases]
@@ -681,12 +2538,17 @@ paths:
           name: releaseId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRollbackDrillRequest" }
       responses:
         "201":
           description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RollbackDrillItem" }
   /api/v1/approvals:
     get:
       tags: [Approvals]
@@ -696,7 +2558,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ApprovalRequestListResponse" }
 
   /api/v1/approvals/{approvalId}/approve:
     post:
@@ -707,12 +2569,16 @@ paths:
           name: approvalId
           required: true
           schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApproveRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ApproveResponse" }
 
   /api/v1/approvals/{approvalId}/reject:
     post:
@@ -723,12 +2589,16 @@ paths:
           name: approvalId
           required: true
           schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RejectApprovalRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CancelResponse" }
 
   /api/v1/audit/exports:
     get:
@@ -739,7 +2609,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditExportListResponse" }
 
   /api/v1/audit/exports/{exportId}/access:
     get:
@@ -755,7 +2625,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditExportAccessResponse" }
 
   /api/v1/audit/logs:
     get:
@@ -766,7 +2636,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditLogListResponse" }
 
   /api/v1/audit/policy:
     get:
@@ -777,38 +2647,52 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditPolicyItem" }
     put:
       tags: [Audit]
       summary: Update audit retention policy
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateAuditPolicyRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditPolicyItem" }
 
   /api/v1/audit/retention/apply:
     post:
       tags: [Audit]
       summary: Apply audit retention policy
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApplyAuditRetentionRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuditRetentionApplyResponse" }
 
   /api/v1/auth/login:
     post:
       tags: [Auth]
       summary: Login with local credentials
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AuthLoginRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
 
   /api/v1/auth/me:
     get:
@@ -819,40 +2703,70 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AuthMeResponse" }
 
   /api/v1/auth/password:
     post:
       tags: [Auth]
       summary: "Change current user's password"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ChangePasswordRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PasswordChangeResponse" }
 
   /api/v1/compliance/export:
     post:
       tags: [Compliance]
       summary: Export audit bundle with doctor report and secret scan summary
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ComplianceExportRequest" }
       responses:
-        "200":
-          description: ok
+        "202":
+          description: accepted
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ComplianceExportResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/compliance/secret-scan:
     get:
       tags: [Compliance]
       summary: Scan audit logs and run events for secret patterns
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer, default: 200, maximum: 500 }
+          description: Max items scanned per source.
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SecretScanResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/doctor/reports/{reportId}:
     get:
@@ -868,18 +2782,33 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/DoctorReportResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/doctor/run:
     post:
       tags: [Doctor]
       summary: Run validation suite
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DoctorRunRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/DoctorRunResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/feedback:
     get:
@@ -890,16 +2819,16 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/FeedbackListResponse" }
     post:
       tags: [Feedback]
       summary: Create feedback
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/FeedbackItem" }
 
   /api/v1/improve/proposals:
     get:
@@ -910,16 +2839,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveListProposalsResponse" }
     post:
       tags: [Improve]
       summary: Create self-improvement proposal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImproveCreateProposalRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveProposalView" }
 
   /api/v1/improve/proposals/{proposalId}:
     get:
@@ -935,7 +2869,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveProposalView" }
 
   /api/v1/improve/proposals/{proposalId}/canary:
     post:
@@ -946,12 +2880,17 @@ paths:
           name: proposalId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ImproveCanaryRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveProposalView" }
 
   /api/v1/improve/proposals/{proposalId}/experiment:
     post:
@@ -967,7 +2906,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveStartExperimentResponse" }
 
   /api/v1/improve/proposals/{proposalId}/promote:
     post:
@@ -983,7 +2922,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveStatusResponse" }
 
   /api/v1/improve/proposals/{proposalId}/rollback:
     post:
@@ -999,7 +2938,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ImproveStatusResponse" }
 
   /api/v1/mcp/tools:
     get:
@@ -1010,16 +2949,16 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MCPToolListResponse" }
     post:
       tags: [Mcp]
       summary: Register an MCP tool
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MCPToolItem" }
 
   /api/v1/memory/candidates:
     get:
@@ -1030,16 +2969,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryListCandidatesResponse" }
     post:
       tags: [Memory]
       summary: Create memory candidate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemoryCreateCandidateRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryCreateCandidateResponse" }
 
   /api/v1/memory/candidates/{candidateId}/review:
     post:
@@ -1050,45 +2994,64 @@ paths:
           name: candidateId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemoryReviewRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryReviewResponse" }
 
   /api/v1/memory/hit-used:
     post:
       tags: [Memory]
       summary: Record memory usage in a run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemoryHitUsedRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryHitUsedResponse" }
 
   /api/v1/memory/query:
     post:
       tags: [Memory]
       summary: Query approved memory records
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemoryQueryRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryQueryResponse" }
 
   /api/v1/memory/migrate:
     post:
       tags: [Memory]
       summary: Run memory catalog migration for current space
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MemoryRunMigrationRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryRunMigrationResponse" }
 
   /api/v1/memory/records/{recordId}:
     get:
@@ -1104,7 +3067,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemoryRecordView" }
 
   /api/v1/model-router/providers:
     get:
@@ -1115,18 +3078,23 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ModelProviderListResponse" }
 
   /api/v1/model-router/route:
     post:
       tags: [ModelRouter]
       summary: Route a non-coding model request
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ModelRouterRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ModelRouterDecision" }
 
   /api/v1/observability/otel/status:
     get:
@@ -1137,7 +3105,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/OtelStatusResponse" }
 
   /api/v1/observability/quality/{runId}:
     get:
@@ -1153,7 +3121,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/QualityMetricListResponse" }
 
   /api/v1/observability/waterfall/{runId}:
     get:
@@ -1169,18 +3137,23 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/WaterfallResponse" }
 
   /api/v1/orgs:
     post:
       tags: [Orgs]
       summary: Create organization
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateOrgRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/OrgItem" }
 
   /api/v1/orgs/{orgId}/roles:
     get:
@@ -1196,7 +3169,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RoleListResponse" }
     post:
       tags: [Orgs]
       summary: Create organization role
@@ -1205,12 +3178,17 @@ paths:
           name: orgId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRoleRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RoleItem" }
 
   /api/v1/permissions/matrix:
     get:
@@ -1221,7 +3199,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PermissionMatrixResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/plugins:
     get:
@@ -1232,16 +3215,16 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginRegistryListResponse" }
     post:
       tags: [Plugins]
       summary: Register a plugin
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginRegistryItem" }
 
   /api/v1/plugins/abi:
     get:
@@ -1252,7 +3235,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginABIProfileResponse" }
 
   /api/v1/plugins/{pluginId}/verify:
     post:
@@ -1268,7 +3251,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginRegistryItem" }
 
   /api/v1/plugins/health:
     get:
@@ -1279,7 +3262,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginHealthSummary" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/plugins/{pluginId}/export-report:
     post:
@@ -1290,23 +3278,33 @@ paths:
           name: pluginId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PluginExportReportRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PluginRegistryItem" }
 
   /api/v1/rag/index:
     post:
       tags: [Rag]
       summary: Index repository for retrieval
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGIndexRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RAGIndexResponse" }
 
   /api/v1/rag/profile:
     get:
@@ -1317,18 +3315,28 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RAGProfileResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/rag/query:
     post:
       tags: [Rag]
       summary: Query repository retrieval index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGQueryRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RAGQueryResponse" }
 
   /api/v1/runs:
     get:
@@ -1339,16 +3347,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RunListResponse" }
     post:
       tags: [Runs]
       summary: Create and start a run
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RunCreateResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}:
     get:
@@ -1364,7 +3377,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RunSummaryResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/agent-tasks:
     get:
@@ -1380,7 +3398,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/AgentTaskListResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/approve:
     post:
@@ -1391,12 +3414,16 @@ paths:
           name: runId
           required: true
           schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ApproveRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ApproveResponse" }
 
   /api/v1/runs/{runId}/artifacts:
     get:
@@ -1412,7 +3439,17 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ArtifactsManifestResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/artifacts/{artifactName}/access:
     get:
@@ -1432,7 +3469,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ArtifactAccessResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/cancel:
     post:
@@ -1448,7 +3490,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CancelResponse" }
 
   /api/v1/runs/{runId}/checkpoints:
     get:
@@ -1464,7 +3506,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CheckpointListResponse" }
 
   /api/v1/runs/{runId}/checkpoints/{checkpointId}/access:
     get:
@@ -1484,12 +3526,13 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/CheckpointAccessResponse" }
 
   /api/v1/runs/{runId}/provenance:
     get:
       tags: [Runs]
       summary: Delivery provenance chain for a run
+      description: TR3-04 trace/event/tool/artifact counts and link table for auditability.
       parameters:
         - in: path
           name: runId
@@ -1500,7 +3543,17 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ProvenanceResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/quality-metrics:
     get:
@@ -1516,7 +3569,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/QualityMetricListResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/replay:
     post:
@@ -1527,12 +3585,17 @@ paths:
           name: runId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RunReplayRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RunReplayResponse" }
 
   /api/v1/runs/{runId}/resume:
     post:
@@ -1548,7 +3611,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/RunResumeResponse" }
 
   /api/v1/runs/{runId}/stream:
     get:
@@ -1561,10 +3624,10 @@ paths:
           schema: { type: string }
       responses:
         "200":
-          description: ok
+          description: text/event-stream
           content:
-            application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+            text/event-stream:
+              schema: { type: string }
 
   /api/v1/runs/{runId}/timeline:
     get:
@@ -1580,7 +3643,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/TimelineAPIResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/runs/{runId}/tool-calls:
     get:
@@ -1596,18 +3664,29 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ToolCallListResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/scale/readiness:
     get:
       tags: [Scale]
       summary: TR3 scale readiness snapshot
+      description: Returns memory/RAG/cost/audit counts plus Postgres migration, RLS, schema mode, and worker ops flags for the active space.
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ScaleReadinessResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/scenarios:
     get:
@@ -1618,29 +3697,39 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ScenarioListResponse" }
 
   /api/v1/scenarios/validate:
     post:
       tags: [Scenarios]
       summary: Validate scenario DSL (JSON body)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ValidateScenarioRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ValidationResponse" }
 
   /api/v1/scenarios/validate/raw:
     post:
       tags: [Scenarios]
       summary: Validate scenario DSL (raw YAML body)
+      requestBody:
+        required: true
+        content:
+          text/plain:
+            schema: { type: string }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ValidationResponse" }
 
   /api/v1/scenarios/{name}/{version}:
     get:
@@ -1660,7 +3749,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ScenarioDetailResponse" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/secrets:
     get:
@@ -1671,16 +3765,21 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SecretListResponse" }
     post:
       tags: [Secrets]
       summary: Create a space secret
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSecretRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SecretResponse" }
 
   /api/v1/secrets/{secretId}:
     delete:
@@ -1704,23 +3803,33 @@ paths:
           name: secretId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RotateSecretRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SecretResponse" }
 
   /api/v1/spaces:
     post:
       tags: [Spaces]
       summary: Create space
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateSpaceRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/SpaceItem" }
 
   /api/v1/spaces/{spaceId}/members:
     get:
@@ -1736,7 +3845,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemberListResponse" }
     post:
       tags: [Spaces]
       summary: Add a member to a space
@@ -1745,12 +3854,17 @@ paths:
           name: spaceId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateMemberRequest" }
       responses:
-        "200":
-          description: ok
+        "201":
+          description: created
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/MemberItem" }
 
   /api/v1/spaces/{spaceId}/permissions/matrix:
     get:
@@ -1766,7 +3880,12 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/PermissionMatrixResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/spaces/{spaceId}/resource-scopes:
     get:
@@ -1782,7 +3901,7 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ResourceScopeListResponse" }
 
   /api/v1/spaces/{spaceId}/resource-scopes/{scopeId}:
     put:
@@ -1797,12 +3916,17 @@ paths:
           name: scopeId
           required: true
           schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/UpdateResourceScopeRequest" }
       responses:
         "200":
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/ResourceScopeView" }
 
   /api/v1/storage/profile:
     get:
@@ -1813,4 +3937,33 @@ paths:
           description: ok
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/ApiResponse" }
+              schema: { $ref: "#/components/schemas/StorageProfileResponse" }
+
+  /healthz:
+    get:
+      tags: [Health]
+      summary: Liveness probe
+      security: []
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+
+  /readyz:
+    get:
+      tags: [Health]
+      summary: Readiness probe
+      security: []
+      responses:
+        "200":
+          description: ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }
+        "503":
+          description: not ready
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HealthResponse" }

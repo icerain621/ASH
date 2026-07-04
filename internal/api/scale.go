@@ -1,6 +1,7 @@
 package api
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -35,6 +36,8 @@ type ScaleReadinessResponse struct {
 	PostgresRLSEnabled    bool   `json:"postgresRLSEnabled"`
 	PostgresRLSForce      bool   `json:"postgresRLSForce"`
 	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
+	PostgresRLSPolicyExpected int64 `json:"postgresRLSPolicyExpected,omitempty"`
+	RLSCatalogSummary      string `json:"rlsCatalogSummary,omitempty"`
 	PostgresAppURLConfigured bool   `json:"postgresAppUrlConfigured,omitempty"`
 	WorkerConnectionRole     string `json:"workerConnectionRole,omitempty"`
 	RuntimeDSNHint           string `json:"runtimeDsnHint,omitempty"`
@@ -139,7 +142,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		AutoMigrateEnabled:         dbProfile.AutoMigrateEnabled,
 		SQLMigrationVersion:        dbProfile.SQLMigrationVersion,
 		SQLMigrationExpected:       dbProfile.SQLMigrationExpected,
-		ReadinessWarnings:             scaleReadinessWarnings(dbProfile.SchemaMode, migSnap),
+		ReadinessWarnings:             scaleReadinessWarnings(dbProfile, migSnap),
 		MemoryCatalogVersion:          memCatalog,
 		MemoryPendingMigrationRecords: memPending,
 		RAGFTSAvailable:               ragFts,
@@ -149,21 +152,43 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		OtelEnabled:                   ops.OtelEnabled,
 		AlertsEvalInterval:            ops.AlertsEvalInterval,
 		MetricsEventReplayEnabled:     ops.MetricsEventReplayEnabled,
+		PostgresRLSPolicyExpected:     dbProfile.PostgresRLSPolicyExpected,
+		RLSCatalogSummary:             rlsCatalogSummary(dbProfile),
 	})
 }
 
-func scaleReadinessWarnings(schemaMode string, mig store.MigrationSnapshot) []string {
-	mode := schemaMode
+func rlsCatalogSummary(profile store.DatabaseProfileInfo) string {
+	if profile.Dialect != "postgres" || !profile.PostgresRLSEnabled {
+		return ""
+	}
+	return store.FormatRLSCatalogSummary()
+}
+
+func scaleReadinessWarnings(profile store.DatabaseProfileInfo, mig store.MigrationSnapshot) []string {
+	var out []string
+	mode := profile.SchemaMode
 	if mode == "" {
 		mode = sqlmigrations.Mode()
 	}
-	if mode != sqlmigrations.SchemaModeSQL {
-		return nil
+	if mode == sqlmigrations.SchemaModeSQL && (mig.DualWriteEnabled || mig.DualWriteRuntime) {
+		out = append(out,
+			"ASH_SCHEMA_MODE=sql 与双写（SQLite→Postgres 影子库）不应同时启用：SQL 修订仅保证主库 schema，影子库可能不一致",
+		)
 	}
-	if !mig.DualWriteEnabled && !mig.DualWriteRuntime {
-		return nil
+	if profile.Dialect == "postgres" && profile.PostgresRLSEnabled && profile.PostgresRLSPolicyExpected > 0 {
+		if profile.PostgresRLSPolicyCount > 0 && profile.PostgresRLSPolicyCount < profile.PostgresRLSPolicyExpected {
+			out = append(out, fmt.Sprintf(
+				"postgres RLS policies=%d want >=%d (run migrate schema or make postgres-rls-e2e)",
+				profile.PostgresRLSPolicyCount, profile.PostgresRLSPolicyExpected,
+			))
+		}
 	}
-	return []string{
-		"ASH_SCHEMA_MODE=sql 与双写（SQLite→Postgres 影子库）不应同时启用：SQL 修订仅保证主库 schema，影子库可能不一致",
+	if profile.Dialect == "postgres" && profile.SQLMigrationExpected > 0 && profile.SQLMigrationVersion > 0 &&
+		profile.SQLMigrationVersion < profile.SQLMigrationExpected {
+		out = append(out, fmt.Sprintf(
+			"sql migration version=%d want %d (run migrate schema up)",
+			profile.SQLMigrationVersion, profile.SQLMigrationExpected,
+		))
 	}
+	return out
 }
