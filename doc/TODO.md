@@ -16,10 +16,10 @@
 | T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ 2026-06-08：`ASH_SCHEMA_MODE=sql`、sql rev **17**、M3 **9/9**（M3-04 skip） |
 | T-06 | CI job | GitHub Actions `ci.yml` + nightly `postgres-e2e.yml` | PR `postgres-sql-schema-e2e`；push main 全量 `postgres-e2e` |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
-| T-07 | 记忆 emit layer | `go test ./internal/memory/... -count=1 -short` | ✅ 断言 pass（Windows 偶发 TempDir 清理警告） |
+| T-07 | 记忆 emit layer | `go test ./internal/memory/... -count=1 -short` | ✅ 断言 pass（OpenTest 关闭 DB） |
 | T-08 | Scale 双写冲突告警 | `go test ./internal/api/... -run ScaleReadinessSchemaSql -count=1` | ✅ 2026-06-03 本地 pass |
 | T-09 | 记忆 P1 derive 单测 | `go test ./internal/observability/derive/... -run Replay_memoryHit -count=1` | ✅ 2026-06-03 本地 pass |
-| T-10 | 记忆 schema 迁移 | `go test ./internal/memory/... -run RunMigrations -count=1` | ✅ 断言 pass（Windows TempDir 清理警告） |
+| T-10 | 记忆 schema 迁移 | `go test ./internal/memory/... -run RunMigrations -count=1` | ✅ OpenTest 关闭 DB |
 | T-11 | OTel 骨架单测 | `go test ./internal/observability/otel/... -count=1` | ✅ 2026-06-03 本地 pass |
 | T-12 | RAG 降级 derive | `go test ./internal/rag/... ./internal/observability/derive/... -run 'Fallback|ragRetrieved' -count=1` | ✅ Sprint I：`retrievalMode=chunk` replay |
 

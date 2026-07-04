@@ -17,11 +17,7 @@ import (
 
 func newTestMemory(t *testing.T) (*Service, *events.Service, *runs.Service) {
 	t.Helper()
-	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)
 	scenariosDir := filepath.Join("..", "..", "scenarios")
 	loader := rules.NewLoader(scenariosDir)

@@ -31,7 +31,13 @@ const CASE_LABELS: Record<string, string> = {
   "M2-03": "运行期策略拒绝",
   "M3-01": "多租户隔离",
   "M3-02": "Postgres 就绪",
+  "M3-03": "迁移目录",
+  "M3-04": "迁移校验",
+  "M3-05": "ExecGo E2E",
+  "M3-06": "Postgres RLS",
+  "M3-07": "ash_app 连接",
   "M3-08": "SQL 修订版本",
+  "M3-09": "运维快照契约",
 };
 
 function caseLabel(id: string) {

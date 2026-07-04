@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint S: memory tests use `store.OpenTest` for reliable DB cleanup; Doctor report UI labels for M3-03..M3-09.
 - Sprint R: `internal/opsenv` shared worker ops snapshot; Doctor **M3-09** readyz/Scale contract; CI runs full `postgres-e2e` on push to main.
 - Sprint Q: `/readyz` exposes schema mode, SQL migration version, OTel, alerts eval interval, and metrics replay flags; production config observability section; CI PR job `postgres-sql-schema-e2e`.
 - Doctor **TR3-07** plugin export health (registry + `plugin.export_failed` audit); Scale `metricsEventReplayEnabled`; Observability OTel exporter health panel.
