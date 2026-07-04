@@ -92,6 +92,9 @@ postgres-rds-e2e:
 ci-fixture-smoke:
 	bash scripts/ci-fixture-smoke.sh
 
+release-window-audit:
+	bash scripts/release-window-audit.sh
+
 verify:
 	bash scripts/verify-local.sh
 

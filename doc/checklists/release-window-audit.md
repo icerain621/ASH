@@ -8,8 +8,9 @@
 |---|-----|-------------|------|
 | 1 | 云 RDS 全链路 | `make postgres-rds-e2e`（需 `ASH_DATABASE_URL`） | 脚本 stdout；Doctor M3/TR3/ALL md |
 | 2 | 本地四门 Postgres（对照） | `make postgres-e2e` + `postgres-sql-schema-e2e` + `postgres-rls-e2e` | CI workflow 绿或本地日志 |
-| 3 | 静态 Doctor | `go run ./cmd/cli doctor --suite ALL --agent static --format md` | **43/43** |
+| 3 | 静态 Doctor | `make release-window-audit` 或 `go test ./internal/doctor/... -run TestALLSuite` | **43/43**（隔离测试库；CLI 报告需 `ASH_RELEASE_AUDIT_DATA_DIR`） |
 | 4 | 契约 | `make openapi-check` + `make regression-short` | openapicheck pass |
+| 4b | 一键静态审计 | `make release-window-audit` | 聚合 §3–§4 + API 抽样（可选 `ASH_WORKER_URL` live） |
 | 5 | Worker 配置核对 | `doc/checklists/postgres-production-config.md` | env 清单签字 |
 | 6 | 密钥轮换（如适用） | §密钥轮换 SOP | 轮换前后 `/readyz` JSON |
 
@@ -28,7 +29,7 @@
 |---|--------|-------------|
 | 1 | `/readyz` / Scale readiness | 持续 200；无 `readinessWarnings` 漂移 |
 | 2 | `/metrics` + 告警 | 30–60 分钟无 P0 告警 |
-| 3 | ExecGo（若启用） | `ASH_EXECGO_E2E=1` + [`execgo-live-smoke.md`](execgo-live-smoke.md) |
+| 3 | ExecGo（若启用） | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 [`execgo-live-smoke.md`](execgo-live-smoke.md) |
 | 4 | CI sync（若启用） | 真实 token `sync=true` 或 `ASH_CI_FIXTURE=1` 联调记录 |
 
 ## 回滚触发（任一即执行）

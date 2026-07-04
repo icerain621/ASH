@@ -48,7 +48,7 @@ make postgres-sql-schema-e2e
 | H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + `POST /ci/failures/diagnose`（仅 `jobId`） | job log 经 fixture 拉取、`logDigest` 落库、`rootCause` 分类；`TestFixtureProviderSyncRunsAndJobs` |
 | H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 Doctor M3-05 | `execgo-health` + live 执行链路；本地静态 `TestM3ExecGoLiveSmoke` |
 | H-07 | 密钥轮换策略 | repo connection `secretId` | 见 `postgres-production-config.md` §密钥轮换；轮换后 Doctor + `/readyz` 归档 |
-| H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) | Postgres e2e + ALL/M3 + §7 证据归档 |
+| H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) + `make release-window-audit` | Postgres e2e + ALL/M3 + §7 证据归档 |
 | H-09 | 业务抽样 §7 | `go test -run TestReleaseSampling` 或 `scripts/release-sampling.sh` | Run/SSE/Memory/KPI/CI/合规/Scale（§7.2 SSE 含 `TestReleaseSamplingSSE`） |
 
 本地自动化（无需云环境，CI 可跑）：
@@ -124,6 +124,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AQ：`scripts/release-window-audit.sh` + `make release-window-audit`（H-08 静态门禁聚合）。
 - Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。
 - Sprint AP：`scripts/ci-fixture-smoke.sh`  live Worker H-04/H-05；`release-sampling.sh` §7.3b ttl-queue；CI 页 fixture 提示 +「诊断选中 job」。
 - Sprint AO：CI fixture H-04/H-05 全链路扩展（双 job：test_failure + docker）；`jobId` 诊断拉日志 + `logDigest` 落库 + adopt；`TestReleaseSamplingCIFixtureH04H05`。
