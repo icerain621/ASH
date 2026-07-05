@@ -309,7 +309,10 @@ export function RunsPage() {
   const streamLines = useRunStream(selectedId);
   const artifacts = useMemo(() => artifactItems(artifactsQuery.data), [artifactsQuery.data]);
   const checkpoints = checkpointsQuery.data?.items ?? [];
-  const scenarioOptions = scenariosQuery.data?.items ?? [];
+  const scenarioOptions = useMemo(
+    () => scenariosQuery.data?.items ?? [],
+    [scenariosQuery.data?.items],
+  );
 
   useEffect(() => {
     if (!scenarioOptions.length) return;

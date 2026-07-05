@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev verify regression-short
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev web-lint web-test web-gate verify regression-short cloud-acceptance mvp-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup worker-local-gate pre-migrate-gate t1-metrics-gate
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -122,8 +122,47 @@ verify:
 regression-short:
 	bash scripts/regression-short.sh
 
+cloud-acceptance:
+	bash scripts/cloud-acceptance-gate.sh
+
+mvp-signoff:
+	bash scripts/mvp-signoff-gate.sh
+
+production-config-gate:
+	bash scripts/production-config-gate.sh
+
+rollback-drill:
+	bash scripts/rollback-drill-gate.sh
+
+queue-gate:
+	bash scripts/queue-gate.sh
+
+t0-alert-gate:
+	bash scripts/t0-alert-gate.sh
+
+data-backup:
+	bash scripts/ash-data-backup.sh
+
+worker-local-gate:
+	bash scripts/worker-local-gate.sh
+
+pre-migrate-gate:
+	bash scripts/pre-migrate-gate.sh
+
+t1-metrics-gate:
+	bash scripts/t1-metrics-gate.sh
+
 web-build:
 	cd frontend && npm install && npm run build
+
+web-lint:
+	cd frontend && npm install && npm run lint
+
+web-test:
+	cd frontend && npm install && npm run test:run
+
+web-gate:
+	bash scripts/web-gate.sh
 
 web-dev:
 	cd frontend && npm install && npm run dev

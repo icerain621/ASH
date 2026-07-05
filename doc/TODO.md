@@ -14,7 +14,7 @@
 | T-03 | Doctor TR3-05..10 | `go test ./internal/doctor/... -run TestTR3Suite -count=1` | ✅ TR3 **10/10**（TR3-06/08 默认 skip） |
 | T-04 | Doctor ALL 计数 | `go test ./internal/doctor/... -run TestALLSuite -count=1` | ✅ **43/43** pass |
 | T-05 | SQL schema 本地 E2E | `make postgres-sql-schema-e2e` | ✅ sql rev **20**；TR3-06/10 live 断言（M3-04 skip by design） |
-| T-06 | CI job | GitHub Actions `ci.yml`（`regression-short` + 三门 Postgres + **`postgres-e2e` PR**）+ `postgres-e2e.yml` nightly | PR 四门 Postgres + 全量 migrate e2e |
+| T-06 | CI job | GitHub Actions `ci.yml`（`regression-short` + 三门 Postgres + **`postgres-e2e` PR** + **`web-gate` frontend**）+ `postgres-e2e.yml` nightly | PR 四门 Postgres + 全量 migrate e2e |
 | T-13 | Postgres RAG FTS 集成 | `go test -tags=integration ./internal/rag/ -run TestPostgresRAGFTSQuery`（`ASH_MIGRATE_E2E=1`） | 已并入 `make postgres-sql-schema-e2e` |
 | T-14 | Memory 子表 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnMemoryChildren` | 已并入 `postgres-rls-e2e` / `postgres-sql-schema-e2e` |
 | T-15 | Org 身份 RLS 集成 | `go test -tags=integration ./internal/store/ -run TestPostgresRLSSpaceIsolationOnOrgIdentity` | 已并入 `postgres-rls-e2e`；`verify-local` Docker 可用时自动跑 |
@@ -41,9 +41,9 @@ make postgres-sql-schema-e2e
 
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
-| H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 43/43 |
+| H-01 | 云 RDS 全链路 E2E | `make cloud-acceptance`（需 `ASH_DATABASE_URL`） | `migrate schema` v20 + Doctor M3 11/11 + ALL 43/43 |
 | H-02 | 云 RDS RLS + ash_app | 清单 §4–§5；本地 `make postgres-app-gate` | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
-| H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres；本地见 `postgres-app-gate.md` |
+| H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres；签字见 `h01-h03-cloud-signoff.md` |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`**（`TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05`） |
 | H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + `POST /ci/failures/diagnose`（仅 `jobId`） | job log 经 fixture 拉取、`logDigest` 落库、`rootCause` 分类；`TestFixtureProviderSyncRunsAndJobs` |
 | H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 Doctor M3-05 | `execgo-health` + live 执行链路；本地静态 `TestM3ExecGoLiveSmoke` |
@@ -54,6 +54,14 @@ make postgres-sql-schema-e2e
 本地自动化（无需云环境，CI 可跑）：
 
 ```bash
+make cloud-acceptance      # H-01~H-03 云 RDS + 证据归档（需 ASH_DATABASE_URL）
+make mvp-signoff           # MVP 发布签字门禁
+make web-gate              # 前端 lint + vitest + build
+make production-config-gate
+make rollback-drill
+make queue-gate
+make t0-alert-gate
+make data-backup            # SQLite 备份（migrate 前）
 make postgres-e2e
 make postgres-rls-e2e
 make postgres-app-gate    # Docker + schema 后 H-02/H-03 本地
@@ -127,6 +135,11 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BB：`make worker-local-gate` / `make pre-migrate-gate` / `make t1-metrics-gate`；`release-window-runbook.md`。
+- Sprint BA：`make queue-gate` / `make t0-alert-gate` / `make data-backup`；`doc/mvp-release-scope.md`；CI production-config + queue gate。
+- Sprint AZ：`make production-config-gate` + `make rollback-drill`；API 延迟/并发基线单测；`regression-short` / `mvp-signoff` 接入。
+- Sprint AY：`make web-gate`（eslint + vitest + build）；CI frontend job 升级；`source-cloud-rds-env.sh`；MVP §3 前端项勾选。
+- Sprint AX：`make cloud-acceptance` + `make mvp-signoff` 证据归档；`h01-h03-cloud-signoff.md`；MVP 清单勾选与 `doc/evidence/`。
 - Sprint AW：`scripts/postgres-app-gate.sh` + `make postgres-app-gate`（H-02/H-03 本地）；`smoke-static.sh`；`verify-local` Go env 引导。
 - Sprint AV：`postgres-rds-e2e` 接入 `live-smoke`；`smoke-index` 文档串联；MVP 清单与 CI `release-sampling-static` 显式步骤。
 - Sprint AU：`scripts/live-smoke.sh` + `make live-smoke`（H-04/05/06/07/09 live 编排）；`doc/checklists/smoke-index.md`；`release-window-audit` live 段收敛。

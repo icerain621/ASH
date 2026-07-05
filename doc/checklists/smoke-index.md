@@ -13,6 +13,14 @@
 | 业务抽样（静态+live） | `ASH_WORKER_URL=... make release-sampling-smoke` | H-09 |
 | Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排 |
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI + openapi + 可选 Postgres RLS |
+| 前端门禁 | `make web-gate` | eslint + vitest + production build |
+| 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |
+| 回滚演练 | `make rollback-drill` | 发布 API drill + 基线 + Doctor ALL |
+| 队列治理 | `make queue-gate` | TTL sweep 消费 + 洁净告警 |
+| T+0 告警 | `make t0-alert-gate` | 洁净空间 evaluate 无 alert |
+| T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback API |
+| Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
+| 迁移前 | `make pre-migrate-gate` | backup + migrate plan |
 
 ## H 清单对照
 
@@ -38,4 +46,6 @@
 ## 相关
 
 - [`postgres-rds-e2e.md`](postgres-rds-e2e.md) — H-01～H-03、云 RDS §7
+- [`h01-h03-cloud-signoff.md`](h01-h03-cloud-signoff.md) — H-01～H-03 云验收签字
 - [`postgres-production-config.md`](postgres-production-config.md) — 生产 env 与轮换 SOP
+- [`../evidence/README.md`](../evidence/README.md) — `make mvp-signoff` / `make cloud-acceptance` 证据

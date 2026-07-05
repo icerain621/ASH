@@ -30,7 +30,7 @@ curl_json GET /readyz | head -c 400
 echo ""
 
 echo "== 7.1 create run =="
-RUN_JSON=$(curl_json POST /api/v1/runs '{"scenario":{"name":"feature_delivery","scenarioVersion":"1.0.0"},"inputs":{"issue":"h09 smoke"}}')
+RUN_JSON=$(curl_json POST /api/v1/runs '{"scenario":{"name":"feature_delivery","scenarioVersion":"1.0.0"},"inputs":{"issueOrSpec":"h09 smoke","repoRoot":"."}}')
 RUN_ID=$(echo "$RUN_JSON" | sed -n 's/.*"runId"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p' | head -1)
 if [[ -z "$RUN_ID" ]]; then
   echo "create run failed: $RUN_JSON" >&2

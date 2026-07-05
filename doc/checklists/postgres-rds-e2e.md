@@ -176,7 +176,7 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 | 套件 | 项数 | 云 RDS 期望 |
 |------|------|-------------|
 | M3 | 8 | **全部 pass**（M3-04 / 06 / 07 / 08 非 skip） |
-| ALL | 37 | **全部 pass**（含 M3-09 readyz 契约、TR3-05..07） |
+| ALL | 43 | **全部 pass**（含 M3-09 readyz 契约、TR3-05..10） |
 | M3-05 ExecGo | 1 | 可选：`ASH_EXECGO_E2E=1` + live ExecGo；未启用可 skipped |
 
 ---
@@ -272,8 +272,8 @@ export ASH_MIGRATE_E2E=1
 export ASH_POSTGRES_RLS=1
 export ASH_POSTGRES_RLS_FORCE=1
 
-make postgres-rds-e2e
-# 等价于 scripts/postgres-rds-e2e.sh
+make cloud-acceptance
+# 等价于 scripts/cloud-acceptance-gate.sh → postgres-rds-e2e + 证据目录 .ash/evidence/cloud-h01-h03-*
 ```
 
 ## 附录 B：相关文档

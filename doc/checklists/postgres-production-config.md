@@ -1,6 +1,7 @@
 # Postgres 生产配置模板（revision 20）
 
-> 切换生产前复制本模板为环境变量/密钥配置。本地验证：`make postgres-sql-schema-e2e`、`make postgres-rls-e2e`。
+> 切换生产前复制本模板为环境变量/密钥配置。本地验证：`make postgres-sql-schema-e2e`、`make postgres-rls-e2e`。  
+> **云 RDS 一键模板**：[`config/cloud-rds.env.example`](../../config/cloud-rds.env.example)
 
 ## 推荐 Schema 模式
 
@@ -36,10 +37,10 @@ export ASH_POSTGRES_RLS_FORCE=1
 ## 迁移顺序（空库 / 维护窗口）
 
 ```bash
-# 1. 应用全部 SQL 修订（000001–000017，expectedVersion=17）
+# 1. 应用全部 SQL 修订（000001–000020，expectedVersion=20）
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
-# 期望：version=17 dirty=false expected=17 mode=sql
+# 期望：version=20 dirty=false expected=20 mode=sql
 
 # 2. SQLite → Postgres 数据（若有存量）
 export ASH_MIGRATE_E2E=1
@@ -84,7 +85,7 @@ export ASH_OTEL_ENDPOINT=otel-collector:4317
 ```bash
 curl -s http://<worker>/readyz | jq .
 # dialect=postgres
-# schemaMode=sql、sqlMigrationVersion=17、autoMigrateEnabled=false
+# schemaMode=sql、sqlMigrationVersion=20、autoMigrateEnabled=false
 # otelEnabled、alertsEvalInterval、memoryTTLSweepInterval、metricsEventReplayEnabled 与上表环境变量一致
 ```
 

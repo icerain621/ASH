@@ -29,6 +29,11 @@ echo "ASH_SCHEMA_MODE=${ASH_SCHEMA_MODE}"
 
 bash scripts/postgres-smoke.sh
 
+if [[ -f "${ASH_SQLITE_PATH:-.ash/ash.db}" ]]; then
+  echo "== pre-migrate backup =="
+  bash scripts/ash-data-backup.sh
+fi
+
 echo "== golang-migrate schema (expected revision 20) =="
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"

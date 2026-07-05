@@ -166,6 +166,23 @@ func TestEvaluateMemoryBacklogAlert(t *testing.T) {
 	}
 }
 
+func TestEvaluateCleanSpaceNoCriticalAlerts(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	resp, err := svc.Evaluate("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range resp.Results {
+		if item.Status == "alert" {
+			t.Fatalf("clean space should not alert: %+v", item)
+		}
+	}
+	if len(resp.Events) != 0 {
+		t.Fatalf("events=%d want 0 on clean evaluate", len(resp.Events))
+	}
+}
+
 func TestPrometheusEventReplaySegment(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	t.Setenv("ASH_METRICS_EVENT_REPLAY", "1")

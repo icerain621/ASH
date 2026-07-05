@@ -32,6 +32,12 @@ jobs:
       - name: Regression short
         run: make regression-short
 
+      - name: Production config gate
+        run: make production-config-gate
+
+      - name: Queue gate
+        run: make queue-gate
+
       - name: H-09 release sampling static
         run: make release-sampling-static
 
@@ -105,5 +111,5 @@ jobs:
           cache: npm
           cache-dependency-path: frontend/package-lock.json
 
-      - name: Web build
-        run: make web-build
+      - name: Web gate (lint + test + build)
+        run: make web-gate

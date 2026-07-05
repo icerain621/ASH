@@ -99,6 +99,9 @@
 | 发布与灰度回滚治理 | ✅ PRD 后四项 | `/ui/releases`；release checklist/gate/rollback drills；只记录策略和证据，不执行生产发布 |
 | SQLite 纯 Go 驱动 | ✅ | `glebarez/sqlite`，Windows 无需 CGO |
 | 本地验证脚本 | ✅ | `bash scripts/verify-local.sh`（Git Bash / Linux） |
+| 烟测门禁 H-04~H-09 | ✅ | `make smoke-static` / `live-smoke`；索引 `doc/checklists/smoke-index.md` |
+| MVP / 云验收签字 | ✅ | `make mvp-signoff` / `make cloud-acceptance`；`doc/evidence/` + `h01-h03-cloud-signoff.md` |
+| 前端门禁 | ✅ | `make web-gate`（eslint + vitest + build）；CI `frontend` job |
 
 本地验证：
 ```bash

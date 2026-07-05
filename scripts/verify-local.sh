@@ -57,7 +57,7 @@ else
   echo "== skip execgo-health (make execgo-bootstrap or install execgocli) =="
 fi
 
-echo "== frontend build =="
-(cd frontend && npm install && npm run build)
+echo "== frontend web-gate =="
+make web-gate
 
 echo "OK"
