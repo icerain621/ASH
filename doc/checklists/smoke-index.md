@@ -15,12 +15,17 @@
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI + openapi + 可选 Postgres RLS |
 | 前端门禁 | `make web-gate` | eslint + vitest + production build |
 | 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |
+| 配置核对 | `make config-env-gate` | 模板 + production/scope gate |
 | 回滚演练 | `make rollback-drill` | 发布 API drill + 基线 + Doctor ALL |
 | 队列治理 | `make queue-gate` | TTL sweep 消费 + 洁净告警 |
 | T+0 告警 | `make t0-alert-gate` | 洁净空间 evaluate 无 alert |
 | T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback API |
 | Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
 | 发布范围冻结 | `make scope-freeze-gate` | `mvp-release-scope.md` 结构校验 |
+| 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
+| 本地就绪 | `make local-readiness-gate` | release-window + worker live（~4min） |
+| 发布窗口预填 | `make release-window-prefill` | 空模板（无跑门禁） |
+| H-03 JWT Worker | `make worker-production-gate` | 生产-like 密钥 + dev-login live |
 | 迁移前 | `make pre-migrate-gate` | backup + migrate plan |
 
 ## H 清单对照

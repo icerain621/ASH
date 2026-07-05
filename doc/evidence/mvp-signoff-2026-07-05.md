@@ -1,9 +1,9 @@
 # MVP 发布签字证据（2026-07-05）
 
-- 生成时间（UTC）：2026-07-05T10:42:21Z
-- Git：8896187 @ main
-- 自动化步骤通过：**4**
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260705T103555Z`（本地，未入库）
+- 生成时间（UTC）：2026-07-05T14:09:41Z
+- Git：a56fc1b @ main
+- 自动化步骤通过：**16**
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260705T135953Z`（本地，未入库）
 - 门禁命令：`make mvp-signoff`
 
 ## 自动化验收
@@ -11,6 +11,12 @@
 | 门禁 | 状态 |
 |------|------|
 | regression-short | ✅ |
+| web-gate (lint+test+build) | ❌ |
+| production-config-gate | ✅ |
+| config-env-gate | ✅ |
+| queue-gate | ✅ |
+| t0-alert-gate | ✅ |
+| rollback-drill | ✅ |
 | release-sampling-static (H-09) | ✅ |
 | Doctor ALL 43/43 | ✅ |
 | release-window-audit (H-08) | ✅ |
@@ -22,6 +28,7 @@
 | MVP § | 项 | 自动化证据 |
 |-------|-----|------------|
 | 3 | 快捷回归 | regression-short |
+| 3 | 前端 lint/测试/构建 | web-gate |
 | 3 | 发布审计静态 | release-window-audit |
 | 5 | H-04~H-09 烟测 | release-sampling-static + regression-short |
 | 5 | Postgres 生产切换 | H-01~H-03 云验收 |

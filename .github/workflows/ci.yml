@@ -38,6 +38,9 @@ jobs:
       - name: Queue gate
         run: make queue-gate
 
+      - name: Config env gate
+        run: make config-env-gate
+
       - name: H-09 release sampling static
         run: make release-sampling-static
 

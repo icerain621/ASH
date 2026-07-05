@@ -39,7 +39,7 @@ fi
 echo "runId=$RUN_ID"
 
 echo "== 7.2 SSE stream (live) =="
-echo "Tip: GET ${BASE}/api/v1/runs/${RUN_ID}/stream (manual); CI uses TestReleaseSamplingSSE"
+bash scripts/sse-live-smoke.sh "$RUN_ID"
 
 echo "== 7.3 memory candidate + review + query =="
 CAND=$(curl_json POST /api/v1/memory/candidates '{"layer":"L1","title":"H09 live","body":"release sampling","scopeRepo":"ash","evidence":[{"kind":"file","ref":"doc/h09.md"}]}')
@@ -73,4 +73,4 @@ echo "== 7.7 scale readiness =="
 curl_json GET /api/v1/scale/readiness | head -c 300
 echo ""
 
-echo "OK H-09 sampling (7.2 SSE manual: GET /api/v1/runs/${RUN_ID}/stream)"
+echo "OK H-09 sampling (7.2 SSE live via sse-live-smoke.sh)"

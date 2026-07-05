@@ -8,6 +8,9 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BF：`make local-readiness-gate`；`web-gate.sh` 禁用 audit + 复用 `node_modules`（npmmirror/Windows 规避）；`release-window-gate` 默认快速路径。
+- Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 静态 release-window + `worker-production-gate`；MVP §6 备份 / §8 自动化勾选。
+- Sprint BD：`make config-env-gate` / `make worker-production-gate` / `make release-window-prefill`；`scripts/sse-live-smoke.sh`（H-09 §7.2 SSE）；`mvp-signoff` + CI 接入 config-env-gate；MVP §8 配置核对 / §10 T+1 勾选。
 - Sprint BC：`make scope-freeze-gate`；`release-gates.yml`（`worker-local-gate` + `mvp-signoff`）；`cloud-acceptance` 接入 `pre-migrate-gate`。
 - Sprint BB：`make worker-local-gate`（临时 Worker + live-smoke）；`make pre-migrate-gate` / `make t1-metrics-gate`；`release-window-runbook.md`。
 - Sprint BA：`make queue-gate` / `make t0-alert-gate` / `make data-backup`；`TestTTLQueueConsumeBaseline`；`TestEvaluateCleanSpaceNoCriticalAlerts`；`doc/mvp-release-scope.md`。

@@ -24,6 +24,23 @@ jobs:
       - name: Worker local gate
         run: make worker-local-gate
 
+  release-window-gate:
+    name: Release window (fast static)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Release window gate
+        run: make release-window-gate
+
   mvp-signoff:
     name: MVP signoff (static gates)
     runs-on: ubuntu-latest
@@ -49,3 +66,20 @@ jobs:
         env:
           ASH_RELEASE_AUDIT_SKIP_OPENAPI: "1"
         run: make mvp-signoff
+
+  worker-production-gate:
+    name: JWT Worker live smoke
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Worker production gate
+        run: make worker-production-gate

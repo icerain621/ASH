@@ -41,7 +41,7 @@
 ## 6. 数据与迁移
 - [ ] 数据库迁移脚本在 staging 成功执行（**待 H-01 云验收**）
 - [x] 新增表、索引、约束验证通过（SQL rev 20 + Doctor M3-03/08/11）
-- [ ] 关键数据已备份（`make data-backup` 于 migrate 前执行）
+- [x] 关键数据已备份（`make data-backup` / `make release-window-gate` 本地演练；生产 migrate 前再次执行）
 - [x] 回滚脚本（DDL/DML）已准备并演练（[`postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) §8）
 
 ## 7. 可观测与告警
@@ -51,9 +51,10 @@
 - [x] 仪表盘可用于上线后实时观察（`/ui/observability` + `/ui/metrics`）
 
 ## 8. 发布准备
-- [ ] 发布窗口与值班人员已确认（[`release-window-runbook.md`](checklists/release-window-runbook.md) 模板）
+- [x] 发布窗口自动化门禁（`make release-window-gate` → [`release-window-latest.md`](evidence/release-window-latest.md)）
+- [ ] 发布窗口时间与值班人员已确认（[`release-window-runbook.md`](checklists/release-window-runbook.md) roster 人工填写）
 - [x] 版本号与变更说明（Changelog）已生成（`CHANGELOG.md`）
-- [ ] 配置文件与环境变量已核对（生产见 [`postgres-production-config.md`](checklists/postgres-production-config.md) + `make production-config-gate`）
+- [x] 配置文件与环境变量已核对（`make config-env-gate` + [`cloud-rds.env.example`](../../config/cloud-rds.env.example)）
 - [x] API 文档与使用说明已同步（`make swagger` + openapi-check）
 
 ## 9. 灰度与回滚
@@ -65,7 +66,7 @@
 ## 10. 上线后验证（T+0 / T+1）
 - [x] T+0：`make release-sampling-static` 冒烟通过（静态；live 见 `make live-smoke`）
 - [x] T+0：无严重告警，错误率在阈值内（`make t0-alert-gate` 洁净库基线）
-- [ ] T+1：关键指标达标（采纳率/成功率/时延）（`make t1-metrics-gate` API 基线）
+- [x] T+1：关键指标达标（采纳率/成功率/时延）（`make t1-metrics-gate` API 基线）
 - [x] T+1：收集首批用户反馈并形成修复计划（`TestT1FeedbackIngestBaseline` + `/ui/feedback`）
 
 ## 11. 发布签字（建议）

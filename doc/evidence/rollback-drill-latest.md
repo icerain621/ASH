@@ -1,8 +1,8 @@
 # 回滚演练证据（自动化）
 
-- 时间（UTC）：2026-07-05T11:58:03Z
-- 耗时（ms）：62000
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/rollback-drill-20260705T115701Z`
+- 时间（UTC）：2026-07-05T14:08:32Z
+- 耗时（ms）：49000
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260705T135953Z`
 - 门禁：`make rollback-drill`
 
 ## 步骤

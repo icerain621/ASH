@@ -22,6 +22,7 @@
 ## 3. 发布前 24h 门禁
 
 ```bash
+make release-window-gate        # §8 本地聚合（含 mvp-signoff / backup / T+0/T+1）
 make mvp-signoff
 make production-config-gate
 make pre-migrate-gate          # 有 ash.db 时备份 + migrate plan
@@ -32,6 +33,7 @@ make cloud-acceptance          # H-01~H-02
 | 门禁 | 负责人 | 结果 | 证据路径 |
 |------|--------|------|----------|
 | mvp-signoff | | ☐ | `doc/evidence/mvp-signoff-latest.md` |
+| release-window-gate | | ☐ | `doc/evidence/release-window-latest.md` |
 | cloud-acceptance | | ☐ | `doc/evidence/cloud-h01-h03-latest.md` |
 | rollback-drill | | ☐ | `doc/evidence/rollback-drill-latest.md` |
 

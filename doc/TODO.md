@@ -135,6 +135,9 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BF：`make local-readiness-gate`；`web-gate` Windows node_modules 复用；`release-window-gate` 默认快速路径。
+- Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 接入 release-window + worker-production；MVP §6 备份 / §8 自动化勾选。
+- Sprint BD：`make config-env-gate` / `make worker-production-gate` / `make release-window-prefill`；H-09 SSE live（`sse-live-smoke.sh`）；`mvp-signoff` + CI 接入 config-env-gate。
 - Sprint BC：`make scope-freeze-gate`；CI `release-gates.yml`；cloud-acceptance 接入 pre-migrate。
 - Sprint BB：`make worker-local-gate` / `make pre-migrate-gate` / `make t1-metrics-gate`；`release-window-runbook.md`。
 - Sprint BA：`make queue-gate` / `make t0-alert-gate` / `make data-backup`；`doc/mvp-release-scope.md`；CI production-config + queue gate。
