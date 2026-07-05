@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev web-lint web-test web-gate verify regression-short cloud-acceptance mvp-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup worker-local-gate pre-migrate-gate t1-metrics-gate
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev web-lint web-test web-gate verify regression-short cloud-acceptance mvp-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup worker-local-gate pre-migrate-gate t1-metrics-gate scope-freeze-gate
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -151,6 +151,9 @@ pre-migrate-gate:
 
 t1-metrics-gate:
 	bash scripts/t1-metrics-gate.sh
+
+scope-freeze-gate:
+	bash scripts/scope-freeze-gate.sh
 
 web-build:
 	cd frontend && npm install && npm run build

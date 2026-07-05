@@ -135,6 +135,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BC：`make scope-freeze-gate`；CI `release-gates.yml`；cloud-acceptance 接入 pre-migrate。
 - Sprint BB：`make worker-local-gate` / `make pre-migrate-gate` / `make t1-metrics-gate`；`release-window-runbook.md`。
 - Sprint BA：`make queue-gate` / `make t0-alert-gate` / `make data-backup`；`doc/mvp-release-scope.md`；CI production-config + queue gate。
 - Sprint AZ：`make production-config-gate` + `make rollback-drill`；API 延迟/并发基线单测；`regression-short` / `mvp-signoff` 接入。

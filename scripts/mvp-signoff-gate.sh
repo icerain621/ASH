@@ -27,6 +27,7 @@ run_step() {
 run_step regression-short bash scripts/regression-short.sh
 run_step web-gate bash scripts/web-gate.sh
 run_step production-config-gate bash scripts/production-config-gate.sh
+run_step scope-freeze-gate bash scripts/scope-freeze-gate.sh
 run_step queue-gate bash scripts/queue-gate.sh
 run_step t0-alert-gate bash scripts/t0-alert-gate.sh
 run_step t1-metrics-gate bash scripts/t1-metrics-gate.sh

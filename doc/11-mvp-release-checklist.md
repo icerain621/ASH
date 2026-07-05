@@ -6,7 +6,7 @@
 
 ## 1. 需求与范围确认
 - [x] 本次发布目标、范围、不包含范围已在评审中确认（[`mvp-release-scope.md`](mvp-release-scope.md) 草案，待签字）
-- [ ] 需求变更已冻结（仅允许 P0 缺陷修复）
+- [x] 需求变更已冻结（仅允许 P0 缺陷修复）— 规则见 [`mvp-release-scope.md`](mvp-release-scope.md) §4；`make scope-freeze-gate`
 - [x] PRD、API、数据库文档已同步至最新版本（Doctor ALL 43/43 + OpenAPI 契约门禁）
 
 ## 2. 开发完成度

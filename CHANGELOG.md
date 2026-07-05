@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BC：`make scope-freeze-gate`；`release-gates.yml`（`worker-local-gate` + `mvp-signoff`）；`cloud-acceptance` 接入 `pre-migrate-gate`。
 - Sprint BB：`make worker-local-gate`（临时 Worker + live-smoke）；`make pre-migrate-gate` / `make t1-metrics-gate`；`release-window-runbook.md`。
 - Sprint BA：`make queue-gate` / `make t0-alert-gate` / `make data-backup`；`TestTTLQueueConsumeBaseline`；`TestEvaluateCleanSpaceNoCriticalAlerts`；`doc/mvp-release-scope.md`。
 - Sprint AZ：`make production-config-gate` / `make rollback-drill`；`TestHealthEndpointsLatencyBaseline` / `TestConcurrentRunsListBaseline`；`internal/config/production_guard.go`。
@@ -19,12 +20,6 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 - Sprint AT：`scripts/release-sampling-static.sh` + `make release-sampling-static`（H-09 §7 静态烟测）；`release-sampling-smoke.sh`；`doc/checklists/release-sampling-smoke.md`；`regression-short` / `release-window-audit` 接入。
 - Sprint AS：`scripts/secret-rotate-smoke.sh` + `make secret-rotate-smoke`（H-07：`TestSecretRotateRepoConnectionH07` + live fixture 轮换后 CI sync）；CI sync upsert 保留 run/job ID；`scripts/regression-short.sh`；`make release-sampling`；CI `regression-short` 扩展。
 - Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06：`execgo-health` + `ASH_EXECGO_E2E=1` Doctor M3-05）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。
-
-### Fixed
-
-- `release-sampling.sh` 创建 Run 使用 `issueOrSpec`（修复 live H-09 烟测）。
-- `ci-fixture-smoke.sh` 按 `fixture-job-9101` 选取 jobId（修复 H-05 诊断 rootCause）。
-
 - Sprint AQ：`make release-window-audit` 聚合 H-08 静态门禁（Doctor ALL/M3/TR3、regression-short、openapi-check、API 抽样）。
 - Sprint AP：`scripts/ci-fixture-smoke.sh`（live Worker + `ASH_CI_FIXTURE=1`）；`release-sampling.sh` ttl-queue §7.3b；CI 页 fixture 模式提示。
 - Sprint AO：CI fixture H-04/H-05 全链路（双 job 日志、仅 `jobId` 诊断、`logDigest` 落库、adopt）；`TestReleaseSamplingCIFixtureH04H05`。
@@ -33,6 +28,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 - Sprint AL（P4+）：记忆 TTL 复核队列（`GET /memory/ttl-queue`）+ 到期 sweep（`POST /memory/ttl-sweep`）；`memory.ttl_expired` derive；Doctor **TR1-06**；Scale TTL 指标与 sweep 按钮；ALL **43/43**。
 - Sprint AJ（P3）：记忆 catalog **v1→v2**（L1=90d / L2=365d 默认 TTL）；`RunMigrations` 多步升至 `CurrentSchemaVersion=2`；H-08 `release-window-audit.md`；H-09 `TestReleaseSamplingH09` + `scripts/release-sampling.sh`；`postgres-rds-e2e` 可选 Worker 抽样。
 - Sprint AH：`ASH_CI_FIXTURE=1` CI sync fixture（runs/jobs/logs 全链路单测）；`/readyz` `liveGateHints`（M3-04..08）；Scale 面板；`doc/checklists/execgo-live-smoke.md`；`verify-local` 可选 `execgo-health`；生产配置密钥轮换 SOP 摘要。
+
+### Fixed
+
+- `release-sampling.sh` 创建 Run 使用 `issueOrSpec`（修复 live H-09 烟测）。
+- `ci-fixture-smoke.sh` 按 `fixture-job-9101` 选取 jobId（修复 H-05 诊断 rootCause）。
+
 - Sprint AD：Scale 页 **Worker /readyz** 面板（与 Scale 一致性对照）；`TestPostgresReadyzWithRLS` 并入 `postgres-sql-schema-e2e`；`ci.yml` PR 跑 `postgres-rls-e2e`；RDS 脚本补 `doctor TR3`。
 - Sprint AC: Doctor **TR3-10** `/readyz` HealthResponse 契约（`openapicheck.ValidateReadyzContract`）；M3-09 校验 `sqlMigrationExpected` 与嵌入修订一致；`postgres-rds-e2e.sh` 同步 rev **20**；ALL **42/42**。
 - Sprint AB: `/readyz` 暴露 RLS/SQL 漂移字段（`postgresRLSPolicyExpected`、`rlsCatalogSummary`、`readinessWarnings`）；Doctor **M3-09** 补 `rlsCatalog`/`rlsPolicies`/`sqlExpected` 证据；`postgres-e2e.yml` 新增 `postgres-rls-e2e` job。

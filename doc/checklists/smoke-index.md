@@ -20,6 +20,7 @@
 | T+0 告警 | `make t0-alert-gate` | 洁净空间 evaluate 无 alert |
 | T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback API |
 | Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
+| 发布范围冻结 | `make scope-freeze-gate` | `mvp-release-scope.md` 结构校验 |
 | 迁移前 | `make pre-migrate-gate` | backup + migrate plan |
 
 ## H 清单对照
