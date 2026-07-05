@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | Runs/CI/Memory/Scale smoke 测试（7 文件 / 14 用例） |
-| Git 远端 | ✅ | `main` 已同步 `f23b728` |
+| Git 远端 | ⚠️ | 本地 `76cc9bb` + tag `v0.1.0-mvp` 待 `git push origin main --tags` |
 
 ### 优先级矩阵
 
