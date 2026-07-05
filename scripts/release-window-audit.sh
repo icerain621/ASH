@@ -30,15 +30,7 @@ else
 fi
 
 echo "== §4 regression-short =="
-go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled' -count=1
-go test ./internal/alerts/... -count=1
-go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestReleaseSampling' -count=1
-go test ./internal/memory/... -run 'TestRunMigrations|TestDefaultTTLForLayer|TestEffectiveTTL|TestTTLQueue|TestClassifyTTL' -count=1
-go test ./internal/ci/... -run 'TestFixtureProvider|TestDiagnoseLogClassifiesTestFailure|TestServiceSyncJobsDiagnose' -count=1
-go test ./internal/opsenv/... -count=1
-go test ./internal/memory/... -count=1 -short
-go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract|TestValidateReadyzContract' -count=1
-go test ./internal/store -run 'TestMigrationCatalog_RLSCoverage|TestVerifyRLSMigrationSQL|TestRLSExpectedPolicyCount' -count=1
+bash scripts/regression-short.sh
 
 if [[ "$SKIP_OPENAPI" != "1" ]]; then
   echo "== §4 openapi-check =="
@@ -53,9 +45,6 @@ fi
 echo "== §7 release sampling (api tests) =="
 go test ./internal/api/ -run 'TestReleaseSampling|TestCISyncRunsWithFixture|TestReleaseSamplingCIFixture' -count=1
 
-echo "== H-06 M3-05 static (TestM3ExecGoLiveSmoke) =="
-go test ./internal/doctor/... -run TestM3ExecGoLiveSmoke -count=1
-
 if [[ "${ASH_EXECGO_E2E:-}" == "1" ]]; then
   echo "== H-06 ExecGo live smoke =="
   bash scripts/execgo-live-smoke.sh
@@ -69,8 +58,10 @@ if [[ -n "$LIVE_WORKER" ]]; then
   if curl -sf "${LIVE_WORKER}/readyz" | grep -q 'ASH_CI_FIXTURE'; then
     echo "== §7 CI fixture smoke =="
     bash scripts/ci-fixture-smoke.sh
+    echo "== §7 H-07 secret rotate smoke =="
+    ASH_CI_FIXTURE=1 bash scripts/secret-rotate-smoke.sh
   else
-    echo "== §7 CI fixture smoke skipped (Worker without ASH_CI_FIXTURE) =="
+    echo "== §7 CI fixture / secret-rotate smoke skipped (Worker without ASH_CI_FIXTURE) =="
   fi
 else
   echo "== §7 live sampling skipped (set ASH_WORKER_URL for live curl checks) =="

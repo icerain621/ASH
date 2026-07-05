@@ -80,6 +80,17 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 	if dockerDiag.RootCause != "docker_or_postgres_unavailable" {
 		t.Fatalf("dockerDiag=%+v want docker_or_postgres_unavailable", dockerDiag)
 	}
+
+	if err := svc.SyncRuns(context.Background(), "local", conn.ID, 10); err != nil {
+		t.Fatal(err)
+	}
+	runsAgain, err := svc.ListRuns(context.Background(), "local", conn.ID, 10, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(runsAgain) != 1 || runsAgain[0].ID != runs[0].ID {
+		t.Fatalf("runsAgain=%+v want same id %s after re-sync", runsAgain, runs[0].ID)
+	}
 }
 
 func TestApplyFixtureProviderWhenEnabled(t *testing.T) {

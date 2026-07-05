@@ -31,6 +31,7 @@
 | 2 | `/metrics` + 告警 | 30–60 分钟无 P0 告警 |
 | 3 | ExecGo（若启用） | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 [`execgo-live-smoke.md`](execgo-live-smoke.md) |
 | 4 | CI sync（若启用） | 真实 token `sync=true` 或 `ASH_CI_FIXTURE=1` 联调记录 |
+| 5 | 密钥轮换（若适用） | `make secret-rotate-smoke` 或 [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 
 ## 回滚触发（任一即执行）
 

@@ -12,6 +12,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/memory"
+	"github.com/ash-repwiki/ash/internal/secrets"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -334,5 +335,107 @@ func TestReleaseSamplingCIFixtureH04H05(t *testing.T) {
 	}
 	if diag.RootCause != "docker_or_postgres_unavailable" || diag.LogDigest == "" {
 		t.Fatalf("diag=%+v want docker failure with digest", diag)
+	}
+}
+
+// TestSecretRotateRepoConnectionH07 verifies repo connections keep working after secret rotate (H-07).
+func TestSecretRotateRepoConnectionH07(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_CI_FIXTURE", "1")
+	t.Setenv("ASH_SECRET_KEY", "test-secret-key-h07")
+	r, db := newPlatformTestRouter(t)
+	space := "space_h07_rotate"
+
+	secretBody := []byte(`{"name":"GITHUB_TOKEN","value":"ghp_before_rotate","scope":{"provider":"github"}}`)
+	secretResp := httptest.NewRecorder()
+	secretReq := httptest.NewRequest(http.MethodPost, "/api/v1/secrets", bytes.NewReader(secretBody))
+	secretReq.Header.Set("Content-Type", "application/json")
+	secretReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(secretResp, secretReq)
+	if secretResp.Code != http.StatusCreated {
+		t.Fatalf("secret status=%d body=%s", secretResp.Code, secretResp.Body.String())
+	}
+	var secret struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(secretResp.Body.Bytes(), &secret); err != nil {
+		t.Fatal(err)
+	}
+
+	connBody := []byte(`{"provider":"github","owner":"iammm0","repo":"ASH","secretId":"` + secret.ID + `"}`)
+	connResp := httptest.NewRecorder()
+	connReq := httptest.NewRequest(http.MethodPost, "/api/v1/repo/connections", bytes.NewReader(connBody))
+	connReq.Header.Set("Content-Type", "application/json")
+	connReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(connResp, connReq)
+	if connResp.Code != http.StatusCreated {
+		t.Fatalf("connection status=%d body=%s", connResp.Code, connResp.Body.String())
+	}
+	var conn struct {
+		ID       string `json:"id"`
+		SecretID string `json:"secretId"`
+	}
+	if err := json.Unmarshal(connResp.Body.Bytes(), &conn); err != nil {
+		t.Fatal(err)
+	}
+	if conn.SecretID != secret.ID {
+		t.Fatalf("conn=%+v want secretId=%s", conn, secret.ID)
+	}
+
+	syncRuns := func() string {
+		t.Helper()
+		runsResp := httptest.NewRecorder()
+		runsReq := httptest.NewRequest(http.MethodGet, "/api/v1/ci/runs?connectionId="+conn.ID+"&sync=true", nil)
+		runsReq.Header.Set("X-ASH-Space-ID", space)
+		r.ServeHTTP(runsResp, runsReq)
+		if runsResp.Code != http.StatusOK {
+			t.Fatalf("runs sync status=%d body=%s", runsResp.Code, runsResp.Body.String())
+		}
+		var runs struct {
+			Items []struct {
+				ID            string `json:"id"`
+				ProviderRunID string `json:"providerRunId"`
+			} `json:"items"`
+		}
+		if err := json.Unmarshal(runsResp.Body.Bytes(), &runs); err != nil {
+			t.Fatal(err)
+		}
+		if len(runs.Items) != 1 || runs.Items[0].ProviderRunID != "fixture-run-9001" {
+			t.Fatalf("runs=%+v want fixture-run-9001", runs.Items)
+		}
+		return runs.Items[0].ID
+	}
+	runID := syncRuns()
+
+	rotateResp := httptest.NewRecorder()
+	rotateReq := httptest.NewRequest(http.MethodPost, "/api/v1/secrets/"+secret.ID+"/rotate", bytes.NewReader([]byte(`{"value":"ghp_after_rotate"}`)))
+	rotateReq.Header.Set("Content-Type", "application/json")
+	rotateReq.Header.Set("X-ASH-Space-ID", space)
+	r.ServeHTTP(rotateResp, rotateReq)
+	if rotateResp.Code != http.StatusOK {
+		t.Fatalf("rotate status=%d body=%s", rotateResp.Code, rotateResp.Body.String())
+	}
+
+	var row store.SecretRecord
+	if err := db.First(&row, "id = ?", secret.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.ValueDigest != secrets.Digest("ghp_after_rotate") {
+		t.Fatalf("digest=%q want rotated digest", row.ValueDigest)
+	}
+
+	if got := syncRuns(); got != runID {
+		t.Fatalf("post-rotate run id=%s want same fixture run %s", got, runID)
+	}
+
+	var audits []store.AuditLog
+	if err := db.Where("space_id = ? AND event_type = ?", space, "secret.rotated").Find(&audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	if len(audits) != 1 {
+		t.Fatalf("audits=%+v want one secret.rotated", audits)
+	}
+	if strings.Contains(audits[0].PayloadJSON, "ghp_after_rotate") || strings.Contains(audits[0].PayloadJSON, "ghp_before_rotate") {
+		t.Fatalf("audit leaked secret value: %+v", audits[0])
 	}
 }

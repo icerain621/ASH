@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke web web-build web-dev verify regression-short
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling web web-build web-dev verify regression-short
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -51,6 +51,12 @@ execgo-health:
 
 execgo-live-smoke:
 	bash scripts/execgo-live-smoke.sh
+
+secret-rotate-smoke:
+	bash scripts/secret-rotate-smoke.sh
+
+release-sampling:
+	bash scripts/release-sampling.sh
 
 doctor:
 	cd $(BACKEND_DIR) && go run ./cmd/cli doctor --suite TR0 --format md
@@ -99,15 +105,7 @@ verify:
 	bash scripts/verify-local.sh
 
 regression-short:
-	cd $(BACKEND_DIR) && go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled' -count=1
-	cd $(BACKEND_DIR) && go test ./internal/alerts/... -count=1
-	cd $(BACKEND_DIR) && go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestReleaseSampling' -count=1
-	cd $(BACKEND_DIR) && go test ./internal/memory/... -run 'TestRunMigrations|TestDefaultTTLForLayer|TestEffectiveTTL|TestTTLQueue|TestClassifyTTL' -count=1
-	cd $(BACKEND_DIR) && go test ./internal/ci/... -run 'TestFixtureProvider|TestDiagnoseLogClassifiesTestFailure|TestServiceSyncJobsDiagnose' -count=1
-	cd $(BACKEND_DIR) && go test ./internal/opsenv/... -count=1
-	cd $(BACKEND_DIR) && go test ./internal/memory/... -count=1 -short
-	cd $(BACKEND_DIR) && go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract|TestValidateReadyzContract' -count=1
-	cd $(BACKEND_DIR) && go test ./internal/store -run 'TestMigrationCatalog_RLSCoverage|TestVerifyRLSMigrationSQL|TestRLSExpectedPolicyCount' -count=1
+	bash scripts/regression-short.sh
 
 web-build:
 	cd frontend && npm install && npm run build

@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AS：`scripts/secret-rotate-smoke.sh` + `make secret-rotate-smoke`（H-07：`TestSecretRotateRepoConnectionH07` + live fixture 轮换后 CI sync）；CI sync upsert 保留 run/job ID；`scripts/regression-short.sh`；`make release-sampling`；CI `regression-short` 扩展。
 - Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06：`execgo-health` + `ASH_EXECGO_E2E=1` Doctor M3-05）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。
 - Sprint AQ：`make release-window-audit` 聚合 H-08 静态门禁（Doctor ALL/M3/TR3、regression-short、openapi-check、API 抽样）。
 - Sprint AP：`scripts/ci-fixture-smoke.sh`（live Worker + `ASH_CI_FIXTURE=1`）；`release-sampling.sh` ttl-queue §7.3b；CI 页 fixture 模式提示。

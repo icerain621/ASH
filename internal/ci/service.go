@@ -257,8 +257,7 @@ func (s *Service) SyncJobs(ctx context.Context, spaceID, runID string) error {
 		if row.ID == "" {
 			row.ID = "ci_job_" + uuid.NewString()
 		}
-		if err := s.q(ctx).Where("connection_id = ? AND provider_job_id = ?", conn.ID, row.ProviderJobID).
-			Assign(row).FirstOrCreate(&store.CIJob{}).Error; err != nil {
+		if err := firstOrCreateCIJob(s.q(ctx), conn.ID, row); err != nil {
 			return err
 		}
 	}
@@ -293,8 +292,7 @@ func (s *Service) SyncRuns(ctx context.Context, spaceID, connectionID string, li
 		if row.ID == "" {
 			row.ID = "ci_run_" + uuid.NewString()
 		}
-		if err := s.q(ctx).Where("connection_id = ? AND provider_run_id = ?", conn.ID, row.ProviderRunID).
-			Assign(row).FirstOrCreate(&store.CIRun{}).Error; err != nil {
+		if err := firstOrCreateCIRun(s.q(ctx), conn.ID, row); err != nil {
 			return err
 		}
 	}
@@ -813,4 +811,32 @@ func parseGithubTime(value string) *time.Time {
 		return nil
 	}
 	return &t
+}
+
+func firstOrCreateCIRun(q *gorm.DB, connID string, row store.CIRun) error {
+	if row.ID == "" {
+		row.ID = "ci_run_" + uuid.NewString()
+	}
+	createID := row.ID
+	updates := row
+	updates.ID = ""
+	var dest store.CIRun
+	return q.Where("connection_id = ? AND provider_run_id = ?", connID, row.ProviderRunID).
+		Assign(updates).
+		Attrs(store.CIRun{ID: createID}).
+		FirstOrCreate(&dest).Error
+}
+
+func firstOrCreateCIJob(q *gorm.DB, connID string, row store.CIJob) error {
+	if row.ID == "" {
+		row.ID = "ci_job_" + uuid.NewString()
+	}
+	createID := row.ID
+	updates := row
+	updates.ID = ""
+	var dest store.CIJob
+	return q.Where("connection_id = ? AND provider_job_id = ?", connID, row.ProviderJobID).
+		Assign(updates).
+		Attrs(store.CIJob{ID: createID}).
+		FirstOrCreate(&dest).Error
 }
