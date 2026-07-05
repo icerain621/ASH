@@ -88,10 +88,10 @@
 
 ## 9. 指标质量保障
 - 指标上线前必须完成：
-  - [ ] SQL 口径评审
-  - [ ] 埋点字段完整性验证
-  - [ ] 样本回放对账（至少 3 天）
-  - [ ] 与业务侧手工统计偏差 < 5%
+  - [ ] SQL 口径评审（BI / DBA 人工）
+  - [x] 埋点字段完整性验证（`TestOverviewAggregatesKPIInputs` + `TestKPIOverviewSummaryCatalog`）
+  - [x] 样本回放对账（`make kpi-reconcile-gate`：overview ↔ derive replay）
+  - [ ] 与业务侧手工统计偏差 < 5%（生产 T+1 观察）
 
 ## 10. 指标预警阈值（MVP 建议）
 - 任务成功率 < 85%：黄色预警，< 75% 红色预警

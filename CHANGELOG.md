@@ -4,10 +4,17 @@ All notable changes to ASH will be documented in this file.
 
 This project follows a Keep a Changelog style. Version numbers can be attached when a release tag is cut.
 
-## [Unreleased] - 2026-06-03
+## [Unreleased]
 
 ### Added
 
+- (empty — next sprint entries go here)
+
+## [v0.1.0-mvp] - 2026-07-05
+
+### Added
+
+- Sprint BH：前端 Runs/CI/Memory/Scale 页 vitest smoke；`ci.yml` 并行 `release-window-gate`；`make kpi-reconcile-gate`（KPI §9）。
 - Sprint BG：`make signoff-apply` / `make signoff-gate`；`config/signoff.env.example` + `mvp-signoff-roster.md`；§11/范围冻结回填（占位 dry-run）。
 - Sprint BF：`make local-readiness-gate`；`web-gate.sh` 禁用 audit + `npm … | cat`（嵌套 evidence 规避）；`release-window-gate` 默认快速路径。
 - Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 静态 release-window + `worker-production-gate`；MVP §6 备份 / §8 自动化勾选。
@@ -148,4 +155,4 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 ### Notes
 
 - The working tree also contains IDE project metadata under `.idea/`. Keep those files staged only if the repository intentionally tracks editor configuration.
-- This entry describes the current unreleased workspace changes. Replace `[Unreleased]` with a tagged version when cutting a release.
+- **v0.1.0-mvp** is the first tagged MVP release anchor (Sprints AY–BH, release gates, signoff workflow). Cloud Postgres cutover and production sign-off names remain post-tag checklist items (see `doc/TODO.md` Sprint BI).

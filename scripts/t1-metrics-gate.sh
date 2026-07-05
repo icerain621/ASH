@@ -15,4 +15,7 @@ go test ./internal/metrics/... -run TestOverviewAggregatesKPIInputs -count=1
 echo "== T+1 feedback baseline =="
 go test ./internal/api/... -run TestT1FeedbackIngestBaseline -count=1
 
+echo "== KPI reconcile (§9) =="
+bash scripts/kpi-reconcile-gate.sh
+
 echo "OK t1-metrics-gate"

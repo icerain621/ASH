@@ -44,11 +44,30 @@ jobs:
       - name: H-09 release sampling static
         run: make release-sampling-static
 
+      - name: KPI reconcile gate
+        run: make kpi-reconcile-gate
+
       - name: Doctor M3 static
         run: go run ./cmd/cli doctor --suite M3 --format md --agent static
 
       - name: Doctor ALL static
         run: go run ./cmd/cli doctor --suite ALL --format md --agent static
+
+  release-window-gate:
+    name: Release window (fast static)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Release window gate
+        run: make release-window-gate
 
   postgres-sql-schema-e2e:
     name: Postgres SQL schema E2E

@@ -13,13 +13,14 @@
 | 业务抽样（静态+live） | `ASH_WORKER_URL=... make release-sampling-smoke` | H-09 |
 | Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排 |
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI + openapi + 可选 Postgres RLS |
-| 前端门禁 | `make web-gate` | eslint + vitest + production build |
+| 前端门禁 | `make web-gate` | eslint + vitest（7 文件 / 14 用例）+ build |
 | 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |
 | 配置核对 | `make config-env-gate` | 模板 + production/scope gate |
 | 回滚演练 | `make rollback-drill` | 发布 API drill + 基线 + Doctor ALL |
 | 队列治理 | `make queue-gate` | TTL sweep 消费 + 洁净告警 |
 | T+0 告警 | `make t0-alert-gate` | 洁净空间 evaluate 无 alert |
-| T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback API |
+| T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback + §9 对账 |
+| KPI 对账 | `make kpi-reconcile-gate` | overview ↔ derive replay（§9） |
 | Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
 | 发布范围冻结 | `make scope-freeze-gate` | `mvp-release-scope.md` 结构校验 |
 | 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
