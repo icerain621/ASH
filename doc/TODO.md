@@ -2,7 +2,137 @@
 
 > 记录尚未完成或需人工环境验证的项。完成请移入 CHANGELOG 并删除对应条目。
 
-## 测试验收
+## 开发计划（2026-07-05 重排）
+
+> **结论**：代码与自动化门禁已达 **MVP v0.1 可发布** 水位；剩余工作以 **环境验收 + 人工签字 + 门禁加固** 为主，而非新功能开发。  
+> **基线**：Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **20** · RLS **41** · 最新提交 `454eb40`（Sprint BD–BF，待推送）
+
+### 完成度快照
+
+| 维度 | 状态 | 说明 |
+|------|------|------|
+| MVP 清单 §1–4, 7, 9–10 | ✅ 自动化已勾 | 功能/测试/性能/可观测/灰度/T+0/T+1 |
+| MVP 清单 §5 Postgres 切换 | ⏸ | 需 H-01~H-03 云 RDS 或 Docker `postgres-app-gate` |
+| MVP 清单 §6 staging 迁移 | ⏸ | 绑定 `make cloud-acceptance` |
+| MVP 清单 §8 值班 roster | ⏸ | 自动化 `release-window-gate` 已过；人工填表 |
+| MVP 清单 §11 四人签字 | ⏸ | 证据在 `doc/evidence/` |
+| 发布范围冻结签字 | ⏸ | `ASH_SCOPE_FREEZE_SIGNED=1` + 产品评审 |
+| 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
+| H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
+| H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
+| 前端测试 | ⚠️ | 仅 **3** 个 vitest 文件 vs **12** 页面；`web-gate` 在嵌套 `mvp-signoff` 中偶发失败 |
+| KPI 口径 BI 对接 | ⏸ | `14-kpi-dashboard-definition.md` §9 四项未勾 |
+| Git 远端 | ⚠️ | `main` 超前 `origin/main` 1 commit（BD–BF） |
+
+### 优先级矩阵
+
+| 优先级 | 目标 | 可纯代码推进？ |
+|--------|------|----------------|
+| **P0-A** | 完成 MVP v0.1 **发布闭环**（签字 + 推送 + CI 绿） | 部分 |
+| **P0-B** | Postgres **生产切换**验收（H-01~H-03） | 否，需 RDS/Docker |
+| **P1** | **门禁与质量加固**（flake、前端测试、证据一致性） | 是 |
+| **P2** | **发布后观察**（真实 KPI、诊断采纳率、T+1 生产数据） | 否，需上线后 |
+| **P3** | **M1+ 能力**（Hotfix/Security 场景深化、插件 ABI、BI 埋点） | 是，但范围冻结后仅 P0 缺陷 |
+
+---
+
+### Sprint 排期（建议）
+
+#### Sprint BG（P0-A · 1–2 天）— 发布闭环
+
+| # | 任务 | 负责人 | 验收 |
+|---|------|--------|------|
+| BG-1 | `git push origin main`；确认 `ci.yml` + `release-gates.yml` 全绿 | 发布 | GitHub Actions 绿 |
+| BG-2 | 产品/技术/测试/发布 **§11 签字** | 四人 | `make signoff-apply` + `make signoff-gate` 绿 |
+| BG-3 | `mvp-release-scope.md` 评审签字 → `ASH_SCOPE_FREEZE_SIGNED=1` | 产品 | `scope-freeze-gate` 无 WARN |
+| BG-4 | 发布窗口 roster + 时间写入 `release-window-runbook.md` | 发布 | 清单 §8 roster 勾选 |
+| BG-5 | 打 tag `v0.1.0-mvp` + CHANGELOG 归档 Unreleased | 发布 | 版本锚点 |
+
+```bash
+cp config/signoff.env.example config/signoff.env
+make local-readiness-gate    # 发布前最后一轮本地 live
+make signoff-apply           # 评审会后回填签字
+make signoff-gate
+```
+
+#### Sprint BH（P1 · 3–5 天）— 门禁加固（不依赖云）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BH-1 | 修复 `mvp-signoff` 嵌套调用 `web-gate` 偶发失败（`ash_evidence_step` 管道/Windows） | 本地 + CI `mvp-signoff` 全绿 |
+| BH-2 | 前端核心页 smoke 测试：Runs、CI、Memory、Scale（+4 vitest） | `web-gate` 测试 ≥7 文件 |
+| BH-3 | `release-window-gate` 报告写入后同步更新 `mvp-signoff` 交叉引用 | 证据目录路径正确 |
+| BH-4 | PR 门禁加 `make release-window-gate`（轻量，~2min） | `ci.yml` 新 step 绿 |
+| BH-5 | KPI 定义 §9：补 `metrics/overview` 与 derive replay 对账单测 | §9 至少 2/4 项可勾 |
+
+#### Sprint BI（P0-B · 发布窗口 · 需环境）
+
+| # | 任务 | 前置 | 验收 |
+|---|------|------|------|
+| BI-1 | 配置 `config/cloud-rds.env` | RDS 实例 | `make cloud-acceptance` 绿 |
+| BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
+| BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | `/readyz` dialect=postgres |
+| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | M3-06/07 pass |
+| BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | `release-window-latest` 云项 ✅ |
+
+```bash
+cp config/cloud-rds.env.example config/cloud-rds.env
+bash scripts/source-cloud-rds-env.sh
+make cloud-acceptance
+```
+
+#### Sprint BJ（P2 · 上线后 1 周）— 真实数据验证
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BJ-1 | 真实 GitHub token：`H-04/H-05` live（非 fixture） | `rootCause` 与真实 log 一致 |
+| BJ-2 | `ASH_EXECGO_E2E=1 make execgo-live-smoke` | Doctor M3-05 live |
+| BJ-3 | T+1 生产 KPI 看板 vs `t1-metrics-gate` 基线偏差 <5% | `14-kpi-dashboard-definition.md` §9 |
+| BJ-4 | CI 诊断采纳率、任务成功率观察 | 风险台账 R-02/R-03 有数据 |
+
+#### Sprint BK+（P3 · 范围冻结后仅 P0 缺陷 / M1  backlog）
+
+| 域 | 候选项 | 备注 |
+|----|--------|------|
+| 场景 | Hotfix / Security Patch 模板深化（PRD §4.2/4.3） | 原 P1，冻结后延期 |
+| 平台 | 插件 gRPC ABI 签名策略（ARCH TODO） | P2 |
+| 安全 | 数据分级与保留期（PRD TODO） | 合规增强 |
+| 前端 | SSE 断线重连 E2E、12 页测试覆盖 | R-07 缓解 |
+| 算法 | CI 诊断规则扩展、Memory 污染防护 | R-03/R-04 |
+
+---
+
+### 一键命令（按阶段）
+
+```bash
+# 日常开发（P1）
+make regression-short && make web-gate
+
+# 发布前本地（P0-A）
+make local-readiness-gate
+
+# 发布窗口（P0-B，需环境）
+make release-window-gate
+ASH_RELEASE_WINDOW_LIVE=1 make release-window-gate
+make cloud-acceptance
+
+# 全量签字证据
+ASH_RELEASE_WINDOW_INCLUDE_MVP=1 make release-window-gate
+make mvp-signoff
+```
+
+### 风险重排（Top 5 → 行动）
+
+| 风险 | 当前缓解 | 下一动作 |
+|------|----------|----------|
+| R-12 回滚不完整 | `rollback-drill` 已自动化 | BI 切换日再演练一次并签字 |
+| R-08 越权 | M2 + 单测 | BH 补跨 space API 回归 |
+| R-03 诊断准确率 | fixture 全绿 | BJ 真实 GitHub log 验证 |
+| R-07 SSE 不稳定 | 静态 + live smoke | BH 前端 SSE 重连测试 |
+| R-01 需求变更 | `scope-freeze-gate` | BG-3 产品签字冻结 |
+
+---
+
 
 > **状态**：Sprint I/H 完成后恢复执行；以下项以本地 `go test` 为准（T-05/T-06 仍需 Postgres）。
 > **关联**：derive parity、Doctor TR3-05、`postgres-sql-schema-e2e` CI job
@@ -135,7 +265,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
-- Sprint BF：`make local-readiness-gate`；`web-gate` Windows node_modules 复用；`release-window-gate` 默认快速路径。
+- Sprint BG：`make signoff-apply` / `make signoff-gate`；`mvp-signoff-roster.md`；范围冻结签字流程（占位 dry-run 验证）。
 - Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 接入 release-window + worker-production；MVP §6 备份 / §8 自动化勾选。
 - Sprint BD：`make config-env-gate` / `make worker-production-gate` / `make release-window-prefill`；H-09 SSE live（`sse-live-smoke.sh`）；`mvp-signoff` + CI 接入 config-env-gate。
 - Sprint BC：`make scope-freeze-gate`；CI `release-gates.yml`；cloud-acceptance 接入 pre-migrate。

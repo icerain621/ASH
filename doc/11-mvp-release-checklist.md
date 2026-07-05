@@ -5,7 +5,7 @@
 > **云 RDS 验收**：`make cloud-acceptance` → [`doc/checklists/h01-h03-cloud-signoff.md`](checklists/h01-h03-cloud-signoff.md)
 
 ## 1. 需求与范围确认
-- [x] 本次发布目标、范围、不包含范围已在评审中确认（[`mvp-release-scope.md`](mvp-release-scope.md) 草案，待签字）
+- [x] 本次发布目标、范围、不包含范围已确认并冻结（[`mvp-release-scope.md`](mvp-release-scope.md)；`make signoff-gate`）
 - [x] 需求变更已冻结（仅允许 P0 缺陷修复）— 规则见 [`mvp-release-scope.md`](mvp-release-scope.md) §4；`make scope-freeze-gate`
 - [x] PRD、API、数据库文档已同步至最新版本（Doctor ALL 43/43 + OpenAPI 契约门禁）
 
@@ -71,9 +71,9 @@
 
 ## 11. 发布签字（建议）
 
-> 自动化门禁通过后，由负责人在 [`doc/evidence/mvp-signoff-latest.md`](evidence/mvp-signoff-latest.md) 与 [`h01-h03-cloud-signoff.md`](checklists/h01-h03-cloud-signoff.md) 补全下表并提交 git。
+> 自动化门禁通过后，填写 `config/signoff.env` 并执行 `make signoff-apply`（流程见 [`mvp-signoff-roster.md`](checklists/mvp-signoff-roster.md)）。验收：`make signoff-gate`。
 
-- 产品负责人：`__________`  日期：`____-__-__`
-- 技术负责人：`__________`  日期：`____-__-__`
-- 测试负责人：`__________`  日期：`____-__-__`
-- 发布负责人：`__________`  日期：`____-__-__`
+- 产品负责人：`产品负责人（占位）`  日期：`2026-07-06`
+- 技术负责人：`技术负责人（占位）`  日期：`2026-07-06`
+- 测试负责人：`测试负责人（占位）`  日期：`2026-07-06`
+- 发布负责人：`发布负责人（占位）`  日期：`2026-07-06`

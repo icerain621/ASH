@@ -8,7 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- Sprint BF：`make local-readiness-gate`；`web-gate.sh` 禁用 audit + 复用 `node_modules`（npmmirror/Windows 规避）；`release-window-gate` 默认快速路径。
+- Sprint BG：`make signoff-apply` / `make signoff-gate`；`config/signoff.env.example` + `mvp-signoff-roster.md`；§11/范围冻结回填（占位 dry-run）。
+- Sprint BF：`make local-readiness-gate`；`web-gate.sh` 禁用 audit + `npm … | cat`（嵌套 evidence 规避）；`release-window-gate` 默认快速路径。
 - Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 静态 release-window + `worker-production-gate`；MVP §6 备份 / §8 自动化勾选。
 - Sprint BD：`make config-env-gate` / `make worker-production-gate` / `make release-window-prefill`；`scripts/sse-live-smoke.sh`（H-09 §7.2 SSE）；`mvp-signoff` + CI 接入 config-env-gate；MVP §8 配置核对 / §10 T+1 勾选。
 - Sprint BC：`make scope-freeze-gate`；`release-gates.yml`（`worker-local-gate` + `mvp-signoff`）；`cloud-acceptance` 接入 `pre-migrate-gate`。

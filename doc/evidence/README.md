@@ -19,6 +19,11 @@ ASH_RELEASE_WINDOW_LIVE=1 make release-window-gate
 
 # 含完整 mvp-signoff（约 6min，本地发布前）
 ASH_RELEASE_WINDOW_INCLUDE_MVP=1 make release-window-gate
+
+# §11 四人签字 + 范围冻结（评审会后）
+cp config/signoff.env.example config/signoff.env
+make signoff-apply
+make signoff-gate
 ```
 
 ## 文件
@@ -29,5 +34,6 @@ ASH_RELEASE_WINDOW_INCLUDE_MVP=1 make release-window-gate
 | `mvp-signoff-YYYY-MM-DD.md` | 按日归档 |
 | `cloud-h01-h03-latest.md` | 云 RDS 验收摘要（`make cloud-acceptance` 后） |
 | `release-window-latest.md` | 发布窗口门禁摘要（`make release-window-gate` 后） |
+| `mvp-signatures-latest.md` | §11 四人签字 + 范围冻结（`make signoff-apply` 后） |
 
-签字完成后更新 §11 与 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md) 表格，并提交本目录变更。
+签字完成后执行 `make signoff-apply`，用 `make signoff-gate` 验收；云切换另见 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。

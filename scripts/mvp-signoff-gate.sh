@@ -110,7 +110,11 @@ write_report() {
     echo
     echo "## 待人工签字"
     echo
-    echo "见 [\`11-mvp-release-checklist.md\`](../11-mvp-release-checklist.md) §11 与 [\`h01-h03-cloud-signoff.md\`](../checklists/h01-h03-cloud-signoff.md)。"
+    echo "见 [\`mvp-signoff-roster.md\`](../checklists/mvp-signoff-roster.md)（\`make signoff-apply\` / \`make signoff-gate\`）。云 RDS：[\`h01-h03-cloud-signoff.md\`](../checklists/h01-h03-cloud-signoff.md)。"
+    if [[ -f "$ROOT/doc/evidence/mvp-signatures-latest.md" ]] && grep -q '范围冻结：已冻结' "$ROOT/doc/evidence/mvp-signatures-latest.md" 2>/dev/null; then
+      echo ""
+      echo "签字记录：[\`mvp-signatures-latest.md\`](../evidence/mvp-signatures-latest.md) ✅"
+    fi
     echo
     echo "| 角色 | 姓名 | 日期 |"
     echo "|------|------|------|"

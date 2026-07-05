@@ -24,6 +24,8 @@
 | 发布范围冻结 | `make scope-freeze-gate` | `mvp-release-scope.md` 结构校验 |
 | 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
 | 本地就绪 | `make local-readiness-gate` | release-window + worker live（~4min） |
+| §11 签字回填 | `make signoff-apply` | `config/signoff.env` → 证据 + 清单 |
+| 签字验收 | `make signoff-gate` | 四人 + 范围冻结齐全 |
 | 发布窗口预填 | `make release-window-prefill` | 空模板（无跑门禁） |
 | H-03 JWT Worker | `make worker-production-gate` | 生产-like 密钥 + dev-login live |
 | 迁移前 | `make pre-migrate-gate` | backup + migrate plan |

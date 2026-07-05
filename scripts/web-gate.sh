@@ -16,8 +16,13 @@ else
   npm install --no-audit --no-fund
 fi
 
-npm run lint
-npm run test:run
-npm run build
+npm_run() {
+  # Avoid npm/eslint non-TTY failures when parent pipes (mvp-signoff evidence).
+  npm "$@" 2>&1 | cat
+}
+
+npm_run run lint
+npm_run run test:run
+npm_run run build
 
 echo "OK web-gate"

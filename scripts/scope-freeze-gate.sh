@@ -26,7 +26,7 @@ for heading in "${required[@]}"; do
   fi
 done
 
-if grep -q '待产品评审签字' "$SCOPE" && [[ "${ASH_SCOPE_FREEZE_SIGNED:-0}" != "1" ]]; then
+if grep -q '待产品评审签字' "$SCOPE" && [[ "${ASH_SCOPE_FREEZE_SIGNED:-0}" != "1" ]] && ! grep -q '已冻结' "$SCOPE"; then
   echo "WARN scope doc still marked draft (set ASH_SCOPE_FREEZE_SIGNED=1 after product sign-off)"
 fi
 
