@@ -13,6 +13,8 @@
 
 ## 3. 测试与质量
 - [ ] 后端单元测试通过（`go test ./...`）
+- [ ] 快捷回归通过（`make regression-short`）
+- [ ] 发布审计静态通过（`ASH_RELEASE_AUDIT_SKIP_OPENAPI=1 make release-window-audit`，可选）
 - [ ] 前端 lint 与核心测试通过（`pnpm lint` / `pnpm test`）
 - [ ] 集成测试通过（任务创建 -> 启动 -> 执行 -> 输出）
 - [ ] 回归测试通过（历史功能无回归）
@@ -29,6 +31,7 @@
 - [ ] 高风险接口权限校验通过
 - [ ] 审计日志记录完整
 - [ ] Postgres 生产切换已完成 `doc/checklists/postgres-rds-e2e.md` + `doc/checklists/release-window-audit.md`（如适用）
+- [ ] H-04–H-09 烟测清单已勾选（见 `doc/checklists/smoke-index.md`）
 - [ ] 默认密钥/测试账号已移除或替换
 
 ## 6. 数据与迁移
@@ -56,7 +59,7 @@
 - [ ] 回滚流程演练完成并记录耗时
 
 ## 10. 上线后验证（T+0 / T+1）
-- [ ] T+0：核心路径冒烟通过
+- [ ] T+0：`make live-smoke` 或 `make release-sampling-static` 冒烟通过（见 `doc/checklists/smoke-index.md`）
 - [ ] T+0：无严重告警，错误率在阈值内
 - [ ] T+1：关键指标达标（采纳率/成功率/时延）
 - [ ] T+1：收集首批用户反馈并形成修复计划

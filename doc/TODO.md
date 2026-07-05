@@ -42,22 +42,25 @@ make postgres-sql-schema-e2e
 | # | 项 | 命令 / 入口 | 验收 |
 |---|-----|-------------|------|
 | H-01 | 云 RDS 全链路 E2E | `make postgres-rds-e2e` | `migrate schema` v20 + Doctor M3 11/11 + ALL 43/43 |
-| H-02 | 云 RDS RLS + ash_app | 清单 §4–§5 | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
-| H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres |
+| H-02 | 云 RDS RLS + ash_app | 清单 §4–§5；本地 `make postgres-app-gate` | M3-06/07 pass；`TestPostgresRLSE2EAfterMigrate` |
+| H-03 | 生产 Worker 配置 | `ASH_DATABASE_APP_URL` + `ASH_POSTGRES_RLS_FORCE=1` | `/readyz` dialect=postgres；本地见 `postgres-app-gate.md` |
 | H-04 | GitHub CI runs 同步 | `GET /api/v1/ci/runs?sync=true` | 真实 token 拉取 Actions 摘要；本地/CI 可用 **`ASH_CI_FIXTURE=1`**（`TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05`） |
 | H-05 | GitHub CI jobs / 日志诊断 | `GET /api/v1/ci/jobs?runId=...&sync=true` + `POST /ci/failures/diagnose`（仅 `jobId`） | job log 经 fixture 拉取、`logDigest` 落库、`rootCause` 分类；`TestFixtureProviderSyncRunsAndJobs` |
 | H-06 | ExecGo live smoke | `ASH_EXECGO_E2E=1 make execgo-live-smoke` 或 Doctor M3-05 | `execgo-health` + live 执行链路；本地静态 `TestM3ExecGoLiveSmoke` |
 | H-07 | 密钥轮换策略 | `make secret-rotate-smoke` 或 `TestSecretRotateRepoConnectionH07` | secret 轮换后 repo connection + CI sync 仍可用 |
 | H-08 | 发布窗口 audit gate | [`release-window-audit.md`](checklists/release-window-audit.md) + `make release-window-audit` | Postgres e2e + ALL/M3 + §7 证据归档 |
-| H-09 | 业务抽样 §7 | `go test -run TestReleaseSampling` 或 `scripts/release-sampling.sh` | Run/SSE/Memory/KPI/CI/合规/Scale（§7.2 SSE 含 `TestReleaseSamplingSSE`） |
+| H-09 | 业务抽样 §7 | `make release-sampling-static` 或 `make release-sampling-smoke` | Run/SSE/Memory/KPI/CI/合规/Scale（§7.2 SSE 含 `TestReleaseSamplingSSE`） |
 
 本地自动化（无需云环境，CI 可跑）：
 
 ```bash
 make postgres-e2e
 make postgres-rls-e2e
-go test ./internal/metrics/... ./internal/doctor/... -count=1 -short
+make postgres-app-gate    # Docker + schema 后 H-02/H-03 本地
+make smoke-static
 bash scripts/verify-local.sh
+# Live Worker（可选）
+ASH_WORKER_URL=http://127.0.0.1:8080 ASH_CI_FIXTURE=1 make live-smoke
 ```
 
 ---
@@ -82,7 +85,7 @@ make test-integration   # 需 ASH_DATABASE_URL + ASH_MIGRATE_E2E=1
 
 ---
 
-## 2. CI / ExecGo / KPI（MVP 已完成，H-04–H-07 本地自动化已就绪）
+## 2. CI / ExecGo / KPI（MVP 已完成，H-04–H-09 本地自动化已就绪）
 
 **状态**：API 与控制台 MVP 已交付；外部依赖验证见 **人工验证（暂缓）**
 **优先级**：P0 自动化回归 / P1 人工闭环
@@ -124,6 +127,10 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint AW：`scripts/postgres-app-gate.sh` + `make postgres-app-gate`（H-02/H-03 本地）；`smoke-static.sh`；`verify-local` Go env 引导。
+- Sprint AV：`postgres-rds-e2e` 接入 `live-smoke`；`smoke-index` 文档串联；MVP 清单与 CI `release-sampling-static` 显式步骤。
+- Sprint AU：`scripts/live-smoke.sh` + `make live-smoke`（H-04/05/06/07/09 live 编排）；`doc/checklists/smoke-index.md`；`release-window-audit` live 段收敛。
+- Sprint AT：`scripts/release-sampling-static.sh` + `make release-sampling-static`（H-09 §7 静态烟测）；`release-sampling-smoke.md`；`regression-short` 接入。
 - Sprint AS：`scripts/secret-rotate-smoke.sh` + `make secret-rotate-smoke`（H-07）；`TestSecretRotateRepoConnectionH07`；`make release-sampling`；`regression-short` / CI / `release-window-audit` 接入。
 - Sprint AQ：`scripts/release-window-audit.sh` + `make release-window-audit`（H-08 静态门禁聚合）。
 - Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。

@@ -105,6 +105,9 @@ curl -s http://<worker>/readyz | jq .
 
 ## 相关清单
 
+- [`smoke-index.md`](smoke-index.md) — H-04–H-09 烟测索引
+- [`postgres-app-gate.md`](postgres-app-gate.md) — H-02/H-03 本地 ash_app 门禁
 - [`postgres-rds-e2e.md`](postgres-rds-e2e.md) — 云 RDS 全链路
+- [`release-sampling-smoke.md`](release-sampling-smoke.md) — H-09 业务抽样
 - [`execgo-live-smoke.md`](execgo-live-smoke.md) — ExecGo live（M3-05）
 - [`../05-M3-多租户与Postgres演进.md`](../05-M3-多租户与Postgres演进.md) — 架构说明

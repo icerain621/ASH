@@ -54,11 +54,11 @@ bash scripts/postgres-doctor-assert.sh TR3 TR3-06,TR3-10
 go run ./cmd/cli doctor --suite ALL --agent static --format md
 
 if [[ -n "${ASH_WORKER_URL:-}" ]]; then
-  echo "== H-09 release sampling (ASH_WORKER_URL set) =="
-  bash scripts/release-sampling.sh
+  echo "== H-04..H-09 live smoke (ASH_WORKER_URL set) =="
+  bash scripts/live-smoke.sh
 else
-  echo "== H-09 release sampling (api tests) =="
-  go test ./internal/api/ -run 'TestReleaseSamplingH09|TestReleaseSamplingSSE|TestReleaseSamplingH09CrossSpaceMemoryDenied' -count=1
+  echo "== H-09 release sampling static =="
+  bash scripts/release-sampling-static.sh
 fi
 
 echo "OK cloud RDS e2e (see doc/checklists/postgres-rds-e2e.md §7 manual SSE)"

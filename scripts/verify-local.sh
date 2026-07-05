@@ -4,6 +4,9 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
+# shellcheck source=_go_env.sh
+source "$ROOT/scripts/_go_env.sh"
+_ash_go_env_bootstrap "$ROOT"
 
 echo "== go test (authz, doctor, api, security, store migration, pluginhealth, opsenv) =="
 go test ./internal/authz ./internal/doctor ./internal/api ./internal/security ./internal/store -run 'TestMigration|TestMigrator|TestDualWrite|TestMigrationCatalog' -count=1
@@ -12,12 +15,6 @@ go test ./internal/authz ./internal/doctor ./internal/api ./internal/security -c
 
 echo "== regression-short =="
 make regression-short
-
-echo "== release sampling api smoke =="
-go test ./internal/api/ -run 'TestReleaseSampling' -count=1
-
-echo "== ci fixture api smoke =="
-go test ./internal/api/ -run 'TestCISyncRunsWithFixture|TestReleaseSamplingCIFixture' -count=1
 
 echo "== execgo M3-05 static smoke =="
 go test ./internal/doctor/ -run TestM3ExecGoLiveSmoke -count=1
@@ -40,6 +37,12 @@ bash scripts/openapi-check.sh
 if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx ash-postgres-dev; then
   echo "== postgres RLS e2e (optional, docker detected) =="
   make postgres-rls-e2e
+  if docker exec ash-postgres-dev psql -U ash -d ash -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='runs' LIMIT 1" 2>/dev/null | grep -q 1; then
+    echo "== postgres app gate H-02/H-03 (optional) =="
+    make postgres-app-gate
+  else
+    echo "== skip postgres-app-gate (run make postgres-sql-schema-e2e first) =="
+  fi
 else
   echo "== skip postgres-rls-e2e (start docker: make postgres-up) =="
 fi

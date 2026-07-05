@@ -8,6 +8,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint AW：`scripts/postgres-app-gate.sh` + `make postgres-app-gate`（H-02/H-03 本地 ash_app/RLS）；`scripts/smoke-static.sh`；`postgres-app-gate.md`。
+- Sprint AV：`postgres-rds-e2e` 接入 `live-smoke`；`smoke-index` 文档串联；MVP 清单与 CI `release-sampling-static` 显式步骤。
+- Sprint AU：`scripts/live-smoke.sh` + `make live-smoke`（H-04/05/06/07/09 live 编排）；`doc/checklists/smoke-index.md`；`release-window-audit` live 段收敛。
+- Sprint AT：`scripts/release-sampling-static.sh` + `make release-sampling-static`（H-09 §7 静态烟测）；`release-sampling-smoke.sh`；`doc/checklists/release-sampling-smoke.md`；`regression-short` / `release-window-audit` 接入。
 - Sprint AS：`scripts/secret-rotate-smoke.sh` + `make secret-rotate-smoke`（H-07：`TestSecretRotateRepoConnectionH07` + live fixture 轮换后 CI sync）；CI sync upsert 保留 run/job ID；`scripts/regression-short.sh`；`make release-sampling`；CI `regression-short` 扩展。
 - Sprint AR：`scripts/execgo-live-smoke.sh` + `make execgo-live-smoke`（H-06：`execgo-health` + `ASH_EXECGO_E2E=1` Doctor M3-05）；`TestM3ExecGoLiveSmoke`；`verify-local` 静态门禁。
 - Sprint AQ：`make release-window-audit` 聚合 H-08 静态门禁（Doctor ALL/M3/TR3、regression-short、openapi-check、API 抽样）。

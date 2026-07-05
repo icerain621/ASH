@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling web web-build web-dev verify regression-short
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev verify regression-short
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -58,6 +58,18 @@ secret-rotate-smoke:
 release-sampling:
 	bash scripts/release-sampling.sh
 
+release-sampling-static:
+	bash scripts/release-sampling-static.sh
+
+release-sampling-smoke:
+	bash scripts/release-sampling-smoke.sh
+
+live-smoke:
+	bash scripts/live-smoke.sh
+
+smoke-static:
+	bash scripts/smoke-static.sh
+
 doctor:
 	cd $(BACKEND_DIR) && go run ./cmd/cli doctor --suite TR0 --format md
 
@@ -91,6 +103,9 @@ test-rls:
 
 postgres-rls-e2e:
 	bash scripts/postgres-rls-e2e.sh
+
+postgres-app-gate:
+	bash scripts/postgres-app-gate.sh
 
 postgres-rds-e2e:
 	bash scripts/postgres-rds-e2e.sh

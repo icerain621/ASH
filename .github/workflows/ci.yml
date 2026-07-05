@@ -32,6 +32,9 @@ jobs:
       - name: Regression short
         run: make regression-short
 
+      - name: H-09 release sampling static
+        run: make release-sampling-static
+
       - name: Doctor M3 static
         run: go run ./cmd/cli doctor --suite M3 --format md --agent static
 

@@ -42,29 +42,11 @@ else
   echo "== §4 openapi-check skipped (ASH_RELEASE_AUDIT_SKIP_OPENAPI=1) =="
 fi
 
-echo "== §7 release sampling (api tests) =="
-go test ./internal/api/ -run 'TestReleaseSampling|TestCISyncRunsWithFixture|TestReleaseSamplingCIFixture' -count=1
-
-if [[ "${ASH_EXECGO_E2E:-}" == "1" ]]; then
-  echo "== H-06 ExecGo live smoke =="
-  bash scripts/execgo-live-smoke.sh
-else
-  echo "== H-06 live ExecGo smoke skipped (set ASH_EXECGO_E2E=1) =="
-fi
-
 if [[ -n "$LIVE_WORKER" ]]; then
-  echo "== §7 live release-sampling @ ${LIVE_WORKER} =="
-  bash scripts/release-sampling.sh
-  if curl -sf "${LIVE_WORKER}/readyz" | grep -q 'ASH_CI_FIXTURE'; then
-    echo "== §7 CI fixture smoke =="
-    bash scripts/ci-fixture-smoke.sh
-    echo "== §7 H-07 secret rotate smoke =="
-    ASH_CI_FIXTURE=1 bash scripts/secret-rotate-smoke.sh
-  else
-    echo "== §7 CI fixture / secret-rotate smoke skipped (Worker without ASH_CI_FIXTURE) =="
-  fi
+  echo "== §7 live smoke (H-04/05/06/07/09) @ ${LIVE_WORKER} =="
+  bash scripts/live-smoke.sh
 else
-  echo "== §7 live sampling skipped (set ASH_WORKER_URL for live curl checks) =="
+  echo "== §7 live smoke skipped (set ASH_WORKER_URL for live curl checks) =="
 fi
 
 echo "OK H-08 static release audit"

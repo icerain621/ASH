@@ -19,10 +19,11 @@
 
 ## 与 release-window-audit 集成
 
-`make release-window-audit` 静态段包含 `TestSecretRotateRepoConnectionH07`；设置 `ASH_WORKER_URL` + `ASH_CI_FIXTURE=1` 时可选 live smoke。
+静态 H-07 经 `make regression-short` 覆盖；`ASH_WORKER_URL` + `ASH_CI_FIXTURE=1` 时 `make live-smoke` 或 `make release-window-audit` 含 live 段。索引见 [`smoke-index.md`](smoke-index.md)。
 
 ## 相关
 
 - API：`POST /api/v1/secrets/{secretId}/rotate`
 - Console：Automation 页 Secrets 轮换按钮
 - [`postgres-production-config.md`](postgres-production-config.md) — GitHub token 轮换 SOP
+- [`smoke-index.md`](smoke-index.md) — H-04–H-09 烟测索引

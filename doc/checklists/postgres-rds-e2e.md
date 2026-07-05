@@ -187,14 +187,14 @@ go run ./cmd/cli doctor --suite ALL --agent static --format md
 
 ```bash
 # 单测等价路径（CI / 无 Worker）
-go test ./internal/api/ -run TestReleaseSamplingH09 -count=1
+make release-sampling-static
 
 # 对已启动 Worker（ASH_AUTH_MODE=dev 或 Bearer token）
 export ASH_WORKER_URL=http://127.0.0.1:8080
-bash scripts/release-sampling.sh
+ASH_CI_FIXTURE=1 make live-smoke   # H-04/05/06/07/09 live 编排
 ```
 
-`make postgres-rds-e2e` 在设置 `ASH_WORKER_URL` 时自动调用 `release-sampling.sh`；否则跑 `TestReleaseSamplingH09`。
+`make postgres-rds-e2e` 在设置 `ASH_WORKER_URL` 时自动调用 `live-smoke.sh`；否则跑 `make release-sampling-static`。烟测索引见 [`smoke-index.md`](smoke-index.md)。
 
 | # | 场景 | 操作 | 期望 |
 |---|------|------|------|
