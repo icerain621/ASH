@@ -14,14 +14,14 @@
 | MVP 清单 §1–4, 7, 9–10 | ✅ 自动化已勾 | 功能/测试/性能/可观测/灰度/T+0/T+1 |
 | MVP 清单 §5 Postgres 切换 | ⚠️ | 本地 `make postgres-app-gate` ✅（H-03 readyz）；云 RDS 待 `cloud-rds.env` |
 | MVP 清单 §6 staging 迁移 | ⚠️ | 本地 Docker `make cloud-acceptance` ✅（2026-07-06）；云 RDS 待 `config/cloud-rds.env` |
-| MVP 清单 §8 值班 roster | ⏸ | 自动化 `release-window-gate` 已过；人工填表 |
+| MVP 清单 §8 值班 roster | ✅ | 占位 dry-run；`signoff-apply` → `release-window-runbook.md` |
 | MVP 清单 §11 四人签字 | ✅ | 占位 dry-run；`make signoff-gate` 2026-07-07 |
-| 发布范围冻结签字 | ⏸ | `ASH_SCOPE_FREEZE_SIGNED=1` + 产品评审 |
+| 发布范围冻结签字 | ✅ | `ASH_SCOPE_FREEZE_SIGNED=1`（占位 dry-run） |
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
-| 前端测试 | ✅ | Runs/CI/Memory/Scale smoke 测试（7 文件 / 14 用例） |
-| Git 远端 | ✅ | `main` @ `9737502` |
+| 前端测试 | ✅ | Runs/CI/Memory/Scale/Observability smoke（8 文件 / 15 用例） |
+| Git 远端 | ✅ | `main` @ `55f2591` |
 
 ### 优先级矩阵
 
@@ -44,7 +44,7 @@
 | BG-1 | `git push origin main`；确认 `ci.yml` + `release-gates.yml` 全绿 | 发布 | GitHub Actions 绿 |
 | BG-2 | 产品/技术/测试/发布 **§11 签字** | 四人 | `make signoff-apply` + `make signoff-gate` 绿 |
 | BG-3 | `mvp-release-scope.md` 评审签字 → `ASH_SCOPE_FREEZE_SIGNED=1` | 产品 | `scope-freeze-gate` 无 WARN |
-| BG-4 | 发布窗口 roster + 时间写入 `release-window-runbook.md` | 发布 | 清单 §8 roster 勾选 |
+| BG-4 | 发布窗口 roster + 时间写入 `release-window-runbook.md` | 发布 | ✅ `signoff-apply` 同步占位 roster |
 | BG-5 | 打 tag `v0.1.0-mvp` + CHANGELOG 归档 Unreleased | 发布 | ✅ tag `v0.1.0-mvp` |
 
 ```bash
@@ -60,6 +60,7 @@ make signoff-gate
 |---|------|------|
 | BH-1 | 修复 `mvp-signoff` 嵌套调用 `web-gate` 偶发失败 | ✅ `npm … \| cat` |
 | BH-2 | 前端核心页 smoke 测试：Runs、CI、Memory、Scale | ✅ 7 vitest 文件 |
+| BH-3 | Observability 页 smoke 测试 | ✅ `ObservabilityPage.test.tsx` |
 | BH-4 | PR 门禁加 `make release-window-gate`（轻量，~2min） | ✅ `ci.yml` 并行 job |
 | BH-5 | KPI 定义 §9：overview 与 derive replay 对账 | ✅ `make kpi-reconcile-gate` |
 

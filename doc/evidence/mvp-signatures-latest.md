@@ -1,7 +1,7 @@
 # MVP v0.1 发布签字记录
 
-- 生成时间（UTC）：2026-07-07T14:18:53Z
-- Git：ebc3bcc @ main
+- 生成时间（UTC）：2026-07-07T15:04:49Z
+- Git：55f2591 @ main
 - 范围冻结：已冻结（`ASH_SCOPE_FREEZE_SIGNED=1`）
 - 操作：`make signoff-apply`
 

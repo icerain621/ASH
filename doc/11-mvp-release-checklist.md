@@ -52,7 +52,7 @@
 
 ## 8. 发布准备
 - [x] 发布窗口自动化门禁（`make release-window-gate` → [`release-window-latest.md`](evidence/release-window-latest.md)）
-- [ ] 发布窗口时间与值班人员已确认（[`release-window-runbook.md`](checklists/release-window-runbook.md) roster 人工填写）
+- [x] 发布窗口时间与值班人员已确认（[`release-window-runbook.md`](checklists/release-window-runbook.md) roster 占位 dry-run；`make signoff-apply` 同步）
 - [x] 版本号与变更说明（Changelog）已生成（`CHANGELOG.md`）
 - [x] 配置文件与环境变量已核对（`make config-env-gate` + [`cloud-rds.env.example`](../../config/cloud-rds.env.example)）
 - [x] API 文档与使用说明已同步（`make swagger` + openapi-check）

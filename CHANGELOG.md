@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BL：`make worker-local-gate` 本地演练（BI-5 §4 第 5 步）；`signoff-apply` 同步 `release-window-runbook.md` §1/§2/§7；Observability 页 vitest smoke。
 - Sprint BI（续）：证据刷新（2026-07-07）；`cloud-acceptance-gate` 区分本地 Docker / 云 RDS；`release-window-latest` 更新。
 - `scripts/postgres-truncate-dev-data.sql` 本地 e2e 漂移清理；`postgres-rds-e2e` / `postgres-smoke` / Doctor CLI 加固。
 
