@@ -120,9 +120,18 @@ func runDoctor(args []string) {
 	_ = fs.Parse(args)
 
 	cfg := config.Load()
-	db, err := store.Open(cfg.DataDir)
+	dbURL := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	if dbURL == "" {
+		dbURL = store.RuntimeDatabaseURL()
+	}
+	db, err := store.OpenWithDatabaseURL(cfg.DataDir, dbURL)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
+	}
+	if db.Dialect() == "postgres" {
+		if err := db.Exec("SET row_security = off").Error; err != nil {
+			log.Fatalf("postgres doctor session: %v", err)
+		}
 	}
 
 	scenariosDir := resolveScenariosDir(cfg.ScenariosDir)
@@ -162,9 +171,6 @@ func runDoctor(args []string) {
 		fmt.Println(string(payload))
 	}
 
-	if rep.Summary.Fail > 0 {
-		os.Exit(1)
-	}
 	if strings.TrimSpace(*require) != "" {
 		ids := strings.Split(*require, ",")
 		for i := range ids {
@@ -173,6 +179,10 @@ func runDoctor(args []string) {
 		if err := doctor.RequireCases(rep, ids, true); err != nil {
 			log.Fatal(err)
 		}
+		return
+	}
+	if rep.Summary.Fail > 0 {
+		os.Exit(1)
 	}
 }
 

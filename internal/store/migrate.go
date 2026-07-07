@@ -166,15 +166,23 @@ func (m *Migrator) Plan() (*MigrationPlan, error) {
 			return nil, fmt.Errorf("count source %s: %w", ent.table, err)
 		}
 		var dstCount int64
+		var match bool
 		if err := m.Target.WithRLSBypassIfNeeded(func(gdb *gorm.DB) error {
 			var err error
 			dstCount, err = countModel(gdb, ent.model)
+			if err != nil {
+				return err
+			}
+			match = srcCount == dstCount
+			if ent.table == "schema_meta" && m.Source.Dialect() == "sqlite" && m.Target.Dialect() == "postgres" {
+				match, err = schemaMetaSourceKeysMatch(m.Source.DB, gdb)
+			}
 			return err
 		}); err != nil {
 			return nil, fmt.Errorf("count target %s: %w", ent.table, err)
 		}
 		plan.Tables = append(plan.Tables, TableStat{
-			Table: ent.table, SourceRows: srcCount, TargetRows: dstCount, Match: srcCount == dstCount,
+			Table: ent.table, SourceRows: srcCount, TargetRows: dstCount, Match: match,
 		})
 	}
 	plan.Ready = m.Source.Dialect() == "sqlite" && m.Target.Dialect() == "postgres"
@@ -279,6 +287,25 @@ func countModelFiltered(db *gorm.DB, model any, incremental bool, since *time.Ti
 		return 0, err
 	}
 	return count, nil
+}
+
+// schemaMetaSourceKeysMatch passes when every sqlite schema_meta key exists on postgres
+// with the same value. Postgres may hold extra deployment keys (e.g. sql_migrations).
+func schemaMetaSourceKeysMatch(src, dst *gorm.DB) (bool, error) {
+	var rows []SchemaMeta
+	if err := src.Find(&rows).Error; err != nil {
+		return false, err
+	}
+	for _, row := range rows {
+		var got SchemaMeta
+		if err := dst.Where("key = ?", row.Key).First(&got).Error; err != nil {
+			return false, nil
+		}
+		if got.Value != row.Value {
+			return false, nil
+		}
+	}
+	return true, nil
 }
 
 func copyEntity(src, dst *gorm.DB, ent migrationEntity, batch int, since *time.Time) (int64, error) {

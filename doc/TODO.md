@@ -13,7 +13,7 @@
 |------|------|------|
 | MVP 清单 §1–4, 7, 9–10 | ✅ 自动化已勾 | 功能/测试/性能/可观测/灰度/T+0/T+1 |
 | MVP 清单 §5 Postgres 切换 | ⏸ | 需 H-01~H-03 云 RDS 或 Docker `postgres-app-gate` |
-| MVP 清单 §6 staging 迁移 | ⏸ | 绑定 `make cloud-acceptance` |
+| MVP 清单 §6 staging 迁移 | ⚠️ | 本地 Docker `make cloud-acceptance` ✅（2026-07-06）；云 RDS 待 `config/cloud-rds.env` |
 | MVP 清单 §8 值班 roster | ⏸ | 自动化 `release-window-gate` 已过；人工填表 |
 | MVP 清单 §11 四人签字 | ⏸ | 证据在 `doc/evidence/` |
 | 发布范围冻结签字 | ⏸ | `ASH_SCOPE_FREEZE_SIGNED=1` + 产品评审 |
@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | Runs/CI/Memory/Scale smoke 测试（7 文件 / 14 用例） |
-| Git 远端 | ⚠️ | 本地 `76cc9bb` + tag `v0.1.0-mvp` 待 `git push origin main --tags` |
+| Git 远端 | ✅ | `main` + tag `v0.1.0-mvp` 已推送；BI 修复待提交 |
 
 ### 优先级矩阵
 
@@ -70,7 +70,7 @@ make signoff-gate
 | BI-1 | 配置 `config/cloud-rds.env` | RDS 实例 | `make cloud-acceptance` 绿 |
 | BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
 | BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | `/readyz` dialect=postgres |
-| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | M3-06/07 pass |
+| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `make cloud-acceptance` 本地演练（2026-07-06） |
 | BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | `release-window-latest` 云项 ✅ |
 
 ```bash

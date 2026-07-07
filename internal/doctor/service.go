@@ -28,6 +28,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 	"github.com/ash-repwiki/ash/internal/toolbus"
+	"gorm.io/gorm"
 )
 
 // Evidence links a check to run artifacts or events.
@@ -1284,35 +1285,47 @@ func (s *Service) m3TenantIsolation() CaseResult {
 		SchemaVersion: memory.CurrentSchemaVersion, Title: "b", Body: "tenant b",
 		CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.runs.DB().Create(&memA).Error; err != nil {
+	run := func(tx *gorm.DB) error {
+		if err := tx.Create(&memA).Error; err != nil {
+			return err
+		}
+		if err := tx.Create(&memB).Error; err != nil {
+			return err
+		}
+		if err := store.EnforceSpaceAccess(memB.SpaceID, spaceA); err == nil {
+			return fmt.Errorf("cross-space access should be denied")
+		}
+		var leak int64
+		if err := tx.Model(&store.MemoryRecord{}).
+			Where("space_id = ? AND id = ?", spaceA, memB.ID).Count(&leak).Error; err != nil {
+			return err
+		}
+		if leak != 0 {
+			return fmt.Errorf("space A query returned space B memory")
+		}
+		var onlyA int64
+		if err := tx.Model(&store.MemoryRecord{}).Where("space_id = ?", spaceA).Count(&onlyA).Error; err != nil {
+			return err
+		}
+		if onlyA < 1 {
+			return fmt.Errorf("space A memory missing")
+		}
+		return tx.Where("id IN ?", []string{memA.ID, memB.ID}).Delete(&store.MemoryRecord{}).Error
+	}
+	ashDB := s.runs.DB()
+	var err error
+	if doctorPostgresRLSSessionNeeded() {
+		err = ashDB.Transaction(func(tx *gorm.DB) error {
+			if err := tx.Exec("SET LOCAL row_security = off").Error; err != nil {
+				return err
+			}
+			return run(tx)
+		})
+	} else {
+		err = run(ashDB.DB)
+	}
+	if err != nil {
 		res.Message = err.Error()
-		return res
-	}
-	if err := s.runs.DB().Create(&memB).Error; err != nil {
-		res.Message = err.Error()
-		return res
-	}
-	if err := store.EnforceSpaceAccess(memB.SpaceID, spaceA); err == nil {
-		res.Message = "cross-space access should be denied"
-		return res
-	}
-	var leak int64
-	if err := s.runs.DB().Model(&store.MemoryRecord{}).
-		Where("space_id = ? AND id = ?", spaceA, memB.ID).Count(&leak).Error; err != nil {
-		res.Message = err.Error()
-		return res
-	}
-	if leak != 0 {
-		res.Message = "space A query returned space B memory"
-		return res
-	}
-	var onlyA int64
-	if err := s.runs.DB().Model(&store.MemoryRecord{}).Where("space_id = ?", spaceA).Count(&onlyA).Error; err != nil {
-		res.Message = err.Error()
-		return res
-	}
-	if onlyA < 1 {
-		res.Message = "space A memory missing"
 		return res
 	}
 	res.Evidence = append(res.Evidence,
@@ -1322,6 +1335,15 @@ func (s *Service) m3TenantIsolation() CaseResult {
 	)
 	res.Status = "pass"
 	return res
+}
+
+func doctorPostgresRLSSessionNeeded() bool {
+	raw := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))
+	if raw == "" {
+		return false
+	}
+	target, err := store.ParseDatabaseTarget("", raw)
+	return err == nil && target.Dialect == "postgres"
 }
 
 func (s *Service) m3PostgresReadiness() CaseResult {

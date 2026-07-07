@@ -180,6 +180,39 @@ func TestDualWriteConfigRoundTrip(t *testing.T) {
 	}
 }
 
+func TestSchemaMetaSourceKeysMatchAllowsPostgresExtras(t *testing.T) {
+	dir := t.TempDir()
+	srcPath := filepath.Join(dir, "src.db")
+	dstPath := filepath.Join(dir, "dst.db")
+	src := mustOpenSQLite(t, dir, srcPath)
+	dst := mustOpenSQLite(t, dir, dstPath)
+	now := time.Now().UTC()
+	extra := SchemaMeta{Key: "memory_schema_catalog_version", Value: "2", UpdatedAt: now}
+	if err := src.Create(&extra).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.Create(&extra).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.Create(&SchemaMeta{Key: "sql_migrations", Value: "golang-migrate/v1", UpdatedAt: now}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	ok, err := schemaMetaSourceKeysMatch(src.DB, dst.DB)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok {
+		t.Fatal("expected source keys to match on target with extras")
+	}
+	if err := src.Close(); err != nil {
+		t.Fatal(err)
+	}
+	if err := dst.Close(); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func mustOpenSQLite(t *testing.T, dir, path string) *DB {
 	t.Helper()
 	db, err := OpenSQLite(dir, path)

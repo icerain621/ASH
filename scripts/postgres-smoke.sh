@@ -6,7 +6,7 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 echo "== parse ASH_DATABASE_URL profiles =="
-go test ./internal/store/ -run 'TestParseDatabaseTargetPostgresURL|TestDatabaseProfileSQLiteDefault' -count=1
+env -u ASH_DATABASE_URL -u ASH_DATABASE_APP_URL go test ./internal/store/ -run 'TestParseDatabaseTargetPostgresURL|TestDatabaseProfileSQLiteDefault' -count=1
 
 if [[ -z "${ASH_DATABASE_URL:-}" ]]; then
   echo "ASH_DATABASE_URL unset — skipping live postgres connection"
@@ -15,6 +15,10 @@ if [[ -z "${ASH_DATABASE_URL:-}" ]]; then
 fi
 
 echo "== live open with ASH_DATABASE_URL =="
-go run ./cmd/cli doctor --suite M3
+if [[ "${ASH_POSTGRES_RLS_FORCE:-}" == "1" ]]; then
+  echo "skip doctor M3 (RLS force; full suite runs later in postgres-rds-e2e)"
+else
+  go run ./cmd/cli doctor --suite M3
+fi
 
 echo "OK"

@@ -11,5 +11,6 @@ _ash_go_env_bootstrap "$ROOT"
 PATTERN='TestReleaseSamplingH09|TestReleaseSamplingSSE|TestReleaseSamplingH09CrossSpaceMemoryDenied|TestReleaseSamplingCIFixtureH04H05'
 
 echo "== H-09 release sampling static (§7 api tests) =="
-go test ./internal/api/... -run "$PATTERN" -count=1
+env -u ASH_DATABASE_URL -u ASH_DATABASE_APP_URL -u ASH_MIGRATE_E2E \
+  go test ./internal/api/... -run "$PATTERN" -count=1
 echo "OK H-09 release sampling static"

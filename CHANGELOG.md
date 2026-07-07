@@ -8,7 +8,14 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- (empty — next sprint entries go here)
+- Sprint BI（本地 Docker）：`make cloud-acceptance` 全绿；证据 `doc/evidence/cloud-h01-h03-latest.md`。
+- `scripts/postgres-truncate-dev-data.sql` 本地 e2e 漂移清理；`postgres-rds-e2e` / `postgres-smoke` / Doctor CLI 加固。
+
+### Fixed
+
+- `schema_meta` migrate verify 允许 Postgres 额外 `sql_migrations` 键。
+- Doctor M3-01 / CLI 在 Postgres+RLS 下验收（owner URL、`row_security=off`、测试行清理）。
+- `OpenTest` 与 `release-sampling-static` 隔离云环境变量，H-09 API 烟测稳定。
 
 ## [v0.1.0-mvp] - 2026-07-05
 

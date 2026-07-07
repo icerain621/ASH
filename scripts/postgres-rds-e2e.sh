@@ -33,28 +33,34 @@ echo "== pre-migrate backup/plan (optional) =="
 bash scripts/pre-migrate-gate.sh || true
 
 echo "== golang-migrate schema (expected revision 20) =="
+bash scripts/postgres-ensure-app-role.sh
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
 
-bash scripts/postgres-ensure-app-role.sh
+echo "== sqlite → postgres data copy =="
+if [[ "${ASH_DATABASE_URL}" == *"127.0.0.1"* || "${ASH_DATABASE_URL}" == *"localhost"* ]]; then
+  if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx ash-postgres-dev; then
+    echo "== truncate local postgres data (dev e2e drift) =="
+    docker exec -i ash-postgres-dev psql -U ash -d ash -v ON_ERROR_STOP=1 < scripts/postgres-truncate-dev-data.sql
+  fi
+fi
 
 go run ./cmd/cli migrate plan  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate copy  --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE_PATH" --postgres "$ASH_DATABASE_URL"
 
-go run ./cmd/cli doctor --suite M3 --format md
-bash scripts/postgres-doctor-assert.sh M3 M3-04
-
-go test -tags=integration ./internal/store/ -run TestPostgresRLS -count=1
-
+echo "== doctor M3 (migrate verify + tenant isolation) =="
 if [[ -n "${ASH_DATABASE_APP_URL:-}" ]]; then
-  bash scripts/postgres-doctor-assert.sh M3 M3-06,M3-07
+  go run ./cmd/cli doctor --suite M3 --format md --require M3-04,M3-06,M3-07
+else
+  go run ./cmd/cli doctor --suite M3 --format md --require M3-04
 fi
 
-go run ./cmd/cli doctor --suite TR3 --format md
-bash scripts/postgres-doctor-assert.sh TR3 TR3-06,TR3-10
+go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate -count=1
 
-go run ./cmd/cli doctor --suite ALL --agent static --format md
+go run ./cmd/cli doctor --suite TR3 --format md --require TR3-06,TR3-10
+
+go run ./cmd/cli doctor --suite ALL --agent static --format md --require M3-06,M3-07,M3-09,M3-11,TR3-06,TR3-09,TR3-10
 
 if [[ -n "${ASH_WORKER_URL:-}" ]]; then
   echo "== H-04..H-09 live smoke (ASH_WORKER_URL set) =="
