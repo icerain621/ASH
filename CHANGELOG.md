@@ -8,7 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- Sprint BI（本地 Docker）：`make cloud-acceptance` 全绿；证据 `doc/evidence/cloud-h01-h03-latest.md`。
+- Sprint BI（续）：`make postgres-app-gate` 本地 H-03（ash_app + readyz）；`postgres-app-gate.sh` 避免 RLS 测试 reset schema。
 - `scripts/postgres-truncate-dev-data.sql` 本地 e2e 漂移清理；`postgres-rds-e2e` / `postgres-smoke` / Doctor CLI 加固。
 
 ### Fixed

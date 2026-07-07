@@ -25,16 +25,18 @@ export ASH_POSTGRES_RLS_FORCE=1
 
 echo "== H-02/H-03 postgres app gate (port ${PORT}) =="
 
+echo "== ensure ash_app role + schema rev 20 =="
+bash scripts/postgres-ensure-app-role.sh
+go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
+
 if ! docker exec ash-postgres-dev psql -U ash -d ash -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='runs' LIMIT 1" | grep -q 1; then
-  echo "postgres schema missing runs table; run: make postgres-sql-schema-e2e (or migrate schema up)" >&2
+  echo "postgres schema missing runs table after migrate schema up" >&2
   exit 2
 fi
 
-echo "== ensure ash_app role =="
-bash scripts/postgres-ensure-app-role.sh
-
-echo "== RLS integration smoke =="
-bash scripts/postgres-rls-e2e.sh
+echo "== RLS ash_app smoke (existing schema, no reset) =="
+export ASH_MIGRATE_E2E=1
+go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate -count=1
 
 GATE_DATA="${ASH_DATA_DIR:-}"
 if [[ -z "$GATE_DATA" ]]; then
