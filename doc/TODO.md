@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | Runs/CI/Memory/Scale smoke 测试（7 文件 / 14 用例） |
-| Git 远端 | ✅ | `main` + tag `v0.1.0-mvp` 已推送；BI 修复待提交 |
+| Git 远端 | ✅ | `main` @ `ad80bf7`（Sprint BI cloud-acceptance 修复） |
 
 ### 优先级矩阵
 
