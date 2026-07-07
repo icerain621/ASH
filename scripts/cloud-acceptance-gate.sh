@@ -39,6 +39,11 @@ mkdir -p "$(dirname "$SIGNOFF")"
   echo "- Git：$(git rev-parse --short HEAD) @ $(git rev-parse --abbrev-ref HEAD)"
   echo "- 证据目录：\`$EVIDENCE\`（本地，未入库）"
   echo "- RDS host：\`${ASH_DATABASE_URL%%@*}@...\`（脱敏）"
+  if [[ "${ASH_DATABASE_URL}" == *"127.0.0.1"* || "${ASH_DATABASE_URL}" == *"localhost"* ]]; then
+    echo "- 环境：**本地 Docker**（云 RDS 待 \`config/cloud-rds.env\`）"
+  else
+    echo "- 环境：云 RDS"
+  fi
   echo
   echo "## 验收项"
   echo
@@ -47,7 +52,11 @@ mkdir -p "$(dirname "$SIGNOFF")"
   echo "| H-01 云 RDS 全链路 | ✅ | \`postgres-rds-e2e\` + migrate verify + Doctor ALL |"
   if [[ -n "${ASH_DATABASE_APP_URL:-}" ]]; then
     echo "| H-02 RLS + ash_app | ✅ | M3-06/07 + RLS 集成测试 |"
-    echo "| H-03 生产 Worker 配置 | ⏸ | 需 Worker 指向 \`ASH_DATABASE_APP_URL\` 后 §5 readyz 签字 |"
+    if [[ "${ASH_DATABASE_URL}" == *"127.0.0.1"* || "${ASH_DATABASE_URL}" == *"localhost"* ]]; then
+      echo "| H-03 生产 Worker 配置 | ⚠️ | 本地 \`make postgres-app-gate\` ✅（readyz）；生产 Worker 部署待签字 |"
+    else
+      echo "| H-03 生产 Worker 配置 | ⏸ | 需 Worker 指向 \`ASH_DATABASE_APP_URL\` 后 §5 readyz 签字 |"
+    fi
   else
     echo "| H-02 RLS + ash_app | ⏸ | 未设 \`ASH_DATABASE_APP_URL\` |"
     echo "| H-03 生产 Worker 配置 | ⏸ | 未设 \`ASH_DATABASE_APP_URL\` |"

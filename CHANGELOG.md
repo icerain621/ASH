@@ -8,7 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- Sprint BI（续）：`make postgres-app-gate` 本地 H-03（ash_app + readyz）；`postgres-app-gate.sh` 避免 RLS 测试 reset schema。
+- Sprint BI（续）：证据刷新（2026-07-07）；`cloud-acceptance-gate` 区分本地 Docker / 云 RDS；`release-window-latest` 更新。
 - `scripts/postgres-truncate-dev-data.sql` 本地 e2e 漂移清理；`postgres-rds-e2e` / `postgres-smoke` / Doctor CLI 加固。
 
 ### Fixed

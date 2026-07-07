@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | Runs/CI/Memory/Scale smoke 测试（7 文件 / 14 用例） |
-| Git 远端 | ✅ | `main` @ `ad80bf7`（Sprint BI cloud-acceptance 修复） |
+| Git 远端 | ✅ | `main` @ `9737502` |
 
 ### 优先级矩阵
 
@@ -71,7 +71,7 @@ make signoff-gate
 | BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
 | BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | ✅ 本地 `make postgres-app-gate`（M3-06/07 + readyz） |
 | BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `make cloud-acceptance` 本地演练（2026-07-06） |
-| BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | `release-window-latest` 云项 ✅ |
+| BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | ⚠️ 本地 pre-migrate/backup 已在 cloud-acceptance；切换日待执行 |
 
 ```bash
 cp config/cloud-rds.env.example config/cloud-rds.env

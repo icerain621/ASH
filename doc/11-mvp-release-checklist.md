@@ -39,7 +39,7 @@
 - [x] 默认密钥/测试账号已移除或替换（`make production-config-gate` 拦截 dev-secret / CHANGE_ME）
 
 ## 6. 数据与迁移
-- [ ] 数据库迁移脚本在 staging 成功执行（**待 H-01 云验收**）
+- [ ] 数据库迁移脚本在 staging 成功执行（**云 RDS 待验收**；本地 Docker `make cloud-acceptance` ✅ 2026-07-07）
 - [x] 新增表、索引、约束验证通过（SQL rev 20 + Doctor M3-03/08/11）
 - [x] 关键数据已备份（`make data-backup` / `make release-window-gate` 本地演练；生产 migrate 前再次执行）
 - [x] 回滚脚本（DDL/DML）已准备并演练（[`postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) §8）
