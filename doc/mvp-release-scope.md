@@ -1,6 +1,6 @@
 # ASH MVP v0.1 发布范围（冻结草案）
 
-> 状态：**已冻结**（2026-07-06，产品 `产品负责人（占位）` 确认）（对应 [`11-mvp-release-checklist.md`](11-mvp-release-checklist.md) §1）  
+> 状态：**已冻结**（2026-07-07，产品 `产品负责人（占位）` 确认）（对应 [`11-mvp-release-checklist.md`](11-mvp-release-checklist.md) §1）  
 > 版本锚点：Doctor ALL **43/43** · SQL rev **20** · RLS **41**
 
 ## 1. 发布目标

@@ -15,7 +15,7 @@
 | MVP 清单 §5 Postgres 切换 | ⚠️ | 本地 `make postgres-app-gate` ✅（H-03 readyz）；云 RDS 待 `cloud-rds.env` |
 | MVP 清单 §6 staging 迁移 | ⚠️ | 本地 Docker `make cloud-acceptance` ✅（2026-07-06）；云 RDS 待 `config/cloud-rds.env` |
 | MVP 清单 §8 值班 roster | ⏸ | 自动化 `release-window-gate` 已过；人工填表 |
-| MVP 清单 §11 四人签字 | ⏸ | 证据在 `doc/evidence/` |
+| MVP 清单 §11 四人签字 | ✅ | 占位 dry-run；`make signoff-gate` 2026-07-07 |
 | 发布范围冻结签字 | ⏸ | `ASH_SCOPE_FREEZE_SIGNED=1` + 产品评审 |
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
@@ -71,7 +71,7 @@ make signoff-gate
 | BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
 | BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | ✅ 本地 `make postgres-app-gate`（M3-06/07 + readyz） |
 | BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `make cloud-acceptance` 本地演练（2026-07-06） |
-| BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | ⚠️ 本地 pre-migrate/backup 已在 cloud-acceptance；切换日待执行 |
+| BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | ✅ 本地 Docker 2026-07-07；生产切换日待执行 |
 
 ```bash
 cp config/cloud-rds.env.example config/cloud-rds.env
