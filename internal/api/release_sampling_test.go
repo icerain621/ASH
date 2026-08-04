@@ -200,6 +200,59 @@ func TestReleaseSamplingSSE(t *testing.T) {
 	}
 }
 
+// TestStreamRunResumesFromQueryLastEventID verifies Sprint BM query resume (R-07).
+func TestStreamRunResumesFromQueryLastEventID(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	space := "space_sse_resume"
+	runID := "run_sse_resume"
+	traceID := "trace_sse_resume"
+
+	if err := db.Create(&store.RunRecord{
+		ID: runID, TraceID: traceID, ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: space,
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	ev := events.NewService(db)
+	first, err := ev.Append(runID, traceID, "run.started", "info", map[string]any{"n": 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ev.Append(runID, traceID, "step.started", "info", map[string]any{"n": 2}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := ev.Append(runID, traceID, "step.finished", "info", map[string]any{"n": 3}); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+runID+"/stream?Last-Event-ID="+first.ID, nil)
+	req = req.WithContext(ctx)
+	req.Header.Set("X-ASH-Space-ID", space)
+
+	done := make(chan struct{})
+	w := httptest.NewRecorder()
+	go func() {
+		r.ServeHTTP(w, req)
+		close(done)
+	}()
+	time.Sleep(300 * time.Millisecond)
+	cancel()
+	<-done
+
+	body := w.Body.String()
+	if !strings.Contains(body, "step.started") || !strings.Contains(body, "step.finished") {
+		t.Fatalf("body=%q want events after Last-Event-ID", body)
+	}
+	if strings.Contains(body, first.ID) || strings.Contains(body, "run.started") {
+		t.Fatalf("body=%q should skip resumed-from event %s", body, first.ID)
+	}
+}
+
 // TestReleaseSamplingH09CrossSpaceMemoryDenied is §7.3 cross-space isolation adjunct.
 func TestReleaseSamplingH09CrossSpaceMemoryDenied(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")

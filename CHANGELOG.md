@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BN：SSE 重连耗尽后回退 timeline 轮询（R-07）；`TestStreamRunResumesFromQueryLastEventID` 校验 query 续传。
 - Sprint BM：前端 SSE 自动重连（指数退避 + `Last-Event-ID` 续传）；`useRunStream` 暴露连接状态；`TestCrossSpaceAPIRegression` 覆盖 stream/provenance/artifacts/approvals/releases/repo（R-07/R-08）。
 - Sprint BL（续）：**12/12** 控制台页 vitest smoke（含 Space/Automation/Compliance）；Automation/Compliance 嵌套字段可选链防护；`signoff-apply` 幂等重跑无 WARN。
 - Sprint BL：`make worker-local-gate` 本地演练（BI-5 §4 第 5 步）；`signoff-apply` 同步 `release-window-runbook.md` §1/§2/§7；Observability 页 vitest smoke。

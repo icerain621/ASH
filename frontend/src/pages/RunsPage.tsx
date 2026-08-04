@@ -685,6 +685,7 @@ export function RunsPage() {
             <span>
               {streamLines.length} 条事件
               {streamStatus === "reconnecting" ? " · 重连中" : ""}
+              {streamStatus === "polling" ? " · 轮询回退" : ""}
               {streamStatus === "open" && selectedId ? " · 已连接" : ""}
             </span>
           </div>

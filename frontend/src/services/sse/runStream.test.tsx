@@ -1,6 +1,11 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { nextReconnectDelayMs, useRunStream } from "./runStream";
+import {
+  DEFAULT_MAX_RECONNECT_ATTEMPTS,
+  DEFAULT_POLL_INTERVAL_MS,
+  nextReconnectDelayMs,
+  useRunStream,
+} from "./runStream";
 
 type Handler = ((ev: MessageEvent) => void) | null;
 
@@ -76,7 +81,7 @@ describe("useRunStream", () => {
 
     act(() => {
       MockEventSource.instances[0].emitOpen();
-      MockEventSource.instances[0].emitMessage("run.started", '{"ok":true}', "evt-1");
+      MockEventSource.instances[0].emitMessage("run.started", '{"ok":true,"seq":1}', "evt-1");
     });
 
     expect(result.current.status).toBe("open");
@@ -89,7 +94,7 @@ describe("useRunStream", () => {
 
     act(() => {
       MockEventSource.instances[0].emitOpen();
-      MockEventSource.instances[0].emitMessage("step.finished", "{}", "evt-9");
+      MockEventSource.instances[0].emitMessage("step.finished", '{"seq":9}', "evt-9");
       MockEventSource.instances[0].emitError();
     });
 
@@ -107,6 +112,53 @@ describe("useRunStream", () => {
       MockEventSource.instances[1].emitOpen();
     });
     expect(result.current.status).toBe("open");
+  });
+
+  it("falls back to timeline polling after max reconnect attempts", async () => {
+    const pollTimeline = vi.fn().mockResolvedValue([
+      { seq: 1, type: "run.started", payload: { a: 1 } },
+      { seq: 2, type: "step.finished", payload: { step: "x" } },
+    ]);
+
+    const { result } = renderHook(() =>
+      useRunStream("run_1", {
+        maxReconnectAttempts: 2,
+        pollIntervalMs: DEFAULT_POLL_INTERVAL_MS,
+        pollTimeline,
+      }),
+    );
+
+    await act(async () => {
+      MockEventSource.instances[0].emitError();
+    });
+    expect(result.current.status).toBe("reconnecting");
+
+    await act(async () => {
+      vi.advanceTimersByTime(1000);
+    });
+    expect(MockEventSource.instances).toHaveLength(2);
+
+    await act(async () => {
+      MockEventSource.instances[1].emitError();
+    });
+
+    expect(result.current.status).toBe("polling");
+    expect(pollTimeline).toHaveBeenCalledWith("run_1");
+
+    await act(async () => {
+      await Promise.resolve();
+    });
+
+    expect(result.current.lines.some((l) => l.type === "run.started")).toBe(true);
+    expect(result.current.lines.some((l) => l.type === "step.finished")).toBe(true);
+
+    pollTimeline.mockResolvedValueOnce([{ seq: 3, type: "run.finished", payload: {} }]);
+    await act(async () => {
+      vi.advanceTimersByTime(DEFAULT_POLL_INTERVAL_MS);
+      await Promise.resolve();
+    });
+    expect(result.current.lines.some((l) => l.type === "run.finished")).toBe(true);
+    expect(MockEventSource.instances.length).toBeLessThanOrEqual(DEFAULT_MAX_RECONNECT_ATTEMPTS);
   });
 
   it("stops reconnecting after unmount", () => {

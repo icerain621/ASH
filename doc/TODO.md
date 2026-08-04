@@ -20,8 +20,8 @@
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
-| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连（16 文件 / 26 用例） |
-| Git 远端 | ✅ | `main` @ `37c430c`（本地未推送 Sprint BL/BM） |
+| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
+| Git 远端 | ✅ | `main` 本地 ahead（BL/BM/BN 待 `git push`） |
 
 ### 优先级矩阵
 
@@ -74,6 +74,13 @@ make signoff-gate
 | BM-2 | 跨 space API 回归（R-08）：stream/provenance/artifacts/approvals/releases/repo | ✅ `TestCrossSpaceAPIRegression` |
 | BM-3 | Stream 接受 query `Last-Event-ID` | ✅ `handlers.streamRun` |
 
+#### Sprint BN（P1 · R-07 轮询回退）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BN-1 | SSE 重连耗尽后 timeline 轮询回退 | ✅ `useRunStream` status=`polling`；Runs 页「轮询回退」 |
+| BN-2 | query `Last-Event-ID` 后端续传单测 | ✅ `TestStreamRunResumesFromQueryLastEventID` |
+
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
 | # | 任务 | 前置 | 验收 |
@@ -106,7 +113,7 @@ make cloud-acceptance
 | 场景 | Hotfix / Security Patch 模板深化（PRD §4.2/4.3） | 原 P1，冻结后延期 |
 | 平台 | 插件 gRPC ABI 签名策略（ARCH TODO） | P2 |
 | 安全 | 数据分级与保留期（PRD TODO） | 合规增强 |
-| 前端 | SSE 断线重连 E2E（浏览器级） | R-07 部分缓解（单元+钩子已落地） |
+| 前端 | SSE 浏览器级 E2E | R-07 单元/钩子/轮询已落地 |
 | 算法 | CI 诊断规则扩展、Memory 污染防护 | R-03/R-04 |
 
 ---
@@ -137,7 +144,7 @@ make mvp-signoff
 | R-12 回滚不完整 | `rollback-drill` 已自动化 | BI 切换日再演练一次并签字 |
 | R-08 越权 | M2 + `TestCrossSpaceAPIRegression` | 发布窗口抽测 + RLS e2e |
 | R-03 诊断准确率 | fixture 全绿 | BJ 真实 GitHub log 验证 |
-| R-07 SSE 不稳定 | 静态 + live smoke + 前端自动重连 | BJ 生产断连率观察 |
+| R-07 SSE 不稳定 | 自动重连 + timeline 轮询回退（BN） | BJ 生产断连率观察 |
 | R-01 需求变更 | `scope-freeze-gate` | BG-3 产品签字冻结 |
 
 ---
@@ -274,6 +281,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BN：SSE 耗尽后 timeline 轮询回退；`TestStreamRunResumesFromQueryLastEventID`。
 - Sprint BM：SSE 自动重连（退避 + Last-Event-ID）；跨 space API 回归表驱动用例；stream query 续传。
 - Sprint BL：12/12 控制台页 smoke；Automation/Compliance 空数据可选链；`signoff-apply` 幂等；`worker-local-gate` + runbook roster 同步。
 - Sprint BH：`frontend` Runs/CI/Memory/Scale 页 smoke 测试；`ci.yml` 并行 `release-window-gate`；`make kpi-reconcile-gate`（KPI §9 对账）。
