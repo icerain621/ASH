@@ -8,7 +8,7 @@ cd "$ROOT"
 source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
-PATTERN='TestReleaseSamplingH09|TestReleaseSamplingSSE|TestReleaseSamplingH09CrossSpaceMemoryDenied|TestReleaseSamplingCIFixtureH04H05'
+PATTERN='TestReleaseSamplingH09|TestReleaseSamplingSSE|TestStreamRunResumesFromQueryLastEventID|TestReleaseSamplingH09CrossSpaceMemoryDenied|TestCrossSpaceAPIRegression|TestReleaseSamplingCIFixtureH04H05'
 
 echo "== H-09 release sampling static (§7 api tests) =="
 env -u ASH_DATABASE_URL -u ASH_DATABASE_APP_URL -u ASH_MIGRATE_E2E \

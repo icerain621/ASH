@@ -10,7 +10,7 @@ _ash_go_env_bootstrap "$ROOT"
 
 go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled|TestM3ExecGoLiveSmoke' -count=1
 go test ./internal/alerts/... -count=1
-go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestSecretRotateRepoConnectionH07|TestHealthEndpointsLatencyBaseline|TestConcurrentRunsListBaseline|TestTTLQueueConsumeBaseline' -count=1
+go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestSecretRotateRepoConnectionH07|TestHealthEndpointsLatencyBaseline|TestConcurrentRunsListBaseline|TestTTLQueueConsumeBaseline|TestCrossSpaceAPIRegression|TestStreamRunResumesFromQueryLastEventID' -count=1
 go test ./internal/alerts/... -run TestEvaluateCleanSpaceNoCriticalAlerts -count=1
 go test ./internal/config/... -run 'TestValidateProduction|TestEnvFilePlaceholder|TestProductionGuard' -count=1
 bash scripts/release-sampling-static.sh

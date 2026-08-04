@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
-| Git 远端 | ✅ | `main` 本地 ahead（BL/BM/BN 待 `git push`） |
+| Git 远端 | ✅ | `main` 本地 ahead（BL–BO 待 `git push`） |
 
 ### 优先级矩阵
 
@@ -80,6 +80,13 @@ make signoff-gate
 |---|------|------|
 | BN-1 | SSE 重连耗尽后 timeline 轮询回退 | ✅ `useRunStream` status=`polling`；Runs 页「轮询回退」 |
 | BN-2 | query `Last-Event-ID` 后端续传单测 | ✅ `TestStreamRunResumesFromQueryLastEventID` |
+
+#### Sprint BO（P1 · 门禁接入）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BO-1 | `regression-short` 跑跨 space + stream 续传 | ✅ `scripts/regression-short.sh` |
+| BO-2 | H-09 static 同步纳入上述用例 | ✅ `release-sampling-static.sh` |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
@@ -281,6 +288,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BO：`regression-short` / H-09 static 接入跨 space 与 stream 续传用例。
 - Sprint BN：SSE 耗尽后 timeline 轮询回退；`TestStreamRunResumesFromQueryLastEventID`。
 - Sprint BM：SSE 自动重连（退避 + Last-Event-ID）；跨 space API 回归表驱动用例；stream query 续传。
 - Sprint BL：12/12 控制台页 smoke；Automation/Compliance 空数据可选链；`signoff-apply` 幂等；`worker-local-gate` + runbook roster 同步。
