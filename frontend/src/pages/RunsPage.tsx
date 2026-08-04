@@ -306,7 +306,7 @@ export function RunsPage() {
     enabled: !!selectedId,
   });
 
-  const streamLines = useRunStream(selectedId);
+  const { lines: streamLines, status: streamStatus } = useRunStream(selectedId);
   const artifacts = useMemo(() => artifactItems(artifactsQuery.data), [artifactsQuery.data]);
   const checkpoints = checkpointsQuery.data?.items ?? [];
   const scenarioOptions = useMemo(
@@ -682,7 +682,11 @@ export function RunsPage() {
           )}
           <div className="pane-title subhead">
             <h3>事件流 (SSE)</h3>
-            <span>{streamLines.length} 条事件</span>
+            <span>
+              {streamLines.length} 条事件
+              {streamStatus === "reconnecting" ? " · 重连中" : ""}
+              {streamStatus === "open" && selectedId ? " · 已连接" : ""}
+            </span>
           </div>
           <div className="event-log">
             {streamLines.map((line) => (

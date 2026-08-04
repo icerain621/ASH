@@ -168,10 +168,10 @@ export function CompliancePage() {
   });
 
   const identityOk =
-    Boolean(meQuery.data?.permissions.length) &&
+    Boolean(meQuery.data?.permissions?.length) &&
     (activeSpaceId === "local" || (scopesQuery.data?.items.length ?? 0) > 0);
   const isolationOk = runsQuery.data?.items.every((run) => (run.spaceId || "local") === activeSpaceId) ?? true;
-  const storageOk = Boolean(storageQuery.data?.artifactStore.ready);
+  const storageOk = Boolean(storageQuery.data?.artifactStore?.ready);
   const pluginOk = Boolean(abiQuery.data?.currentAbi) && (pluginsQuery.data?.items.length ?? 0) >= 0;
   const secretOk = (scanQuery.data?.leakCount ?? 0) === 0;
   const scenarioScopes =
@@ -314,8 +314,8 @@ export function CompliancePage() {
             <span>{meQuery.data?.role || "-"}</span>
           </div>
           <p className="muted-line">
-            用户 {meQuery.data?.user.displayName || meQuery.data?.user.id || "-"} ·{" "}
-            {meQuery.data?.permissions.length ?? 0} 项权限 · 审计保留{" "}
+            用户 {meQuery.data?.user?.displayName || meQuery.data?.user?.id || "-"} ·{" "}
+            {meQuery.data?.permissions?.length ?? 0} 项权限 · 审计保留{" "}
             {auditQuery.data?.retentionDays ?? 365} 天
             {auditQuery.data?.redactPayload ? " · 脱敏开启" : ""}
           </p>

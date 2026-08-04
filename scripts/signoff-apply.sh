@@ -117,6 +117,9 @@ patch_line() {
     old_escaped="$(printf '%s' "$old" | sed 's/[|/\\&]/\\&/g')"
     new_escaped="$(printf '%s' "$new" | sed 's/[|/\\&]/\\&/g')"
     sed -i "s|${old_escaped}|${new_escaped}|" "$file"
+  elif grep -qF -- "$new" "$file"; then
+    # Already applied (idempotent re-run) — silent
+    :
   else
     echo "WARN: pattern not found in $file: $old" >&2
   fi
@@ -144,13 +147,12 @@ sed -i "s/^- 发布负责人：\`.*\`  日期：\`.*\`/- 发布负责人：\`${A
 # mvp-release-scope.md — status line (line 3)
 sed -i "3s|> 状态：.*|> 状态：${SCOPE_STATUS_LINE}（对应 [\`11-mvp-release-checklist.md\`](11-mvp-release-checklist.md) §1）  |" "$SCOPE_DOC"
 
-# §6 table
-patch_line "$SCOPE_DOC" '| 产品 | | | 范围确认 / 冻结 |' \
-  "| 产品 | ${ASH_SIGNOFF_PRODUCT_NAME} | ${ASH_SCOPE_FREEZE_DATE:-$ASH_SIGNOFF_PRODUCT_DATE} | ${PRODUCT_CONCLUSION} |"
-patch_line "$SCOPE_DOC" '| 技术 | | | 门禁达标 |' \
-  "| 技术 | ${ASH_SIGNOFF_TECH_NAME} | ${ASH_SIGNOFF_TECH_DATE} | 门禁达标 |"
-patch_line "$SCOPE_DOC" '| 测试 | | | 回归通过 |' \
-  "| 测试 | ${ASH_SIGNOFF_QA_NAME} | ${ASH_SIGNOFF_QA_DATE} | 回归通过 |"
+# §6 table — idempotent rewrite (empty or previously filled)
+perl -i -pe '
+  s/^\| 产品 \| .* \| .* \| .* \|$/| 产品 | '"$ASH_SIGNOFF_PRODUCT_NAME"' | '"${ASH_SCOPE_FREEZE_DATE:-$ASH_SIGNOFF_PRODUCT_DATE}"' | '"$PRODUCT_CONCLUSION"' |/;
+  s/^\| 技术 \| .* \| .* \| .* \|$/| 技术 | '"$ASH_SIGNOFF_TECH_NAME"' | '"$ASH_SIGNOFF_TECH_DATE"' | 门禁达标 |/;
+  s/^\| 测试 \| .* \| .* \| .* \|$/| 测试 | '"$ASH_SIGNOFF_QA_NAME"' | '"$ASH_SIGNOFF_QA_DATE"' | 回归通过 |/;
+' "$SCOPE_DOC"
 
 if [[ -f "$MVP_LATEST" ]]; then
   perl -i -pe '

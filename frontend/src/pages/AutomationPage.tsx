@@ -336,10 +336,10 @@ export function AutomationPage() {
             </span>
           </div>
           <div className="abi-strip">
-            <span>{pluginABIQuery.data?.supportedProtocols.join("/") ?? "-"}</span>
+            <span>{pluginABIQuery.data?.supportedProtocols?.join("/") ?? "-"}</span>
             <span>{pluginABIQuery.data?.breakingPolicy ?? "-"}</span>
-            <span title={pluginABIQuery.data?.protoFiles.map((file) => `${file.path} ${file.digest}`).join("\n")}>
-              {pluginABIQuery.data?.protoFiles.length ?? 0} proto
+            <span title={pluginABIQuery.data?.protoFiles?.map((file) => `${file.path} ${file.digest}`).join("\n")}>
+              {pluginABIQuery.data?.protoFiles?.length ?? 0} proto
             </span>
           </div>
           <table className="table">
@@ -397,7 +397,7 @@ export function AutomationPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Storage</h2>
-            <span>{storageQuery.data?.database.dialect ?? "-"}</span>
+            <span>{storageQuery.data?.database?.dialect ?? "-"}</span>
           </div>
           <table className="table">
             <thead>
@@ -411,28 +411,28 @@ export function AutomationPage() {
             <tbody>
               <tr>
                 <td>Database</td>
-                <td>{storageQuery.data?.database.dialect ?? "-"}</td>
+                <td>{storageQuery.data?.database?.dialect ?? "-"}</td>
                 <td>
                   <span className="status-pill ok">
                     <span className="status-dot" />
                     ready
                   </span>
                 </td>
-                <td title={storageQuery.data?.database.dataDir}>
-                  {storageQuery.data?.database.urlConfigured ? "url" : "dev sqlite"}
+                <td title={storageQuery.data?.database?.dataDir}>
+                  {storageQuery.data?.database?.urlConfigured ? "url" : "dev sqlite"}
                 </td>
               </tr>
               <tr>
                 <td>Artifacts</td>
-                <td>{storageQuery.data?.artifactStore.kind ?? "-"}</td>
+                <td>{storageQuery.data?.artifactStore?.kind ?? "-"}</td>
                 <td>
-                  <span className={"status-pill " + (storageQuery.data?.artifactStore.ready ? "ok" : "err")}>
+                  <span className={"status-pill " + (storageQuery.data?.artifactStore?.ready ? "ok" : "err")}>
                     <span className="status-dot" />
-                    {storageQuery.data?.artifactStore.ready ? "ready" : "not ready"}
+                    {storageQuery.data?.artifactStore?.ready ? "ready" : "not ready"}
                   </span>
                 </td>
-                <td title={storageQuery.data?.artifactStore.uri || storageQuery.data?.artifactStore.error}>
-                  {storageQuery.data?.artifactStore.objectStore ? "object store" : "local fs"}
+                <td title={storageQuery.data?.artifactStore?.uri || storageQuery.data?.artifactStore?.error}>
+                  {storageQuery.data?.artifactStore?.objectStore ? "object store" : "local fs"}
                 </td>
               </tr>
             </tbody>

@@ -30,7 +30,7 @@ vi.mock("@/modules/scenarios/api/scenarios.api", () => ({
 }));
 
 vi.mock("@/services/sse/runStream", () => ({
-  useRunStream: () => [],
+  useRunStream: () => ({ lines: [], status: "idle" as const }),
 }));
 
 describe("RunsPage", () => {

@@ -8,9 +8,15 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BM：前端 SSE 自动重连（指数退避 + `Last-Event-ID` 续传）；`useRunStream` 暴露连接状态；`TestCrossSpaceAPIRegression` 覆盖 stream/provenance/artifacts/approvals/releases/repo（R-07/R-08）。
+- Sprint BL（续）：**12/12** 控制台页 vitest smoke（含 Space/Automation/Compliance）；Automation/Compliance 嵌套字段可选链防护；`signoff-apply` 幂等重跑无 WARN。
 - Sprint BL：`make worker-local-gate` 本地演练（BI-5 §4 第 5 步）；`signoff-apply` 同步 `release-window-runbook.md` §1/§2/§7；Observability 页 vitest smoke。
 - Sprint BI（续）：证据刷新（2026-07-07）；`cloud-acceptance-gate` 区分本地 Docker / 云 RDS；`release-window-latest` 更新。
 - `scripts/postgres-truncate-dev-data.sql` 本地 e2e 漂移清理；`postgres-rds-e2e` / `postgres-smoke` / Doctor CLI 加固。
+
+### Changed
+
+- SSE `/api/v1/runs/{runId}/stream` 同时接受 header / query `Last-Event-ID`（及 `lastEventId`），便于前端手动重连续传。
 
 ### Fixed
 

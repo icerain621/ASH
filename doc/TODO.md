@@ -20,8 +20,8 @@
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
-| 前端测试 | ✅ | Runs/CI/Memory/Scale/Observability smoke（8 文件 / 15 用例） |
-| Git 远端 | ✅ | `main` @ `55f2591` |
+| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连（16 文件 / 26 用例） |
+| Git 远端 | ✅ | `main` @ `37c430c`（本地未推送 Sprint BL/BM） |
 
 ### 优先级矩阵
 
@@ -63,6 +63,16 @@ make signoff-gate
 | BH-3 | Observability 页 smoke 测试 | ✅ `ObservabilityPage.test.tsx` |
 | BH-4 | PR 门禁加 `make release-window-gate`（轻量，~2min） | ✅ `ci.yml` 并行 job |
 | BH-5 | KPI 定义 §9：overview 与 derive replay 对账 | ✅ `make kpi-reconcile-gate` |
+| BH-6 | Feedback / Releases / Metrics / Doctor 页 smoke | ✅ 2026-08-04 |
+| BH-7 | Space / Automation / Compliance 页 smoke（全页覆盖） | ✅ 2026-08-04 |
+
+#### Sprint BM（P1 · 风险缓解 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BM-1 | 前端 SSE 自动重连 + `Last-Event-ID` 续传（R-07） | ✅ `runStream.test.tsx`；Runs 页显示重连状态 |
+| BM-2 | 跨 space API 回归（R-08）：stream/provenance/artifacts/approvals/releases/repo | ✅ `TestCrossSpaceAPIRegression` |
+| BM-3 | Stream 接受 query `Last-Event-ID` | ✅ `handlers.streamRun` |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
@@ -96,7 +106,7 @@ make cloud-acceptance
 | 场景 | Hotfix / Security Patch 模板深化（PRD §4.2/4.3） | 原 P1，冻结后延期 |
 | 平台 | 插件 gRPC ABI 签名策略（ARCH TODO） | P2 |
 | 安全 | 数据分级与保留期（PRD TODO） | 合规增强 |
-| 前端 | SSE 断线重连 E2E、12 页测试覆盖 | R-07 缓解 |
+| 前端 | SSE 断线重连 E2E（浏览器级） | R-07 部分缓解（单元+钩子已落地） |
 | 算法 | CI 诊断规则扩展、Memory 污染防护 | R-03/R-04 |
 
 ---
@@ -125,9 +135,9 @@ make mvp-signoff
 | 风险 | 当前缓解 | 下一动作 |
 |------|----------|----------|
 | R-12 回滚不完整 | `rollback-drill` 已自动化 | BI 切换日再演练一次并签字 |
-| R-08 越权 | M2 + 单测 | BH 补跨 space API 回归 |
+| R-08 越权 | M2 + `TestCrossSpaceAPIRegression` | 发布窗口抽测 + RLS e2e |
 | R-03 诊断准确率 | fixture 全绿 | BJ 真实 GitHub log 验证 |
-| R-07 SSE 不稳定 | 静态 + live smoke | BH 前端 SSE 重连测试 |
+| R-07 SSE 不稳定 | 静态 + live smoke + 前端自动重连 | BJ 生产断连率观察 |
 | R-01 需求变更 | `scope-freeze-gate` | BG-3 产品签字冻结 |
 
 ---
@@ -264,6 +274,8 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BM：SSE 自动重连（退避 + Last-Event-ID）；跨 space API 回归表驱动用例；stream query 续传。
+- Sprint BL：12/12 控制台页 smoke；Automation/Compliance 空数据可选链；`signoff-apply` 幂等；`worker-local-gate` + runbook roster 同步。
 - Sprint BH：`frontend` Runs/CI/Memory/Scale 页 smoke 测试；`ci.yml` 并行 `release-window-gate`；`make kpi-reconcile-gate`（KPI §9 对账）。
 - Sprint BE：`make release-window-gate` / `make bootstrap-local-ash-db`；`release-gates.yml` 接入 release-window + worker-production；MVP §6 备份 / §8 自动化勾选。
 - Sprint BD：`make config-env-gate` / `make worker-production-gate` / `make release-window-prefill`；H-09 SSE live（`sse-live-smoke.sh`）；`mvp-signoff` + CI 接入 config-env-gate。

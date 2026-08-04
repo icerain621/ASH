@@ -391,7 +391,14 @@ func (h *Handler) streamRun(c *gin.Context) {
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
 
 	lastSeq := int64(0)
-	if lastID := c.GetHeader("Last-Event-ID"); lastID != "" {
+	lastID := strings.TrimSpace(c.GetHeader("Last-Event-ID"))
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("Last-Event-ID"))
+	}
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("lastEventId"))
+	}
+	if lastID != "" {
 		if seq, err := h.eventsFor(c).SeqFromEventID(runID, lastID); err == nil {
 			lastSeq = seq
 		}
