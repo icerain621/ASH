@@ -83,7 +83,10 @@ go test -tags=integration ./internal/api/ -run TestPostgresReadyzWithRLS -count=
 go test -tags=integration ./internal/api/ -run TestPostgresReadyzScaleParity -count=1
 
 echo "== doctor M3 with RLS env =="
-ASH_POSTGRES_RLS=1 ASH_POSTGRES_RLS_FORCE=1 ASH_DATABASE_APP_URL="$ASH_DATABASE_APP_URL" \
+# Unset ASH_MIGRATE_E2E: M3-04 was already asserted above. Re-running verify after RLS/doctor
+# seeding drifts postgres row counts vs the original sqlite snapshot (e.g. users 0→2).
+env -u ASH_MIGRATE_E2E \
+  ASH_POSTGRES_RLS=1 ASH_POSTGRES_RLS_FORCE=1 ASH_DATABASE_APP_URL="$ASH_DATABASE_APP_URL" \
   go run ./cmd/cli doctor --suite M3 --agent static
 
 echo "== assert M3-06/07 live RLS + ash_app =="

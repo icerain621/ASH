@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
-| Git 远端 | ✅ | `main` @ `e6444f2` 已推送；CI Backend/Postgres 长期红（BP 加固诊断中） |
+| Git 远端 | ✅ | `main` @ `78c708e`；Backend/RLS/SQL schema 已绿；full migrate E2E 收尾中 |
 
 ### 优先级矩阵
 
