@@ -1,8 +1,11 @@
 -- ash_app / ash_rls_tester roles and DML grants (production worker + integration tests).
+-- Prefer IF NOT EXISTS: CREATE ROLE requires CREATEROLE even when the role already exists
+-- (EXCEPTION WHEN duplicate_object does not skip the privilege check).
 
 DO $$ BEGIN
-    CREATE ROLE ash_app LOGIN PASSWORD 'ash_app' NOINHERIT NOBYPASSRLS;
-EXCEPTION WHEN duplicate_object THEN NULL;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ash_app') THEN
+        CREATE ROLE ash_app LOGIN PASSWORD 'ash_app' NOINHERIT NOBYPASSRLS;
+    END IF;
 END $$;
 
 GRANT USAGE ON SCHEMA public TO ash_app;
@@ -14,8 +17,9 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT, INSERT, UPDATE, DELETE O
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO ash_app;
 
 DO $$ BEGIN
-    CREATE ROLE ash_rls_tester LOGIN PASSWORD 'ash_rls_tester' NOINHERIT NOBYPASSRLS;
-EXCEPTION WHEN duplicate_object THEN NULL;
+    IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ash_rls_tester') THEN
+        CREATE ROLE ash_rls_tester LOGIN PASSWORD 'ash_rls_tester' NOINHERIT NOBYPASSRLS;
+    END IF;
 END $$;
 
 GRANT USAGE ON SCHEMA public TO ash_rls_tester;
