@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
-| Git 远端 | ✅ | `main` @ `78c708e`；Backend/RLS/SQL schema 已绿；full migrate E2E 收尾中 |
+| Git 远端 | ✅ | `main` @ `4d5acad`；CI / Postgres E2E / Live Worker **全绿**（2026-08-06） |
 
 ### 优先级矩阵
 
@@ -41,7 +41,7 @@
 
 | # | 任务 | 负责人 | 验收 |
 |---|------|--------|------|
-| BG-1 | `git push origin main`；确认 `ci.yml` + `release-gates.yml` 全绿 | 发布 | GitHub Actions 绿 |
+| BG-1 | `git push origin main`；确认 `ci.yml` + `release-gates.yml` 全绿 | 发布 | ✅ `4d5acad` CI/Postgres E2E/Live Worker 全绿 |
 | BG-2 | 产品/技术/测试/发布 **§11 签字** | 四人 | `make signoff-apply` + `make signoff-gate` 绿 |
 | BG-3 | `mvp-release-scope.md` 评审签字 → `ASH_SCOPE_FREEZE_SIGNED=1` | 产品 | `scope-freeze-gate` 无 WARN |
 | BG-4 | 发布窗口 roster + 时间写入 `release-window-runbook.md` | 发布 | ✅ `signoff-apply` 同步占位 roster |
@@ -95,7 +95,7 @@ make signoff-gate
 | BP-1 | 跨平台 fake execgocli（Windows `.cmd` + bash） | ✅ `internal/testutil`；toolbus/agentexec/runs |
 | BP-2 | `OpenTest` 关闭后强制删除 sqlite 锁文件 | ✅ runs/rag 本地 pass |
 | BP-3 | CI 失败上传 `go-test.log` / postgres e2e log + docker 诊断 | ✅ `ci.yml` / `postgres-e2e.yml` |
-| BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ✅ apicodes 缺码 + `ash_rls_tester` 不 DROP |
+| BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ✅ apicodes + owner DSN + M3-04 跳过；`4d5acad` 全绿 |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
