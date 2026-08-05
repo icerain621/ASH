@@ -30,8 +30,21 @@ GRANT EXECUTE ON FUNCTION ash_rls_run_visible(text) TO ash_rls_tester;
 
 DO $$
 BEGIN
-    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ash') THEN
-        GRANT ash_rls_tester TO ash;
+    -- PG16 requires ADMIN OPTION to GRANT a role; skip when already member or lacking privilege.
+    IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ash')
+       AND EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'ash_rls_tester')
+       AND NOT EXISTS (
+           SELECT 1
+           FROM pg_auth_members m
+           JOIN pg_roles r ON r.oid = m.roleid
+           JOIN pg_roles u ON u.oid = m.member
+           WHERE r.rolname = 'ash_rls_tester' AND u.rolname = 'ash'
+       ) THEN
+        BEGIN
+            GRANT ash_rls_tester TO ash;
+        EXCEPTION WHEN insufficient_privilege THEN
+            NULL;
+        END;
     END IF;
 END $$;
 

@@ -21,6 +21,7 @@ type DB struct {
 	*gorm.DB
 	dataDir string
 	dialect string
+	dsn     string // connection DSN used at open (postgres migrations must use this, not RuntimeDatabaseURL)
 }
 
 // RuntimeDatabaseURL returns the worker connection URL (prefers ASH_DATABASE_APP_URL).
@@ -50,7 +51,7 @@ func OpenWithDatabaseURL(dataDir, databaseURL string) (*DB, error) {
 		return nil, fmt.Errorf("open %s: %w", target.dialect, err)
 	}
 
-	db := &DB{DB: gdb, dataDir: dataDir, dialect: target.dialect}
+	db := &DB{DB: gdb, dataDir: dataDir, dialect: target.dialect, dsn: target.dsn}
 	if err := db.migrate(); err != nil {
 		return nil, err
 	}
@@ -136,7 +137,12 @@ func resolveSQLiteFilePath(dataDir, rest string) string {
 
 func (db *DB) migrate() error {
 	if sqlmigrations.SQLMigrationsEnabled(db.dialect) {
-		pgDSN := strings.TrimSpace(RuntimeDatabaseURL())
+		// Prefer the DSN this handle was opened with. RuntimeDatabaseURL() may point at
+		// ash_app (ASH_DATABASE_APP_URL) which cannot run owner DDL / CREATE ROLE grants.
+		pgDSN := strings.TrimSpace(db.dsn)
+		if pgDSN == "" {
+			pgDSN = strings.TrimSpace(RuntimeDatabaseURL())
+		}
 		if pgDSN == "" {
 			return fmt.Errorf("postgres sql migrations require ASH_DATABASE_URL")
 		}
@@ -230,7 +236,7 @@ func (db *DB) BindContext(ctx context.Context) *DB {
 	if db == nil || ctx == nil {
 		return db
 	}
-	return &DB{DB: db.DB.WithContext(ctx), dataDir: db.dataDir, dialect: db.dialect}
+	return &DB{DB: db.DB.WithContext(ctx), dataDir: db.dataDir, dialect: db.dialect, dsn: db.dsn}
 }
 
 // Close releases the underlying database connection (required on Windows before temp dirs are removed).
