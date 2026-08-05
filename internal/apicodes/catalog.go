@@ -60,6 +60,9 @@ var Catalog = map[string]Entry{
 	"MEMORY_REVIEW_FAILED":       {Domain: "memory", Summary: "Memory review decision failed"},
 	"MEMORY_QUERY_FAILED":        {Domain: "memory", Summary: "Memory query failed"},
 	"MEMORY_HIT_FAILED":          {Domain: "memory", Summary: "Failed to record memory hit-used"},
+	"MEMORY_MIGRATION_FAILED":    {Domain: "memory", Summary: "Memory catalog migration failed"},
+	"MEMORY_TTL_QUEUE_FAILED":    {Domain: "memory", Summary: "Failed to list memory TTL review queue"},
+	"MEMORY_TTL_SWEEP_FAILED":    {Domain: "memory", Summary: "Memory TTL sweep failed"},
 
 	// rag
 	"RAG_INDEX_FAILED": {Domain: "rag", Summary: "Repository index build failed"},
@@ -99,13 +102,14 @@ var Catalog = map[string]Entry{
 	"METRICS_OVERVIEW_FAILED":       {Domain: "metrics", Summary: "KPI overview query failed"},
 
 	// observability
-	"ALERT_LIST_FAILED":        {Domain: "observability", Summary: "Failed to list alert events"},
-	"ALERT_RULE_LIST_FAILED":   {Domain: "observability", Summary: "Failed to list alert rules"},
-	"ALERT_RULE_UPDATE_FAILED": {Domain: "observability", Summary: "Failed to update alert rules"},
-	"ALERT_EVALUATE_FAILED":    {Domain: "observability", Summary: "Alert rule evaluation failed"},
-	"TRACE_LOOKUP_FAILED":      {Domain: "observability", Summary: "Trace-linked record lookup failed"},
-	"WATERFALL_NOT_FOUND":      {Domain: "observability", Summary: "Run waterfall not found"},
+	"ALERT_LIST_FAILED":          {Domain: "observability", Summary: "Failed to list alert events"},
+	"ALERT_RULE_LIST_FAILED":     {Domain: "observability", Summary: "Failed to list alert rules"},
+	"ALERT_RULE_UPDATE_FAILED":   {Domain: "observability", Summary: "Failed to update alert rules"},
+	"ALERT_EVALUATE_FAILED":      {Domain: "observability", Summary: "Alert rule evaluation failed"},
+	"TRACE_LOOKUP_FAILED":        {Domain: "observability", Summary: "Trace-linked record lookup failed"},
+	"WATERFALL_NOT_FOUND":        {Domain: "observability", Summary: "Run waterfall not found"},
 	"QUALITY_METRIC_LIST_FAILED": {Domain: "observability", Summary: "Failed to list quality metrics"},
+	"OBS_CONFIG_LOAD_FAILED":     {Domain: "observability", Summary: "Failed to load observability config"},
 
 	// feedback
 	"FEEDBACK_CREATE_FAILED": {Domain: "feedback", Summary: "Failed to create feedback"},
@@ -135,38 +139,42 @@ var Catalog = map[string]Entry{
 	"PERMISSION_MATRIX_FAILED":       {Domain: "platform", Summary: "Failed to build permission matrix"},
 
 	// audit
-	"AUDIT_EXPORT_CREATE_FAILED":  {Domain: "audit", Summary: "Failed to create audit export job"},
-	"AUDIT_EXPORT_FAILED":         {Domain: "audit", Summary: "Audit export processing failed"},
-	"AUDIT_EXPORT_LIST_FAILED":    {Domain: "audit", Summary: "Failed to list audit exports"},
-	"AUDIT_EXPORT_NOT_FOUND":      {Domain: "audit", Summary: "Audit export id not found"},
-	"AUDIT_EXPORT_NOT_READY":      {Domain: "audit", Summary: "Audit export not ready for download"},
-	"AUDIT_EXPORT_ACCESS_FAILED":  {Domain: "audit", Summary: "Failed to build audit export access URL"},
-	"AUDIT_LOG_LIST_FAILED":       {Domain: "audit", Summary: "Failed to list audit logs"},
-	"AUDIT_POLICY_GET_FAILED":     {Domain: "audit", Summary: "Failed to load audit policy"},
-	"INVALID_AUDIT_POLICY":          {Domain: "audit", Summary: "Audit retention policy out of range"},
-	"AUDIT_POLICY_LOCKED":         {Domain: "audit", Summary: "Audit policy is locked"},
-	"AUDIT_POLICY_UPDATE_FAILED":  {Domain: "audit", Summary: "Failed to update audit policy"},
-	"AUDIT_RETENTION_COUNT_FAILED":  {Domain: "audit", Summary: "Failed to count rows for retention"},
-	"AUDIT_RETENTION_APPLY_FAILED":  {Domain: "audit", Summary: "Failed to apply audit retention"},
+	"AUDIT_EXPORT_CREATE_FAILED":   {Domain: "audit", Summary: "Failed to create audit export job"},
+	"AUDIT_EXPORT_FAILED":          {Domain: "audit", Summary: "Audit export processing failed"},
+	"AUDIT_EXPORT_LIST_FAILED":     {Domain: "audit", Summary: "Failed to list audit exports"},
+	"AUDIT_EXPORT_NOT_FOUND":       {Domain: "audit", Summary: "Audit export id not found"},
+	"AUDIT_EXPORT_NOT_READY":       {Domain: "audit", Summary: "Audit export not ready for download"},
+	"AUDIT_EXPORT_ACCESS_FAILED":   {Domain: "audit", Summary: "Failed to build audit export access URL"},
+	"AUDIT_LOG_LIST_FAILED":        {Domain: "audit", Summary: "Failed to list audit logs"},
+	"AUDIT_POLICY_GET_FAILED":      {Domain: "audit", Summary: "Failed to load audit policy"},
+	"INVALID_AUDIT_POLICY":         {Domain: "audit", Summary: "Audit retention policy out of range"},
+	"AUDIT_POLICY_LOCKED":          {Domain: "audit", Summary: "Audit policy is locked"},
+	"AUDIT_POLICY_UPDATE_FAILED":   {Domain: "audit", Summary: "Failed to update audit policy"},
+	"AUDIT_RETENTION_COUNT_FAILED": {Domain: "audit", Summary: "Failed to count rows for retention"},
+	"AUDIT_RETENTION_APPLY_FAILED": {Domain: "audit", Summary: "Failed to apply audit retention"},
 
 	// plugins
-	"PLUGIN_LIST_FAILED":         {Domain: "plugins", Summary: "Failed to list plugins"},
-	"PLUGIN_REGISTER_FAILED":     {Domain: "plugins", Summary: "Failed to register plugin"},
-	"PLUGIN_NOT_FOUND":           {Domain: "plugins", Summary: "Plugin id not found"},
-	"PLUGIN_VERIFY_FAILED":       {Domain: "plugins", Summary: "Plugin ABI verification failed"},
-	"PLUGIN_ABI_PROFILE_FAILED":  {Domain: "plugins", Summary: "Failed to load plugin ABI profile"},
+	"PLUGIN_LIST_FAILED":            {Domain: "plugins", Summary: "Failed to list plugins"},
+	"PLUGIN_REGISTER_FAILED":        {Domain: "plugins", Summary: "Failed to register plugin"},
+	"PLUGIN_NOT_FOUND":              {Domain: "plugins", Summary: "Plugin id not found"},
+	"PLUGIN_VERIFY_FAILED":          {Domain: "plugins", Summary: "Plugin ABI verification failed"},
+	"PLUGIN_ABI_PROFILE_FAILED":     {Domain: "plugins", Summary: "Failed to load plugin ABI profile"},
+	"PLUGIN_EXPORT_AUDIT_FAILED":    {Domain: "plugins", Summary: "Failed to write plugin export audit"},
+	"PLUGIN_EXPORT_EVENT_FAILED":    {Domain: "plugins", Summary: "Failed to emit plugin export run event"},
+	"PLUGIN_EXPORT_REPORT_FAILED":   {Domain: "plugins", Summary: "Failed to record plugin export report"},
+	"PLUGIN_HEALTH_FAILED":          {Domain: "plugins", Summary: "Failed to load plugin export health"},
 
 	// secrets
-	"SECRET_LIST_FAILED":      {Domain: "secrets", Summary: "Failed to list secrets"},
-	"INVALID_SECRET_NAME":     {Domain: "secrets", Summary: "Secret name format invalid"},
-	"SECRET_ALREADY_EXISTS":   {Domain: "secrets", Summary: "Secret name already used in space"},
-	"SECRET_LOOKUP_FAILED":    {Domain: "secrets", Summary: "Secret lookup failed"},
-	"SECRET_ENCRYPT_FAILED":   {Domain: "secrets", Summary: "Secret encryption failed"},
-	"INVALID_SECRET_SCOPE":    {Domain: "secrets", Summary: "Secret scope JSON invalid"},
-	"SECRET_CREATE_FAILED":    {Domain: "secrets", Summary: "Failed to create secret"},
-	"SECRET_ROTATE_FAILED":    {Domain: "secrets", Summary: "Failed to rotate secret"},
-	"SECRET_DELETE_FAILED":    {Domain: "secrets", Summary: "Failed to delete secret"},
-	"SECRET_NOT_FOUND":        {Domain: "secrets", Summary: "Secret id not found"},
+	"SECRET_LIST_FAILED":    {Domain: "secrets", Summary: "Failed to list secrets"},
+	"INVALID_SECRET_NAME":   {Domain: "secrets", Summary: "Secret name format invalid"},
+	"SECRET_ALREADY_EXISTS": {Domain: "secrets", Summary: "Secret name already used in space"},
+	"SECRET_LOOKUP_FAILED":  {Domain: "secrets", Summary: "Secret lookup failed"},
+	"SECRET_ENCRYPT_FAILED": {Domain: "secrets", Summary: "Secret encryption failed"},
+	"INVALID_SECRET_SCOPE":  {Domain: "secrets", Summary: "Secret scope JSON invalid"},
+	"SECRET_CREATE_FAILED":  {Domain: "secrets", Summary: "Failed to create secret"},
+	"SECRET_ROTATE_FAILED":  {Domain: "secrets", Summary: "Failed to rotate secret"},
+	"SECRET_DELETE_FAILED":  {Domain: "secrets", Summary: "Failed to delete secret"},
+	"SECRET_NOT_FOUND":      {Domain: "secrets", Summary: "Secret id not found"},
 
 	// releases
 	"RELEASE_CREATE_FAILED":           {Domain: "releases", Summary: "Failed to create release record"},
@@ -177,8 +185,8 @@ var Catalog = map[string]Entry{
 	"ROLLBACK_DRILL_CREATE_FAILED":    {Domain: "releases", Summary: "Failed to record rollback drill"},
 
 	// doctor / compliance
-	"DOCTOR_FAILED":     {Domain: "doctor", Summary: "Doctor suite execution failed"},
-	"REPORT_NOT_FOUND":  {Domain: "doctor", Summary: "Doctor report id not found"},
+	"DOCTOR_FAILED":    {Domain: "doctor", Summary: "Doctor suite execution failed"},
+	"REPORT_NOT_FOUND": {Domain: "doctor", Summary: "Doctor report id not found"},
 
 	// approvals
 	"APPROVAL_LIST_FAILED":   {Domain: "approvals", Summary: "Failed to list approval requests"},

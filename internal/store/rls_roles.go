@@ -45,14 +45,16 @@ func EnsurePostgresAppRole(db *DB) error {
 }
 
 // EnsurePostgresRLSTestRole creates ash_rls_tester for integration tests (NOBYPASSRLS).
+// Does not DROP the role: grants/default privileges may still depend on it after schema resets.
 func EnsurePostgresRLSTestRole(db *DB) error {
 	if db == nil || db.Dialect() != "postgres" {
 		return nil
 	}
-	if err := db.Exec(`DROP ROLE IF EXISTS ash_rls_tester`).Error; err != nil {
+	if err := postgresRoleDDL(db, "ash_rls_tester", "ash_rls_tester"); err != nil {
 		return err
 	}
-	return postgresRoleDDL(db, "ash_rls_tester", "ash_rls_tester")
+	// Re-assert attributes when the role already existed (CREATE is a no-op then).
+	return db.Exec(`ALTER ROLE ash_rls_tester WITH LOGIN PASSWORD 'ash_rls_tester' NOINHERIT NOBYPASSRLS`).Error
 }
 
 // PostgresAppRoleExists reports whether ash_app is present.

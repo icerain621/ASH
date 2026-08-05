@@ -95,7 +95,7 @@ make signoff-gate
 | BP-1 | 跨平台 fake execgocli（Windows `.cmd` + bash） | ✅ `internal/testutil`；toolbus/agentexec/runs |
 | BP-2 | `OpenTest` 关闭后强制删除 sqlite 锁文件 | ✅ runs/rag 本地 pass |
 | BP-3 | CI 失败上传 `go-test.log` / postgres e2e log + docker 诊断 | ✅ `ci.yml` / `postgres-e2e.yml` |
-| BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ⏳ 待下一次 CI artifact |
+| BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ✅ apicodes 缺码 + `ash_rls_tester` 不 DROP |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
