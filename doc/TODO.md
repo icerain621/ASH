@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
-| Git 远端 | ✅ | `main` 本地 ahead（BL–BO 待 `git push`） |
+| Git 远端 | ✅ | `main` @ `e6444f2` 已推送；CI Backend/Postgres 长期红（BP 加固诊断中） |
 
 ### 优先级矩阵
 
@@ -87,6 +87,15 @@ make signoff-gate
 |---|------|------|
 | BO-1 | `regression-short` 跑跨 space + stream 续传 | ✅ `scripts/regression-short.sh` |
 | BO-2 | H-09 static 同步纳入上述用例 | ✅ `release-sampling-static.sh` |
+
+#### Sprint BP（P0-A · CI 诊断与 Windows 测试）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BP-1 | 跨平台 fake execgocli（Windows `.cmd` + bash） | ✅ `internal/testutil`；toolbus/agentexec/runs |
+| BP-2 | `OpenTest` 关闭后强制删除 sqlite 锁文件 | ✅ runs/rag 本地 pass |
+| BP-3 | CI 失败上传 `go-test.log` / postgres e2e log + docker 诊断 | ✅ `ci.yml` / `postgres-e2e.yml` |
+| BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ⏳ 待下一次 CI artifact |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
@@ -288,6 +297,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint BP：跨平台 fake execgocli、`OpenTest` Windows 清理、CI 失败日志 artifact。
 - Sprint BO：`regression-short` / H-09 static 接入跨 space 与 stream 续传用例。
 - Sprint BN：SSE 耗尽后 timeline 轮询回退；`TestStreamRunResumesFromQueryLastEventID`。
 - Sprint BM：SSE 自动重连（退避 + Last-Event-ID）；跨 space API 回归表驱动用例；stream query 续传。

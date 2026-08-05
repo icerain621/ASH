@@ -21,7 +21,17 @@ jobs:
           cache: true
 
       - name: Go test all packages
-        run: go test ./...
+        run: |
+          set -euo pipefail
+          go test ./... -count=1 2>&1 | tee go-test.log
+
+      - name: Upload go test log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: go-test-log
+          path: go-test.log
+          if-no-files-found: ignore
 
       - name: OpenAPI contract check
         run: make openapi-check
@@ -82,8 +92,23 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker compose version
+
       - name: Run SQL schema E2E
-        run: make postgres-sql-schema-e2e
+        run: |
+          set -euo pipefail
+          make postgres-sql-schema-e2e 2>&1 | tee postgres-sql-schema-e2e.log
+
+      - name: Upload postgres sql-schema log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-sql-schema-e2e-log
+          path: postgres-sql-schema-e2e.log
+          if-no-files-found: ignore
 
   postgres-rls-e2e:
     name: Postgres RLS E2E
@@ -98,10 +123,24 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker compose version
+
       - name: Run Postgres RLS E2E
         run: |
+          set -euo pipefail
           make postgres-up
-          make postgres-rls-e2e
+          make postgres-rls-e2e 2>&1 | tee postgres-rls-e2e.log
+
+      - name: Upload postgres RLS log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-rls-e2e-log
+          path: postgres-rls-e2e.log
+          if-no-files-found: ignore
 
   postgres-e2e:
     name: Postgres full migrate E2E
@@ -116,8 +155,23 @@ jobs:
           go-version-file: go.mod
           cache: true
 
+      - name: Docker diagnostics
+        run: |
+          docker version
+          docker compose version
+
       - name: Run full Postgres E2E
-        run: make postgres-e2e
+        run: |
+          set -euo pipefail
+          make postgres-e2e 2>&1 | tee postgres-e2e.log
+
+      - name: Upload postgres e2e log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: postgres-e2e-log
+          path: postgres-e2e.log
+          if-no-files-found: ignore
 
   frontend:
     name: Frontend Build

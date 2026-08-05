@@ -7,6 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ash-repwiki/ash/internal/testutil"
 )
 
 func TestExecGoCodexExecutorBridgeUnavailableWhenCLIIsMissing(t *testing.T) {
@@ -34,9 +36,10 @@ case "$1" in
   *) echo '{"ok":true,"data":{}}' ;;
 esac
 `)
+	codex := testutil.WriteFakeShellCLI(t, "fake-codex", "#!/bin/sh\nexit 0\n")
 	exec := &ExecGoCodexExecutor{
 		CLI:        cli,
-		CodexBin:   "/bin/echo",
+		CodexBin:   codex,
 		ExecGoURL:  defaultExecGoURL,
 		RuntimeURL: defaultExecGoRuntimeURL,
 		AgentID:    "test-agent",
@@ -60,10 +63,11 @@ case "$1" in
   *) echo '{"ok":false,"error":{"message":"unexpected command","status_code":400,"body":"bad"}}' ;;
 esac
 `)
+	codex := testutil.WriteFakeShellCLI(t, "fake-codex", "#!/bin/sh\nexit 0\n")
 	runDir := t.TempDir()
 	exec := &ExecGoCodexExecutor{
 		CLI:        cli,
-		CodexBin:   "/bin/echo",
+		CodexBin:   codex,
 		ExecGoURL:  defaultExecGoURL,
 		RuntimeURL: defaultExecGoRuntimeURL,
 		AgentID:    "test-agent",
@@ -85,7 +89,7 @@ esac
 		t.Fatal(err)
 	}
 	text := string(b)
-	for _, want := range []string{`"kind": "runtime.command"`, `"program": "/bin/echo"`, `"action_id": "ash-`} {
+	for _, want := range []string{`"kind": "runtime.command"`, `"action_id": "ash-`, "fake-codex"} {
 		if !strings.Contains(text, want) {
 			t.Fatalf("action JSON missing %q:\n%s", want, text)
 		}
@@ -113,10 +117,5 @@ func TestNewExecGoCodexExecutorReadsBypassSandboxEnv(t *testing.T) {
 }
 
 func writeFakeExecGoCLI(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "execgocli")
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testutil.WriteFakeExecGoCLI(t, body)
 }

@@ -15,10 +15,7 @@ import (
 
 func TestImproveProposalExperimentFlow(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join("..", "..", "scenarios")
 	if _, err := os.Stat(scenariosDir); err != nil {
 		scenariosDir = "scenarios"

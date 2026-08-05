@@ -10,10 +10,7 @@ import (
 )
 
 func TestIndexAndQueryUsesFTSWithSymbolRefs(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)
 	if err := svc.ensureSQLiteFTS(); err != nil {
 		t.Skipf("sqlite fts5 unavailable: %v", err)
@@ -76,10 +73,7 @@ func ReconcilePaymentGateway() string {
 }
 
 func TestQueryFallsBackToChunkSearchWhenFTSUnavailable(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)
 	repo := t.TempDir()
 	if err := os.WriteFile(filepath.Join(repo, "note.md"), []byte("fallback evidence works\n"), 0o644); err != nil {

@@ -14,16 +14,14 @@ import (
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/testutil"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
 func testRunsService(t *testing.T) (*Service, string) {
 	t.Helper()
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join("..", "..", "scenarios")
 	if _, err := os.Stat(scenariosDir); err != nil {
 		scenariosDir = "scenarios"
@@ -551,10 +549,7 @@ func TestRunArtifactManifestIndexAndAccessUseObjectStoreKey(t *testing.T) {
 
 func TestToolChainRetriesTransientFailure(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join(dir, "scenarios")
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -646,10 +641,7 @@ scenario:
 
 func TestDangerousToolRequiresApprovalBeforeExecution(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join(dir, "scenarios")
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -778,10 +770,7 @@ scenario:
 
 func TestRuntimeCommandRequiresApprovalThenExecutesViaExecGo(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join(dir, "scenarios")
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -922,10 +911,7 @@ func (nonStaticPlaceholderExecutor) AdapterName() string {
 
 func TestMCPFailureClassIsPreservedInToolResultEvent(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join(dir, "scenarios")
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -959,7 +945,7 @@ scenario:
 	ev := events.NewService(db)
 	svc := NewService(db, ev, loader, toolbus.DefaultBus()).WithAgentExecutor(agentexec.StaticExecutor{})
 
-	_, err = svc.Create(CreateRequest{
+	_, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "mcp_policy", ScenarioVersion: "1.0.0"},
 		Inputs:   map[string]any{"issueOrSpec": "mcp policy should fail isolated"},
 	})
@@ -1012,10 +998,7 @@ func TestRequireCitationsBlocksWithoutEvidence(t *testing.T) {
 
 func TestRequireCitationsCanDegradeToHumanConfirm(t *testing.T) {
 	dir := t.TempDir()
-	db, err := store.Open(dir)
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, dir)
 	scenariosDir := filepath.Join(dir, "scenarios")
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
 		t.Fatal(err)
@@ -1180,10 +1163,5 @@ func TestScenarioMatrixDeniesToolAtRuntime(t *testing.T) {
 }
 
 func writeFakeRunsExecGoCLI(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "execgocli")
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testutil.WriteFakeExecGoCLI(t, body)
 }

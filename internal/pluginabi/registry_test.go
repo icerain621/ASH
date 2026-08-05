@@ -14,10 +14,7 @@ import (
 )
 
 func TestRegistryServerRegisterHeartbeatStatus(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	client, cleanup := registryClient(t, db)
 	defer cleanup()
 
@@ -70,10 +67,7 @@ func TestRegistryServerRegisterHeartbeatStatus(t *testing.T) {
 }
 
 func TestRegistryServerRejectsIncompatiblePlugin(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	client, cleanup := registryClient(t, db)
 	defer cleanup()
 
@@ -101,10 +95,7 @@ func TestRegistryServerRejectsIncompatiblePlugin(t *testing.T) {
 }
 
 func TestStartRegistryServerListensOnTCP(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	rt, err := StartRegistryServer("127.0.0.1:0", db)
 	if err != nil {
 		t.Fatal(err)

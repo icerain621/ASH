@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/ash-repwiki/ash/internal/testutil"
 )
 
 func TestRuntimeCommandSubmitsThroughExecGoCLI(t *testing.T) {
@@ -256,10 +258,5 @@ func TestRuntimeCommandRejectsSecretValueFields(t *testing.T) {
 }
 
 func writeFakeRuntimeExecGoCLI(t *testing.T, body string) string {
-	t.Helper()
-	path := filepath.Join(t.TempDir(), "execgocli")
-	if err := os.WriteFile(path, []byte(body), 0o755); err != nil {
-		t.Fatal(err)
-	}
-	return path
+	return testutil.WriteFakeExecGoCLI(t, body)
 }

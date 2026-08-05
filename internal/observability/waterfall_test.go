@@ -8,10 +8,7 @@ import (
 )
 
 func TestBuildWaterfallAggregatesSpansFailuresAndMetrics(t *testing.T) {
-	db, err := store.Open(t.TempDir())
-	if err != nil {
-		t.Fatal(err)
-	}
+	db := store.OpenTest(t, t.TempDir())
 	now := time.Now().UTC()
 	done := now.Add(2 * time.Second)
 	run := store.RunRecord{
