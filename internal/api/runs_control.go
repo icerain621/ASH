@@ -48,6 +48,7 @@ func (h *Handler) resumeRun(c *gin.Context) {
 // @Header 201 {string} X-Trace-Id "new trace id"
 // @Failure 400 {object} APIErrorResponse
 // @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/runs/{runId}/replay [post]
 func (h *Handler) replayRun(c *gin.Context) {
@@ -127,6 +128,14 @@ func writeRunControlError(c *gin.Context, err error) {
 		c.JSON(http.StatusNotFound, errorBody("RUN_NOT_FOUND", err.Error()))
 	case errors.Is(err, runs.ErrRunNotResumable):
 		c.JSON(http.StatusConflict, errorBody("RUN_NOT_RESUMABLE", err.Error()))
+	case errors.Is(err, runs.ErrRunNotApprovable):
+		c.JSON(http.StatusConflict, errorBody("RUN_NOT_APPROVABLE", err.Error()))
+	case errors.Is(err, runs.ErrRunNotReplayable):
+		c.JSON(http.StatusConflict, errorBody("RUN_NOT_REPLAYABLE", err.Error()))
+	case errors.Is(err, runs.ErrIllegalStatusTransition):
+		c.JSON(http.StatusConflict, errorBody("ILLEGAL_STATUS_TRANSITION", err.Error()))
+	case errors.Is(err, runs.ErrRunCanceled):
+		c.JSON(http.StatusConflict, errorBody("RUN_CANCELED", err.Error()))
 	case errors.Is(err, runs.ErrRunMetaMissing):
 		c.JSON(http.StatusConflict, errorBody("RUN_META_MISSING", err.Error()))
 	case errors.Is(err, runs.ErrInvalidReplayMode):

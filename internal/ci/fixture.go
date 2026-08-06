@@ -51,10 +51,34 @@ func DefaultFixtureProvider() FixtureProvider {
 			Conclusion:    "failure",
 			StartedAt:     &now,
 			CompletedAt:   &completed,
+		}, {
+			ProviderJobID: "fixture-job-9103",
+			Name:          "Canceled workflow",
+			Status:        "completed",
+			Conclusion:    "cancelled",
+			StartedAt:     &now,
+			CompletedAt:   &completed,
+		}, {
+			ProviderJobID: "fixture-job-9104",
+			Name:          "Runner disk full",
+			Status:        "completed",
+			Conclusion:    "failure",
+			StartedAt:     &now,
+			CompletedAt:   &completed,
+		}, {
+			ProviderJobID: "fixture-job-9105",
+			Name:          "Frontend gate",
+			Status:        "completed",
+			Conclusion:    "failure",
+			StartedAt:     &now,
+			CompletedAt:   &completed,
 		}},
 		Logs: map[string]string{
 			"fixture-job-9101": "go test ./...\n--- FAIL: TestAPI (0.02s)\nFAIL\tgithub.com/ash-repwiki/ash/internal/api\t0.2s\n",
 			"fixture-job-9102": "Starting postgres service\nCannot connect to the Docker daemon at unix:///var/run/docker.sock\n",
+			"fixture-job-9103": "##[error]The job was canceled because the workflow was cancelled.\n",
+			"fixture-job-9104": "mkdir: cannot create directory '/tmp/ash-ci': No space left on device\n",
+			"fixture-job-9105": "src/pages/CIPage.tsx(12,5): error TS2322: Type 'string' is not assignable to type 'number'.\n",
 		},
 	}
 }

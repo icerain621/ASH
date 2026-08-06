@@ -139,7 +139,7 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		ashotel.EndSpan(runSpan, err)
 		s.exportRunWaterfallOTel(runID, rec.SpaceID)
 		resp := &CreateResponse{RunID: runID, TraceID: traceID}
-		if errors.Is(err, ErrWaitingApproval) {
+		if errors.Is(err, ErrWaitingApproval) || errors.Is(err, ErrRunCanceled) {
 			return resp, nil
 		}
 		return resp, err
@@ -175,6 +175,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue)
 
 	for idx, step := range doc.Scenario.Steps {
+		if err := s.observeCanceled(rec); err != nil {
+			return err
+		}
 		stepCtx, stepSpan := ashotel.StartStep(execCtx, step.ID, step.Role, step.Kind)
 		for _, gate := range eng.GatesBeforeStep(step.ID) {
 			_, gateSpan := ashotel.StartGate(stepCtx, gate.ID)
@@ -203,7 +206,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 			refs, err := s.retrieveStepEvidence(runID, traceID, rec.SpaceID, repoRoot, issue, step, req.Inputs)
 			if err != nil {
 				if isCitationHumanConfirm(step) {
-					rec.Status = "waiting_approval"
+					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+						return setErr
+					}
 					rec.UpdatedAt = time.Now().UTC()
 					_ = s.gdb().Save(rec).Error
 					s.finishStep(stepRow, "waiting_approval", stepStart, "GATE_CITATION_MISSING", err.Error())
@@ -236,6 +241,10 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 				_, ferr := s.failRun(rec, runID, traceID, started, code, err.Error())
 				return ferr
 			}
+			if err := s.observeCanceled(rec); err != nil {
+				stepSpan.End()
+				return err
+			}
 			evidenceRefs = append(evidenceRefs, s.captureDiffEvidence(runID, traceID, runDir, repoRoot)...)
 		case "tool_chain":
 			lastToolStep.id = step.ID
@@ -253,7 +262,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 				risk := string(s.tools.ToolRisk(item.Tool))
 				if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
-					rec.Status = "waiting_approval"
+					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+						return setErr
+					}
 					rec.UpdatedAt = time.Now().UTC()
 					_ = s.gdb().Save(rec).Error
 					s.finishStep(stepRow, "waiting_approval", stepStart, "TOOL_DANGEROUS_APPROVAL_REQUIRED", msg)
@@ -318,7 +329,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 				evidenceRefs = appendUnique(evidenceRefs, "approval:"+step.ID)
 				break
 			}
-			rec.Status = "waiting_approval"
+			if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+				return setErr
+			}
 			rec.UpdatedAt = time.Now().UTC()
 			_ = s.gdb().Save(rec).Error
 			s.finishStep(stepRow, "waiting_approval", stepStart, "", "")
@@ -385,7 +398,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	}
 
 	finished := time.Now().UTC()
-	rec.Status = "finished"
+	if err := s.trySetRunStatus(rec, StatusFinished); err != nil {
+		return err
+	}
 	rec.FinishedAt = &finished
 	rec.UpdatedAt = finished
 	if err := s.gdb().Save(rec).Error; err != nil {
@@ -474,7 +489,7 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 		q = q.Where("scope_repo = ? OR scope_repo = ?", repoRoot, "")
 	}
 	var rows []store.MemoryRecord
-	if err := q.Order("updated_at desc").Limit(limit * 3).Find(&rows).Error; err != nil {
+	if err := q.Order("confidence desc, updated_at desc").Limit(limit * 3).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	var edges []store.MemoryEdge
@@ -491,10 +506,12 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 	for _, edge := range edges {
 		duplicated[edge.FromID] = true
 	}
+	// Keep in sync with memory.MinQueryableConfidence (avoid import cycle with memory tests).
+	const minQueryableConfidence = 0.2
 	now := time.Now().UTC()
 	out := make([]store.MemoryRecord, 0, limit)
 	for _, row := range rows {
-		if duplicated[row.ID] || runMemoryExpired(row, now) {
+		if duplicated[row.ID] || runMemoryExpired(row, now) || row.Confidence < minQueryableConfidence {
 			continue
 		}
 		out = append(out, row)

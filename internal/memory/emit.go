@@ -107,6 +107,17 @@ func (s *Service) emitReviewed(runID, traceID, candidateID, layer, decision, rea
 	return nil
 }
 
+func (s *Service) emitConfidenceAdjusted(runID, traceID, memoryID, layer string, from, to float64, feedbackID string, rating int) error {
+	return s.emitRunEvent(runID, traceID, "memory.confidence_adjusted", map[string]any{
+		"memoryId":   memoryID,
+		"layer":      layer,
+		"from":       from,
+		"to":         to,
+		"feedbackId": feedbackID,
+		"rating":     rating,
+	})
+}
+
 func (s *Service) emitHitUsed(runID, traceID string, recordIDs []string, hitsByLayer map[string]int) error {
 	total := 0
 	for _, n := range hitsByLayer {

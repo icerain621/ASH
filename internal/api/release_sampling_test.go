@@ -366,11 +366,21 @@ func TestReleaseSamplingCIFixtureH04H05(t *testing.T) {
 	if err := json.Unmarshal(jobsResp.Body.Bytes(), &jobs); err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs.Items) != 2 {
-		t.Fatalf("jobs=%+v want 2 fixture jobs", jobs.Items)
+	if len(jobs.Items) < 5 {
+		t.Fatalf("jobs=%+v want >=5 fixture jobs", jobs.Items)
+	}
+	var dockerJobID string
+	for _, job := range jobs.Items {
+		if job.ProviderJobID == "fixture-job-9102" {
+			dockerJobID = job.ID
+			break
+		}
+	}
+	if dockerJobID == "" {
+		t.Fatalf("jobs=%+v want fixture-job-9102", jobs.Items)
 	}
 
-	diagBody := []byte(`{"jobId":"` + jobs.Items[1].ID + `"}`)
+	diagBody := []byte(`{"jobId":"` + dockerJobID + `"}`)
 	diagResp := httptest.NewRecorder()
 	diagReq := httptest.NewRequest(http.MethodPost, "/api/v1/ci/failures/diagnose", bytes.NewReader(diagBody))
 	diagReq.Header.Set("Content-Type", "application/json")

@@ -171,7 +171,7 @@ func TestCatalog_coversAppendixCoreEvents(t *testing.T) {
 		"tool.result", "policy.denied", "model.usage", "rag.results", "rag.retrieved",
 		"memory.candidate_created", "memory.reviewed",
 		"memory.hit_used", "memory.deprecated", "memory.query", "memory.migrated",
-		"memory.ttl_expired",
+		"memory.ttl_expired", "memory.confidence_adjusted",
 		"plugin.export_failed",
 	}
 	seen := map[string]struct{}{}

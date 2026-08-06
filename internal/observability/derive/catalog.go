@@ -279,6 +279,13 @@ func Catalog() []Rule {
 			},
 		},
 		{
+			EventType: "memory.confidence_adjusted",
+			Metric:    "ash_memory_confidence_adjusted_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "layer", JSONField: "layer"}},
+		},
+		{
 			EventType: "memory.query",
 			Metric:    "ash_memory_queries_total",
 			Kind:      MetricCounter,

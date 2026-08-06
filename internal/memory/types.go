@@ -174,4 +174,24 @@ type HitUsedResponse struct {
 	OK bool `json:"ok"`
 }
 
+// ApplyFeedbackDecayRequest lowers confidence after low-score feedback (R-04).
+type ApplyFeedbackDecayRequest struct {
+	SpaceID    string `json:"spaceId,omitempty"`
+	MemoryID   string `json:"memoryId" binding:"required"`
+	FeedbackID string `json:"feedbackId,omitempty"`
+	Rating     int    `json:"rating" binding:"required"`
+	ActorID    string `json:"actorId,omitempty"`
+	RunID      string `json:"runId,omitempty"`
+	TraceID    string `json:"traceId,omitempty"`
+}
+
+// ApplyFeedbackDecayResponse reports whether confidence changed.
+type ApplyFeedbackDecayResponse struct {
+	OK       bool    `json:"ok"`
+	MemoryID string  `json:"memoryId,omitempty"`
+	From     float64 `json:"from,omitempty"`
+	To       float64 `json:"to,omitempty"`
+	Adjusted bool    `json:"adjusted"`
+}
+
 func ms(t time.Time) int64 { return t.UTC().UnixMilli() }

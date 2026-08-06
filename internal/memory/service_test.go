@@ -397,3 +397,88 @@ func TestCreateCandidateGovernanceHints(t *testing.T) {
 		t.Fatalf("governance=%+v want duplicate hint", dup.Governance)
 	}
 }
+
+func TestApplyFeedbackDecayLowScore(t *testing.T) {
+	svc, _, _ := newTestMemory(t)
+	confidence := 0.85
+	created, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L0", Title: "decay target", Body: "pollution decay body",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Review(created.CandidateID, ReviewRequest{
+		Decision: "approve", Reason: "ok", PolicyProfile: "default", Confidence: &confidence,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := svc.ApplyFeedbackDecay(ApplyFeedbackDecayRequest{
+		MemoryID: created.CandidateID, FeedbackID: "fb_decay_1", Rating: 1, ActorID: "reviewer",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !resp.Adjusted || resp.From != confidence || resp.To != confidence-feedbackDecayStep {
+		t.Fatalf("resp=%+v want decayed by %v", resp, feedbackDecayStep)
+	}
+
+	var row store.MemoryRecord
+	if err := svc.db.First(&row, "id = ?", created.CandidateID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.Confidence != confidence-feedbackDecayStep {
+		t.Fatalf("confidence=%v want %v", row.Confidence, confidence-feedbackDecayStep)
+	}
+	var audits int64
+	if err := svc.db.Model(&store.AuditLog{}).
+		Where("event_type = ? AND payload_json LIKE ?", "memory.confidence_adjusted", "%"+created.CandidateID+"%").
+		Count(&audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Fatalf("audits=%d want 1", audits)
+	}
+
+	noop, err := svc.ApplyFeedbackDecay(ApplyFeedbackDecayRequest{
+		MemoryID: created.CandidateID, Rating: 5,
+	})
+	if err != nil || noop.Adjusted {
+		t.Fatalf("high rating should no-op: %+v err=%v", noop, err)
+	}
+}
+
+func TestQueryRanksByConfidenceAndFiltersFloor(t *testing.T) {
+	svc, _, _ := newTestMemory(t)
+	high, low := 0.9, 0.1
+	a, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L0", Title: "rank alpha", Body: "shared retrieval keyword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L0", Title: "rank beta", Body: "shared retrieval keyword",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Review(a.CandidateID, ReviewRequest{
+		Decision: "approve", Reason: "ok", PolicyProfile: "default", Confidence: &low,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Review(b.CandidateID, ReviewRequest{
+		Decision: "approve", Reason: "ok", PolicyProfile: "default", Confidence: &high,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	q, err := svc.Query(QueryRequest{Text: "shared retrieval", TopK: 10})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(q.Items) != 1 || q.Items[0].ID != b.CandidateID {
+		t.Fatalf("items=%+v want only high-confidence record", q.Items)
+	}
+}

@@ -223,8 +223,15 @@ func (s *Service) evaluateGate(ctx toolbus.Context, gate rules.Gate) (denied boo
 }
 
 func (s *Service) failRun(rec *store.RunRecord, runID, traceID string, started time.Time, code, msg string) (*CreateResponse, error) {
+	errOut := fmt.Errorf("%s: %s", code, msg)
+	// Reload so a concurrent Cancel is not overwritten by failed/finished (R-05).
+	if err := s.refreshRunStatus(rec); err == nil && isTerminalRunStatus(rec.Status) {
+		return nil, errOut
+	}
+	if err := applyRunStatus(rec, StatusFailed); err != nil {
+		return nil, errOut
+	}
 	finished := time.Now().UTC()
-	rec.Status = "failed"
 	rec.FinishedAt = &finished
 	rec.ErrorCode = code
 	rec.ErrorMessage = msg
@@ -235,7 +242,7 @@ func (s *Service) failRun(rec *store.RunRecord, runID, traceID string, started t
 		"durationMs": finished.Sub(started).Milliseconds(),
 		"error":      map[string]any{"code": code, "message": msg, "recoverable": true},
 	})
-	return nil, fmt.Errorf("%s: %s", code, msg)
+	return nil, errOut
 }
 
 func checkpointStrategy(doc *rules.Document) string {
@@ -414,7 +421,7 @@ func (s *Service) Cancel(runID string) (*CancelResponse, error) {
 	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		return nil, ErrRunNotFound
 	}
-	if rec.Status == "finished" || rec.Status == "failed" || rec.Status == "canceled" {
+	if isTerminalRunStatus(rec.Status) {
 		return &CancelResponse{RunID: runID, Status: rec.Status}, nil
 	}
 	var tasks []store.AgentTask
@@ -422,14 +429,16 @@ func (s *Service) Cancel(runID string) (*CancelResponse, error) {
 	for _, task := range tasks {
 		_ = s.agent.Cancel(context.Background(), firstNonEmpty(task.ExecGoTaskID, task.ActionID, task.ID))
 	}
+	if err := applyRunStatus(&rec, StatusCanceled); err != nil {
+		return nil, err
+	}
 	now := time.Now().UTC()
-	rec.Status = "canceled"
 	rec.FinishedAt = &now
 	rec.UpdatedAt = now
 	if err := s.gdb().Save(&rec).Error; err != nil {
 		return nil, err
 	}
-	_, _ = s.eventsFor().Append(runID, rec.TraceID, "run.canceled", "warn", map[string]any{"status": "canceled"})
+	_, _ = s.eventsFor().Append(runID, rec.TraceID, "run.canceled", "warn", map[string]any{"status": StatusCanceled})
 	s.decidePendingApproval(runID, "", "canceled", "", "run canceled")
 	return &CancelResponse{RunID: runID, Status: rec.Status}, nil
 }
@@ -439,8 +448,8 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	if err := s.gdb().First(&rec, "id = ?", runID).Error; err != nil {
 		return nil, ErrRunNotFound
 	}
-	if rec.Status != "waiting_approval" {
-		return nil, fmt.Errorf("%w: status is %q", ErrRunNotResumable, rec.Status)
+	if !canApprove(rec.Status) {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotApprovable, rec.Status)
 	}
 
 	var step store.RunStep
@@ -485,7 +494,16 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	})
 	s.decidePendingApproval(runID, step.StepID, "approved", req.ActorID, req.Reason)
 
-	rec.Status = "running"
+	// Re-check after side effects so a concurrent Cancel cannot revive the run.
+	if err := s.refreshRunStatus(&rec); err != nil {
+		return nil, err
+	}
+	if !canApprove(rec.Status) {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotApprovable, rec.Status)
+	}
+	if err := applyRunStatus(&rec, StatusRunning); err != nil {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotApprovable, rec.Status)
+	}
 	rec.FinishedAt = nil
 	rec.ErrorCode = ""
 	rec.ErrorMessage = ""
@@ -494,12 +512,12 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		return nil, err
 	}
 	_, _ = s.eventsFor().Append(runID, rec.TraceID, "run.approval_resumed", "info", map[string]any{
-		"fromStatus": "waiting_approval",
+		"fromStatus": StatusWaitingApproval,
 		"stepId":     step.StepID,
 		"kind":       approvalKind,
 	})
 	_ = s.writeAudit(runID, rec.TraceID, "run.approval_resumed", map[string]any{
-		"fromStatus": "waiting_approval",
+		"fromStatus": StatusWaitingApproval,
 		"stepId":     step.StepID,
 		"kind":       approvalKind,
 	})
@@ -517,7 +535,7 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		SpaceID:       rec.SpaceID,
 	}
 	if err := s.executeSteps(context.Background(), &rec, createReq, doc, eng, rec.StartedAt); err != nil {
-		if errors.Is(err, ErrWaitingApproval) {
+		if errors.Is(err, ErrWaitingApproval) || errors.Is(err, ErrRunCanceled) {
 			return &ApproveResponse{RunID: runID, OK: true}, nil
 		}
 		return nil, err

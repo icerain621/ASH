@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -145,7 +146,7 @@ func (h *Handler) listCIRuns(c *gin.Context) {
 	sync := strings.EqualFold(c.Query("sync"), "true") || c.Query("sync") == "1"
 	rows, err := h.ciFor(c).ListRuns(c.Request.Context(), space, c.Query("connectionId"), limit, sync)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorBody("CI_RUN_LIST_FAILED", err.Error()))
+		writeCIProviderError(c, "CI_RUN_LIST_FAILED", err)
 		return
 	}
 	c.JSON(http.StatusOK, CIRunListResponse{Items: rows})
@@ -171,7 +172,7 @@ func (h *Handler) listCIJobs(c *gin.Context) {
 	sync := strings.EqualFold(c.Query("sync"), "true") || c.Query("sync") == "1"
 	rows, err := h.ciFor(c).ListJobs(c.Request.Context(), space, c.Query("runId"), limit, sync)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, errorBody("CI_JOB_LIST_FAILED", err.Error()))
+		writeCIProviderError(c, "CI_JOB_LIST_FAILED", err)
 		return
 	}
 	c.JSON(http.StatusOK, CIJobListResponse{Items: rows})
@@ -354,4 +355,13 @@ func parseOptionalTime(value string) (time.Time, error) {
 		return time.Time{}, nil
 	}
 	return time.Parse(time.RFC3339, value)
+}
+
+func writeCIProviderError(c *gin.Context, fallbackCode string, err error) {
+	switch {
+	case errors.Is(err, ci.ErrGitHubCircuitOpen), errors.Is(err, ci.ErrGitHubUnavailable):
+		c.JSON(http.StatusBadGateway, errorBody("CI_PROVIDER_UNAVAILABLE", err.Error()))
+	default:
+		c.JSON(http.StatusInternalServerError, errorBody(fallbackCode, err.Error()))
+	}
 }

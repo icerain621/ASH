@@ -85,6 +85,134 @@ func TestReplayExact(t *testing.T) {
 	}
 }
 
+func TestCanReplayMatrix(t *testing.T) {
+	cases := []struct {
+		status string
+		ok     bool
+	}{
+		{StatusFinished, true},
+		{StatusFailed, true},
+		{StatusCanceled, true},
+		{StatusRunning, false},
+		{StatusWaitingApproval, false},
+		{"", false},
+	}
+	for _, tc := range cases {
+		if got := canReplay(tc.status); got != tc.ok {
+			t.Fatalf("canReplay(%q)=%v want %v", tc.status, got, tc.ok)
+		}
+	}
+}
+
+func TestReplayRejectsNonTerminalSource(t *testing.T) {
+	svc, _ := testRunsService(t)
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
+		Inputs: map[string]any{
+			"issueOrSpec": "replay gate",
+			"repoRoot":    repoWithEvidence(t, "replay gate"),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rec store.RunRecord
+	if err := svc.db.First(&rec, "id = ?", created.RunID).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range []string{StatusRunning, StatusWaitingApproval} {
+		rec.Status = status
+		rec.FinishedAt = nil
+		if err := svc.db.Save(&rec).Error; err != nil {
+			t.Fatal(err)
+		}
+		_, err := svc.Replay(created.RunID, ReplayRequest{Mode: "exact"})
+		if !errors.Is(err, ErrRunNotReplayable) {
+			t.Fatalf("status=%s err=%v want ErrRunNotReplayable", status, err)
+		}
+	}
+	// Terminal failed remains replayable.
+	rec.Status = StatusFailed
+	now := time.Now().UTC()
+	rec.FinishedAt = &now
+	if err := svc.db.Save(&rec).Error; err != nil {
+		t.Fatal(err)
+	}
+	replayed, err := svc.Replay(created.RunID, ReplayRequest{Mode: "exact"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if replayed.RunID == created.RunID {
+		t.Fatal("replay should allocate a new run id")
+	}
+}
+
+func TestCanApproveCanResumeMatrix(t *testing.T) {
+	if !canApprove(StatusWaitingApproval) || canApprove(StatusFailed) || canApprove(StatusCanceled) {
+		t.Fatal("canApprove matrix mismatch")
+	}
+	if !canResume(StatusFailed) || canResume(StatusWaitingApproval) || canResume(StatusFinished) {
+		t.Fatal("canResume matrix mismatch")
+	}
+}
+
+func TestApproveRejectsNonWaitingAndCanceled(t *testing.T) {
+	svc, _ := testRunsService(t)
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
+		Inputs: map[string]any{
+			"issueOrSpec": "approve gate",
+			"repoRoot":    repoWithEvidence(t, "approve gate"),
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var rec store.RunRecord
+	if err := svc.db.First(&rec, "id = ?", created.RunID).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, status := range []string{StatusFinished, StatusFailed, StatusCanceled, StatusRunning} {
+		rec.Status = status
+		if err := svc.db.Save(&rec).Error; err != nil {
+			t.Fatal(err)
+		}
+		_, err := svc.Approve(created.RunID, ApproveRequest{ActorID: "tester", Reason: "nope"})
+		if !errors.Is(err, ErrRunNotApprovable) {
+			t.Fatalf("status=%s err=%v want ErrRunNotApprovable", status, err)
+		}
+	}
+
+	rec.Status = StatusWaitingApproval
+	rec.FinishedAt = nil
+	if err := svc.db.Save(&rec).Error; err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	step := store.RunStep{
+		ID: "step_approve_gate", RunID: created.RunID, StepID: "human.review",
+		Role: "Human", Kind: "human", Status: StatusWaitingApproval,
+		StepOrder: 1, CreatedAt: now, UpdatedAt: now, StartedAt: &now,
+	}
+	if err := svc.db.Create(&step).Error; err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Cancel(created.RunID); err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Approve(created.RunID, ApproveRequest{ActorID: "tester", Reason: "after cancel"})
+	if !errors.Is(err, ErrRunNotApprovable) {
+		t.Fatalf("after cancel err=%v want ErrRunNotApprovable", err)
+	}
+	var after store.RunRecord
+	if err := svc.db.First(&after, "id = ?", created.RunID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if after.Status != StatusCanceled {
+		t.Fatalf("status=%q want canceled", after.Status)
+	}
+}
+
 func TestResumeFailedRun(t *testing.T) {
 	svc, _ := testRunsService(t)
 	createReq := CreateRequest{

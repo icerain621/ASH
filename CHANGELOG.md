@@ -8,6 +8,14 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint BX：GitHub provider 对 429/5xx/瞬时错误退避重试；连续失败熔断；API `CI_PROVIDER_UNAVAILABLE`（R-09）。
+- Sprint BW：`canApprove` / `canResume`；`ErrRunNotApprovable`；Approve 刷新后再转换以防 Cancel 竞态；API `RUN_NOT_APPROVABLE` / `ILLEGAL_STATUS_TRANSITION` / `RUN_CANCELED`（R-05）。
+- Sprint BV：Replay 仅允许终态源（finished/failed/canceled）；`ErrRunNotReplayable` / API `RUN_NOT_REPLAYABLE`（R-05）。
+- Sprint BU：`observeCanceled` 在步边界与 agent 完成后轮询；Create/Resume 将中途 Cancel 视为终态；`TestMidLoopCancelStopsWithoutFinish`（R-05）。
+- Sprint BT：run 生命周期状态机（`canTransition` / `trySetRunStatus`）；`failRun`/finish/waiting_approval 尊重 Cancel；Cancel/Resume/Approve 走统一转换；表驱动与幂等单测（R-05）。
+- Sprint BS：`regression-short` 纳入 BQ/BR 单测；CI fixture 增加 cancel/OOM/frontend job（9103–9105）；RunsPage SSE「重连中 / 轮询回退」smoke（R-03/R-07）。
+- Sprint BR：`ApplyFeedbackDecay`（rating≤2 → confidence −0.15）经 `POST /feedback`（`memory`/`memory_hit`）接线；audit/event `memory.confidence_adjusted`；Query 与 run 检索按 confidence 排序并排除 `<0.2`（R-04）。
+- Sprint BQ：`postgresMigrationDSN` 回归单测（open-time owner DSN 优先于 `ASH_DATABASE_APP_URL`）；CI 诊断规则扩展 `actions_cancel_or_runner_abort` / `runner_resource_exhaustion` / `frontend_lint_or_typecheck_failure`（R-03）。
 - Sprint BP：跨平台 `testutil.WriteFakeExecGoCLI`；`OpenTest` Windows SQLite 清理；CI/Postgres E2E 失败日志 artifact + docker 诊断；补齐 apicodes 缺码；RLS tester 角色改为幂等 ensure；`migrate()` 使用打开时的 owner DSN；postgres-e2e RLS 段跳过重复 M3-04（避免种子漂移）。
 - Sprint BO：`regression-short` / H-09 static 接入 `TestCrossSpaceAPIRegression` 与 `TestStreamRunResumesFromQueryLastEventID`。
 - Sprint BN：SSE 重连耗尽后回退 timeline 轮询（R-07）；`TestStreamRunResumesFromQueryLastEventID` 校验 query 续传。

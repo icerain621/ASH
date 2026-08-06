@@ -11,23 +11,43 @@ import (
 )
 
 var (
-	ErrRunNotFound      = errors.New("run not found")
-	ErrRunNotResumable  = errors.New("run is not resumable")
-	ErrRunMetaMissing   = errors.New("run metadata missing")
+	ErrRunNotFound       = errors.New("run not found")
+	ErrRunNotResumable   = errors.New("run is not resumable")
+	ErrRunNotApprovable  = errors.New("run is not approvable")
+	ErrRunNotReplayable  = errors.New("run is not replayable")
+	ErrRunMetaMissing    = errors.New("run metadata missing")
 	ErrInvalidReplayMode = errors.New("replay mode must be exact or latest_memory")
 )
 
-// Replay creates a new run from a completed or failed source run.
+// canReplay reports whether a source run may be replayed into a new run.
+func canReplay(status string) bool {
+	switch status {
+	case StatusFinished, StatusFailed, StatusCanceled:
+		return true
+	default:
+		return false
+	}
+}
+
+// Replay creates a new run from a completed, failed, or canceled source run.
 func (s *Service) Replay(sourceRunID string, req ReplayRequest) (*ReplayResponse, error) {
 	if req.Mode != "exact" && req.Mode != "latest_memory" {
 		return nil, ErrInvalidReplayMode
+	}
+	var sourceRec store.RunRecord
+	if err := s.gdb().First(&sourceRec, "id = ?", sourceRunID).Error; err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return nil, ErrRunNotFound
+		}
+		return nil, err
+	}
+	if !canReplay(sourceRec.Status) {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotReplayable, sourceRec.Status)
 	}
 	meta, err := s.loadMetaForRun(sourceRunID)
 	if err != nil {
 		return nil, err
 	}
-	var sourceRec store.RunRecord
-	_ = s.gdb().Select("space_id", "actor_role").First(&sourceRec, "id = ?", sourceRunID).Error
 
 	inputs := copyMap(meta.Inputs)
 	for k, v := range req.Overrides {
@@ -64,7 +84,7 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 		}
 		return nil, err
 	}
-	if rec.Status != "failed" {
+	if !canResume(rec.Status) {
 		return nil, fmt.Errorf("%w: status is %q", ErrRunNotResumable, rec.Status)
 	}
 
@@ -73,7 +93,15 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 		return nil, ErrRunMetaMissing
 	}
 
-	rec.Status = "running"
+	if err := s.refreshRunStatus(&rec); err != nil {
+		return nil, err
+	}
+	if !canResume(rec.Status) {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotResumable, rec.Status)
+	}
+	if err := applyRunStatus(&rec, StatusRunning); err != nil {
+		return nil, fmt.Errorf("%w: status is %q", ErrRunNotResumable, rec.Status)
+	}
 	rec.Recovered = true
 	rec.ErrorCode = ""
 	rec.ErrorMessage = ""
@@ -83,7 +111,7 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 	}
 
 	if _, err := s.eventsFor().Append(runID, rec.TraceID, "run.resumed", "info", map[string]any{
-		"fromStatus": "failed",
+		"fromStatus": StatusFailed,
 		"recovered":  true,
 	}); err != nil {
 		return nil, err
@@ -102,6 +130,14 @@ func (s *Service) Resume(runID string) (*ResumeResponse, error) {
 	}
 	eng := rules.NewEngine(doc)
 	if err := s.executeSteps(context.Background(), &rec, createReq, doc, eng, rec.StartedAt); err != nil {
+		if errors.Is(err, ErrWaitingApproval) || errors.Is(err, ErrRunCanceled) {
+			sum, getErr := s.Get(runID)
+			status := rec.Status
+			if getErr == nil {
+				status = sum.Status
+			}
+			return &ResumeResponse{RunID: runID, TraceID: rec.TraceID, Status: status}, nil
+		}
 		return nil, err
 	}
 	return &ResumeResponse{RunID: runID, TraceID: rec.TraceID, Status: rec.Status}, nil

@@ -135,14 +135,22 @@ func resolveSQLiteFilePath(dataDir, rest string) string {
 	return filepath.Join(dataDir, path)
 }
 
+// postgresMigrationDSN is the DSN used for SQL migrations. Prefer the handle's
+// open-time DSN: RuntimeDatabaseURL() may point at ash_app (ASH_DATABASE_APP_URL),
+// which cannot run owner DDL / CREATE ROLE grants.
+func postgresMigrationDSN(db *DB) string {
+	if db == nil {
+		return strings.TrimSpace(RuntimeDatabaseURL())
+	}
+	if pgDSN := strings.TrimSpace(db.dsn); pgDSN != "" {
+		return pgDSN
+	}
+	return strings.TrimSpace(RuntimeDatabaseURL())
+}
+
 func (db *DB) migrate() error {
 	if sqlmigrations.SQLMigrationsEnabled(db.dialect) {
-		// Prefer the DSN this handle was opened with. RuntimeDatabaseURL() may point at
-		// ash_app (ASH_DATABASE_APP_URL) which cannot run owner DDL / CREATE ROLE grants.
-		pgDSN := strings.TrimSpace(db.dsn)
-		if pgDSN == "" {
-			pgDSN = strings.TrimSpace(RuntimeDatabaseURL())
-		}
+		pgDSN := postgresMigrationDSN(db)
 		if pgDSN == "" {
 			return fmt.Errorf("postgres sql migrations require ASH_DATABASE_URL")
 		}

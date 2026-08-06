@@ -20,7 +20,7 @@
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
-| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（16 文件 / 27 用例） |
+| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 状态文案；16 文件 / 29 用例） |
 | Git 远端 | ✅ | `main` @ `4d5acad`；CI / Postgres E2E / Live Worker **全绿**（2026-08-06） |
 
 ### 优先级矩阵
@@ -97,6 +97,68 @@ make signoff-gate
 | BP-3 | CI 失败上传 `go-test.log` / postgres e2e log + docker 诊断 | ✅ `ci.yml` / `postgres-e2e.yml` |
 | BP-4 | 根据 artifact 根治 Backend/Postgres 长期红 | ✅ apicodes + owner DSN + M3-04 跳过；`4d5acad` 全绿 |
 
+#### Sprint BQ（P1 · R-03 / 迁移回归 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BQ-1 | `postgresMigrationDSN` 优先 open-time owner DSN | ✅ `TestPostgresMigrationDSNPrefersOpenDSNOverAppURL` |
+| BQ-2 | CI 诊断扩展 cancel / OOM / frontend lint-typecheck | ✅ `TestDiagnoseLogClassifiesCancelAndResourceAndFrontend` |
+
+#### Sprint BR（P1 · R-04 Memory 污染缓解 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BR-1 | 低分 feedback → `ApplyFeedbackDecay`（−0.15）+ audit/event | ✅ `TestApplyFeedbackDecayLowScore` / `TestFeedbackMemoryTargetDecaysConfidence` |
+| BR-2 | Query / run 检索按 confidence 排序，排除 `<0.2` | ✅ `TestQueryRanksByConfidenceAndFiltersFloor` |
+
+#### Sprint BS（P1 · BQ/BR 门禁 + fixture 硬化 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BS-1 | `regression-short` 接入 BQ/BR 诊断与 decay 单测 | ✅ `scripts/regression-short.sh` |
+| BS-2 | CI fixture 扩 cancel / OOM / frontend（9103–9105） | ✅ `TestFixtureProviderSyncRunsAndJobs` |
+| BS-3 | RunsPage 展示「重连中 / 轮询回退」smoke | ✅ `RunsPage.test.tsx` |
+
+#### Sprint BT（P1 · R-05 状态机守卫 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BT-1 | `canTransition` / `trySetRunStatus` 中央转换表 | ✅ `internal/runs/status.go` |
+| BT-2 | 接线 fail/finish/waiting_approval/Cancel/Resume/Approve | ✅ 取消后不再被 fail 覆盖 |
+| BT-3 | 表驱动 + Cancel 幂等 + fail-after-cancel 单测 | ✅ `status_test.go`；`regression-short` 接入 |
+
+#### Sprint BU（P1 · R-05 中途 Cancel 观察 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BU-1 | `observeCanceled` 步边界 / agent 后轮询 | ✅ `status.go` + `executeSteps` |
+| BU-2 | Create/Resume 将 `ErrRunCanceled` 视为终态 | ✅ 不写成 failed |
+| BU-3 | 阻塞 agent 中途 Cancel 集成测试 | ✅ `TestMidLoopCancelStopsWithoutFinish` |
+
+#### Sprint BV（P1 · R-05 Replay 状态门禁 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BV-1 | Replay 仅允许 finished/failed/canceled 源 | ✅ `canReplay` + `ErrRunNotReplayable` |
+| BV-2 | API `RUN_NOT_REPLAYABLE` 409 | ✅ `writeRunControlError` + apicodes |
+| BV-3 | 表驱动 + 非终态负例单测 | ✅ `TestCanReplayMatrix` / `TestReplayRejectsNonTerminalSource` |
+
+#### Sprint BW（P1 · R-05 Approve/Resume 收口 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BW-1 | `canApprove` / `canResume`；Approve 用 `ErrRunNotApprovable` | ✅ `status.go` / `Approve` |
+| BW-2 | API `RUN_NOT_APPROVABLE` / `ILLEGAL_STATUS_TRANSITION` / `RUN_CANCELED` | ✅ `writeRunControlError` + apicodes |
+| BW-3 | Cancel 后 Approve 不复活；表驱动单测 | ✅ `TestApproveRejectsNonWaitingAndCanceled` |
+
+#### Sprint BX（P1 · R-09 GitHub CI 韧性 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BX-1 | `getJSON` / logs：429/5xx 有限退避重试 | ✅ `doWithRetry` |
+| BX-2 | 连续失败熔断 + 单测 | ✅ `TestGitHubProviderCircuitOpensAfterFailures` |
+| BX-3 | API `CI_PROVIDER_UNAVAILABLE`（502） | ✅ `writeCIProviderError` |
+
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
 | # | 任务 | 前置 | 验收 |
@@ -130,7 +192,7 @@ make cloud-acceptance
 | 平台 | 插件 gRPC ABI 签名策略（ARCH TODO） | P2 |
 | 安全 | 数据分级与保留期（PRD TODO） | 合规增强 |
 | 前端 | SSE 浏览器级 E2E | R-07 单元/钩子/轮询已落地 |
-| 算法 | CI 诊断规则扩展、Memory 污染防护 | R-03/R-04 |
+| 算法 | CI 诊断真实 log 校准；高置信额外确认（产品） | R-03/BQ；R-04 衰减已落地（BR） |
 
 ---
 
@@ -159,7 +221,7 @@ make mvp-signoff
 |------|----------|----------|
 | R-12 回滚不完整 | `rollback-drill` 已自动化 | BI 切换日再演练一次并签字 |
 | R-08 越权 | M2 + `TestCrossSpaceAPIRegression` | 发布窗口抽测 + RLS e2e |
-| R-03 诊断准确率 | fixture 全绿 | BJ 真实 GitHub log 验证 |
+| R-03 诊断准确率 | fixture 含 cancel/OOM/frontend（BS） | BJ 真实 GitHub log 验证 |
 | R-07 SSE 不稳定 | 自动重连 + timeline 轮询回退（BN） | BJ 生产断连率观察 |
 | R-01 需求变更 | `scope-freeze-gate` | BG-3 产品签字冻结 |
 
@@ -297,7 +359,15 @@ make postgres-roles
 
 ## 已完成（近期）
 
-- Sprint BP：跨平台 fake execgocli、`OpenTest` Windows 清理、CI 失败日志 artifact。
+- Sprint BX：GitHub CI 429/5xx 重试与熔断；`CI_PROVIDER_UNAVAILABLE`（R-09）。
+- Sprint BW：Approve/Resume 对称门禁；Cancel 后不可 Approve；控制面错误码扩展（R-05）。
+- Sprint BV：Replay 源状态门禁（非终态拒绝）；`RUN_NOT_REPLAYABLE`（R-05）。
+- Sprint BU：executeSteps 步边界观察 Cancel；中途取消不落 finished/failed（R-05）。
+- Sprint BT：run 状态机 `canTransition`；fail/finish 不覆盖 canceled；Cancel 幂等单测（R-05）。
+- Sprint BS：`regression-short` 接入 BQ/BR；CI fixture 9103–9105；RunsPage SSE 状态文案 smoke。
+- Sprint BR：低分 feedback 置信度衰减；Query/run 按 confidence 排序并过滤 `<0.2`（R-04）。
+- Sprint BQ：`postgresMigrationDSN` 回归单测；CI 诊断新增 cancel / 资源耗尽 / 前端 lint-typecheck（R-03）。
+- Sprint BP：跨平台 fake execgocli、`OpenTest` Windows 清理、CI 失败日志 artifact；CI 全绿（`4d5acad`）。
 - Sprint BO：`regression-short` / H-09 static 接入跨 space 与 stream 续传用例。
 - Sprint BN：SSE 耗尽后 timeline 轮询回退；`TestStreamRunResumesFromQueryLastEventID`。
 - Sprint BM：SSE 自动重连（退避 + Last-Event-ID）；跨 space API 回归表驱动用例；stream query 续传。

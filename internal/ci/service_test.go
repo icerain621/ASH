@@ -18,6 +18,46 @@ func TestDiagnoseLogClassifiesTestFailure(t *testing.T) {
 	}
 }
 
+func TestDiagnoseLogClassifiesCancelAndResourceAndFrontend(t *testing.T) {
+	cases := []struct {
+		name string
+		log  string
+		want string
+	}{
+		{
+			name: "actions cancel",
+			log:  "##[error]The job was canceled because the workflow was cancelled.\n",
+			want: "actions_cancel_or_runner_abort",
+		},
+		{
+			name: "disk full",
+			log:  "mkdir: cannot create directory '/tmp/x': No space left on device\n",
+			want: "runner_resource_exhaustion",
+		},
+		{
+			name: "typescript",
+			log:  "src/pages/CIPage.tsx(12,5): error TS2322: Type 'string' is not assignable to type 'number'.\n",
+			want: "frontend_lint_or_typecheck_failure",
+		},
+		{
+			name: "vitest lifecycle before generic npm ERR",
+			log:  "npm ERR! code ELIFECYCLE\nnpm ERR! errno 1\nnpm ERR! ash-frontend@0.0.0 test: `vitest run`\n",
+			want: "frontend_lint_or_typecheck_failure",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := DiagnoseLog(tc.log)
+			if resp.RootCause != tc.want {
+				t.Fatalf("rootCause=%q want %q evidence=%v", resp.RootCause, tc.want, resp.EvidenceRefs)
+			}
+			if len(resp.EvidenceRefs) == 0 || resp.LogDigest == "" {
+				t.Fatalf("resp=%+v want evidence and digest", resp)
+			}
+		})
+	}
+}
+
 func TestServiceDiagnosePersistsLogText(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db, nil)

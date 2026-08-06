@@ -38,11 +38,15 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs) != 2 || jobs[0].ProviderJobID != "fixture-job-9101" {
-		t.Fatalf("jobs=%+v want 2 fixture jobs starting with fixture-job-9101", jobs)
+	if len(jobs) < 5 || jobs[0].ProviderJobID != "fixture-job-9101" {
+		t.Fatalf("jobs=%+v want >=5 fixture jobs starting with fixture-job-9101", jobs)
+	}
+	byProvider := map[string]store.CIJob{}
+	for _, job := range jobs {
+		byProvider[job.ProviderJobID] = job
 	}
 
-	logs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", jobs[0].ProviderJobID)
+	logs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", "fixture-job-9101")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -51,7 +55,7 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 	}
 
 	diag, err := svc.Diagnose(context.Background(), DiagnoseRequest{
-		SpaceID: "local", JobID: jobs[0].ID,
+		SpaceID: "local", JobID: byProvider["fixture-job-9101"].ID,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -60,25 +64,46 @@ func TestFixtureProviderSyncRunsAndJobs(t *testing.T) {
 		t.Fatalf("diag=%+v want test_failure with digest", diag)
 	}
 	var jobRow store.CIJob
-	if err := db.First(&jobRow, "id = ?", jobs[0].ID).Error; err != nil {
+	if err := db.First(&jobRow, "id = ?", byProvider["fixture-job-9101"].ID).Error; err != nil {
 		t.Fatal(err)
 	}
 	if jobRow.LogDigest == "" || jobRow.LogDigest != diag.LogDigest {
 		t.Fatalf("job logDigest=%q want %q", jobRow.LogDigest, diag.LogDigest)
 	}
 
-	dockerLogs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", jobs[1].ProviderJobID)
+	dockerLogs, err := DefaultFixtureProvider().GetJobLogs(context.Background(), conn, "tok", "fixture-job-9102")
 	if err != nil || !strings.Contains(dockerLogs, "Docker daemon") {
 		t.Fatalf("docker logs=%q err=%v", dockerLogs, err)
 	}
 	dockerDiag, err := svc.Diagnose(context.Background(), DiagnoseRequest{
-		SpaceID: "local", JobID: jobs[1].ID,
+		SpaceID: "local", JobID: byProvider["fixture-job-9102"].ID,
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if dockerDiag.RootCause != "docker_or_postgres_unavailable" {
 		t.Fatalf("dockerDiag=%+v want docker_or_postgres_unavailable", dockerDiag)
+	}
+
+	wantCauses := map[string]string{
+		"fixture-job-9103": "actions_cancel_or_runner_abort",
+		"fixture-job-9104": "runner_resource_exhaustion",
+		"fixture-job-9105": "frontend_lint_or_typecheck_failure",
+	}
+	for providerJobID, want := range wantCauses {
+		job, ok := byProvider[providerJobID]
+		if !ok {
+			t.Fatalf("missing fixture job %s", providerJobID)
+		}
+		got, err := svc.Diagnose(context.Background(), DiagnoseRequest{
+			SpaceID: "local", JobID: job.ID,
+		})
+		if err != nil {
+			t.Fatalf("%s diagnose: %v", providerJobID, err)
+		}
+		if got.RootCause != want {
+			t.Fatalf("%s rootCause=%q want %q", providerJobID, got.RootCause, want)
+		}
 	}
 
 	if err := svc.SyncRuns(context.Background(), "local", conn.ID, 10); err != nil {

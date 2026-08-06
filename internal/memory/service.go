@@ -18,6 +18,12 @@ import (
 
 var ErrNotFound = errors.New("memory not found")
 
+// Low-score feedback subtracts this from approved memory confidence (R-04).
+const feedbackDecayStep = 0.15
+
+// MinQueryableConfidence excludes polluted / heavily decayed records from retrieval.
+const MinQueryableConfidence = 0.2
+
 func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateResponse, error) {
 	if err := validateCreate(req); err != nil {
 		return nil, err
@@ -286,7 +292,7 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 	q = q.Where("LOWER(title) LIKE ? OR LOWER(body) LIKE ?", like, like)
 
 	var rows []store.MemoryRecord
-	if err := q.Order("updated_at desc").Limit(topK * 3).Find(&rows).Error; err != nil {
+	if err := q.Order("confidence desc, updated_at desc").Limit(topK * 3).Find(&rows).Error; err != nil {
 		return nil, err
 	}
 	rows, err := s.filterQueryableMemory(rows, topK, time.Now().UTC())
@@ -305,6 +311,80 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 		}
 	}
 	return &QueryResponse{Items: items}, nil
+}
+
+// ApplyFeedbackDecay reduces approved-memory confidence after rating 1–2 feedback.
+// Non-memory targets, missing rows, or non-approved status are soft no-ops.
+func (s *Service) ApplyFeedbackDecay(req ApplyFeedbackDecayRequest) (*ApplyFeedbackDecayResponse, error) {
+	memoryID := strings.TrimSpace(req.MemoryID)
+	if memoryID == "" {
+		return nil, fmt.Errorf("memoryId is required")
+	}
+	if req.Rating <= 0 || req.Rating > 2 {
+		return &ApplyFeedbackDecayResponse{OK: true, MemoryID: memoryID, Adjusted: false}, nil
+	}
+	spaceID := firstNonEmpty(req.SpaceID, "local")
+	var rec store.MemoryRecord
+	err := s.gdb().Where("id = ? AND space_id = ?", memoryID, spaceID).First(&rec).Error
+	if err != nil {
+		if errors.Is(err, gorm.ErrRecordNotFound) {
+			return &ApplyFeedbackDecayResponse{OK: true, MemoryID: memoryID, Adjusted: false}, nil
+		}
+		return nil, err
+	}
+	if rec.Status != "approved" {
+		return &ApplyFeedbackDecayResponse{OK: true, MemoryID: memoryID, Adjusted: false}, nil
+	}
+
+	from := rec.Confidence
+	to := from - feedbackDecayStep
+	if to < 0 {
+		to = 0
+	}
+	if to > 1 {
+		to = 1
+	}
+	if to == from {
+		return &ApplyFeedbackDecayResponse{OK: true, MemoryID: memoryID, From: from, To: to, Adjusted: false}, nil
+	}
+
+	now := time.Now().UTC()
+	traceID, err := s.validateRunRef(req.RunID, req.TraceID)
+	if err != nil {
+		return nil, err
+	}
+	err = s.gdb().Transaction(func(tx *gorm.DB) error {
+		rec.Confidence = to
+		rec.UpdatedAt = now
+		if err := tx.Save(&rec).Error; err != nil {
+			return err
+		}
+		payload, _ := json.Marshal(map[string]any{
+			"memoryId":   memoryID,
+			"from":       from,
+			"to":         to,
+			"feedbackId": req.FeedbackID,
+			"rating":     req.Rating,
+			"step":       feedbackDecayStep,
+		})
+		return tx.Create(&store.AuditLog{
+			ID:          "aud_" + uuid.NewString(),
+			SpaceID:     rec.SpaceID,
+			TraceID:     req.TraceID,
+			RunID:       req.RunID,
+			ActorID:     req.ActorID,
+			EventType:   "memory.confidence_adjusted",
+			PayloadJSON: string(payload),
+			CreatedAt:   now,
+		}).Error
+	})
+	if err != nil {
+		return nil, fmt.Errorf("feedback decay: %w", err)
+	}
+	if req.RunID != "" {
+		_ = s.emitConfidenceAdjusted(req.RunID, traceID, memoryID, rec.Layer, from, to, req.FeedbackID, req.Rating)
+	}
+	return &ApplyFeedbackDecayResponse{OK: true, MemoryID: memoryID, From: from, To: to, Adjusted: true}, nil
 }
 
 func (s *Service) HitUsed(req HitUsedRequest) (*HitUsedResponse, error) {
@@ -604,7 +684,7 @@ func (s *Service) filterQueryableMemory(rows []store.MemoryRecord, topK int, now
 
 	out := make([]store.MemoryRecord, 0, len(rows))
 	for _, row := range rows {
-		if duplicated[row.ID] || memoryExpired(row, now) {
+		if duplicated[row.ID] || memoryExpired(row, now) || row.Confidence < MinQueryableConfidence {
 			continue
 		}
 		out = append(out, row)

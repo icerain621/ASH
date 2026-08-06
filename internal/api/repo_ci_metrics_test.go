@@ -157,8 +157,8 @@ func TestCISyncRunsWithFixture(t *testing.T) {
 	if err := json.Unmarshal(jobsResp.Body.Bytes(), &jobs); err != nil {
 		t.Fatal(err)
 	}
-	if len(jobs.Items) != 2 || jobs.Items[0].ProviderJobID != "fixture-job-9101" {
-		t.Fatalf("jobs=%+v want 2 fixture jobs", jobs.Items)
+	if len(jobs.Items) < 5 || jobs.Items[0].ProviderJobID != "fixture-job-9101" {
+		t.Fatalf("jobs=%+v want >=5 fixture jobs starting with fixture-job-9101", jobs.Items)
 	}
 
 	diagBody := []byte(`{"connectionId":"` + conn.ID + `","runId":"` + runs.Items[0].ID + `","jobId":"` + jobs.Items[0].ID + `"}`)

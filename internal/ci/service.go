@@ -527,6 +527,24 @@ func diagnosisRules() []PatternRule {
 			Patterns: rex(`(?i)cannot connect to the docker daemon`, `(?i)docker: command not found`, `(?i)postgres.*connection refused`, `(?i)database system is starting`),
 		},
 		{
+			Cause:      "actions_cancel_or_runner_abort",
+			Confidence: 0.87,
+			Suggestions: []string{
+				"确认是否为手动取消、并发取消或分支强制推送导致的 workflow cancel。",
+				"若 runner 中途 shutdown，检查 GitHub Actions 状态页与自托管 runner 可用性后重跑。",
+			},
+			Patterns: rex(`(?i)the job was canceled`, `(?i)the operation was canceled`, `(?i)workflow was cancelled`, `(?i)runner.*shutdown`, `(?i)##\[error\].*canceled`),
+		},
+		{
+			Cause:      "runner_resource_exhaustion",
+			Confidence: 0.85,
+			Suggestions: []string{
+				"检查 runner 磁盘与内存占用；清理 Docker 镜像/缓存或拆分重量级 job。",
+				"Postgres e2e / web-build 等高峰任务可改到更大 runner 或串行化资源密集步骤。",
+			},
+			Patterns: rex(`(?i)no space left on device`, `(?i)cannot allocate memory`, `(?i)out of memory`, `(?i)killed.*signal 9`, `(?i)\bENOSPC\b`),
+		},
+		{
 			Cause:      "go_compile_failure",
 			Confidence: 0.86,
 			Suggestions: []string{
@@ -543,6 +561,15 @@ func diagnosisRules() []PatternRule {
 				"本地使用相同 -run 过滤条件复现，并保留失败输出作为修复证据。",
 			},
 			Patterns: rex(`(?m)^--- FAIL:`, `(?m)^FAIL\s`, `(?i)t\.fatalf`, `(?i)panic:`),
+		},
+		{
+			Cause:      "frontend_lint_or_typecheck_failure",
+			Confidence: 0.82,
+			Suggestions: []string{
+				"本地运行 make web-gate（eslint / vitest / build）复现首个错误。",
+				"优先修复 TypeScript TS 错误与 eslint error，再处理 vitest 失败用例。",
+			},
+			Patterns: rex(`(?i)eslint.*error`, `(?i)\berror TS\d+:`, `(?i)failed to compile`, `(?i)vitest.*failed`, `(?i)npm ERR!.*ELIFECYCLE`),
 		},
 		{
 			Cause:      "dependency_resolution_failure",
@@ -666,7 +693,32 @@ func firstNonEmpty(values ...string) string {
 }
 
 type GitHubProvider struct {
-	Client *http.Client
+	Client      *http.Client
+	Circuit     *githubCircuit
+	Sleep       func(time.Duration) // tests inject no-op / tracked sleep
+	MaxAttempts int
+}
+
+func (p GitHubProvider) circuit() *githubCircuit {
+	if p.Circuit != nil {
+		return p.Circuit
+	}
+	return defaultGitHubCircuit
+}
+
+func (p GitHubProvider) sleep(d time.Duration) {
+	if p.Sleep != nil {
+		p.Sleep(d)
+		return
+	}
+	time.Sleep(d)
+}
+
+func (p GitHubProvider) maxAttempts() int {
+	if p.MaxAttempts > 0 {
+		return p.MaxAttempts
+	}
+	return githubDefaultMaxAttempts
 }
 
 func (p GitHubProvider) ListWorkflowRuns(ctx context.Context, conn store.RepoConnection, token string, limit int) ([]store.CIRun, error) {
@@ -752,39 +804,75 @@ func (p GitHubProvider) GetRunJobs(ctx context.Context, conn store.RepoConnectio
 
 func (p GitHubProvider) GetJobLogs(ctx context.Context, conn store.RepoConnection, token, providerJobID string) (string, error) {
 	endpoint := fmt.Sprintf("https://api.github.com/repos/%s/%s/actions/jobs/%s/logs", url.PathEscape(conn.Owner), url.PathEscape(conn.Repo), url.PathEscape(providerJobID))
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
-		return "", err
-	}
-	addGitHubHeaders(req, token)
-	client := p.client()
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("github logs returned %s", resp.Status)
-	}
-	raw, err := io.ReadAll(resp.Body)
-	return string(raw), err
+	var body string
+	err := p.doWithRetry(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return err
+		}
+		addGitHubHeaders(req, token)
+		resp, err := p.client().Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return &githubHTTPError{StatusCode: resp.StatusCode, Status: resp.Status}
+		}
+		raw, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+		body = string(raw)
+		return nil
+	})
+	return body, err
 }
 
 func (p GitHubProvider) getJSON(ctx context.Context, endpoint, token string, out any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
-	if err != nil {
+	return p.doWithRetry(ctx, func() error {
+		req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, nil)
+		if err != nil {
+			return err
+		}
+		addGitHubHeaders(req, token)
+		resp, err := p.client().Do(req)
+		if err != nil {
+			return err
+		}
+		defer resp.Body.Close()
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			return &githubHTTPError{StatusCode: resp.StatusCode, Status: resp.Status}
+		}
+		return json.NewDecoder(resp.Body).Decode(out)
+	})
+}
+
+func (p GitHubProvider) doWithRetry(ctx context.Context, op func() error) error {
+	if err := p.circuit().Allow(); err != nil {
 		return err
 	}
-	addGitHubHeaders(req, token)
-	resp, err := p.client().Do(req)
-	if err != nil {
-		return err
+	attempts := p.maxAttempts()
+	var lastErr error
+	for i := 0; i < attempts; i++ {
+		if err := ctx.Err(); err != nil {
+			return err
+		}
+		lastErr = op()
+		if lastErr == nil {
+			p.circuit().RecordSuccess()
+			return nil
+		}
+		if !isRetryableGitHubError(lastErr) {
+			p.circuit().RecordFailure()
+			return lastErr
+		}
+		if i+1 < attempts {
+			p.sleep(githubBackoff(i))
+		}
 	}
-	defer resp.Body.Close()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return fmt.Errorf("github API returned %s", resp.Status)
-	}
-	return json.NewDecoder(resp.Body).Decode(out)
+	p.circuit().RecordFailure()
+	return fmt.Errorf("%w: %v", ErrGitHubUnavailable, lastErr)
 }
 
 func (p GitHubProvider) client() *http.Client {

@@ -18,6 +18,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
@@ -317,6 +318,15 @@ func (h *Handler) createFeedback(c *gin.Context) {
 				"feedbackId": row.ID, "alertId": alert.ID, "rating": row.Rating,
 			}))
 		}
+	}
+	if row.Rating > 0 && row.Rating <= 2 && isMemoryFeedbackTarget(row.TargetType) && h.memory != nil {
+		_, _ = h.memory.WithContext(c.Request.Context()).ApplyFeedbackDecay(memory.ApplyFeedbackDecayRequest{
+			SpaceID:    space,
+			MemoryID:   row.TargetID,
+			FeedbackID: row.ID,
+			Rating:     row.Rating,
+			ActorID:    row.ActorID,
+		})
 	}
 	c.JSON(http.StatusCreated, row)
 }
@@ -1485,6 +1495,15 @@ func slugify(value string) string {
 		return "default"
 	}
 	return strings.Join(fields, "-")
+}
+
+func isMemoryFeedbackTarget(targetType string) bool {
+	switch strings.ToLower(strings.TrimSpace(targetType)) {
+	case "memory", "memory_hit":
+		return true
+	default:
+		return false
+	}
 }
 
 func normalizeFeedbackCategory(value string) string {

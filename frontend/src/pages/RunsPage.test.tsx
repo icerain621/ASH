@@ -2,6 +2,7 @@ import { screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RunsPage } from "./RunsPage";
 import { renderPage } from "@/test/renderPage";
+import { useRunStream } from "@/services/sse/runStream";
 
 vi.mock("@/modules/runs/api/runs.api", () => ({
   listRuns: vi.fn().mockResolvedValue({ items: [] }),
@@ -30,15 +31,32 @@ vi.mock("@/modules/scenarios/api/scenarios.api", () => ({
 }));
 
 vi.mock("@/services/sse/runStream", () => ({
-  useRunStream: () => ({ lines: [], status: "idle" as const }),
+  useRunStream: vi.fn(() => ({ lines: [], status: "idle" as const })),
 }));
 
 describe("RunsPage", () => {
   it("renders runs console heading and create controls", async () => {
+    vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "idle" });
     renderPage(<RunsPage />);
     expect(screen.getByRole("heading", { name: "运行" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "新建运行" })).toBeInTheDocument();
+    });
+  });
+
+  it("shows SSE reconnecting status label", async () => {
+    vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "reconnecting" });
+    renderPage(<RunsPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/重连中/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows SSE polling fallback status label", async () => {
+    vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "polling" });
+    renderPage(<RunsPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/轮询回退/)).toBeInTheDocument();
     });
   });
 });

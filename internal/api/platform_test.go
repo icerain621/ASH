@@ -1423,6 +1423,46 @@ func TestFeedbackRejectsUnauthorizedTargetSpace(t *testing.T) {
 	}
 }
 
+func TestFeedbackMemoryTargetDecaysConfidence(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	mem := store.MemoryRecord{
+		ID: "mem_feedback_decay", SpaceID: "local", Layer: "L0", Status: "approved",
+		SchemaVersion: 2, Title: "feedback decay", Body: "target body",
+		Sensitivity: "normal", Confidence: 0.8, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&mem).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	createBody := []byte(`{"targetType":"memory","targetId":"mem_feedback_decay","rating":1,"category":"quality","comment":"命中后有害"}`)
+	createResp := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/feedback", bytes.NewReader(createBody))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createResp, createReq)
+	if createResp.Code != http.StatusCreated {
+		t.Fatalf("create status=%d want 201 body=%s", createResp.Code, createResp.Body.String())
+	}
+
+	var row store.MemoryRecord
+	if err := db.First(&row, "id = ?", mem.ID).Error; err != nil {
+		t.Fatal(err)
+	}
+	if row.Confidence != 0.65 {
+		t.Fatalf("confidence=%v want 0.65 after rating=1 decay", row.Confidence)
+	}
+	var audits int64
+	if err := db.Model(&store.AuditLog{}).
+		Where("event_type = ? AND payload_json LIKE ?", "memory.confidence_adjusted", "%mem_feedback_decay%").
+		Count(&audits).Error; err != nil {
+		t.Fatal(err)
+	}
+	if audits != 1 {
+		t.Fatalf("audits=%d want 1", audits)
+	}
+}
+
 func TestFeedbackListUpdateAndLowScoreAlert(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	r, db := newPlatformTestRouter(t)
