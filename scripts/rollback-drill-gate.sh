@@ -17,7 +17,11 @@ START_SEC=$(date +%s)
 ash_evidence_step release-governance go test ./internal/api/... -run TestReleaseGovernanceAPI -count=1
 ash_evidence_step health-baseline go test ./internal/api/... -run TestHealthEndpointsLatencyBaseline -count=1
 ash_evidence_step concurrent-runs go test ./internal/api/... -run TestConcurrentRunsListBaseline -count=1
-ash_evidence_step doctor-static go test ./internal/doctor/... -run TestALLSuite -count=1
+if [[ "${ASH_ROLLBACK_DRILL_SKIP_DOCTOR:-0}" == "1" ]]; then
+  echo "SKIP doctor-static (ASH_ROLLBACK_DRILL_SKIP_DOCTOR=1)" | tee -a "$EVIDENCE/skipped.txt"
+else
+  ash_evidence_step doctor-static go test ./internal/doctor/... -run TestALLSuite -count=1
+fi
 
 END_SEC=$(date +%s)
 DURATION_MS=$(( (END_SEC - START_SEC) * 1000 ))
@@ -39,7 +43,11 @@ mkdir -p "$(dirname "$REPORT")"
   echo "1. 发布治理 API 记录 rollback drill（TestReleaseGovernanceAPI）"
   echo "2. 健康检查 P95 基线（TestHealthEndpointsLatencyBaseline）"
   echo "3. 并发 /runs 列表（TestConcurrentRunsListBaseline）"
-  echo "4. Doctor ALL 静态回归（TestALLSuite）"
+  if [[ "${ASH_ROLLBACK_DRILL_SKIP_DOCTOR:-0}" == "1" ]]; then
+    echo "4. Doctor ALL 静态回归（跳过：\`ASH_ROLLBACK_DRILL_SKIP_DOCTOR=1\`）"
+  else
+    echo "4. Doctor ALL 静态回归（TestALLSuite）"
+  fi
   echo
   echo "## 回滚触发失败准则（任一即回滚）"
   echo

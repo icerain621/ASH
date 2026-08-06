@@ -77,6 +77,8 @@ jobs:
           cache: true
 
       - name: Release window gate
+        env:
+          ASH_ROLLBACK_DRILL_SKIP_DOCTOR: "1"
         run: make release-window-gate
 
   postgres-sql-schema-e2e:

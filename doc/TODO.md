@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 控制码 / Scale 积压；≥16 文件） |
-| Git 远端 | ✅ | `main` @ `4d5acad`；CI / Postgres E2E / Live Worker **全绿**（2026-08-06） |
+| Git 远端 | ✅ | `main` @ `2bc33b2`（修 memory query confidence 门槛；CI 跟进中） |
 
 ### 优先级矩阵
 

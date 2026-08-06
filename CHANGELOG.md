@@ -9,6 +9,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 ### Added
 
 - fix: memory query 空间隔离单测补齐 `confidence>=0.2`（BR 检索门槛回归）。
+- CI：`release-window` / `mvp-signoff` 设置 `ASH_ROLLBACK_DRILL_SKIP_DOCTOR=1`，避免与 Backend Doctor 重复跑 `TestALLSuite`。
 - Sprint CB：CIPage 同步失败展示 `CI_PROVIDER_UNAVAILABLE` / `CI_*_LIST_FAILED`；控制面负例覆盖 Cancel 后 Resume/Approve（R-09/R-05）。
 - Sprint CA：发布窗口 / mvp-signoff 默认 `ASH_REQUIRE_ROLLBACK_DRILL=1`；告警指标 `run_inflight_count`（阈值 20）与 Prometheus `ash_run_inflight_live`（R-12/R-06）。
 - Sprint BZ：发布窗口强制 `rollback-drill`（含 `ASH_ROLLBACK_DRILL_MAX_MS` SLA）；`data-backup` 后 sha256 + SQLite `integrity_check`；`EvaluateGate` 纳入 rollback drill（缺省 warn，`ASH_REQUIRE_ROLLBACK_DRILL=1` 硬阻断）；触发准则写入证据报告（R-12）。
