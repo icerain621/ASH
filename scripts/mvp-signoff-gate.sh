@@ -15,6 +15,10 @@ EVIDENCE="$ASH_EVIDENCE_DIR"
 echo "Evidence dir: $EVIDENCE"
 
 export ASH_REQUIRE_ROLLBACK_DRILL="${ASH_REQUIRE_ROLLBACK_DRILL:-1}"
+# Nested audit/drill already covered by regression-short + doctor-all above.
+export ASH_RELEASE_AUDIT_SKIP_DOCTOR="${ASH_RELEASE_AUDIT_SKIP_DOCTOR:-1}"
+export ASH_RELEASE_AUDIT_SKIP_REGRESSION="${ASH_RELEASE_AUDIT_SKIP_REGRESSION:-1}"
+export ASH_ROLLBACK_DRILL_SKIP_DOCTOR="${ASH_ROLLBACK_DRILL_SKIP_DOCTOR:-1}"
 
 FAIL=0
 
@@ -40,9 +44,15 @@ run_step doctor-all go test ./internal/doctor/... -run TestALLSuite -count=1
 SKIP_OPENAPI="${ASH_RELEASE_AUDIT_SKIP_OPENAPI:-1}"
 if [[ "$SKIP_OPENAPI" == "1" ]]; then
   ash_evidence_optional_step release-window-audit \
-    env ASH_RELEASE_AUDIT_SKIP_OPENAPI=1 bash scripts/release-window-audit.sh
+    env ASH_RELEASE_AUDIT_SKIP_OPENAPI=1 \
+      ASH_RELEASE_AUDIT_SKIP_DOCTOR="${ASH_RELEASE_AUDIT_SKIP_DOCTOR:-1}" \
+      ASH_RELEASE_AUDIT_SKIP_REGRESSION="${ASH_RELEASE_AUDIT_SKIP_REGRESSION:-1}" \
+      bash scripts/release-window-audit.sh
 else
-  run_step release-window-audit bash scripts/release-window-audit.sh
+  run_step release-window-audit \
+    env ASH_RELEASE_AUDIT_SKIP_DOCTOR="${ASH_RELEASE_AUDIT_SKIP_DOCTOR:-1}" \
+      ASH_RELEASE_AUDIT_SKIP_REGRESSION="${ASH_RELEASE_AUDIT_SKIP_REGRESSION:-1}" \
+      bash scripts/release-window-audit.sh
 fi
 
 if ash_evidence_has_docker_postgres; then

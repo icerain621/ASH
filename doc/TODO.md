@@ -192,6 +192,13 @@ make signoff-gate
 | CB-1 | CIPage 展示 `CI_PROVIDER_UNAVAILABLE` 等错误码 | ✅ `formatCIError` + vitest |
 | CB-2 | 控制面 Cancel 后 Resume/Approve 负例 | ✅ `TestRunControlNegativeStatusCodes` |
 
+#### Sprint CC（P1 · mvp-signoff 去重 + R-08 控制面 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| CC-1 | mvp-signoff 嵌套 audit 默认跳过 Doctor/regression；drill 跳过 ALL | ✅ `ASH_RELEASE_AUDIT_SKIP_*` / `ASH_ROLLBACK_DRILL_SKIP_DOCTOR` |
+| CC-2 | 跨 space：`runs/{id}/cancel|resume|replay|approve` → 403 | ✅ `TestCrossSpaceAPIRegression` |
+
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
 | # | 任务 | 前置 | 验收 |
@@ -392,6 +399,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint CC：mvp-signoff 嵌套 audit/drill 去重 Doctor；控制面 cancel/resume/replay/approve 跨 space 403（R-08）。
 - Sprint CB：CIPage 展示 `CI_PROVIDER_UNAVAILABLE`；Cancel 后 Resume/Approve 负例（R-09/R-05）。
 - Sprint CA：发布门禁默认 `ASH_REQUIRE_ROLLBACK_DRILL=1`；告警 `run_inflight_count` + `ash_run_inflight_live`（R-12/R-06）。
 - Sprint BZ：发布窗口强制 `rollback-drill` + 时长 SLA；备份 sha256/`integrity_check`；`EvaluateGate` 纳入 drill（R-12）。

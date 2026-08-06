@@ -67,6 +67,8 @@ jobs:
       - name: MVP signoff static
         env:
           ASH_RELEASE_AUDIT_SKIP_OPENAPI: "1"
+          ASH_RELEASE_AUDIT_SKIP_DOCTOR: "1"
+          ASH_RELEASE_AUDIT_SKIP_REGRESSION: "1"
           ASH_ROLLBACK_DRILL_SKIP_DOCTOR: "1"
         run: make mvp-signoff
 

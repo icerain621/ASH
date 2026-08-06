@@ -9,18 +9,24 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 SKIP_OPENAPI="${ASH_RELEASE_AUDIT_SKIP_OPENAPI:-0}"
+SKIP_DOCTOR="${ASH_RELEASE_AUDIT_SKIP_DOCTOR:-0}"
+SKIP_REGRESSION="${ASH_RELEASE_AUDIT_SKIP_REGRESSION:-0}"
 LIVE_WORKER="${ASH_WORKER_URL:-}"
 
 echo "== H-08 release window audit (static) =="
 
-echo "== §3 Doctor ALL (TestALLSuite, expect 43/43) =="
-go test ./internal/doctor/... -run TestALLSuite -count=1
+if [[ "$SKIP_DOCTOR" == "1" ]]; then
+  echo "== §3 Doctor suites skipped (ASH_RELEASE_AUDIT_SKIP_DOCTOR=1) =="
+else
+  echo "== §3 Doctor ALL (TestALLSuite, expect 43/43) =="
+  go test ./internal/doctor/... -run TestALLSuite -count=1
 
-echo "== §3 Doctor M3 (TestM3Suite) =="
-go test ./internal/doctor/... -run TestM3Suite -count=1
+  echo "== §3 Doctor M3 (TestM3Suite) =="
+  go test ./internal/doctor/... -run TestM3Suite -count=1
 
-echo "== §3 Doctor TR3 (TestTR3Suite) =="
-go test ./internal/doctor/... -run TestTR3Suite -count=1
+  echo "== §3 Doctor TR3 (TestTR3Suite) =="
+  go test ./internal/doctor/... -run TestTR3Suite -count=1
+fi
 
 if [[ -n "${ASH_RELEASE_AUDIT_DATA_DIR:-}" ]]; then
   echo "== §3 CLI doctor ALL md report (fresh ASH_DATA_DIR) =="
@@ -29,8 +35,12 @@ else
   echo "== §3 CLI doctor md report skipped (set ASH_RELEASE_AUDIT_DATA_DIR for archive) =="
 fi
 
-echo "== §4 regression-short =="
-bash scripts/regression-short.sh
+if [[ "$SKIP_REGRESSION" == "1" ]]; then
+  echo "== §4 regression-short skipped (ASH_RELEASE_AUDIT_SKIP_REGRESSION=1) =="
+else
+  echo "== §4 regression-short =="
+  bash scripts/regression-short.sh
+fi
 
 if [[ "$SKIP_OPENAPI" != "1" ]]; then
   echo "== §4 openapi-check =="
