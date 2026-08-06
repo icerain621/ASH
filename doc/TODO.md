@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 控制码 / Scale 积压；≥16 文件） |
-| Git 远端 | ⚠️ | 本地 `main` @ `852726b`+ 证据刷新 ahead；推送暂缓 |
+| Git 远端 | ⚠️ | 本地 `main` ahead（含 Sprint CE）；推送暂缓 |
 
 ### 优先级矩阵
 
@@ -205,6 +205,14 @@ make signoff-gate
 |---|------|------|
 | CD-1 | `release-window-gate`（备份修复后） | ✅ 2026-08-06 @ `852726b` |
 | CD-2 | `postgres-app-gate` + `cloud-acceptance`（port 5433） | ✅ H-01~H-03 本地；证据已刷新 |
+
+#### Sprint CE（P1 · Observability / R-08 / 证据 SHA · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| CE-1 | Observability 展示 `run_inflight_count` + vitest | ✅ `ObservabilityPage` 治理面板 + Prometheus 快照 |
+| CE-2 | CrossSpace 扩敏感写路径；CI diagnosis 跨 space → 403 | ✅ `TestCrossSpaceAPIRegression`；`decideCIDiagnosis` 先查再鉴权 |
+| CE-3 | `evidence-sha-gate`（默认 WARN / `ASH_REQUIRE_EVIDENCE_SHA=1` 硬失败） | ✅ smoke + 接入 release-window / mvp-signoff |
 
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
@@ -406,6 +414,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint CE：Observability 展示 `run_inflight_count`；CrossSpace 扩 secret/memory/CI/audit/plugin/access；CI diagnosis 跨 space 403；`evidence-sha-gate`（R-06/R-08/证据一致性）。
 - Sprint CD：本地 Docker 复验 `release-window` / `postgres-app-gate` / `cloud-acceptance`（port 5433）；刷新 H-01~H-03 与发布窗口证据。
 - Sprint CC：mvp-signoff 嵌套 audit/drill 去重 Doctor；控制面 cancel/resume/replay/approve 跨 space 403（R-08）。
 - Sprint CB：CIPage 展示 `CI_PROVIDER_UNAVAILABLE`；Cancel 后 Resume/Approve 负例（R-09/R-05）。

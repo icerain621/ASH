@@ -274,21 +274,29 @@ func (h *Handler) dismissCIDiagnosis(c *gin.Context) {
 }
 
 func (h *Handler) decideCIDiagnosis(c *gin.Context, decision string) {
-	space := currentSpace(c)
-	if !h.requirePermission(c, permCIDiagnose, space) {
+	id := strings.TrimSpace(c.Param("diagnosisId"))
+	var row store.CIDiagnosis
+	if err := h.dbFor(c).First(&row, "id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("CI_DIAGNOSIS_NOT_FOUND", "ci diagnosis not found"))
+		return
+	}
+	if !h.requireRequestSpace(c, row.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permCIDiagnose, row.SpaceID) {
 		return
 	}
 	var req decideCIDiagnosisRequest
 	_ = c.ShouldBindJSON(&req)
 	resp, err := h.ciFor(c).DecideDiagnosis(ci.DecideDiagnosisRequest{
-		SpaceID: space, DiagnosisID: c.Param("diagnosisId"), Decision: decision,
+		SpaceID: row.SpaceID, DiagnosisID: row.ID, Decision: decision,
 		Reason: req.Reason, ActorID: currentActor(c),
 	})
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("CI_DIAGNOSIS_DECISION_FAILED", err.Error()))
 		return
 	}
-	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "ci.diagnosis_decided", map[string]any{
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "ci.diagnosis_decided", map[string]any{
 		"diagnosisId": resp.ID, "decision": decision, "reason": req.Reason,
 		"connectionId": resp.ConnectionID, "runId": resp.RunID, "jobId": resp.JobID,
 	}))

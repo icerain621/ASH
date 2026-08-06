@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CE：Observability 治理面板展示 `run_inflight_count`；`TestCrossSpaceAPIRegression` 扩 secret/memory/CI/audit/plugin/artifact·checkpoint access；CI diagnosis adopt/dismiss 先按 ID 鉴权再决策（跨 space 403）；`evidence-sha-gate`（默认 WARN，`ASH_REQUIRE_EVIDENCE_SHA=1` 硬失败）接入 release-window / mvp-signoff / `regression-short` smoke（R-06/R-08）。
 - fix: memory query 空间隔离单测补齐 `confidence>=0.2`（BR 检索门槛回归）。
 - CI：`release-window` / `mvp-signoff` 设置 `ASH_ROLLBACK_DRILL_SKIP_DOCTOR=1`，避免与 Backend Doctor 重复跑 `TestALLSuite`。
 - Sprint CD：本地 Docker 复验 release-window / postgres-app-gate / cloud-acceptance；证据刷新至当前 HEAD（R-12/BI）。

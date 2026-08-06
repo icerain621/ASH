@@ -19,6 +19,7 @@ const GOVERNANCE_METRIC_HINTS: Record<string, string> = {
   memory_unreviewed_backlog: "未评审记忆候选（status=candidate）总数",
   rag_fts_fallback_rate: "窗口内 RAG chunk 降级查询占比",
   plugin_export_failures: "窗口内 plugin.export_failed 审计事件数",
+  run_inflight_count: "running / waiting_approval 运行数（Scale backlog）",
   run_failure_rate: "运行失败 / 取消占比",
   api_error_rate: "审计日志中含 failed 的事件占比",
   queue_backlog_minutes: "长时间未开始的运行步骤数",
@@ -204,7 +205,7 @@ export function ObservabilityPage() {
       <div className="pane">
         <div className="pane-title">
           <h2>治理指标告警</h2>
-          <span>记忆 / RAG / 插件</span>
+          <span>记忆 / RAG / 插件 / 运行积压</span>
         </div>
         <table className="table">
           <thead>

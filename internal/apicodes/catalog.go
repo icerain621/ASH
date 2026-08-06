@@ -101,6 +101,7 @@ var Catalog = map[string]Entry{
 	"CI_PROVIDER_UNAVAILABLE":       {Domain: "ci", Summary: "GitHub CI provider unavailable after retry/circuit open"},
 	"CI_DIAGNOSE_FAILED":            {Domain: "ci", Summary: "CI failure diagnosis failed"},
 	"CI_DIAGNOSIS_LIST_FAILED":      {Domain: "ci", Summary: "Failed to list CI diagnoses"},
+	"CI_DIAGNOSIS_NOT_FOUND":        {Domain: "ci", Summary: "CI diagnosis not found"},
 	"CI_DIAGNOSIS_DECISION_FAILED":  {Domain: "ci", Summary: "Failed to adopt/dismiss diagnosis"},
 	"INVALID_FROM":                  {Domain: "metrics", Summary: "metrics overview from timestamp invalid"},
 	"INVALID_TO":                    {Domain: "metrics", Summary: "metrics overview to timestamp invalid"},

@@ -59,6 +59,8 @@ echo "== bootstrap sqlite (if missing) =="
 bash scripts/bootstrap-local-ash-db.sh | tee -a "$EVIDENCE/bootstrap.log"
 
 run_step config-env-gate bash scripts/config-env-gate.sh
+# Soft check by default; set ASH_REQUIRE_EVIDENCE_SHA=1 to hard-fail stale *-latest.md SHAs.
+ash_evidence_optional_step evidence-sha-gate bash scripts/evidence-sha-gate.sh
 run_step t0-alert-gate bash scripts/t0-alert-gate.sh
 run_step t1-metrics-gate bash scripts/t1-metrics-gate.sh
 run_step data-backup bash scripts/ash-data-backup.sh

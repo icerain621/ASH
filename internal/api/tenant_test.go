@@ -135,7 +135,22 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		StepID: "qa.verify", Gate: "human", Reason: "cross", Status: "pending",
 		EvidenceJSON: `{}`, CreatedAt: now, UpdatedAt: now,
 	}
-	for _, row := range []any{&run, &approval} {
+	secret := store.SecretRecord{
+		ID: "sec_cross_reg", SpaceID: "space_other", Name: "CROSS_REG_TOKEN",
+		Status: "active", ScopeJSON: "{}", ValueCiphertext: "x", ValueDigest: "d",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	mem := store.MemoryRecord{
+		ID: "mem_cross_reg", Layer: "L1", Status: "candidate", SpaceID: "space_other",
+		SchemaVersion: 1, Title: "cross", Body: "body", TagsJSON: "[]", Confidence: 0.9,
+		Sensitivity: "normal", CreatedAt: now, UpdatedAt: now,
+	}
+	diag := store.CIDiagnosis{
+		ID: "diag_cross_reg", SpaceID: "space_other", Status: "ready",
+		RootCause: "fixture", FixSuggestionsJSON: "[]", EvidenceRefsJSON: "[]",
+		DecisionStatus: "pending", CreatedAt: now, UpdatedAt: now,
+	}
+	for _, row := range []any{&run, &approval, &secret, &mem, &diag} {
 		if err := db.Create(row).Error; err != nil {
 			t.Fatal(err)
 		}
@@ -150,6 +165,8 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		{"stream", http.MethodGet, "/api/v1/runs/" + run.ID + "/stream", ""},
 		{"provenance", http.MethodGet, "/api/v1/runs/" + run.ID + "/provenance", ""},
 		{"artifacts", http.MethodGet, "/api/v1/runs/" + run.ID + "/artifacts", ""},
+		{"artifactAccess", http.MethodGet, "/api/v1/runs/" + run.ID + "/artifacts/bundle.zip/access", ""},
+		{"checkpointAccess", http.MethodGet, "/api/v1/runs/" + run.ID + "/checkpoints/cp_missing/access", ""},
 		{"timeline", http.MethodGet, "/api/v1/runs/" + run.ID + "/timeline", ""},
 		{"runCancel", http.MethodPost, "/api/v1/runs/" + run.ID + "/cancel", ""},
 		{"runResume", http.MethodPost, "/api/v1/runs/" + run.ID + "/resume", ""},
@@ -159,6 +176,15 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		{"reject", http.MethodPost, "/api/v1/approvals/" + approval.ID + "/reject", `{"reason":"x"}`},
 		{"createRelease", http.MethodPost, "/api/v1/releases", `{"spaceId":"space_other","version":"9.9.9","title":"x"}`},
 		{"createRepo", http.MethodPost, "/api/v1/repo/connections", `{"spaceId":"space_other","provider":"github","owner":"o","repo":"r","secretId":"sec_missing"}`},
+		{"createSecret", http.MethodPost, "/api/v1/secrets", `{"spaceId":"space_other","name":"X_TOKEN","value":"secret-value-here"}`},
+		{"rotateSecret", http.MethodPost, "/api/v1/secrets/" + secret.ID + "/rotate", `{"value":"new-secret-value"}`},
+		{"deleteSecret", http.MethodDelete, "/api/v1/secrets/" + secret.ID, ""},
+		{"reviewMemory", http.MethodPost, "/api/v1/memory/candidates/" + mem.ID + "/review", `{"decision":"approve","reason":"x","policyProfile":"default"}`},
+		{"getMemory", http.MethodGet, "/api/v1/memory/records/" + mem.ID, ""},
+		{"adoptDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/adopt", `{"reason":"x"}`},
+		{"dismissDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/dismiss", `{"reason":"x"}`},
+		{"auditExport", http.MethodPost, "/api/v1/audit/export", `{"spaceId":"space_other"}`},
+		{"registerPlugin", http.MethodPost, "/api/v1/plugins", `{"spaceId":"space_other","name":"p","version":"1.0.0","endpoint":"http://127.0.0.1:9"}`},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
