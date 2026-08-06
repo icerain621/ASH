@@ -19,9 +19,10 @@ DEST="$BACKUP_DIR/ash-${TS}.db"
 cp -f "$SRC" "$DEST"
 
 if command -v sha256sum >/dev/null 2>&1; then
-  sha256sum "$DEST" | tee "$DEST.sha256"
+  # Basename-only checksum so verify can `cd` into the backup dir safely.
+  (cd "$(dirname "$DEST")" && sha256sum "$(basename "$DEST")" | tee "$(basename "$DEST").sha256")
 elif command -v shasum >/dev/null 2>&1; then
-  shasum -a 256 "$DEST" | tee "$DEST.sha256"
+  (cd "$(dirname "$DEST")" && shasum -a 256 "$(basename "$DEST")" | tee "$(basename "$DEST").sha256")
 fi
 
 echo "OK backup: $DEST"
