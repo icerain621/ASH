@@ -23,5 +23,6 @@ go test ./internal/opsenv/... -count=1
 go test ./internal/memory/... -count=1 -short
 go test ./internal/openapicheck -run 'TestContractMatchesSwagger|TestApiV1SuccessResponsesAvoidGenericEnvelope|TestValidateContract|TestValidateReadyzContract' -count=1
 go test ./internal/store -run 'TestMigrationCatalog_RLSCoverage|TestVerifyRLSMigrationSQL|TestRLSExpectedPolicyCount' -count=1
+bash scripts/ash-data-backup-smoke.sh
 
 echo "OK regression-short"
