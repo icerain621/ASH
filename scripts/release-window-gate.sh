@@ -63,7 +63,7 @@ run_step t0-alert-gate bash scripts/t0-alert-gate.sh
 run_step t1-metrics-gate bash scripts/t1-metrics-gate.sh
 run_step data-backup bash scripts/ash-data-backup.sh
 run_step pre-migrate-gate bash scripts/pre-migrate-gate.sh
-run_step rollback-drill bash scripts/rollback-drill-gate.sh
+run_step rollback-drill env ASH_ROLLBACK_DRILL_SKIP_DOCTOR="${ASH_ROLLBACK_DRILL_SKIP_DOCTOR:-0}" bash scripts/rollback-drill-gate.sh
 
 if [[ "${ASH_RELEASE_WINDOW_INCLUDE_MVP:-0}" == "1" ]]; then
   SKIP_OPENAPI="${ASH_RELEASE_AUDIT_SKIP_OPENAPI:-1}"

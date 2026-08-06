@@ -1,9 +1,9 @@
 # 回滚演练证据（自动化）
 
-- 时间（UTC）：2026-08-06T14:11:16Z
-- 耗时（ms）：40000
-- SLA 上限（ms）：600000（`ASH_ROLLBACK_DRILL_MAX_MS`）
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/rollback-drill-20260806T141035Z`
+- 时间（UTC）：2026-08-06T16:12:32Z
+- 耗时（ms）：44000
+- SLA 上限（ms）：300000（`ASH_ROLLBACK_DRILL_MAX_MS`）
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/release-window-20260806T161052Z`
 - 门禁：`make rollback-drill`
 
 ## 步骤

@@ -199,6 +199,13 @@ make signoff-gate
 | CC-1 | mvp-signoff 嵌套 audit 默认跳过 Doctor/regression；drill 跳过 ALL | ✅ `ASH_RELEASE_AUDIT_SKIP_*` / `ASH_ROLLBACK_DRILL_SKIP_DOCTOR` |
 | CC-2 | 跨 space：`runs/{id}/cancel|resume|replay|approve` → 403 | ✅ `TestCrossSpaceAPIRegression` |
 
+#### Sprint CD（P1 · 本地 Docker BI 复验 · 当前 HEAD）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| CD-1 | `release-window-gate`（备份修复后） | ✅ 2026-08-06 @ `852726b` |
+| CD-2 | `postgres-app-gate` + `cloud-acceptance`（port 5433） | ✅ H-01~H-03 本地；证据已刷新 |
+
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
 | # | 任务 | 前置 | 验收 |
@@ -206,7 +213,7 @@ make signoff-gate
 | BI-1 | 配置 `config/cloud-rds.env` | RDS 实例 | `make cloud-acceptance` 绿 |
 | BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
 | BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | ✅ 本地 `make postgres-app-gate`（M3-06/07 + readyz） |
-| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `postgres-app-gate` + `cloud-acceptance` 本地（2026-08-06，port 5433） |
+| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `postgres-app-gate` + `cloud-acceptance` @ `852726b`（2026-08-06，port 5433） |
 | BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | ✅ 本地 Docker 2026-07-07；生产切换日待执行 |
 
 ```bash
