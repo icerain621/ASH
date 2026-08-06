@@ -199,7 +199,7 @@ make signoff-gate
 | BI-1 | 配置 `config/cloud-rds.env` | RDS 实例 | `make cloud-acceptance` 绿 |
 | BI-2 | H-01 staging `migrate copy/verify` | BI-1 + `.ash/ash.db` | `h01-h03-cloud-signoff.md` 勾选 |
 | BI-3 | H-02/H-03 `ASH_DATABASE_APP_URL` + RLS Worker | BI-2 | ✅ 本地 `make postgres-app-gate`（M3-06/07 + readyz） |
-| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `make cloud-acceptance` 本地演练（2026-07-06） |
+| BI-4 | 或本地 Docker：`make postgres-app-gate` | Docker 运行 | ✅ `postgres-app-gate` + `cloud-acceptance` 本地（2026-08-06，port 5433） |
 | BI-5 | 切换日：`data-backup` → 停 SQLite Worker → migrate → `t0-alert-gate` | runbook §4 | ✅ 本地 Docker 2026-07-07；生产切换日待执行 |
 
 ```bash
