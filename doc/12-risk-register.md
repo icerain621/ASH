@@ -17,13 +17,13 @@
 | R-03 | CI 诊断准确率不足 | 技术 | H | 根因定位偏差导致修复无效 | 诊断采纳率低、重复失败率高 | 高频模式已扩（cancel/OOM/frontend，Sprint BQ）；BJ 用真实 GitHub log 校准采纳率 | 后端负责人 | Mitigating |
 | R-04 | Memory 记忆污染 | 产品/数据 | M | 错误信息被高置信写入 | 命中后负反馈升高 | TTL/sweep 已有；低分 feedback 衰减 + 检索置信度门槛（Sprint BR）；高置信额外确认待产品 | 产品+算法 | Mitigating |
 | R-05 | 任务状态机异常流转 | 技术 | H | 出现非法状态跳转 | 状态异常告警、人工修复增加 | 状态表 + mid-loop Cancel + Replay/Approve/Resume 门禁（BT–BW） | 后端负责人 | Mitigating |
-| R-06 | 队列积压导致任务延迟 | 稳定性 | M | 峰值任务超出 worker 消费能力 | 队列积压时长、消费速率下降 | 队列分级、动态扩容、降级非关键任务 | 后端/运维 | Open |
+| R-06 | 队列积压导致任务延迟 | 稳定性 | M | 峰值任务超出 worker 消费能力 | 队列积压时长、消费速率下降 | TTL queue-gate；Scale inflight；告警 `run_inflight_count` + `ash_run_inflight_live`（Sprint BY/CA）；分级扩容仍待运维 | 后端/运维 | Mitigating |
 | R-07 | SSE 不稳定影响体验 | 前端/稳定性 | M | 日志流频繁中断 | SSE 断连率、前端报错率 | 自动重连 + Last-Event-ID + timeline 轮询回退（Sprint BM/BN）；生产观察断连率 | 前端负责人 | Mitigating |
 | R-08 | 权限策略缺陷导致越权 | 安全 | H | 非授权用户访问敏感接口 | 401/403 异常分布、审计告警 | RBAC + `TestCrossSpaceAPIRegression`（Sprint BM）；发布窗口抽测 | 后端负责人 | Mitigating |
 | R-09 | 关键依赖服务不稳定 | 外部依赖 | M | Repo/CI API 波动或限流 | 第三方错误率上升 | GitHub 429/5xx 退避重试 + 连续失败熔断；API `CI_PROVIDER_UNAVAILABLE`（Sprint BX） | 平台负责人 | Mitigating |
-| R-10 | 文档与实现不一致 | 协作 | M | 接口变更未同步文档 | 联调阻塞次数 | OpenAPI 作为单一契约源；变更必须更新文档 | 全体模块负责人 | Open |
+| R-10 | 文档与实现不一致 | 协作 | M | 接口变更未同步文档 | 联调阻塞次数 | OpenAPI 控制面 409 / Scale backlog 字段已同步（Sprint BY）；变更继续走 openapi-check | 全体模块负责人 | Mitigating |
 | R-11 | 人员并行不足 | 资源 | M | 单点人员阻塞关键链路 | PR 积压、任务延期 | 明确备份人；关键模块双人覆盖 | 项目经理 | Open |
-| R-12 | 上线回滚预案不完整 | 发布 | H | 发布异常后无法快速回退 | 回滚演练失败/超时 | 上线前强制演练；明确回滚触发阈值 | 发布负责人 | Open |
+| R-12 | 上线回滚预案不完整 | 发布 | H | 发布异常后无法快速回退 | 回滚演练失败/超时 | 发布窗口强制 `rollback-drill` + SLA；备份 sha256/`integrity_check`；`EvaluateGate` 纳入 drill（`ASH_REQUIRE_ROLLBACK_DRILL` 可硬阻断）；触发准则写入证据（Sprint BZ） | 发布负责人 | Mitigating |
 
 ## 3. Top 5 高优先风险（当前关注）
 1. R-01 需求变更失控

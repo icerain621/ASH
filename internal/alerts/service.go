@@ -408,6 +408,14 @@ func (s *Service) metricValue(rule store.AlertRule, now time.Time) (float64, boo
 			return 0, false, nil, "", err
 		}
 		return float64(failed), true, []string{fmt.Sprintf("audit:plugin_export_failed=%d", failed)}, "插件导出失败次数超过阈值", nil
+	case "run_inflight_count":
+		var inflight int64
+		if err := s.gdb().Model(&store.RunRecord{}).
+			Where("space_id = ? AND status IN ?", rule.SpaceID, []string{"running", "waiting_approval"}).
+			Count(&inflight).Error; err != nil {
+			return 0, false, nil, "", err
+		}
+		return float64(inflight), true, []string{fmt.Sprintf("runs:inflight=%d", inflight)}, "运行 inflight 积压超过阈值", nil
 	default:
 		return 0, false, nil, "未知指标，规则暂不可评估", nil
 	}
@@ -455,6 +463,18 @@ func (s *Service) writeGovernancePrometheus(b *strings.Builder, opts PrometheusO
 		b.WriteString(fmt.Sprintf("ash_rag_fts_fallback_live{space_id=%q} %d\n", label(opts.SpaceID), fallback))
 	} else {
 		b.WriteString(fmt.Sprintf("ash_rag_fts_fallback_live %d\n", fallback))
+	}
+	var inflight int64
+	runQ := s.gdb().Model(&store.RunRecord{}).Where("status IN ?", []string{"running", "waiting_approval"})
+	if opts.scoped() {
+		runQ = runQ.Where("space_id = ?", opts.SpaceID)
+	}
+	_ = runQ.Count(&inflight).Error
+	writeHelp("ash_run_inflight_live", "Runs currently running or waiting_approval.", "gauge")
+	if opts.scoped() {
+		b.WriteString(fmt.Sprintf("ash_run_inflight_live{space_id=%q} %d\n", label(opts.SpaceID), inflight))
+	} else {
+		b.WriteString(fmt.Sprintf("ash_run_inflight_live %d\n", inflight))
 	}
 }
 
@@ -523,6 +543,7 @@ func defaultRules(spaceID string, now time.Time) []store.AlertRule {
 		rule(spaceID, "记忆未评审积压", "memory_unreviewed_backlog", 50, 60, "warn", "候选记忆（status=candidate）数量超过阈值", now),
 		rule(spaceID, "RAG FTS 降级率", "rag_fts_fallback_rate", 0.5, 60, "warn", "窗口内 rag.retrieved chunk 模式占比超过阈值", now),
 		rule(spaceID, "插件导出失败", "plugin_export_failures", 3, 60, "warn", "窗口内 plugin.export_failed 审计事件超过阈值", now),
+		rule(spaceID, "运行 inflight 积压", "run_inflight_count", 20, 60, "warn", "status=running/waiting_approval 的运行数超过阈值（Scale backlog）", now),
 	}
 }
 

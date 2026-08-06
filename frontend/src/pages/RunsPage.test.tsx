@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { RunsPage } from "./RunsPage";
 import { renderPage } from "@/test/renderPage";
 import { useRunStream } from "@/services/sse/runStream";
+import { ApiError } from "@/services/http/client";
+import { listRuns } from "@/modules/runs/api/runs.api";
 
 vi.mock("@/modules/runs/api/runs.api", () => ({
   listRuns: vi.fn().mockResolvedValue({ items: [] }),
@@ -57,6 +59,19 @@ describe("RunsPage", () => {
     renderPage(<RunsPage />);
     await waitFor(() => {
       expect(screen.getByText(/轮询回退/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows ApiError control codes in error banner", async () => {
+    vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "idle" });
+    vi.mocked(listRuns).mockRejectedValueOnce(
+      new ApiError("RUN_NOT_REPLAYABLE", "run is not in a replayable status"),
+    );
+    renderPage(<RunsPage />);
+    await waitFor(() => {
+      expect(
+        screen.getByText(/RUN_NOT_REPLAYABLE: run is not in a replayable status/),
+      ).toBeInTheDocument();
     });
   });
 });

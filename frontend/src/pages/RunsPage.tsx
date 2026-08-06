@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-table";
 import { CheckCircle, Download, ExternalLink, GitBranch, Link2, Play, RefreshCw, RotateCcw, Square, Terminal } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { ApiError } from "@/services/http/client";
 import {
   approveRun,
   cancelRun,
@@ -200,6 +201,25 @@ function spanTone(status: string) {
 
 function isTerminalStatus(status?: string) {
   return status === "finished" || status === "failed" || status === "canceled" || status === "cancelled";
+}
+
+function formatControlError(err: unknown): string | null {
+  if (!err) return null;
+  if (err instanceof ApiError) {
+    const known =
+      err.code === "RUN_NOT_RESUMABLE" ||
+      err.code === "RUN_NOT_APPROVABLE" ||
+      err.code === "RUN_NOT_REPLAYABLE" ||
+      err.code === "RUN_CANCELED" ||
+      err.code === "ILLEGAL_STATUS_TRANSITION" ||
+      err.code === "RUN_META_MISSING";
+    if (known) {
+      return `${err.code}: ${err.message}`;
+    }
+    return err.message || err.code;
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
 }
 
 function payloadRecord(payload: unknown) {
@@ -426,14 +446,14 @@ export function RunsPage() {
 
   const selected = detailQuery.data;
   const err =
-    runsQuery.error?.message ||
-    createMut.error?.message ||
-    resumeMut.error?.message ||
-    replayMut.error?.message ||
-    cancelMut.error?.message ||
-    approveMut.error?.message ||
-    artifactAccessMut.error?.message ||
-    checkpointAccessMut.error?.message;
+    formatControlError(runsQuery.error) ||
+    formatControlError(createMut.error) ||
+    formatControlError(resumeMut.error) ||
+    formatControlError(replayMut.error) ||
+    formatControlError(cancelMut.error) ||
+    formatControlError(approveMut.error) ||
+    formatControlError(artifactAccessMut.error) ||
+    formatControlError(checkpointAccessMut.error);
   const gate = waitingGate(timelineQuery.data?.items);
   const canCancel = selectedId && selected && !isTerminalStatus(selected.status);
   const canApprove = selectedId && selected?.status === "waiting_approval";

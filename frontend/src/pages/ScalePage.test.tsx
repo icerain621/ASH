@@ -9,6 +9,9 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
     memorySchemaVersion: 2,
     migrationReady: true,
     databaseDialect: "sqlite",
+    runRunningCount: 2,
+    runWaitingApprovalCount: 1,
+    runInflightCount: 3,
   }),
 }));
 
@@ -41,6 +44,14 @@ describe("ScalePage", () => {
     await waitFor(() => {
       expect(screen.getByText("M3-01")).toBeInTheDocument();
       expect(screen.getByText("TR3-10")).toBeInTheDocument();
+    });
+  });
+
+  it("shows run inflight backlog counts from readiness", async () => {
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByText("运行积压（inflight）")).toBeInTheDocument();
+      expect(screen.getByText(/3（running 2 · waiting 1）/)).toBeInTheDocument();
     });
   });
 });

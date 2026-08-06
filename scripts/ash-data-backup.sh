@@ -25,3 +25,7 @@ elif command -v shasum >/dev/null 2>&1; then
 fi
 
 echo "OK backup: $DEST"
+
+if [[ "${ASH_BACKUP_SKIP_VERIFY:-0}" != "1" ]]; then
+  ASH_BACKUP_FILE="$DEST" bash "$ROOT/scripts/ash-data-backup-verify.sh"
+fi

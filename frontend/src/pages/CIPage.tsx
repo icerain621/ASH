@@ -12,6 +12,19 @@ import {
   type CIDiagnosis,
 } from "@/modules/closure/api/closure.api";
 import { getReadyz } from "@/modules/health/api/health.api";
+import { ApiError } from "@/services/http/client";
+
+function formatCIError(err: unknown): string | null {
+  if (!err) return null;
+  if (err instanceof ApiError) {
+    if (err.code === "CI_PROVIDER_UNAVAILABLE" || err.code === "CI_RUN_LIST_FAILED" || err.code === "CI_JOB_LIST_FAILED") {
+      return `${err.code}: ${err.message}`;
+    }
+    return err.message || err.code;
+  }
+  if (err instanceof Error) return err.message;
+  return String(err);
+}
 
 export function CIPage() {
   const qc = useQueryClient();
@@ -120,7 +133,10 @@ export function CIPage() {
 
       {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error) && (
         <p className="error-text">
-          {(syncRunsMut.error || syncJobsMut.error || diagnoseMut.error || decideMut.error as Error)?.message}
+          {formatCIError(syncRunsMut.error) ||
+            formatCIError(syncJobsMut.error) ||
+            formatCIError(diagnoseMut.error) ||
+            formatCIError(decideMut.error)}
         </p>
       )}
 

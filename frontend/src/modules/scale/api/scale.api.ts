@@ -4,6 +4,9 @@ export type ScaleReadiness = {
   spaceId: string;
   memorySchemaVersion: number;
   memoryApprovedCount: number;
+  runRunningCount?: number;
+  runWaitingApprovalCount?: number;
+  runInflightCount?: number;
   ragDocumentCount: number;
   ragChunkCount: number;
   modelUsageRows: number;

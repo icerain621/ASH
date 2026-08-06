@@ -16,6 +16,9 @@ type ScaleReadinessResponse struct {
 	SpaceID              string `json:"spaceId"`
 	MemorySchemaVersion  int    `json:"memorySchemaVersion"`
 	MemoryApprovedCount  int64  `json:"memoryApprovedCount"`
+	RunRunningCount           int64  `json:"runRunningCount"`
+	RunWaitingApprovalCount   int64  `json:"runWaitingApprovalCount"`
+	RunInflightCount          int64  `json:"runInflightCount"`
 	RAGDocumentCount     int64  `json:"ragDocumentCount"`
 	RAGChunkCount        int64  `json:"ragChunkCount"`
 	ModelUsageRows       int64  `json:"modelUsageRows"`
@@ -79,6 +82,11 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	var memApproved int64
 	_ = db.Model(&store.MemoryRecord{}).
 		Where("space_id = ? AND status = ?", space, "approved").Count(&memApproved).Error
+	var runRunning, runWaiting int64
+	_ = db.Model(&store.RunRecord{}).
+		Where("space_id = ? AND status = ?", space, "running").Count(&runRunning).Error
+	_ = db.Model(&store.RunRecord{}).
+		Where("space_id = ? AND status = ?", space, "waiting_approval").Count(&runWaiting).Error
 	var ragDocs, ragChunks int64
 	_ = db.Model(&store.RAGDocument{}).Where("space_id = ?", space).Count(&ragDocs).Error
 	_ = db.Model(&store.RAGChunk{}).Where("space_id = ?", space).Count(&ragChunks).Error
@@ -122,6 +130,9 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		SpaceID:              space,
 		MemorySchemaVersion:  memory.CurrentSchemaVersion,
 		MemoryApprovedCount:  memApproved,
+		RunRunningCount:          runRunning,
+		RunWaitingApprovalCount:  runWaiting,
+		RunInflightCount:         runRunning + runWaiting,
 		RAGDocumentCount:     ragDocs,
 		RAGChunkCount:        ragChunks,
 		ModelUsageRows:       usageRows,

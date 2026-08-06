@@ -90,6 +90,20 @@ func Catalog() []Rule {
 			Labels:    []LabelSpec{{Name: "scenario", JSONField: "_scenario"}},
 		},
 		{
+			EventType: "run.canceled",
+			Metric:    "ash_run_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "status", Static: "canceled"}, {Name: "scenario", JSONField: "_scenario"}},
+		},
+		{
+			EventType: "run.canceled",
+			Metric:    "ash_run_inflight",
+			Kind:      MetricGauge,
+			Op:        OpDec,
+			Labels:    []LabelSpec{{Name: "scenario", JSONField: "_scenario"}},
+		},
+		{
 			EventType: "step.finished",
 			Metric:    "ash_step_total",
 			Kind:      MetricCounter,

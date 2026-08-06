@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev web-lint web-test web-gate verify regression-short cloud-acceptance mvp-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup worker-local-gate worker-production-gate pre-migrate-gate t1-metrics-gate scope-freeze-gate config-env-gate release-window-prefill release-window-gate bootstrap-local-ash-db local-readiness-gate signoff-apply signoff-gate kpi-reconcile-gate
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke secret-rotate-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static web web-build web-dev web-lint web-test web-gate verify regression-short cloud-acceptance mvp-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup data-backup-verify worker-local-gate worker-production-gate pre-migrate-gate t1-metrics-gate scope-freeze-gate config-env-gate release-window-prefill release-window-gate bootstrap-local-ash-db local-readiness-gate signoff-apply signoff-gate kpi-reconcile-gate
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -142,6 +142,9 @@ t0-alert-gate:
 
 data-backup:
 	bash scripts/ash-data-backup.sh
+
+data-backup-verify:
+	bash scripts/ash-data-backup-verify.sh
 
 worker-local-gate:
 	bash scripts/worker-local-gate.sh

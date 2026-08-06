@@ -166,6 +166,59 @@ func TestEvaluateMemoryBacklogAlert(t *testing.T) {
 	}
 }
 
+func TestEvaluateRunInflightAlert(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	for i := 0; i < 3; i++ {
+		status := "running"
+		if i == 2 {
+			status = "waiting_approval"
+		}
+		row := store.RunRecord{
+			ID: fmt.Sprintf("run_inflight_%d", i), TraceID: fmt.Sprintf("tr_%d", i), SpaceID: "local",
+			ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+			Status: status, StartedAt: now, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	rules, err := svc.ListRules("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, rule := range rules {
+		if rule.Metric != "run_inflight_count" {
+			continue
+		}
+		if err := db.Model(&store.AlertRule{}).Where("id = ?", rule.ID).
+			Update("threshold", 2).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	resp, err := svc.Evaluate("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range resp.Results {
+		if item.Metric == "run_inflight_count" && item.Status == "alert" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("resp=%+v want run_inflight alert", resp)
+	}
+	text, err := svc.PrometheusTextWith(PrometheusOptions{SpaceID: "local"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(text, "ash_run_inflight_live") {
+		t.Fatalf("prometheus missing run inflight metric:\n%s", text)
+	}
+}
+
 func TestEvaluateCleanSpaceNoCriticalAlerts(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)

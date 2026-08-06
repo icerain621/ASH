@@ -44,6 +44,34 @@ func TestReplay_runLifecycle(t *testing.T) {
 	}
 }
 
+func TestReplay_runCanceledClearsInflight(t *testing.T) {
+	events := []Event{
+		{
+			RunID: "run_c",
+			Type:  "run.started",
+			PayloadJSON: `{
+				"scenario":{"name":"feature_delivery","scenarioVersion":"1.0.0"},
+				"policyProfile":"default","inputsDigest":"d1"
+			}`,
+		},
+		{
+			RunID:       "run_c",
+			Type:        "run.canceled",
+			PayloadJSON: `{"status":"canceled"}`,
+		},
+	}
+	snap := Replay(events)
+	if snap.Counters[`ash_run_total{scenario="feature_delivery",status="canceled"}`] != 1 {
+		t.Fatalf("canceled counter=%v", snap.Counters)
+	}
+	if snap.Gauges[`ash_run_inflight{scenario="feature_delivery"}`] != 0 {
+		t.Fatalf("inflight=%v want 0 after cancel", snap.Gauges)
+	}
+	if err := ValidateReplayParity(events); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func TestReplay_toolAndPolicy(t *testing.T) {
 	events := []Event{
 		{
@@ -167,7 +195,7 @@ func TestReplay_memoryMigrated(t *testing.T) {
 
 func TestCatalog_coversAppendixCoreEvents(t *testing.T) {
 	want := []string{
-		"run.started", "run.finished", "run.failed", "step.finished",
+		"run.started", "run.finished", "run.failed", "run.canceled", "step.finished",
 		"tool.result", "policy.denied", "model.usage", "rag.results", "rag.retrieved",
 		"memory.candidate_created", "memory.reviewed",
 		"memory.hit_used", "memory.deprecated", "memory.query", "memory.migrated",

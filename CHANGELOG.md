@@ -8,6 +8,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CB：CIPage 同步失败展示 `CI_PROVIDER_UNAVAILABLE` / `CI_*_LIST_FAILED`；控制面负例覆盖 Cancel 后 Resume/Approve（R-09/R-05）。
+- Sprint CA：发布窗口 / mvp-signoff 默认 `ASH_REQUIRE_ROLLBACK_DRILL=1`；告警指标 `run_inflight_count`（阈值 20）与 Prometheus `ash_run_inflight_live`（R-12/R-06）。
+- Sprint BZ：发布窗口强制 `rollback-drill`（含 `ASH_ROLLBACK_DRILL_MAX_MS` SLA）；`data-backup` 后 sha256 + SQLite `integrity_check`；`EvaluateGate` 纳入 rollback drill（缺省 warn，`ASH_REQUIRE_ROLLBACK_DRILL=1` 硬阻断）；触发准则写入证据报告（R-12）。
+- Sprint BY：`run.canceled` 进入 derive/`ash_run_inflight` 对账；Scale 暴露 `runRunningCount` / `runWaitingApprovalCount` / `runInflightCount`；OpenAPI 控制面 409；RunsPage 展示 `RUN_NOT_*` 等错误码；控制面负例 API 单测；Scale/Runs 前端 smoke；vitest `afterEach(cleanup)` 避免多挂载串扰（R-06/R-10）。`make swagger` 代理不可达时自动镜像重试。
 - Sprint BX：GitHub provider 对 429/5xx/瞬时错误退避重试；连续失败熔断；API `CI_PROVIDER_UNAVAILABLE`（R-09）。
 - Sprint BW：`canApprove` / `canResume`；`ErrRunNotApprovable`；Approve 刷新后再转换以防 Cancel 竞态；API `RUN_NOT_APPROVABLE` / `ILLEGAL_STATUS_TRANSITION` / `RUN_CANCELED`（R-05）。
 - Sprint BV：Replay 仅允许终态源（finished/failed/canceled）；`ErrRunNotReplayable` / API `RUN_NOT_REPLAYABLE`（R-05）。

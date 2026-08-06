@@ -3503,6 +3503,12 @@ const docTemplate = `{
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -3621,6 +3627,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -3858,6 +3870,12 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -8829,6 +8847,15 @@ const docTemplate = `{
                 },
                 "rlsCatalogSummary": {
                     "type": "string"
+                },
+                "runInflightCount": {
+                    "type": "integer"
+                },
+                "runRunningCount": {
+                    "type": "integer"
+                },
+                "runWaitingApprovalCount": {
+                    "type": "integer"
                 },
                 "runtimeDsnHint": {
                     "type": "string"

@@ -361,7 +361,9 @@ func writeCIProviderError(c *gin.Context, fallbackCode string, err error) {
 	switch {
 	case errors.Is(err, ci.ErrGitHubCircuitOpen), errors.Is(err, ci.ErrGitHubUnavailable):
 		c.JSON(http.StatusBadGateway, errorBody("CI_PROVIDER_UNAVAILABLE", err.Error()))
+	case fallbackCode == "CI_JOB_LIST_FAILED":
+		c.JSON(http.StatusInternalServerError, errorBody("CI_JOB_LIST_FAILED", err.Error()))
 	default:
-		c.JSON(http.StatusInternalServerError, errorBody(fallbackCode, err.Error()))
+		c.JSON(http.StatusInternalServerError, errorBody("CI_RUN_LIST_FAILED", err.Error()))
 	}
 }

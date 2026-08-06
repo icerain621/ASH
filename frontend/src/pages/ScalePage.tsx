@@ -217,6 +217,14 @@ export function ScalePage() {
               <td>{r?.memoryApprovedCount ?? "-"}</td>
             </tr>
             <tr>
+              <td>运行积压（inflight）</td>
+              <td>
+                {r
+                  ? `${r.runInflightCount ?? (r.runRunningCount ?? 0) + (r.runWaitingApprovalCount ?? 0)}（running ${r.runRunningCount ?? 0} · waiting ${r.runWaitingApprovalCount ?? 0}）`
+                  : "-"}
+              </td>
+            </tr>
+            <tr>
               <td>RAG 文档 / 分块</td>
               <td>
                 {r ? `${r.ragDocumentCount} / ${r.ragChunkCount}` : "-"}

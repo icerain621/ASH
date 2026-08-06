@@ -78,6 +78,7 @@ func (h *Handler) replayRun(c *gin.Context) {
 // @Param runId path string true "run id"
 // @Success 200 {object} runs.CancelResponse
 // @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/runs/{runId}/cancel [post]
 func (h *Handler) cancelRun(c *gin.Context) {
@@ -102,6 +103,7 @@ func (h *Handler) cancelRun(c *gin.Context) {
 // @Param body body runs.ApproveRequest true "approval request"
 // @Success 200 {object} runs.ApproveResponse
 // @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/runs/{runId}/approve [post]
 func (h *Handler) approveRun(c *gin.Context) {

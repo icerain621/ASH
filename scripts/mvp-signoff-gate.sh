@@ -14,6 +14,8 @@ ash_evidence_init mvp-signoff
 EVIDENCE="$ASH_EVIDENCE_DIR"
 echo "Evidence dir: $EVIDENCE"
 
+export ASH_REQUIRE_ROLLBACK_DRILL="${ASH_REQUIRE_ROLLBACK_DRILL:-1}"
+
 FAIL=0
 
 run_step() {
@@ -59,7 +61,7 @@ else
   H01_STATUS="⏸ 需 ASH_DATABASE_URL"
 fi
 
-ash_evidence_optional_step rollback-drill bash scripts/rollback-drill-gate.sh
+run_step rollback-drill bash scripts/rollback-drill-gate.sh
 ash_evidence_optional_step worker-local-gate bash scripts/worker-local-gate.sh
 
 DATE_UTC="$(date -u +%Y-%m-%d)"

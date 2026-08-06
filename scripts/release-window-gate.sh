@@ -14,6 +14,9 @@ ash_evidence_init release-window
 EVIDENCE="$ASH_EVIDENCE_DIR"
 echo "Evidence dir: $EVIDENCE"
 
+# Release window requires a passed rollback drill on EvaluateGate paths exercised by gates.
+export ASH_REQUIRE_ROLLBACK_DRILL="${ASH_REQUIRE_ROLLBACK_DRILL:-1}"
+
 FAIL=0
 
 run_step() {
@@ -60,7 +63,7 @@ run_step t0-alert-gate bash scripts/t0-alert-gate.sh
 run_step t1-metrics-gate bash scripts/t1-metrics-gate.sh
 run_step data-backup bash scripts/ash-data-backup.sh
 run_step pre-migrate-gate bash scripts/pre-migrate-gate.sh
-ash_evidence_optional_step rollback-drill bash scripts/rollback-drill-gate.sh
+run_step rollback-drill bash scripts/rollback-drill-gate.sh
 
 if [[ "${ASH_RELEASE_WINDOW_INCLUDE_MVP:-0}" == "1" ]]; then
   SKIP_OPENAPI="${ASH_RELEASE_AUDIT_SKIP_OPENAPI:-1}"
@@ -135,6 +138,14 @@ write_report() {
     echo "- ${chk_cloud} \`make cloud-acceptance\`（云环境）"
     echo "- $([[ "$chk_t0" == "✅" ]] && echo "[x]" || echo "[ ]") \`make t0-alert-gate\`"
     echo "- $([[ "$chk_t1" == "✅" ]] && echo "[x]" || echo "[ ]") \`make t1-metrics-gate\`（T+1）"
+    echo
+    echo "## 回滚触发失败准则（任一即回滚）"
+    echo
+    echo "- \`migrate verify\` 失败或抽样行数不一致"
+    echo "- M3-04 / M3-06 / M3-07 失败"
+    echo "- 跨 space 数据泄漏"
+    echo "- \`readyz\` 非 postgres 或持续 5xx"
+    echo "- P95 查询劣化超过约定 SLO"
     echo
     echo "## 值班 roster（填写）"
     echo

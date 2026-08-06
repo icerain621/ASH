@@ -2648,6 +2648,12 @@ definitions:
         type: array
       rlsCatalogSummary:
         type: string
+      runInflightCount:
+        type: integer
+      runRunningCount:
+        type: integer
+      runWaitingApprovalCount:
+        type: integer
       runtimeDsnHint:
         type: string
       schemaMode:
@@ -5362,6 +5368,10 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
         "500":
           description: Internal Server Error
           schema:
@@ -5440,6 +5450,10 @@ paths:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.CancelResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
         "500":
@@ -5597,6 +5611,10 @@ paths:
             $ref: '#/definitions/internal_api.APIErrorResponse'
         "404":
           description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
         "500":

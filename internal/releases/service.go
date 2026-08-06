@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 	"time"
 
@@ -161,6 +162,7 @@ func (s *Service) EvaluateGate(spaceID, releaseID string) (GateEvaluation, error
 		s.activeAlertsGate(spaceID),
 		s.kpiFeedbackGate(spaceID),
 		s.auditEvidenceGate(spaceID, "execgo.live_smoke", "execgo_live_smoke", "ExecGo live smoke"),
+		s.rollbackDrillGate(spaceID, releaseID),
 	}
 	results := make([]store.ReleaseGateResult, 0, len(checks))
 	evidence := []string{}
@@ -199,10 +201,16 @@ func (s *Service) CreateRollbackDrill(req RollbackDrillRequest) (store.RollbackD
 	if strings.TrimSpace(req.Scenario) == "" {
 		return store.RollbackDrill{}, fmt.Errorf("scenario is required")
 	}
+	status := normalizeStatus(req.Status, "recorded")
+	switch status {
+	case "passed", "failed", "recorded":
+	default:
+		return store.RollbackDrill{}, fmt.Errorf("invalid rollback drill status %q", status)
+	}
 	now := time.Now().UTC()
 	row := store.RollbackDrill{
 		ID: "rollback_" + uuid.NewString(), SpaceID: spaceID, ReleaseID: req.ReleaseID,
-		Scenario: strings.TrimSpace(req.Scenario), Status: normalizeStatus(req.Status, "recorded"),
+		Scenario: strings.TrimSpace(req.Scenario), Status: status,
 		DurationMs: req.DurationMs, EvidenceRefsJSON: mustJSON(req.EvidenceRefs),
 		Notes: strings.TrimSpace(req.Notes), CreatedBy: strings.TrimSpace(req.CreatedBy),
 		CreatedAt: now, UpdatedAt: now,
@@ -334,6 +342,49 @@ func (s *Service) kpiFeedbackGate(spaceID string) gateCheck {
 		return gateCheck{Key: "kpi_feedback", Status: "warn", Message: fmt.Sprintf("低分反馈率 %.2f 超过观察阈值", rate), EvidenceRefs: []string{"feedback:low_rate"}}
 	}
 	return gateCheck{Key: "kpi_feedback", Status: "pass", Message: fmt.Sprintf("低分反馈率 %.2f 在阈值内", rate), EvidenceRefs: []string{"feedback:low_rate"}}
+}
+
+func (s *Service) rollbackDrillGate(spaceID, releaseID string) gateCheck {
+	var row store.RollbackDrill
+	err := s.gdb().Where("space_id = ? AND release_id = ?", spaceID, releaseID).
+		Order("created_at desc").First(&row).Error
+	if err == gorm.ErrRecordNotFound {
+		status := "warn"
+		msg := "暂无回滚演练记录"
+		if requireRollbackDrill() {
+			status, msg = "block", "缺少通过的回滚演练（ASH_REQUIRE_ROLLBACK_DRILL=1）"
+		}
+		return gateCheck{Key: "rollback_drill", Status: status, Message: msg, EvidenceRefs: []string{"rollback_drill:missing"}}
+	}
+	if err != nil {
+		return gateCheck{Key: "rollback_drill", Status: "block", Message: err.Error()}
+	}
+	switch strings.ToLower(strings.TrimSpace(row.Status)) {
+	case "passed":
+		return gateCheck{
+			Key: "rollback_drill", Status: "pass",
+			Message:      fmt.Sprintf("回滚演练已通过（%dms）", row.DurationMs),
+			EvidenceRefs: []string{"rollback_drill:" + row.ID},
+		}
+	case "failed":
+		return gateCheck{
+			Key: "rollback_drill", Status: "block",
+			Message:      "最近回滚演练失败",
+			EvidenceRefs: []string{"rollback_drill:" + row.ID},
+		}
+	default:
+		status := "warn"
+		msg := "回滚演练尚未标记为 passed"
+		if requireRollbackDrill() {
+			status, msg = "block", "回滚演练未通过（ASH_REQUIRE_ROLLBACK_DRILL=1）"
+		}
+		return gateCheck{Key: "rollback_drill", Status: status, Message: msg, EvidenceRefs: []string{"rollback_drill:" + row.ID}}
+	}
+}
+
+func requireRollbackDrill() bool {
+	v := strings.TrimSpace(strings.ToLower(os.Getenv("ASH_REQUIRE_ROLLBACK_DRILL")))
+	return v == "1" || v == "true" || v == "yes"
 }
 
 func (s *Service) requireRelease(spaceID, releaseID string) error {

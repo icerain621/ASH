@@ -62,6 +62,7 @@
 - `run.started` → `ash_run_total{status="started"}++`、`ash_run_inflight++`
 - `run.finished` → `ash_run_total{status="finished"}++`、`ash_run_inflight--`、`ash_run_duration_ms.observe`
 - `run.failed` → `ash_run_total{status="failed"}++`、`ash_run_inflight--`
+- `run.canceled` → `ash_run_total{status="canceled"}++`、`ash_run_inflight--`
 - `step.finished` → `ash_step_total++`、`ash_step_duration_ms.observe`
 - `tool.result` → `ash_tool_calls_total{ok}++`、`ash_tool_duration_ms.observe`
 - `policy.denied` → `ash_policy_denied_total++`
@@ -109,8 +110,8 @@
 - `ash_memory_unreviewed_backlog{layer=L1/L2}` 持续增长
 - `ash_memory_missing_evidence_total` 比例超过阈值
 - 评审 SLA 超时（P1 细化）
-- **默认告警规则**（`internal/alerts`）：`memory_unreviewed_backlog`、`rag_fts_fallback_rate`、`plugin_export_failures`
-- **Prometheus live 段**：`ash_memory_unreviewed_backlog_live`、`ash_rag_fts_fallback_live`、`ash_plugin_export_errors_live`
+- **默认告警规则**（`internal/alerts`）：`memory_unreviewed_backlog`、`rag_fts_fallback_rate`、`plugin_export_failures`、`run_inflight_count`
+- **Prometheus live 段**：`ash_memory_unreviewed_backlog_live`、`ash_rag_fts_fallback_live`、`ash_plugin_export_errors_live`、`ash_run_inflight_live`
 
 ## 7. 插件健康与自监控
 - `plugin_registry` 列：`last_export_at`、`export_errors`、`drop_count`（SQL revision **16**）

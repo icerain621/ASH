@@ -31,12 +31,70 @@ func TestReleaseChecklistGateAndRollbackDrill(t *testing.T) {
 	}
 
 	seedPassingGateEvidence(t, db, now)
+
 	gate, err := svc.EvaluateGate("local", rel.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
+	if gate.Overall != "warn" {
+		t.Fatalf("gate=%+v want warn without rollback drill", gate)
+	}
+
+	t.Setenv("ASH_REQUIRE_ROLLBACK_DRILL", "1")
+	gate, err = svc.EvaluateGate("local", rel.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gate.Overall != "block" {
+		t.Fatalf("gate=%+v want block when ASH_REQUIRE_ROLLBACK_DRILL=1 and no drill", gate)
+	}
+	t.Setenv("ASH_REQUIRE_ROLLBACK_DRILL", "")
+
+	if _, err := svc.CreateRollbackDrill(RollbackDrillRequest{
+		SpaceID: "local", ReleaseID: rel.ID, Scenario: "",
+		Status: "passed", CreatedBy: "dev",
+	}); err == nil {
+		t.Fatal("expected empty scenario to fail")
+	}
+	if _, err := svc.CreateRollbackDrill(RollbackDrillRequest{
+		SpaceID: "local", ReleaseID: rel.ID, Scenario: "rollback to previous image",
+		Status: "bogus", CreatedBy: "dev",
+	}); err == nil {
+		t.Fatal("expected invalid status to fail")
+	}
+
+	failed, err := svc.CreateRollbackDrill(RollbackDrillRequest{
+		SpaceID: "local", ReleaseID: rel.ID, Scenario: "rollback to previous image",
+		Status: "failed", DurationMs: 1000, EvidenceRefs: []string{"runbook:rollback"}, CreatedBy: "dev",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	gate, err = svc.EvaluateGate("local", rel.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gate.Overall != "block" {
+		t.Fatalf("gate=%+v want block after failed drill", gate)
+	}
+	_ = failed
+
+	drill, err := svc.CreateRollbackDrill(RollbackDrillRequest{
+		SpaceID: "local", ReleaseID: rel.ID, Scenario: "rollback to previous image",
+		Status: "passed", DurationMs: 120000, EvidenceRefs: []string{"runbook:rollback"}, CreatedBy: "dev",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if drill.ID == "" || drill.Status != "passed" {
+		t.Fatalf("drill=%+v want persisted drill", drill)
+	}
+	gate, err = svc.EvaluateGate("local", rel.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if gate.Overall != "pass" {
-		t.Fatalf("gate=%+v want pass", gate)
+		t.Fatalf("gate=%+v want pass after passed drill", gate)
 	}
 
 	if err := db.Create(&store.AlertEvent{
@@ -53,17 +111,6 @@ func TestReleaseChecklistGateAndRollbackDrill(t *testing.T) {
 	}
 	if gate.Overall != "block" {
 		t.Fatalf("gate=%+v want block with active critical alert", gate)
-	}
-
-	drill, err := svc.CreateRollbackDrill(RollbackDrillRequest{
-		SpaceID: "local", ReleaseID: rel.ID, Scenario: "rollback to previous image",
-		Status: "passed", DurationMs: 120000, EvidenceRefs: []string{"runbook:rollback"}, CreatedBy: "dev",
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if drill.ID == "" || drill.Status != "passed" {
-		t.Fatalf("drill=%+v want persisted drill", drill)
 	}
 }
 

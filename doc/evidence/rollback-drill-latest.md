@@ -1,8 +1,9 @@
 # 回滚演练证据（自动化）
 
-- 时间（UTC）：2026-07-05T14:08:32Z
-- 耗时（ms）：49000
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260705T135953Z`
+- 时间（UTC）：2026-08-06T14:11:16Z
+- 耗时（ms）：40000
+- SLA 上限（ms）：600000（`ASH_ROLLBACK_DRILL_MAX_MS`）
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/rollback-drill-20260806T141035Z`
 - 门禁：`make rollback-drill`
 
 ## 步骤
@@ -11,6 +12,14 @@
 2. 健康检查 P95 基线（TestHealthEndpointsLatencyBaseline）
 3. 并发 /runs 列表（TestConcurrentRunsListBaseline）
 4. Doctor ALL 静态回归（TestALLSuite）
+
+## 回滚触发失败准则（任一即回滚）
+
+- `migrate verify` 失败或抽样行数不一致
+- M3-04 / M3-06 / M3-07 失败
+- 跨 space 数据泄漏
+- `readyz` 非 postgres 或持续 5xx
+- P95 查询劣化超过约定 SLO
 
 ## 人工补充（生产切换后）
 

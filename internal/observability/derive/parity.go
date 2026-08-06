@@ -24,6 +24,9 @@ func ValidateReplayParity(events []Event) error {
 	if err := checkCounterSum(snap, "ash_run_total", `status="failed"`, typeCounts["run.failed"]); err != nil {
 		return err
 	}
+	if err := checkCounterSum(snap, "ash_run_total", `status="canceled"`, typeCounts["run.canceled"]); err != nil {
+		return err
+	}
 	if err := checkCounterSum(snap, "ash_tool_calls_total", "", typeCounts["tool.result"]); err != nil {
 		return err
 	}
@@ -71,6 +74,7 @@ func checkInflightGauges(events []Event, snap Snapshot) error {
 	started := map[string]int{}
 	finished := map[string]int{}
 	failed := map[string]int{}
+	canceled := map[string]int{}
 	for _, ev := range events {
 		payload := parsePayload(ev.PayloadJSON)
 		if ev.Type == "run.started" {
@@ -89,11 +93,13 @@ func checkInflightGauges(events []Event, snap Snapshot) error {
 			finished[scenario]++
 		case "run.failed":
 			failed[scenario]++
+		case "run.canceled":
+			canceled[scenario]++
 		}
 	}
 	for scenario, startN := range started {
 		key := fmt.Sprintf(`ash_run_inflight{scenario=%q}`, scenario)
-		want := float64(startN - finished[scenario] - failed[scenario])
+		want := float64(startN - finished[scenario] - failed[scenario] - canceled[scenario])
 		got := snap.Gauges[key]
 		if got != want {
 			return fmt.Errorf("inflight %s: replay=%g want=%g", scenario, got, want)

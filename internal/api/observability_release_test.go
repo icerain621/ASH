@@ -94,6 +94,14 @@ func TestReleaseGovernanceAPI(t *testing.T) {
 		t.Fatal("expected checklist items")
 	}
 
+	drillResp := httptest.NewRecorder()
+	drillReq := httptest.NewRequest(http.MethodPost, "/api/v1/releases/"+rel.ID+"/rollback-drills", bytes.NewReader([]byte(`{"scenario":"rollback image","status":"passed","durationMs":60000}`)))
+	drillReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(drillResp, drillReq)
+	if drillResp.Code != http.StatusCreated {
+		t.Fatalf("drill status=%d want 201 body=%s", drillResp.Code, drillResp.Body.String())
+	}
+
 	gateResp := httptest.NewRecorder()
 	gateReq := httptest.NewRequest(http.MethodPost, "/api/v1/releases/"+rel.ID+"/gate", nil)
 	r.ServeHTTP(gateResp, gateReq)
@@ -102,14 +110,6 @@ func TestReleaseGovernanceAPI(t *testing.T) {
 	}
 	if !bytes.Contains(gateResp.Body.Bytes(), []byte(`"overall":"pass"`)) {
 		t.Fatalf("gate body=%s want pass", gateResp.Body.String())
-	}
-
-	drillResp := httptest.NewRecorder()
-	drillReq := httptest.NewRequest(http.MethodPost, "/api/v1/releases/"+rel.ID+"/rollback-drills", bytes.NewReader([]byte(`{"scenario":"rollback image","status":"passed","durationMs":60000}`)))
-	drillReq.Header.Set("Content-Type", "application/json")
-	r.ServeHTTP(drillResp, drillReq)
-	if drillResp.Code != http.StatusCreated {
-		t.Fatalf("drill status=%d want 201 body=%s", drillResp.Code, drillResp.Body.String())
 	}
 }
 

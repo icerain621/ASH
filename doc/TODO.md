@@ -20,7 +20,7 @@
 | 后端测试 T-01..T-15 | ✅ | 本地/CI Postgres e2e 已覆盖 |
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
-| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 状态文案；16 文件 / 29 用例） |
+| 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 控制码 / Scale 积压；≥16 文件） |
 | Git 远端 | ✅ | `main` @ `4d5acad`；CI / Postgres E2E / Live Worker **全绿**（2026-08-06） |
 
 ### 优先级矩阵
@@ -159,6 +159,39 @@ make signoff-gate
 | BX-2 | 连续失败熔断 + 单测 | ✅ `TestGitHubProviderCircuitOpensAfterFailures` |
 | BX-3 | API `CI_PROVIDER_UNAVAILABLE`（502） | ✅ `writeCIProviderError` |
 
+#### Sprint BY（P1 · R-06/R-10 + cancel derive · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BY-1 | `run.canceled` → `ash_run_total` / inflight 对账 | ✅ `TestReplay_runCanceledClearsInflight` |
+| BY-2 | Scale `runRunning/Waiting/Inflight` backlog 信号 | ✅ `TestScaleReadinessRunBacklogCounts` |
+| BY-3 | OpenAPI 控制面 409 + RunsPage `ApiError` 码展示 | ✅ openapi + `formatControlError` + vitest |
+| BY-4 | API Resume/Approve/Replay 负例矩阵 | ✅ `TestRunControlNegativeStatusCodes` |
+
+#### Sprint BZ（P1 · R-12 回滚门禁硬化 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| BZ-1 | `rollback-drill` 强制接入发布窗口 + 时长 SLA | ✅ `release-window-gate` / `mvp-signoff`；`ASH_ROLLBACK_DRILL_MAX_MS` |
+| BZ-2 | `data-backup` 后 sha256 + SQLite `integrity_check` | ✅ `make data-backup-verify` / `TestVerifySQLiteFile*` |
+| BZ-3 | `EvaluateGate` 纳入 rollback drill；空场景/非法 status 拒绝 | ✅ `TestReleaseChecklistGateAndRollbackDrill` |
+| BZ-4 | `regression-short` 接入治理 API + releases 单测；R-12 → Mitigating | ✅ scripts + 风险台账 |
+
+#### Sprint CA（P1 · R-12 硬要求 + R-06 inflight 告警 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| CA-1 | 发布窗口 / mvp-signoff 默认 `ASH_REQUIRE_ROLLBACK_DRILL=1` | ✅ gate 脚本 export |
+| CA-2 | 告警 `run_inflight_count` + Prometheus `ash_run_inflight_live` | ✅ `TestEvaluateRunInflightAlert` |
+| CA-3 | `t0-alert-gate` / docs；R-06 补强 | ✅ t0 + 附录 D |
+
+#### Sprint CB（P1 · R-09/R-05 前端与负例收口 · 可纯代码）
+
+| # | 任务 | 验收 |
+|---|------|------|
+| CB-1 | CIPage 展示 `CI_PROVIDER_UNAVAILABLE` 等错误码 | ✅ `formatCIError` + vitest |
+| CB-2 | 控制面 Cancel 后 Resume/Approve 负例 | ✅ `TestRunControlNegativeStatusCodes` |
+
 #### Sprint BI（P0-B · 发布窗口 · 需环境）
 
 | # | 任务 | 前置 | 验收 |
@@ -219,7 +252,7 @@ make mvp-signoff
 
 | 风险 | 当前缓解 | 下一动作 |
 |------|----------|----------|
-| R-12 回滚不完整 | `rollback-drill` 已自动化 | BI 切换日再演练一次并签字 |
+| R-12 回滚不完整 | 强制 drill + 备份校验（BZ/CA） | BI 切换日再演练一次并签字 |
 | R-08 越权 | M2 + `TestCrossSpaceAPIRegression` | 发布窗口抽测 + RLS e2e |
 | R-03 诊断准确率 | fixture 含 cancel/OOM/frontend（BS） | BJ 真实 GitHub log 验证 |
 | R-07 SSE 不稳定 | 自动重连 + timeline 轮询回退（BN） | BJ 生产断连率观察 |
@@ -359,6 +392,10 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint CB：CIPage 展示 `CI_PROVIDER_UNAVAILABLE`；Cancel 后 Resume/Approve 负例（R-09/R-05）。
+- Sprint CA：发布门禁默认 `ASH_REQUIRE_ROLLBACK_DRILL=1`；告警 `run_inflight_count` + `ash_run_inflight_live`（R-12/R-06）。
+- Sprint BZ：发布窗口强制 `rollback-drill` + 时长 SLA；备份 sha256/`integrity_check`；`EvaluateGate` 纳入 drill（R-12）。
+- Sprint BY：`run.canceled` derive 对账；Scale 运行积压；控制面 OpenAPI 409 与前端错误码展示（R-06/R-10）。
 - Sprint BX：GitHub CI 429/5xx 重试与熔断；`CI_PROVIDER_UNAVAILABLE`（R-09）。
 - Sprint BW：Approve/Resume 对称门禁；Cancel 后不可 Approve；控制面错误码扩展（R-05）。
 - Sprint BV：Replay 源状态门禁（非终态拒绝）；`RUN_NOT_REPLAYABLE`（R-05）。
