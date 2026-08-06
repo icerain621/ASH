@@ -1351,12 +1351,12 @@ func TestMemoryQueryFiltersCurrentSpace(t *testing.T) {
 	ownRecord := store.MemoryRecord{
 		ID: "mem_own_scope", Layer: "L0", Status: "approved", SpaceID: ownSpace.ID,
 		SchemaVersion: 1, Title: "Shared marker", Body: "tenant scoped answer", TagsJSON: "[]",
-		Sensitivity: "normal", CreatedAt: now, UpdatedAt: now,
+		Sensitivity: "normal", Confidence: 0.9, CreatedAt: now, UpdatedAt: now,
 	}
 	otherRecord := store.MemoryRecord{
 		ID: "mem_other_scope", Layer: "L0", Status: "approved", SpaceID: otherSpace.ID,
 		SchemaVersion: 1, Title: "Shared marker", Body: "tenant scoped answer", TagsJSON: "[]",
-		Sensitivity: "normal", CreatedAt: now, UpdatedAt: now,
+		Sensitivity: "normal", Confidence: 0.9, CreatedAt: now, UpdatedAt: now,
 	}
 	if err := db.Create(&ownRecord).Error; err != nil {
 		t.Fatal(err)
