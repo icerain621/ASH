@@ -21,7 +21,7 @@
 | H-04~H-09 本地 live | ✅ | `worker-local-gate` / fixture |
 | H-04~H-06 生产外部依赖 | ⏸ | 真实 GitHub token / ExecGo |
 | 前端测试 | ✅ | **12/12 页** smoke + SSE 重连/轮询（含 RunsPage 控制码 / Scale 积压；≥16 文件） |
-| Git 远端 | ⚠️ | 本地 `main` @ `b4e13f0`（备份校验修复）ahead；GitHub 443 超时未推送；推送后 CI 应跟进 |
+| Git 远端 | ⚠️ | 本地 `main` @ `852726b`+ 证据刷新 ahead；推送暂缓 |
 
 ### 优先级矩阵
 
@@ -406,6 +406,7 @@ make postgres-roles
 
 ## 已完成（近期）
 
+- Sprint CD：本地 Docker 复验 `release-window` / `postgres-app-gate` / `cloud-acceptance`（port 5433）；刷新 H-01~H-03 与发布窗口证据。
 - Sprint CC：mvp-signoff 嵌套 audit/drill 去重 Doctor；控制面 cancel/resume/replay/approve 跨 space 403（R-08）。
 - Sprint CB：CIPage 展示 `CI_PROVIDER_UNAVAILABLE`；Cancel 后 Resume/Approve 负例（R-09/R-05）。
 - Sprint CA：发布门禁默认 `ASH_REQUIRE_ROLLBACK_DRILL=1`；告警 `run_inflight_count` + `ash_run_inflight_live`（R-12/R-06）。
