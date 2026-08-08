@@ -20,7 +20,16 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   getPermissionMatrix: vi.fn().mockResolvedValue({ roles: [], actions: [] }),
   getAuthMe: vi.fn().mockResolvedValue({ userId: "u1", spaceId: "local" }),
   listOrgTemplates: vi.fn().mockResolvedValue({
-    items: [{ id: "small_team", name: "小型团队", description: "fixture" }],
+    items: [
+      {
+        id: "small_team",
+        label: "小型团队",
+        description: "fixture",
+        payer: "工程经理",
+        decisionMaker: "Tech Lead",
+        approver: "Tech Lead",
+      },
+    ],
   }),
   provisionOrgTemplate: vi.fn(),
   createOrg: vi.fn(),
@@ -37,6 +46,14 @@ describe("SpacePage", () => {
     expect(screen.getByRole("heading", { name: "空间" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Dev Token" })).toBeInTheDocument();
+    });
+  });
+
+  it("renders org templates panel", async () => {
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("org-templates-panel")).toBeInTheDocument();
+      expect(screen.getByText("小型团队")).toBeInTheDocument();
     });
   });
 });

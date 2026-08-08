@@ -35,7 +35,7 @@ docker exec ash-postgres-dev psql -U ash -d ash -c \
   'DROP SCHEMA IF EXISTS public CASCADE; CREATE SCHEMA public; GRANT ALL ON SCHEMA public TO ash; GRANT ALL ON SCHEMA public TO public;'
 
 echo "== seed sqlite at $E2E_DIR (sqlite-only) =="
-env -u ASH_DATABASE_URL -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3
+env -u ASH_DATABASE_URL -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3 --agent static
 
 export ASH_MIGRATE_E2E=1
 

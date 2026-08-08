@@ -9,11 +9,12 @@
 | 快捷回归 | `make regression-short` 或 `make smoke-static` | Doctor M3/TR3 + API + CI fixture + H-07/H-09 静态 |
 | 发布审计（静态） | `make release-window-audit` | H-08：Doctor ALL/M3/TR3 + regression-short + openapi |
 | Postgres ash_app（本地） | `make postgres-app-gate` | H-02/H-03：Docker + schema 后 M3-06/07 + readyz |
+| Postgres 本地 RDS（H-01 dry-run） | `make postgres-local-rds-e2e` | Docker + `.ash/ash.db`：sqlite→Postgres + M3-04（Sprint CW） |
 | 业务抽样（静态） | `make release-sampling-static` | H-09 §7 API 单测 |
 | 业务抽样（静态+live） | `ASH_WORKER_URL=... make release-sampling-smoke` | H-09 |
 | Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排 |
-| 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI + openapi + 可选 Postgres RLS |
-| 前端门禁 | `make web-gate` | eslint + vitest（7 文件 / 14 用例）+ build |
+| 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI（`--agent static`）+ openapi + 可选 Postgres；`ASH_VERIFY_LOCAL_RDS=1` 时含 local-rds |
+| 前端门禁 | `make web-gate` | eslint + vitest（全页 smoke）+ build |
 | SSE 浏览器 E2E（可选） | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
 | R-08 跨 space | `make r08-cross-space-gate` | API 越权回归 + RLS 静态；Docker/URL 时跑 Postgres live |
 | 插件签名 | `make plugin-sign-smoke` | HMAC 单测 + `ash plugin-sign` 往返（Sprint CR） |

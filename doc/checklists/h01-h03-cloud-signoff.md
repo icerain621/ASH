@@ -1,6 +1,7 @@
 # H-01～H-03 云环境验收与签字清单
 
-> 在切换生产 `ASH_DATABASE_APP_URL` 前于目标云 RDS 执行。本地 Docker 等价见 `make postgres-app-gate`（H-02/H-03）。
+> 在切换生产 `ASH_DATABASE_APP_URL` 前于目标云 RDS 执行。  
+> 本地 Docker 等价：`make postgres-local-rds-e2e`（H-01 dry-run，含 M3-04）· `make postgres-app-gate`（H-02/H-03）。
 >
 > **一键云验收（证据归档）**：`make cloud-acceptance`（需 `ASH_DATABASE_URL`）  
 > **MVP 发布签字**：`make mvp-signoff`（静态门禁 + 可选云/Docker）
@@ -35,10 +36,12 @@ set -a && source config/cloud-rds.env && set +a
 | H-01.4 | Doctor ALL | `doctor --suite ALL` | **43/43** pass | `doctor-all.log` |
 | H-01.5 | TR3 live | `doctor --suite TR3` | TR3-06/10 pass | `doctor-tr3.log` |
 | H-01.6 | 业务抽样 | `make release-sampling-static` 或 `live-smoke` | H-09 §7 | `release-sampling.log` |
+| H-01.L | 本地 dry-run | `make postgres-local-rds-e2e` | Docker + sqlite→Postgres + M3-04 live | `postgres-local-rds-e2e.log` |
 
 ```bash
 make cloud-acceptance
 # 等价 scripts/cloud-acceptance-gate.sh → postgres-rds-e2e + 证据目录 .ash/evidence/cloud-h01-h03-*
+# 无云时本地：make postgres-up && make postgres-local-rds-e2e
 ```
 
 **H-01 签字**

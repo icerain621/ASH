@@ -124,6 +124,7 @@
 | **CU** | TR0 固定探测语料 + SpacePage/web-gate | ✅ 已完成 |
 | **CV** | Docker 本地 Postgres 门禁复验 | ✅ 已完成 |
 | **CW** | 本地 sqlite→Postgres E2E（M3-04） | ✅ 已完成 |
+| **CX** | doctor static 全扫 + UI/文档门禁对齐 | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |

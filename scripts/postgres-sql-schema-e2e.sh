@@ -25,7 +25,7 @@ export ASH_DATA_DIR="$E2E_DIR"
 go test -tags=integration ./internal/store/ -run TestPostgresSQLSchemaModeE2E -count=1
 
 echo "== doctor M3 (M3-08 sql schema; M3-04 skipped without dual-write migrate) =="
-env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3
+env -u ASH_MIGRATE_E2E go run ./cmd/cli doctor --suite M3 --agent static
 
 echo "== rag postgres fts integration test =="
 go test -tags=integration ./internal/rag/ -count=1 -run TestPostgresRAGFTSQuery

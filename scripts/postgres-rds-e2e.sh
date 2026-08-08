@@ -51,9 +51,9 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 
 echo "== doctor M3 (migrate verify + tenant isolation) =="
 if [[ -n "${ASH_DATABASE_APP_URL:-}" ]]; then
-  go run ./cmd/cli doctor --suite M3 --format md --require M3-04,M3-06,M3-07
+  go run ./cmd/cli doctor --suite M3 --agent static --format md --require M3-04,M3-06,M3-07
 else
-  go run ./cmd/cli doctor --suite M3 --format md --require M3-04
+  go run ./cmd/cli doctor --suite M3 --agent static --format md --require M3-04
 fi
 
 go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate -count=1

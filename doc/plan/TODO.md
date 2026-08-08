@@ -90,6 +90,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CX：doctor 脚本统一 `--agent static`；smoke-index/H-01 文档对齐 `postgres-local-rds-e2e`；Runs 门禁 / Space 组织样板 vitest
 - Sprint CW：`make postgres-local-rds-e2e`（Docker 模拟云 migrate+M3-04）；修复 ALL 套件重复 M3-04 行数漂移；归档 release-window 证据
 - Sprint CV：启动 Docker 复验 `postgres-app-gate` + `local-readiness-gate`；doctor 阶段取消误开的 `ASH_MIGRATE_E2E`（避免无 SQLite 的 M3-04 假红）
 - Sprint CU：TR0 固定探测语料 `ash.doctor.probe/v1`；SpacePage `listOrgTemplates` mock；memory scope AbsRepoRoot 对齐

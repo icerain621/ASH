@@ -18,7 +18,7 @@ echo "== live open with ASH_DATABASE_URL =="
 if [[ "${ASH_POSTGRES_RLS_FORCE:-}" == "1" ]]; then
   echo "skip doctor M3 (RLS force; full suite runs later in postgres-rds-e2e)"
 else
-  go run ./cmd/cli doctor --suite M3
+  go run ./cmd/cli doctor --suite M3 --agent static
 fi
 
 echo "OK"

@@ -23,9 +23,9 @@ echo "== secret rotate H-07 static smoke =="
 go test ./internal/api/ -run TestSecretRotateRepoConnectionH07 -count=1
 
 echo "== doctor M2 + M3 + TR3 + ALL (static) =="
-go run ./cmd/cli doctor --suite M2
-go run ./cmd/cli doctor --suite M3
-go run ./cmd/cli doctor --suite TR3
+go run ./cmd/cli doctor --suite M2 --agent static
+go run ./cmd/cli doctor --suite M3 --agent static
+go run ./cmd/cli doctor --suite TR3 --agent static
 go run ./cmd/cli doctor --suite ALL --agent static
 
 echo "== metrics KPI regression =="
@@ -40,6 +40,12 @@ if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx ash-postgres-dev; then
   if docker exec ash-postgres-dev psql -U ash -d ash -tAc "SELECT 1 FROM information_schema.tables WHERE table_name='runs' LIMIT 1" 2>/dev/null | grep -q 1; then
     echo "== postgres app gate H-02/H-03 (optional) =="
     make postgres-app-gate
+    if [[ "${ASH_VERIFY_LOCAL_RDS:-}" == "1" && -f "${ASH_SQLITE_PATH:-.ash/ash.db}" ]]; then
+      echo "== postgres local RDS e2e H-01 dry-run (ASH_VERIFY_LOCAL_RDS=1) =="
+      make postgres-local-rds-e2e
+    else
+      echo "== skip postgres-local-rds-e2e (set ASH_VERIFY_LOCAL_RDS=1 + .ash/ash.db) =="
+    fi
   else
     echo "== skip postgres-app-gate (run make postgres-sql-schema-e2e first) =="
   fi

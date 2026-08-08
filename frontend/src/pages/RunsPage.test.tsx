@@ -1,22 +1,33 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { RunsPage } from "./RunsPage";
 import { renderPage } from "@/test/renderPage";
 import { useRunStream } from "@/services/sse/runStream";
 import { ApiError } from "@/services/http/client";
-import { listRuns } from "@/modules/runs/api/runs.api";
+import {
+  getRun,
+  getRunAgentTasks,
+  getRunArtifacts,
+  getRunCheckpoints,
+  getRunProvenance,
+  getRunQualityMetrics,
+  getRunTimeline,
+  getRunToolCalls,
+  getRunWaterfall,
+  listRuns,
+} from "@/modules/runs/api/runs.api";
 
 vi.mock("@/modules/runs/api/runs.api", () => ({
   listRuns: vi.fn().mockResolvedValue({ items: [] }),
   getRun: vi.fn(),
-  getRunArtifacts: vi.fn(),
-  getRunCheckpoints: vi.fn(),
-  getRunTimeline: vi.fn(),
-  getRunToolCalls: vi.fn(),
-  getRunAgentTasks: vi.fn(),
-  getRunQualityMetrics: vi.fn(),
-  getRunWaterfall: vi.fn(),
-  getRunProvenance: vi.fn(),
+  getRunArtifacts: vi.fn().mockResolvedValue({ items: [] }),
+  getRunCheckpoints: vi.fn().mockResolvedValue({ items: [] }),
+  getRunTimeline: vi.fn().mockResolvedValue({ items: [] }),
+  getRunToolCalls: vi.fn().mockResolvedValue({ items: [] }),
+  getRunAgentTasks: vi.fn().mockResolvedValue({ items: [] }),
+  getRunQualityMetrics: vi.fn().mockResolvedValue({ items: [] }),
+  getRunWaterfall: vi.fn().mockResolvedValue({ spans: [] }),
+  getRunProvenance: vi.fn().mockResolvedValue({ links: [] }),
   getRunArtifactAccess: vi.fn(),
   getRunCheckpointAccess: vi.fn(),
   createRun: vi.fn(),
@@ -72,6 +83,67 @@ describe("RunsPage", () => {
       expect(
         screen.getByText(/RUN_NOT_REPLAYABLE: run is not in a replayable status/),
       ).toBeInTheDocument();
+    });
+  });
+
+  it("shows tool_risk gate summary when waiting approval", async () => {
+    vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "idle" });
+    const runId = "run_gate_tool_risk_01";
+    vi.mocked(listRuns).mockResolvedValue({
+      items: [
+        {
+          runId,
+          traceId: "trc_1",
+          scenario: { name: "hotfix", scenarioVersion: "1.1.0" },
+          policyProfile: "hotfix",
+          status: "waiting_approval",
+          spaceId: "local",
+          actorRole: "operator",
+          startedAt: Date.now(),
+        },
+      ],
+    });
+    vi.mocked(getRun).mockResolvedValue({
+      runId,
+      traceId: "trc_1",
+      scenario: { name: "hotfix", scenarioVersion: "1.1.0" },
+      policyProfile: "hotfix",
+      status: "waiting_approval",
+      spaceId: "local",
+      actorRole: "operator",
+      startedAt: Date.now(),
+    });
+    vi.mocked(getRunTimeline).mockResolvedValue({
+      items: [
+        {
+          type: "gate.waiting_approval",
+          payload: {
+            gate: "tool_risk",
+            tool: "runtime.command",
+            risk: "danger",
+            stepId: "sre.approve_ship",
+          },
+        },
+      ],
+    });
+    vi.mocked(getRunArtifacts).mockResolvedValue({ items: [] });
+    vi.mocked(getRunCheckpoints).mockResolvedValue({ items: [] });
+    vi.mocked(getRunToolCalls).mockResolvedValue({ items: [] });
+    vi.mocked(getRunAgentTasks).mockResolvedValue({ items: [] });
+    vi.mocked(getRunQualityMetrics).mockResolvedValue({ items: [] });
+    vi.mocked(getRunWaterfall).mockResolvedValue({ spans: [] });
+    vi.mocked(getRunProvenance).mockResolvedValue({ links: [] });
+
+    renderPage(<RunsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("待审批")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByText("待审批"));
+    await waitFor(() => {
+      const summary = screen.getByTestId("run-gate-summary");
+      expect(summary).toHaveAttribute("data-gate", "tool_risk");
+      expect(screen.getByText("危险工具审批 · runtime.command")).toBeInTheDocument();
+      expect(screen.getByText(/工具风险级别 danger/)).toBeInTheDocument();
     });
   });
 });
