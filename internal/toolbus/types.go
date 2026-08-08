@@ -1,6 +1,9 @@
 package toolbus
 
-import "time"
+import (
+	"sort"
+	"time"
+)
 
 // Risk classifies tool execution policy (hooks match on this).
 type Risk string
@@ -10,6 +13,14 @@ const (
 	RiskMedium Risk = "medium"
 	RiskDanger Risk = "danger"
 )
+
+// ToolRiskEntry is one row in the published dangerous-ops / risk catalog.
+type ToolRiskEntry struct {
+	Name        string `json:"name"`
+	Risk        Risk   `json:"risk"`
+	DefaultDeny bool   `json:"defaultDeny"`
+	Label       string `json:"label"`
+}
 
 // Context carries run-scoped execution state for tools.
 type Context struct {
@@ -70,6 +81,40 @@ func (r *Registry) Has(name string) bool {
 	return ok
 }
 
+// Catalog returns registered tools sorted by name with risk metadata.
+func (r *Registry) Catalog() []ToolRiskEntry {
+	if r == nil {
+		return nil
+	}
+	names := make([]string, 0, len(r.risk))
+	for name := range r.risk {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	out := make([]ToolRiskEntry, 0, len(names))
+	for _, name := range names {
+		risk := r.Risk(name)
+		out = append(out, ToolRiskEntry{
+			Name:        name,
+			Risk:        risk,
+			DefaultDeny: risk == RiskDanger,
+			Label:       riskLabel(name, risk),
+		})
+	}
+	return out
+}
+
+func riskLabel(name string, risk Risk) string {
+	switch risk {
+	case RiskDanger:
+		return name + "（危险：默认需人工批准或 allow_dangerous）"
+	case RiskSafe:
+		return name + "（安全）"
+	default:
+		return name + "（中等）"
+	}
+}
+
 // Bus dispatches tool calls through a registry.
 type Bus struct {
 	reg *Registry
@@ -81,6 +126,14 @@ func NewBus(reg *Registry) *Bus {
 
 func (b *Bus) ToolRisk(name string) Risk {
 	return b.reg.Risk(name)
+}
+
+// Catalog returns the bus risk catalog (dangerous-ops product surface).
+func (b *Bus) Catalog() []ToolRiskEntry {
+	if b == nil || b.reg == nil {
+		return nil
+	}
+	return b.reg.Catalog()
 }
 
 func (b *Bus) Call(ctx Context, req CallRequest) Result {

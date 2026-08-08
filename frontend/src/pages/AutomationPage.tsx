@@ -31,6 +31,7 @@ import {
   listMCPTools,
   listModelProviders,
   listPlugins,
+  listToolRiskCatalog,
   listSecrets,
   rejectApproval,
   rotateSecret,
@@ -76,6 +77,10 @@ export function AutomationPage() {
   const toolsQuery = useQuery({
     queryKey: ["mcp-tools", activeSpaceId],
     queryFn: listMCPTools,
+  });
+  const riskCatalogQuery = useQuery({
+    queryKey: ["tools-risk-catalog"],
+    queryFn: listToolRiskCatalog,
   });
   const pluginsQuery = useQuery({
     queryKey: ["plugins", activeSpaceId],
@@ -256,7 +261,7 @@ export function AutomationPage() {
       <div className="page-heading">
         <div>
           <h1>自动化</h1>
-          <p>查看模型路由、MCP 工具和执行边界状态。</p>
+          <p>查看模型路由、内置工具风险目录、MCP 工具和执行边界状态。</p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
       </div>
@@ -320,6 +325,36 @@ export function AutomationPage() {
               {!toolsQuery.data?.items.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无 MCP 工具。</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="pane" data-testid="tool-risk-catalog">
+          <div className="pane-title">
+            <h2>内置工具风险（危险操作）</h2>
+            <span>{riskCatalogQuery.data?.items.length ?? 0} 项</span>
+          </div>
+          <p className="muted-line">danger 默认需人工批准或场景 allow_dangerous；见 ARCH §安全。</p>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>Tool</th>
+                <th>Risk</th>
+                <th>Default deny</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(riskCatalogQuery.data?.items ?? []).map((tool) => (
+                <tr key={tool.name} className={tool.defaultDeny ? "error" : undefined}>
+                  <td title={tool.label}>{tool.name}</td>
+                  <td>{tool.risk}</td>
+                  <td>{tool.defaultDeny ? "是" : "否"}</td>
+                </tr>
+              ))}
+              {!riskCatalogQuery.data?.items.length && (
+                <tr className="empty-row">
+                  <td colSpan={3}>加载风险目录中…</td>
                 </tr>
               )}
             </tbody>

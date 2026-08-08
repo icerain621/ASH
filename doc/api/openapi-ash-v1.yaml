@@ -1115,6 +1115,20 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/MCPToolItem" }
+    ToolRiskEntry:
+      type: object
+      properties:
+        name: { type: string }
+        risk: { type: string, enum: [safe, medium, danger] }
+        defaultDeny: { type: boolean }
+        label: { type: string }
+    ToolRiskCatalogResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ToolRiskEntry" }
+        docRef: { type: string }
     ModelProviderItem:
       type: object
       properties:
@@ -3180,6 +3194,17 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ImproveStatusResponse" }
+
+  /api/v1/tools/risk-catalog:
+    get:
+      tags: [Tools]
+      summary: List built-in tool risk catalog (dangerous-ops)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ToolRiskCatalogResponse" }
 
   /api/v1/mcp/tools:
     get:

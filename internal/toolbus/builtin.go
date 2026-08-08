@@ -30,6 +30,11 @@ func DefaultBus() *Bus {
 	return NewBus(DefaultRegistry())
 }
 
+// DefaultCatalog is the productized dangerous-ops list for consoles/API.
+func DefaultCatalog() []ToolRiskEntry {
+	return DefaultRegistry().Catalog()
+}
+
 func applyPatch(ctx Context, args map[string]any) (map[string]any, error) {
 	artDir := filepath.Join(ctx.RunDir, "artifacts")
 	if err := os.MkdirAll(artDir, 0o755); err != nil {

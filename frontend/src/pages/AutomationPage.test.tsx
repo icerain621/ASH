@@ -10,6 +10,9 @@ vi.mock("@/components/ImproveProposalsPane", () => ({
 vi.mock("@/modules/platform/api/platform.api", () => ({
   listModelProviders: vi.fn().mockResolvedValue({ items: [] }),
   listMCPTools: vi.fn().mockResolvedValue({ items: [] }),
+  listToolRiskCatalog: vi.fn().mockResolvedValue({
+    items: [{ name: "runtime.command", risk: "danger", defaultDeny: true, label: "runtime.command（危险）" }],
+  }),
   listPlugins: vi.fn().mockResolvedValue({ items: [] }),
   getPluginABIProfile: vi.fn().mockResolvedValue({
     version: "v0",
@@ -47,6 +50,15 @@ describe("AutomationPage", () => {
     await waitFor(() => {
       expect(screen.getByText("Space: local")).toBeInTheDocument();
       expect(screen.getByText("Model Router")).toBeInTheDocument();
+    });
+  });
+
+  it("renders built-in tool risk catalog", async () => {
+    renderPage(<AutomationPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("tool-risk-catalog")).toBeInTheDocument();
+      expect(screen.getByText("runtime.command")).toBeInTheDocument();
+      expect(screen.getByText("danger")).toBeInTheDocument();
     });
   });
 });

@@ -248,7 +248,35 @@ function waitingGate(items: TimelineItem[] | undefined) {
     gate: typeof payload.gate === "string" ? payload.gate : "human",
     reason: typeof payload.reason === "string" ? payload.reason : "",
     stepId: typeof payload.stepId === "string" ? payload.stepId : "",
+    tool: typeof payload.tool === "string" ? payload.tool : "",
+    risk: typeof payload.risk === "string" ? payload.risk : "",
   };
+}
+
+function gateTitle(gate: { gate: string; tool?: string; risk?: string }): string {
+  switch (gate.gate) {
+    case "citation":
+      return "引用门禁";
+    case "tool_risk":
+      return gate.tool ? `危险工具审批 · ${gate.tool}` : "危险工具审批";
+    case "human":
+      return "人工步骤审批";
+    default:
+      return `审批门禁 · ${gate.gate}`;
+  }
+}
+
+function gateHint(gate: { gate: string; tool?: string; risk?: string }): string {
+  switch (gate.gate) {
+    case "citation":
+      return "步骤要求证据引用，通过前请确认仓库检索/引用已就绪。";
+    case "tool_risk":
+      return `工具风险级别 ${gate.risk || "danger"}：默认拒绝执行，批准后允许本步继续（或场景开启 allow_dangerous）。`;
+    case "human":
+      return "场景要求人工确认（ship / SRE / Security 等 human step）。";
+    default:
+      return "等待人工通过后继续执行。";
+  }
 }
 
 export function RunsPage() {
@@ -585,9 +613,10 @@ export function RunsPage() {
                 <span className="muted">选择运行后可操作。</span>
               )}
               {gate && (
-                <div className="gate-summary">
-                  <strong>{gate.gate === "citation" ? "引用门禁" : "人工门禁"}</strong>
+                <div className="gate-summary" data-testid="run-gate-summary" data-gate={gate.gate}>
+                  <strong>{gateTitle(gate)}</strong>
                   <span>{gate.stepId || "-"}</span>
+                  <p className="muted-line">{gateHint(gate)}</p>
                   {gate.reason && <p>{gate.reason}</p>}
                 </div>
               )}

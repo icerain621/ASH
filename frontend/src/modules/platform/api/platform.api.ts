@@ -529,6 +529,20 @@ export function listModelProviders() {
   return api<{ items: ModelProvider[] }>("/model-router/providers");
 }
 
+export type ToolRiskEntry = {
+  name: string;
+  risk: string;
+  defaultDeny: boolean;
+  label: string;
+};
+
+export function listToolRiskCatalog() {
+  return api<{ items?: ToolRiskEntry[]; docRef?: string }>("/tools/risk-catalog").then((res) => ({
+    items: res.items ?? [],
+    docRef: res.docRef ?? "",
+  }));
+}
+
 export function listMCPTools() {
   return api<{ items?: RawRecord[]; Items?: RawRecord[] }>("/mcp/tools").then((res) => ({
     items: itemsFrom(res).map(normalizeMCPTool),

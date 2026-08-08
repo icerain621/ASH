@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CS：内置工具风险目录（`GET /api/v1/tools/risk-catalog` + 自动化页）；Runs 门禁文案区分引用 / 危险工具 / 人工步骤；关闭 ARCH 危险操作产品化 TODO。
 - Sprint CR：插件签名生产轮换 SOP；`ash plugin-sign` CLI；`make plugin-sign-smoke`；proto `RegisterRequest.signature` 与 gRPC 注册接线；关闭 ARCH §3.2 签名 TODO。
 - Sprint CQ（R-07 / KPI-08）：SSE 稳定率改为 `closed/(closed+failed)`；stream 中途 poll 失败记 `session_failed` 且不再记成功关闭；补 KPI 口径与单测。
 - Sprint CP（P1-5 / R-08）：扩 `TestCrossSpaceAPIRegression`（RAG/feedback/retention/space 矩阵等）；events/artifacts retention 校验可选 `spaceId`；`make r08-cross-space-gate` 接入 `release-window-gate`；清单 `doc/checklists/r08-cross-space.md`。

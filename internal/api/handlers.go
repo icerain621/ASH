@@ -140,6 +140,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.PUT("/observability/alert-rules", h.putAlertRules)
 		v1.POST("/observability/alerts/evaluate", h.evaluateAlerts)
 		v1.GET("/observability/trace/:traceId", h.getTrace)
+		v1.GET("/tools/risk-catalog", h.listToolRiskCatalog)
 		v1.GET("/mcp/tools", h.listMCPTools)
 		v1.POST("/mcp/tools", h.registerMCPTool)
 		v1.POST("/feedback", h.createFeedback)

@@ -4927,6 +4927,25 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/tools/risk-catalog": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "tools"
+                ],
+                "summary": "List built-in tool risk catalog (dangerous-ops)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.toolRiskCatalogResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "produces": [
@@ -8366,6 +8385,36 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_toolbus.Risk": {
+            "type": "string",
+            "enum": [
+                "safe",
+                "medium",
+                "danger"
+            ],
+            "x-enum-varnames": [
+                "RiskSafe",
+                "RiskMedium",
+                "RiskDanger"
+            ]
+        },
+        "github_com_ash-repwiki_ash_internal_toolbus.ToolRiskEntry": {
+            "type": "object",
+            "properties": {
+                "defaultDeny": {
+                    "type": "boolean"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "risk": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_toolbus.Risk"
+                }
+            }
+        },
         "internal_api.APIError": {
             "type": "object",
             "properties": {
@@ -9965,6 +10014,20 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.toolRiskCatalogResponse": {
+            "type": "object",
+            "properties": {
+                "docRef": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_toolbus.ToolRiskEntry"
+                    }
                 }
             }
         },

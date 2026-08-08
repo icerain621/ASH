@@ -89,6 +89,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CS：危险操作目录 `GET /tools/risk-catalog` + Runs 门禁文案（citation/tool_risk/human）
 - Sprint CR：插件签名轮换 SOP + `ash plugin-sign` + `make plugin-sign-smoke`；proto `RegisterRequest.signature`
 - Sprint CQ：KPI-08 SSE 稳定率口径修正（closed/(closed+failed)；中途 poll 失败记 session_failed）
 - Sprint CP：R-08 跨 space 发布窗口门禁（扩 `TestCrossSpaceAPIRegression` + retention spaceId 校验 + `r08-cross-space-gate`）

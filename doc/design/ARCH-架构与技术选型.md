@@ -134,8 +134,7 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 - **M0**：策略门禁（policy/hook/gate）+ 最小工具集 + 危险工具 deny + 脱敏
 - **P2**：执行隔离（容器/沙箱/受控网络）+ 组织级审批
 
-**已实现（基础）**：M2 policy enforcement、`waiting_approval`、危险工具默认 deny、合规 Secret 扫描与 Redact。  
-**TODO（负责人：安全/平台）**：产品化「危险操作列表」清单与控制台 human-step UX 文案（P2 硬化）。  
+**已实现**：M2 policy enforcement、`waiting_approval`、危险工具默认 deny、合规 Secret 扫描与 Redact；`GET /api/v1/tools/risk-catalog` + 自动化页风险目录；Runs 门禁区分 citation / tool_risk / human（Sprint CS）。  
 **验收方式**：TR2 红队用例集全部拦截；审计可追踪。
 
 ## 10. 与参考项目的映射（能力对齐）

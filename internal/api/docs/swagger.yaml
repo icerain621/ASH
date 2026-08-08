@@ -2211,6 +2211,27 @@ definitions:
       traceID:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_toolbus.Risk:
+    enum:
+    - safe
+    - medium
+    - danger
+    type: string
+    x-enum-varnames:
+    - RiskSafe
+    - RiskMedium
+    - RiskDanger
+  github_com_ash-repwiki_ash_internal_toolbus.ToolRiskEntry:
+    properties:
+      defaultDeny:
+        type: boolean
+      label:
+        type: string
+      name:
+        type: string
+      risk:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_toolbus.Risk'
+    type: object
   internal_api.APIError:
     properties:
       code:
@@ -3260,6 +3281,15 @@ definitions:
         type: string
     required:
     - value
+    type: object
+  internal_api.toolRiskCatalogResponse:
+    properties:
+      docRef:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_toolbus.ToolRiskEntry'
+        type: array
     type: object
   internal_api.updateAuditPolicyRequest:
     properties:
@@ -6493,6 +6523,18 @@ paths:
       summary: Get storage profile
       tags:
       - storage
+  /api/v1/tools/risk-catalog:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.toolRiskCatalogResponse'
+      summary: List built-in tool risk catalog (dangerous-ops)
+      tags:
+      - tools
   /healthz:
     get:
       produces:
