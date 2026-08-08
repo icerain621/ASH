@@ -20,7 +20,7 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| H-01 | 云 RDS `make cloud-acceptance` | migrate v20 + Doctor M3/ALL | ⏸ 待 `cloud-rds.env`（本地 Docker / `postgres-app-gate` ✅ Sprint CV） |
+| H-01 | 云 RDS `make cloud-acceptance` | migrate v20 + Doctor M3/ALL | ⏸ 待 `cloud-rds.env`（本地 `postgres-local-rds-e2e` ✅ Sprint CW，含 M3-04） |
 | H-02 | 云 RLS + `ash_app` | M3-06/07；本地 `postgres-app-gate` ✅ | ⏸ 云待签（本地已复验） |
 | H-03 | 生产 Worker `ASH_DATABASE_APP_URL` + RLS | `/readyz` dialect=postgres | ⏸ 云待签（本地已复验） |
 | BI-5 | 切换日备份→停 SQLite→migrate→t0 | runbook §4 证据 | ⏸ 生产日待执行 |
@@ -51,6 +51,7 @@ make mvp-signoff
 ```bash
 make smoke-static
 make postgres-app-gate
+make postgres-local-rds-e2e   # sqlite→Postgres + M3-04（需 Docker + .ash/ash.db）
 make worker-local-gate
 make regression-short && make web-gate
 ```
@@ -89,6 +90,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CW：`make postgres-local-rds-e2e`（Docker 模拟云 migrate+M3-04）；修复 ALL 套件重复 M3-04 行数漂移；归档 release-window 证据
 - Sprint CV：启动 Docker 复验 `postgres-app-gate` + `local-readiness-gate`；doctor 阶段取消误开的 `ASH_MIGRATE_E2E`（避免无 SQLite 的 M3-04 假红）
 - Sprint CU：TR0 固定探测语料 `ash.doctor.probe/v1`；SpacePage `listOrgTemplates` mock；memory scope AbsRepoRoot 对齐
 - Sprint CT：断开 `config→memory` 导入环（恢复 `smoke-static`）；PLAN RACI/Artifacts 文档闭环

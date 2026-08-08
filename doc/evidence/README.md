@@ -34,6 +34,8 @@ make signoff-gate
 | `mvp-signoff-YYYY-MM-DD.md` | 按日归档 |
 | `cloud-h01-h03-latest.md` | 云 RDS 验收摘要（`make cloud-acceptance` 后） |
 | `release-window-latest.md` | 发布窗口门禁摘要（`make release-window-gate` 后） |
+| `release-window-YYYY-MM-DD.md` | 发布窗口按日归档 |
+| `rollback-drill-latest.md` | 最近一次回滚演练摘要 |
 | `mvp-signatures-latest.md` | §11 四人签字 + 范围冻结（`make signoff-apply` 后） |
 
 签字完成后执行 `make signoff-apply`，用 `make signoff-gate` 验收；云切换另见 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。

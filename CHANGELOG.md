@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CW：`make postgres-local-rds-e2e`（Docker 本地模拟云 RDS migrate）；`postgres-rds-e2e` 在 M3-04 通过后取消 `ASH_MIGRATE_E2E`，避免 ALL 套件行数漂移假红；归档 2026-08-08 发布窗口证据。
 - Sprint CV：Docker 复验 `postgres-app-gate` / `local-readiness-gate`；`postgres-app-gate` doctor 阶段不再误开 `ASH_MIGRATE_E2E`（M3-04 假红）。
 - Sprint CU：Doctor TR0 固定探测语料（`ash.doctor.probe/v1` + embed）；关闭附录 E §3.3 TODO；SpacePage vitest 补齐 org-templates mock；运行时 memory 检索对齐 AbsRepoRoot。
 - Sprint CT：`config.LoadDataPolicy` 不再依赖 `memory`，消除测试导入环并恢复 `make smoke-static`；hotfix/security_patch@1.1.0 场景测试走人工门禁；memory 注入测试对齐 AbsRepoRoot；PLAN 补齐 Epic owner RACI。

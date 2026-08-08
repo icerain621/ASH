@@ -58,6 +58,10 @@ fi
 
 go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate -count=1
 
+# M3/TR3 probes insert rows into Postgres; re-running M3-04 in later suites would false-fail
+# (source SQLite unchanged). Migrate verify is already asserted above.
+unset ASH_MIGRATE_E2E
+
 go run ./cmd/cli doctor --suite TR3 --format md --require TR3-06,TR3-10
 
 go run ./cmd/cli doctor --suite ALL --agent static --format md --require M3-06,M3-07,M3-09,M3-11,TR3-06,TR3-09,TR3-10
