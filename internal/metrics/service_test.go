@@ -146,6 +146,68 @@ func TestOverviewScopesRunEventsAndStepsBySpace(t *testing.T) {
 	}
 }
 
+func TestOverviewScenarioStabilityR02(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	done := now.Add(time.Minute)
+	seed := []store.RunRecord{
+		{ID: "run_a1", TraceID: "tr_a1", SpaceID: "local", ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0", Status: "finished", StartedAt: now.Add(-3 * time.Hour), FinishedAt: &done, CreatedAt: now, UpdatedAt: now},
+		{ID: "run_a2", TraceID: "tr_a2", SpaceID: "local", ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0", Status: "failed", StartedAt: now.Add(-2 * time.Hour), FinishedAt: &done, CreatedAt: now, UpdatedAt: now},
+		{ID: "run_a3", TraceID: "tr_a3", SpaceID: "local", ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0", Status: "finished", StartedAt: now.Add(-time.Hour), FinishedAt: &done, CreatedAt: now, UpdatedAt: now},
+		{ID: "run_b1", TraceID: "tr_b1", SpaceID: "local", ScenarioName: "hotfix", ScenarioVersion: "1.1.0", Status: "finished", StartedAt: now.Add(-30 * time.Minute), FinishedAt: &done, CreatedAt: now, UpdatedAt: now},
+		{ID: "run_b2", TraceID: "tr_b2", SpaceID: "local", ScenarioName: "hotfix", ScenarioVersion: "1.1.0", Status: "finished", StartedAt: now.Add(-20 * time.Minute), FinishedAt: &done, CreatedAt: now, UpdatedAt: now},
+	}
+	for i := range seed {
+		if err := db.Create(&seed[i]).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Create(&store.Feedback{
+		ID: "fb_r02", SpaceID: "local", TargetType: "run", TargetID: "run_a2", Rating: 1, CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	overview, err := svc.Overview(OverviewRequest{SpaceID: "local", From: now.Add(-4 * time.Hour), To: now.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// feature_delivery 2/3 < 0.85 → unstable; hotfix 2/2 ≥ 0.85 → stable → KPI-11 = 1/2
+	kpi11 := card(overview, "KPI-11")
+	if kpi11.Status != "ok" || kpi11.Numerator != 1 || kpi11.Denominator != 2 || kpi11.Value != 0.5 {
+		t.Fatalf("KPI-11=%+v want numerator=1 denominator=2 value=0.5", kpi11)
+	}
+
+	var stab *MetricBreakdown
+	for i := range overview.Breakdowns {
+		if overview.Breakdowns[i].ID == "scenarioStability" {
+			stab = &overview.Breakdowns[i]
+			break
+		}
+	}
+	if stab == nil {
+		t.Fatal("missing scenarioStability breakdown")
+	}
+	byKey := map[string]BreakdownItem{}
+	for _, item := range stab.Items {
+		byKey[item.Key] = item
+	}
+	if byKey["feature_delivery@1.0.0"].Value != ratio(2, 3) {
+		t.Fatalf("feature_delivery rate=%v want %v", byKey["feature_delivery@1.0.0"].Value, ratio(2, 3))
+	}
+	if byKey["feature_delivery@1.0.0:n"].Value != 3 {
+		t.Fatalf("feature_delivery samples=%v want 3", byKey["feature_delivery@1.0.0:n"].Value)
+	}
+	if byKey["feature_delivery@1.0.0:low"].Value != 1 {
+		t.Fatalf("feature_delivery low=%v want 1", byKey["feature_delivery@1.0.0:low"].Value)
+	}
+	if byKey["hotfix@1.1.0"].Value != 1 {
+		t.Fatalf("hotfix rate=%v want 1", byKey["hotfix@1.1.0"].Value)
+	}
+}
+
 func card(overview Overview, id string) MetricCard {
 	for _, item := range overview.Summary {
 		if item.ID == id {

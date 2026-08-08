@@ -15,7 +15,7 @@
 | ID | 风险项 | 类型 | 等级 | 触发条件 | 预警指标 | 应对策略 | 责任角色 | 状态 |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
 | R-01 | 需求频繁变更导致排期失控 | 管理 | H | 迭代中新增/变更 P0 > 2 次 | 迭代内变更单数量 | 需求冻结；新增需求进入下迭代；变更走评审 | 产品负责人 | Open |
-| R-02 | Agent 结果不稳定影响信任 | 产品/算法 | H | 同场景输出波动明显 | 任务成功率下降、低分反馈上升 | 增加 Reviewer 校验；模板化 prompt；失败案例回流 | 算法负责人 | Open |
+| R-02 | Agent 结果不稳定影响信任 | 产品/算法 | H | 同场景输出波动明显 | 任务成功率下降、低分反馈上升 | KPI-11 + `scenarioStability` 度量（Sprint CN）；Reviewer/模板化/失败回流仍待算法 | 算法负责人 | Mitigating |
 | R-03 | CI 诊断准确率不足 | 技术 | H | 根因定位偏差导致修复无效 | 诊断采纳率低、重复失败率高 | 高频模式已扩（cancel/OOM/frontend，Sprint BQ）；BJ 用真实 GitHub log 校准采纳率 | 后端负责人 | Mitigating |
 | R-04 | Memory 记忆污染 | 产品/数据 | M | 错误信息被高置信写入 | 命中后负反馈升高 | TTL/sweep 已有；低分 feedback 衰减 + 检索置信度门槛（Sprint BR）；高置信额外确认待产品 | 产品+算法 | Mitigating |
 | R-05 | 任务状态机异常流转 | 技术 | H | 出现非法状态跳转 | 状态异常告警、人工修复增加 | 状态表 + mid-loop Cancel + Replay/Approve/Resume 门禁（BT–BW） | 后端负责人 | Mitigating |
@@ -30,7 +30,7 @@
 ## 3. Top 5 高优先风险（当前关注 · 2026-08-08）
 1. **云切流未完成**（R-12 / H-01~H-03）— 本地 drill 已过，生产 RDS 与切换日签字仍缺
 2. R-03 CI 诊断准确率 — fixture 已扩；待真实 GitHub log（BJ）
-3. R-02 Agent 结果稳定性 — ExecGo live 与生产采纳率未验
+3. R-02 Agent 结果稳定性 — 度量已落地（KPI-11）；ExecGo live 与生产采纳率未验
 4. R-08 越权 — 单测覆盖强；发布窗口抽测待做
 5. R-01 需求变更 — scope-freeze 占位已过；需真人产品确认保持冻结
 

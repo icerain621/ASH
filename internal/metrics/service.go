@@ -5,11 +5,19 @@ import (
 	"encoding/json"
 	"fmt"
 	"math"
+	"sort"
 	"strings"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/store"
 	"gorm.io/gorm"
+)
+
+// Scenario stability (R-02): among scenarios with enough repeats, fraction that
+// meet the success-rate floor. Thresholds are product defaults for console KPI-11.
+const (
+	scenarioStabilityMinSamples = 2
+	scenarioStabilityRateFloor  = 0.85
 )
 
 type OverviewRequest struct {
@@ -146,6 +154,10 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 	if err != nil {
 		return out, err
 	}
+	scenarioCard, scenarioBreakdown, err := s.scenarioStability(gdb, req)
+	if err != nil {
+		return out, err
+	}
 
 	out.Summary = []MetricCard{
 		ratioCard("KPI-01", "任务成功率", runStats.success, runStats.started, "ratio"),
@@ -158,6 +170,7 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 		sseStabilityCard(sseStats),
 		ratioCard("KPI-09", "API 错误率", apiStats.errors, apiStats.total, "ratio"),
 		durationCard("KPI-10", "队列积压时长", queueStats.totalWaitMs, queueStats.count),
+		scenarioCard,
 	}
 	out.Trends = []MetricTrend{
 		{MetricID: "KPI-01", Points: s.runSuccessTrend(gdb, req)},
@@ -165,6 +178,7 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 		{MetricID: "KPI-06", Points: s.lowFeedbackTrend(gdb, req)},
 	}
 	out.Breakdowns = []MetricBreakdown{
+		scenarioBreakdown,
 		{ID: "ciDiagnosis", Label: "CI 诊断根因", Items: s.ciDiagnosisBreakdown(gdb, req)},
 		{ID: "feedbackRatings", Label: "反馈评分分布", Items: s.feedbackRatingBreakdown(gdb, req)},
 		{ID: "memoryEvents", Label: "Memory 事件", Items: []BreakdownItem{
@@ -390,6 +404,110 @@ func sseStabilityCard(stats sseStatsResult) MetricCard {
 		}
 	}
 	return ratioCard("KPI-08", "SSE 稳定率", stats.closed, stats.opened, "ratio")
+}
+
+type scenarioBucket struct {
+	started  int64
+	finished int64
+	lowScore int64
+}
+
+func scenarioKey(name, version string) string {
+	name = strings.TrimSpace(name)
+	version = strings.TrimSpace(version)
+	if name == "" {
+		name = "unknown"
+	}
+	if version == "" {
+		return name
+	}
+	return name + "@" + version
+}
+
+// scenarioStability aggregates per-scenario repeat success (R-02) for KPI-11 + breakdown.
+func (s *Service) scenarioStability(gdb *gorm.DB, req OverviewRequest) (MetricCard, MetricBreakdown, error) {
+	breakdown := MetricBreakdown{ID: "scenarioStability", Label: "场景可重复性 (R-02)"}
+	var runs []store.RunRecord
+	if err := gdb.Where("space_id = ? AND started_at >= ? AND started_at <= ?", req.SpaceID, req.From, req.To).
+		Find(&runs).Error; err != nil {
+		return MetricCard{}, breakdown, err
+	}
+	buckets := map[string]*scenarioBucket{}
+	runScenario := map[string]string{}
+	for _, row := range runs {
+		key := scenarioKey(row.ScenarioName, row.ScenarioVersion)
+		b := buckets[key]
+		if b == nil {
+			b = &scenarioBucket{}
+			buckets[key] = b
+		}
+		b.started++
+		if row.Status == "finished" {
+			b.finished++
+		}
+		runScenario[row.ID] = key
+	}
+
+	var feedback []store.Feedback
+	if err := gdb.Where("space_id = ? AND created_at >= ? AND created_at <= ?", req.SpaceID, req.From, req.To).
+		Find(&feedback).Error; err != nil {
+		return MetricCard{}, breakdown, err
+	}
+	for _, row := range feedback {
+		if row.Rating <= 0 || row.Rating > 2 {
+			continue
+		}
+		target := strings.ToLower(strings.TrimSpace(row.TargetType))
+		if target != "run" && target != "runs" {
+			continue
+		}
+		if key, ok := runScenario[row.TargetID]; ok {
+			if b := buckets[key]; b != nil {
+				b.lowScore++
+			}
+		}
+	}
+
+	keys := make([]string, 0, len(buckets))
+	for key := range buckets {
+		keys = append(keys, key)
+	}
+	sort.Strings(keys)
+
+	var stable, eligible int64
+	items := make([]BreakdownItem, 0, len(keys)*3)
+	for _, key := range keys {
+		b := buckets[key]
+		rate := ratio(b.finished, b.started)
+		items = append(items,
+			BreakdownItem{Key: key, Label: key + " 成功率", Value: rate, Unit: "ratio"},
+			BreakdownItem{Key: key + ":n", Label: key + " 样本", Value: float64(b.started), Unit: "count"},
+			BreakdownItem{Key: key + ":low", Label: key + " 低分反馈", Value: float64(b.lowScore), Unit: "count"},
+		)
+		if b.started >= scenarioStabilityMinSamples {
+			eligible++
+			if rate >= scenarioStabilityRateFloor {
+				stable++
+			}
+		}
+	}
+	breakdown.Items = items
+
+	card := ratioCard("KPI-11", "场景稳定率", stable, eligible, "ratio")
+	card.Description = fmt.Sprintf(
+		"R-02：同场景样本≥%d 且成功率≥%.0f%% 的场景占比；分解见 scenarioStability。",
+		scenarioStabilityMinSamples, scenarioStabilityRateFloor*100,
+	)
+	if eligible <= 0 {
+		card = MetricCard{
+			ID: "KPI-11", Label: "场景稳定率", Unit: "ratio", Status: "empty",
+			Description: fmt.Sprintf(
+				"当前窗口没有场景达到可重复样本门槛（≥%d 次运行）；单次运行不计入 KPI-11。",
+				scenarioStabilityMinSamples,
+			),
+		}
+	}
+	return card, breakdown, nil
 }
 
 func (s *Service) queueStats(gdb *gorm.DB, req OverviewRequest) (queueStatsResult, error) {

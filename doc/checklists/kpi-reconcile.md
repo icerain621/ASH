@@ -9,7 +9,8 @@
 | 埋点字段完整性 | `TestOverviewAggregatesKPIInputs` | KPI-01/04/05/07/08/10 聚合 |
 | 样本回放对账 | `TestKPIOverviewMatchesDeriveReplay` | KPI-01 分子与 `ash_run_total{status="finished"}` 一致 |
 | derive parity | `TestValidateReplayParity` | 事件 replay 与独立计数对齐 |
-| 看板卡片齐全 | `TestKPIOverviewSummaryCatalog` | KPI-01..10 均出现在 overview |
+| 看板卡片齐全 | `TestKPIOverviewSummaryCatalog` | KPI-01..11 均出现在 overview |
+| 场景可重复（R-02） | `TestOverviewScenarioStabilityR02` | KPI-11 + `scenarioStability` |
 
 ## 命令
 

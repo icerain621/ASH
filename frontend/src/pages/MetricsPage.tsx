@@ -4,7 +4,19 @@ import { useMemo, useState } from "react";
 import { getMetricsOverview, type MetricCard, type MetricTrend } from "@/modules/metrics/api/metrics.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
-const KPI_ORDER = ["KPI-01", "KPI-02", "KPI-03", "KPI-04", "KPI-05", "KPI-06", "KPI-07", "KPI-08", "KPI-09", "KPI-10"];
+const KPI_ORDER = [
+  "KPI-01",
+  "KPI-02",
+  "KPI-03",
+  "KPI-04",
+  "KPI-05",
+  "KPI-06",
+  "KPI-07",
+  "KPI-08",
+  "KPI-09",
+  "KPI-10",
+  "KPI-11",
+];
 
 export function MetricsPage() {
   const activeSpaceId = getCurrentSpaceId();
@@ -33,7 +45,7 @@ export function MetricsPage() {
       <div className="page-heading">
         <div>
           <h1>指标看板</h1>
-          <p>按 ASH KPI 口径查看交付、CI、反馈、记忆与稳定性聚合结果。</p>
+          <p>按 ASH KPI 口径查看交付、CI、反馈、记忆与场景可重复性（R-02）聚合结果。</p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar metrics-toolbar">
@@ -119,7 +131,7 @@ export function MetricsPage() {
 
       <div className="split metrics-split">
         {(overview?.breakdowns ?? []).map((group) => (
-          <div className="pane" key={group.id}>
+          <div className="pane" key={group.id} data-testid={`metrics-breakdown-${group.id}`}>
             <div className="pane-title">
               <h2>{group.label}</h2>
               <span>{group.items.length} 项</span>
@@ -137,14 +149,23 @@ export function MetricsPage() {
                     <td colSpan={2}>暂无样本。</td>
                   </tr>
                 )}
-                {group.items.map((item) => (
-                  <tr key={item.key}>
-                    <td>{item.label}</td>
-                    <td>
-                      {formatNumber(item.value)} {item.unit}
-                    </td>
-                  </tr>
-                ))}
+                {group.items.map((item) => {
+                  const unstable =
+                    group.id === "scenarioStability" &&
+                    item.unit === "ratio" &&
+                    !item.key.endsWith(":n") &&
+                    !item.key.endsWith(":low") &&
+                    item.value < 0.85;
+                  return (
+                    <tr key={item.key} className={unstable ? "error" : undefined}>
+                      <td>{item.label}</td>
+                      <td>
+                        {formatNumber(item.value)} {item.unit}
+                        {unstable ? " · 低于门槛" : ""}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

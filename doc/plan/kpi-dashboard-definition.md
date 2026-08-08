@@ -27,6 +27,9 @@
 | KPI-08 | SSE 稳定率 | SSE 正常会话占比 | `successful_sse_sessions / total_sse_sessions` | 日/周 | 前端负责人 |
 | KPI-09 | API 错误率 | 非 2xx 请求占比 | `error_requests / total_requests` | 日/周 | 后端负责人 |
 | KPI-10 | 队列积压时长 | 队列任务平均等待时长 | `sum(queue_wait_ms)/queue_task_count`（`run_steps` 经 `runs.space_id` 过滤） | 日/周 | 运维负责人 |
+| KPI-11 | 场景稳定率 | 同场景可重复成功率达标占比（R-02） | `stable_scenarios / eligible_scenarios`（样本≥2 且成功率≥85%） | 日/周 | 算法/产品 |
+
+breakdown：`scenarioStability` — 按 `scenario_name@scenario_version` 输出成功率 / 样本数 / 关联低分反馈（`target_type=run`）。
 
 ## 4. 关键指标详细口径
 
@@ -54,6 +57,16 @@
 - 分母事件：`memory_query`
 - 风险：高命中不等于高质量，需结合低分反馈率一起观察
 
+## 4.5 KPI-11 场景稳定率（R-02）
+- 定义：窗口内可重复场景中，成功率达到门槛的场景占比
+- 分组：`runs.scenario_name` + `runs.scenario_version`
+- 可重复门槛：同场景 `started ≥ 2`
+- 稳定门槛：`finished / started ≥ 0.85`（`finished` = `status == finished`，与 KPI-01 一致）
+- 分子：达到稳定门槛的场景数；分母：达到可重复门槛的场景数
+- 空窗：无场景达到样本门槛时 KPI-11 = `empty`（不伪造 100%）
+- 联动：breakdown `scenarioStability` + KPI-06 低分反馈（按 run 归属场景）
+- 不含：产物 digest / 文本语义方差（后续算法轨）
+
 ## 5. 数据源映射
 
 | 指标 | 主数据源 | 辅助数据源 |
@@ -63,6 +76,7 @@
 | CI 类（KPI-04/05） | `ci_events`（如后续建立）/ `tool_calls` | 外部 CI API |
 | 记忆类（KPI-07） | `memories`, `memory_events` | `task_steps` |
 | 稳定性类（KPI-08/09/10） | 网关日志、SSE 日志、队列监控 | OTel 指标 |
+| 场景可重复（KPI-11 / R-02） | `runs`（scenario + status） | `feedback`（run 低分） |
 
 ## 6. 刷新频率与时区
 - 实时指标（接口错误率、队列积压）：1 分钟刷新
