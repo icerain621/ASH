@@ -16,6 +16,7 @@
 | 前端门禁 | `make web-gate` | eslint + vitest（7 文件 / 14 用例）+ build |
 | SSE 浏览器 E2E（可选） | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
 | R-08 跨 space | `make r08-cross-space-gate` | API 越权回归 + RLS 静态；Docker/URL 时跑 Postgres live |
+| 插件签名 | `make plugin-sign-smoke` | HMAC 单测 + `ash plugin-sign` 往返（Sprint CR） |
 | 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |
 | 配置核对 | `make config-env-gate` | 模板 + production/scope gate |
 | 回滚演练 | `make rollback-drill` | 发布 API drill + 基线 + Doctor ALL |

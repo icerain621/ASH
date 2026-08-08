@@ -75,9 +75,12 @@ proto/
 | 密钥 | `ASH_PLUGIN_SIGNING_KEY`；设为非空则注册必须带有效签名 |
 | 强制 | `ASH_PLUGIN_SIGNING_REQUIRED=1`（无密钥视为配置错误） |
 | HTTP | `POST /api/v1/plugins` 字段 `signature`（hex） |
-| gRPC | capability `ash.sign.hmac=<hex>`（proto `signature` 字段待下次 `proto-generate` 落地） |
-| 打包建议 | `plugin.json`（name/version/protocol/abi/endpoint/capabilities）+ 二进制/配置 + `signature.txt` |
+| gRPC | `RegisterRequest.signature`（field 10）或 capability `ash.sign.hmac=<hex>` |
+| CLI | `ash plugin-sign --name … --version … --endpoint …` |
+| 打包建议 | `plugin.json` + `signature.txt` + 二进制/配置 |
 | 生产暴露 | `ASH_PLUGIN_GRPC_ADDR` 默认仅在 `ASH_AUTH_MODE=dev` 开启本机监听；生产显式配置并配合签名 |
+| 轮换 SOP | [`plugin-signing-sop.md`](../checklists/plugin-signing-sop.md) |
+| 烟测 | `make plugin-sign-smoke` |
 
 运行时：`GET /api/v1/plugins/abi` 返回 `signingAlg` / `signingRequired` / `signingKeyConfigured`。
 

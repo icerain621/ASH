@@ -38,7 +38,7 @@
 |----|--------|----------|------|
 | ~~商业落地：谁付费/谁决策/组织样板~~ | P2 | PRD §3 / ORG 文档 | **已关闭**（Sprint CO；`org-templates`） |
 | ~~数据分级与保留期~~ | P1（合规） | 附录 J / PRD §8 | **已关闭**（Sprint CF） |
-| ~~插件打包/签名策略~~ | P2 | ARCH §3.2 / 附录 H §6 | **骨架已关闭**（Sprint CH；生产密钥轮换 SOP 仍待） |
+| ~~插件打包/签名策略~~ | P2 | ARCH §3.2 / 附录 H §6 | **已关闭**（CH 骨架 + CR 轮换 SOP / `plugin-sign-smoke`） |
 | 向量库 / 符号索引路线 | P3 | ARCH §5–6 | RAG 增强，FTS 已够用 |
 | ~~Artifacts 跨平台默认路径与权限~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
 | ~~Canonical JSON 实现说明（产物 digest）~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
@@ -118,6 +118,7 @@
 | **CO** | P2-5 商业组织样板（PRD §3） | ✅ 已完成 |
 | **CP** | P1-5 R-08 跨 space 发布窗口抽测门禁 | ✅ 已完成（云 RLS live 另轨） |
 | **CQ** | KPI-08 SSE 稳定率口径硬化（R-07） | ✅ 已完成 |
+| **CR** | 插件签名轮换 SOP + CLI/烟测 | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
@@ -143,7 +144,7 @@
 | 合规 / 权限 / Scale | ✅ | ✅ | |
 | CI / KPI / Feedback / Releases | ✅ | ✅ | 生产外部依赖待验 |
 | OTel 骨架 | ✅ | ✅ | 完整外发策略按组织开关 |
-| Proto 插件 ABI | ⚠️ 草案 | ✅ 基础+签名骨架 | 生产密钥轮换 / 端到端打包验收待 |
+| Proto 插件 ABI | ✅ signature 字段 | ✅ 签名+SOP | 外部实机打包可选 |
 | 向量库 / 技能市场 | 展望 | ❌ | P3 |
 
 ---

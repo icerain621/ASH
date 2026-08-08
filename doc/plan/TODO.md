@@ -63,7 +63,7 @@ make regression-short && make web-gate
 |----|-----|------|
 | 附录 F | ~~Artifacts 默认路径与权限~~ | ✅ Sprint CG：`paths.go` + storage/profile |
 | 附录 F | ~~Canonical JSON~~ | ✅ Sprint CG：`canonical.go` |
-| ARCH | ~~插件打包/签名策略~~ | ✅ Sprint CH：`pluginabi/sign` + ABI profile |
+| ARCH | ~~插件打包/签名策略~~ | ✅ CH + CR：`plugin-sign` / SOP / `plugin-sign-smoke` |
 | 场景 | ~~Hotfix / Security 模板深化~~ | ✅ Sprint CH：v1.1.0 + human approve |
 | 前端 | ~~SSE 浏览器级 E2E~~ | ✅ Sprint CM：`make sse-browser-e2e` |
 | 度量 | ~~Agent 稳定性度量（R-02）~~ | ✅ Sprint CN：KPI-11 + `scenarioStability` |
@@ -89,6 +89,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CR：插件签名轮换 SOP + `ash plugin-sign` + `make plugin-sign-smoke`；proto `RegisterRequest.signature`
 - Sprint CQ：KPI-08 SSE 稳定率口径修正（closed/(closed+failed)；中途 poll 失败记 session_failed）
 - Sprint CP：R-08 跨 space 发布窗口门禁（扩 `TestCrossSpaceAPIRegression` + retention spaceId 校验 + `r08-cross-space-gate`）
 - Sprint CO：商业组织样板（PRD §3：`orgtemplates` + `/org-templates` + Space 页）

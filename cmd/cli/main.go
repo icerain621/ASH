@@ -14,6 +14,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -36,6 +37,8 @@ func main() {
 		runDoctor(os.Args[2:])
 	case "migrate":
 		runMigrate(os.Args[2:])
+	case "plugin-sign":
+		runPluginSign(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
@@ -43,7 +46,35 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
+}
+
+func runPluginSign(args []string) {
+	fs := flag.NewFlagSet("plugin-sign", flag.ExitOnError)
+	name := fs.String("name", "", "plugin name")
+	version := fs.String("version", "", "plugin version")
+	protocol := fs.String("protocol", "grpc", "protocol")
+	abi := fs.String("abi", pluginabi.CurrentABI, "ABI version")
+	endpoint := fs.String("endpoint", "", "plugin endpoint")
+	key := fs.String("key", "", "HMAC key (default: ASH_PLUGIN_SIGNING_KEY)")
+	capability := fs.Bool("capability", false, "print ash.sign.hmac=<hex> instead of bare hex")
+	_ = fs.Parse(args)
+	if strings.TrimSpace(*name) == "" || strings.TrimSpace(*version) == "" || strings.TrimSpace(*endpoint) == "" {
+		log.Fatal("--name, --version, and --endpoint are required")
+	}
+	signKey := strings.TrimSpace(*key)
+	if signKey == "" {
+		signKey = pluginabi.SigningKey()
+	}
+	if signKey == "" {
+		log.Fatal("signing key required: pass --key or set ASH_PLUGIN_SIGNING_KEY")
+	}
+	sig := pluginabi.SignHMAC(signKey, *name, *version, *protocol, *abi, *endpoint)
+	if *capability {
+		fmt.Println(pluginabi.CapabilitySignPrefix + sig)
+		return
+	}
+	fmt.Println(sig)
 }
 
 func runScenario(args []string) {

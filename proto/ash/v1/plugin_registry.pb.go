@@ -32,8 +32,11 @@ type RegisterRequest struct {
 	Capabilities    []string               `protobuf:"bytes,7,rep,name=capabilities,proto3" json:"capabilities,omitempty"`
 	SupportedEvents []string               `protobuf:"bytes,8,rep,name=supported_events,json=supportedEvents,proto3" json:"supported_events,omitempty"`
 	Context         *TraceContext          `protobuf:"bytes,9,opt,name=context,proto3" json:"context,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// HMAC-SHA256 hex of SignMaterial (name/version/protocol/abi/endpoint).
+	// Clients may also pass capability "ash.sign.hmac=<hex>" for older stubs.
+	Signature     string `protobuf:"bytes,10,opt,name=signature,proto3" json:"signature,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RegisterRequest) Reset() {
@@ -127,6 +130,13 @@ func (x *RegisterRequest) GetContext() *TraceContext {
 		return x.Context
 	}
 	return nil
+}
+
+func (x *RegisterRequest) GetSignature() string {
+	if x != nil {
+		return x.Signature
+	}
+	return ""
 }
 
 type RegisterResponse struct {
@@ -425,7 +435,7 @@ var File_ash_v1_plugin_registry_proto protoreflect.FileDescriptor
 
 const file_ash_v1_plugin_registry_proto_rawDesc = "" +
 	"\n" +
-	"\x1cash/v1/plugin_registry.proto\x12\x06ash.v1\x1a\x13ash/v1/common.proto\"\x98\x02\n" +
+	"\x1cash/v1/plugin_registry.proto\x12\x06ash.v1\x1a\x13ash/v1/common.proto\"\xb6\x02\n" +
 	"\x0fRegisterRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x18\n" +
@@ -435,7 +445,9 @@ const file_ash_v1_plugin_registry_proto_rawDesc = "" +
 	"\bendpoint\x18\x06 \x01(\tR\bendpoint\x12\"\n" +
 	"\fcapabilities\x18\a \x03(\tR\fcapabilities\x12)\n" +
 	"\x10supported_events\x18\b \x03(\tR\x0fsupportedEvents\x12.\n" +
-	"\acontext\x18\t \x01(\v2\x14.ash.v1.TraceContextR\acontext\"\x93\x01\n" +
+	"\acontext\x18\t \x01(\v2\x14.ash.v1.TraceContextR\acontext\x12\x1c\n" +
+	"\tsignature\x18\n" +
+	" \x01(\tR\tsignature\"\x93\x01\n" +
 	"\x10RegisterResponse\x12\x1a\n" +
 	"\baccepted\x18\x01 \x01(\bR\baccepted\x12\x1e\n" +
 	"\n" +

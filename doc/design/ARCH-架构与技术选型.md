@@ -54,8 +54,8 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 - **WASM 插件（P2+）**：用于更强的安全隔离与分发（可选）
 
 **已实现（基础）**：HTTP 插件注册 + 可选 gRPC（`ASH_PLUGIN_GRPC_ADDR`，见 `internal/pluginabi`）。  
-**已实现（MVP 签名骨架）**：`hmac-sha256` + `ASH_PLUGIN_SIGNING_KEY` / `ASH_PLUGIN_SIGNING_REQUIRED`；HTTP `signature` 与 gRPC capability `ash.sign.hmac=`；详见附录 H §6。  
-**TODO（负责人：平台）**：生产签名密钥轮换 SOP + 外部观测插件端到端打包验收（Windows）。
+**已实现**：`hmac-sha256` + `ASH_PLUGIN_SIGNING_KEY` / `ASH_PLUGIN_SIGNING_REQUIRED`；HTTP `signature`；gRPC `RegisterRequest.signature` 与 capability `ash.sign.hmac=`；CLI `ash plugin-sign`；轮换 SOP 见 [`plugin-signing-sop.md`](../checklists/plugin-signing-sop.md)；烟测 `make plugin-sign-smoke`。  
+**可选验收**：Windows 外部观测插件实机打包一次（非阻断）。
 
 ### 3.3 前端技术栈推荐
 

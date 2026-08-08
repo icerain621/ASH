@@ -100,6 +100,7 @@ curl -s http://<worker>/readyz | jq .
 | `ash` / migrator 密码 | 维护窗口：`ALTER ROLE ash PASSWORD` → 更新 `ASH_DATABASE_URL` → 滚动 Worker | `doctor --require M3-04`（`ASH_MIGRATE_E2E=1`） |
 | `ash_app` 密码 | `ALTER ROLE ash_app PASSWORD` → 更新 `ASH_DATABASE_APP_URL` → 滚动 Worker | `doctor --require M3-07`；`/readyz` `liveGateHints` 含 app URL |
 | GitHub `GITHUB_TOKEN`（CI sync） | Console Secrets 更新 → 不改明文连接配置 | `ASH_CI_FIXTURE=1` + [`secret-rotate-smoke.md`](secret-rotate-smoke.md)；生产 `GET /ci/runs?sync=true` |
+| `ASH_PLUGIN_SIGNING_KEY` | 见 [`plugin-signing-sop.md`](plugin-signing-sop.md)：生成新钥 → 重签插件 → 滚动 Worker | `make plugin-sign-smoke`；错误签名应 `PLUGIN_SIGNATURE_INVALID` |
 | ExecGo / Codex | 按 ExecGo 部署文档轮换；更新 `EXECGO_*` 与 `ASH_CODEX_BIN` | `make execgo-health` → `ASH_EXECGO_E2E=1 doctor M3-05` |
 
 轮换后归档：Doctor ALL/TR3 报告、`/readyz` JSON、Scale readiness 截图。

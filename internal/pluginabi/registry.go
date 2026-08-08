@@ -31,7 +31,10 @@ func (s *RegistryServer) Register(ctx context.Context, req *ashv1.RegisterReques
 	protocol := normalize(req.GetProtocol(), "grpc")
 	abi := normalize(req.GetAbi(), CurrentABI)
 	compatible, reason := Compatible(protocol, abi, req.GetName(), req.GetVersion())
-	sig := SignatureFromCapabilities(req.GetCapabilities())
+	sig := strings.TrimSpace(req.GetSignature())
+	if sig == "" {
+		sig = SignatureFromCapabilities(req.GetCapabilities())
+	}
 	if err := VerifyRegistrationSignature(sig, req.GetName(), req.GetVersion(), protocol, abi, req.GetEndpoint()); err != nil {
 		compatible = false
 		if reason == "" {
