@@ -486,7 +486,12 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 	q := s.gdb().Where("status = ? AND layer = ? AND space_id = ?", "approved", "L1", firstNonEmpty(spaceID, "local")).
 		Where("LOWER(title) LIKE ? OR LOWER(body) LIKE ?", like, like)
 	if repoRoot != "" {
-		q = q.Where("scope_repo = ? OR scope_repo = ?", repoRoot, "")
+		absRoot := repoRoot
+		if abs, err := rag.AbsRepoRoot(repoRoot); err == nil {
+			absRoot = abs
+		}
+		// Match both raw and AbsRepoRoot forms (Create normalizes RepoRoot).
+		q = q.Where("scope_repo = ? OR scope_repo = ? OR scope_repo = ?", absRoot, repoRoot, "")
 	}
 	var rows []store.MemoryRecord
 	if err := q.Order("confidence desc, updated_at desc").Limit(limit * 3).Find(&rows).Error; err != nil {

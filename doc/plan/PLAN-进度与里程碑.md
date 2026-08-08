@@ -121,6 +121,7 @@
 | **CR** | 插件签名轮换 SOP + CLI/烟测 | ✅ 已完成 |
 | **CS** | 危险操作目录 + human-step UX | ✅ 已完成 |
 | **CT** | data-policy 导入环修复 + RACI 闭环 | ✅ 已完成 |
+| **CU** | TR0 固定探测语料 + SpacePage/web-gate | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |

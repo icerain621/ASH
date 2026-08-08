@@ -1,0 +1,6 @@
+package probe
+
+// ProbeService is a stable citation target for Doctor TR0 runs.
+type ProbeService struct{}
+
+func (ProbeService) Health() string { return "ok" }

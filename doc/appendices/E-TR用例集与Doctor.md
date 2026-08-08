@@ -91,6 +91,8 @@
   - 可复现步骤（如何重跑）
   - 关键证据链接（event seq 范围、artifacts digest）
 
-**TODO（负责人：测试/平台）**：定义 TR0 的合成探测输入 repo 与固定数据集（避免漂移）。  
-**验收方式**：同一输入在 7 天内重复执行，TR0 结果稳定。
+**已实现（Sprint CU）**：固定合成探测语料 `ash.doctor.probe/v1`  
+- 嵌入路径：`internal/doctor/testdata/probe-repo/`（`PROBE_MANIFEST.md` / `README.md` / `docs/SPEC.md` / `src/service.go.txt`）  
+- 运行时物化：`materializeProbeRepo` → `{dataDir}/doctor-probe/{caseId}/`，并写入确定性 `CASE.md`  
+- 验收：`go test ./internal/doctor -run 'TestTR0Suite|TestMaterializeProbeRepo'`；语料变更须 bump `ProbeDatasetID`
 

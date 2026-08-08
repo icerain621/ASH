@@ -89,6 +89,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CU：TR0 固定探测语料 `ash.doctor.probe/v1`；SpacePage `listOrgTemplates` mock；memory scope AbsRepoRoot 对齐
 - Sprint CT：断开 `config→memory` 导入环（恢复 `smoke-static`）；PLAN RACI/Artifacts 文档闭环
 - Sprint CS：危险操作目录 `GET /tools/risk-catalog` + Runs 门禁文案（citation/tool_risk/human）
 - Sprint CR：插件签名轮换 SOP + `ash plugin-sign` + `make plugin-sign-smoke`；proto `RegisterRequest.signature`

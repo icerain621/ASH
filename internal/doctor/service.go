@@ -166,12 +166,17 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 
 func (s *Service) probeInputs(suffix string) map[string]any {
 	probeDir := filepath.Join(s.dataDir, "doctor-probe", suffix)
-	_ = os.MkdirAll(probeDir, 0o755)
-	issue := "doctor " + suffix
-	_ = os.WriteFile(filepath.Join(probeDir, "README.md"), []byte(issue+"\nFeature delivery evidence for ASH doctor.\n"), 0o644)
+	issue, err := materializeProbeRepo(probeDir, suffix)
+	if err != nil {
+		// Fall back to a minimal local corpus so Doctor still runs if embed fails.
+		_ = os.MkdirAll(probeDir, 0o755)
+		issue = "doctor " + suffix
+		_ = os.WriteFile(filepath.Join(probeDir, "README.md"), []byte(issue+"\nFeature delivery evidence for ASH doctor.\n"), 0o644)
+	}
 	return map[string]any{
-		"issueOrSpec": issue,
-		"repoRoot":    probeDir,
+		"issueOrSpec":    issue,
+		"repoRoot":       probeDir,
+		"probeDatasetId": ProbeDatasetID,
 	}
 }
 

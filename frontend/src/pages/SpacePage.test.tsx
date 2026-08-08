@@ -19,6 +19,10 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   listSpaceResourceScopes: vi.fn().mockResolvedValue({ items: [] }),
   getPermissionMatrix: vi.fn().mockResolvedValue({ roles: [], actions: [] }),
   getAuthMe: vi.fn().mockResolvedValue({ userId: "u1", spaceId: "local" }),
+  listOrgTemplates: vi.fn().mockResolvedValue({
+    items: [{ id: "small_team", name: "小型团队", description: "fixture" }],
+  }),
+  provisionOrgTemplate: vi.fn(),
   createOrg: vi.fn(),
   createSpace: vi.fn(),
   createRole: vi.fn(),
