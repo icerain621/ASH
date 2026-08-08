@@ -414,8 +414,9 @@ func (h *Handler) streamRun(c *gin.Context) {
 	}
 
 	opened := false
+	failed := false
 	defer func() {
-		if opened {
+		if opened && !failed {
 			h.auditStream(c, runID, "stream.session_closed", map[string]any{
 				"runId":  runID,
 				"reason": "client_disconnect",
@@ -469,7 +470,14 @@ func (h *Handler) streamRun(c *gin.Context) {
 			return
 		case <-ticker.C:
 			evs, err := h.eventsFor(c).ListAfter(runID, lastSeq, 100)
-			if err != nil || len(evs) == 0 {
+			if err != nil {
+				failed = true
+				h.auditStream(c, runID, "stream.session_failed", map[string]any{
+					"runId": runID, "reason": "event_poll_failed", "error": err.Error(),
+				})
+				return
+			}
+			if len(evs) == 0 {
 				continue
 			}
 			writeEvents(evs)

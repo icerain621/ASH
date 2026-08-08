@@ -76,6 +76,7 @@ func TestOverviewSSEStabilityFromStreamAudits(t *testing.T) {
 	for _, row := range []store.AuditLog{
 		{ID: "aud_sse_open", SpaceID: "local", RunID: "run_sse", EventType: "stream.session_opened", PayloadJSON: `{"runId":"run_sse"}`, CreatedAt: now},
 		{ID: "aud_sse_close", SpaceID: "local", RunID: "run_sse", EventType: "stream.session_closed", PayloadJSON: `{"runId":"run_sse","reason":"client_disconnect"}`, CreatedAt: now},
+		{ID: "aud_sse_fail", SpaceID: "local", RunID: "run_sse_bad", EventType: "stream.session_failed", PayloadJSON: `{"runId":"run_sse_bad","reason":"event_poll_failed"}`, CreatedAt: now},
 	} {
 		if err := db.Create(&row).Error; err != nil {
 			t.Fatal(err)
@@ -86,8 +87,29 @@ func TestOverviewSSEStabilityFromStreamAudits(t *testing.T) {
 		t.Fatal(err)
 	}
 	kpi := card(overview, "KPI-08")
-	if kpi.Status != "ok" || kpi.Value != 1 {
-		t.Fatalf("KPI-08=%+v want ok ratio=1", kpi)
+	// 1 closed + 1 failed → success rate 0.5 (failed sessions count in denominator)
+	if kpi.Status != "ok" || kpi.Numerator != 1 || kpi.Denominator != 2 || kpi.Value != 0.5 {
+		t.Fatalf("KPI-08=%+v want ok numerator=1 denominator=2 value=0.5", kpi)
+	}
+}
+
+func TestOverviewSSEStabilityInFlightOnlyIsEmpty(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	if err := db.Create(&store.AuditLog{
+		ID: "aud_sse_open_only", SpaceID: "local", RunID: "run_live",
+		EventType: "stream.session_opened", PayloadJSON: `{}`, CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	overview, err := svc.Overview(OverviewRequest{SpaceID: "local", From: now.Add(-time.Hour), To: now.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kpi := card(overview, "KPI-08")
+	if kpi.Status != "empty" {
+		t.Fatalf("KPI-08=%+v want empty while only in-flight opens", kpi)
 	}
 }
 

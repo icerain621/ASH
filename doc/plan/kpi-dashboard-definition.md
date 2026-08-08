@@ -24,7 +24,7 @@
 | KPI-05 | CI 诊断采纳率 | 诊断建议被执行的比例 | `adopted_diagnosis / total_diagnosis` | 周/月 | 后端负责人 |
 | KPI-06 | 低分反馈率 | 评分 <=2 的反馈占比 | `low_score_feedback / total_feedback` | 日/周 | 产品负责人 |
 | KPI-07 | Memory 命中率 | 执行中命中记忆次数占检索次数比 | `memory_hits / memory_queries`（`run_events` 经 `runs.space_id` 过滤） | 日/周 | 算法负责人 |
-| KPI-08 | SSE 稳定率 | SSE 正常会话占比 | `successful_sse_sessions / total_sse_sessions` | 日/周 | 前端负责人 |
+| KPI-08 | SSE 稳定率 | SSE 正常会话占比 | `session_closed / (session_closed + session_failed)` | 日/周 | 前端负责人 |
 | KPI-09 | API 错误率 | 非 2xx 请求占比 | `error_requests / total_requests` | 日/周 | 后端负责人 |
 | KPI-10 | 队列积压时长 | 队列任务平均等待时长 | `sum(queue_wait_ms)/queue_task_count`（`run_steps` 经 `runs.space_id` 过滤） | 日/周 | 运维负责人 |
 | KPI-11 | 场景稳定率 | 同场景可重复成功率达标占比（R-02） | `stable_scenarios / eligible_scenarios`（样本≥2 且成功率≥85%） | 日/周 | 算法/产品 |
@@ -57,7 +57,15 @@ breakdown：`scenarioStability` — 按 `scenario_name@scenario_version` 输出�
 - 分母事件：`memory_query`
 - 风险：高命中不等于高质量，需结合低分反馈率一起观察
 
-## 4.5 KPI-11 场景稳定率（R-02）
+## 4.5 KPI-08 SSE 稳定率
+- 定义：终态 SSE 会话中正常关闭的占比（R-07）
+- 成功：审计 `stream.session_closed`
+- 失败：审计 `stream.session_failed`（握手失败、首刷失败、轮询中途失败）
+- 分母：`closed + failed`（仅终态；仅有 `session_opened` 的在途会话不计）
+- 采集：Worker `GET /runs/{id}/stream`；中途 `ListAfter` 失败会记 `session_failed` 且不再记 `closed`
+- 空窗：无终态事件 → `unavailable` / 仅在途 → `empty`
+
+## 4.6 KPI-11 场景稳定率（R-02）
 - 定义：窗口内可重复场景中，成功率达到门槛的场景占比
 - 分组：`runs.scenario_name` + `runs.scenario_version`
 - 可重复门槛：同场景 `started ≥ 2`

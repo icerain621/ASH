@@ -117,6 +117,7 @@
 | **CN** | P2-4 R-02 场景稳定率（KPI-11） | ✅ 已完成 |
 | **CO** | P2-5 商业组织样板（PRD §3） | ✅ 已完成 |
 | **CP** | P1-5 R-08 跨 space 发布窗口抽测门禁 | ✅ 已完成（云 RLS live 另轨） |
+| **CQ** | KPI-08 SSE 稳定率口径硬化（R-07） | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |

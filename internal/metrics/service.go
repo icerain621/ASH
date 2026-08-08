@@ -393,17 +393,28 @@ func (s *Service) sseStats(gdb *gorm.DB, req OverviewRequest) (sseStatsResult, e
 }
 
 func sseStabilityCard(stats sseStatsResult) MetricCard {
-	if stats.opened == 0 && stats.failed == 0 {
+	// KPI-08: successful_sse_sessions / total_sse_sessions among terminal outcomes.
+	// successful = stream.session_closed; failed = stream.session_failed; in-flight opened ignored.
+	terminal := stats.closed + stats.failed
+	if terminal == 0 && stats.opened == 0 {
 		return unavailableCard("KPI-08", "SSE 稳定率", "当前时间窗口尚无 SSE 会话审计事件；连接 /runs/{id}/stream 后将自动采集。")
 	}
-	if stats.opened == 0 {
+	if terminal == 0 {
 		return MetricCard{
 			ID: "KPI-08", Label: "SSE 稳定率", Unit: "ratio", Status: "empty",
-			Numerator: 0, Denominator: stats.failed,
-			Description: "仅有失败会话，尚无成功建立的 SSE 连接。",
+			Numerator: 0, Denominator: 0,
+			Description: fmt.Sprintf(
+				"有 %d 个已打开会话尚无终态（closed/failed）；待客户端断开或失败后再计入 KPI-08。",
+				stats.opened,
+			),
 		}
 	}
-	return ratioCard("KPI-08", "SSE 稳定率", stats.closed, stats.opened, "ratio")
+	card := ratioCard("KPI-08", "SSE 稳定率", stats.closed, terminal, "ratio")
+	card.Description = fmt.Sprintf(
+		"成功关闭 / (成功关闭 + 失败)；opened=%d closed=%d failed=%d。",
+		stats.opened, stats.closed, stats.failed,
+	)
+	return card
 }
 
 type scenarioBucket struct {

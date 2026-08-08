@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CQ（R-07 / KPI-08）：SSE 稳定率改为 `closed/(closed+failed)`；stream 中途 poll 失败记 `session_failed` 且不再记成功关闭；补 KPI 口径与单测。
 - Sprint CP（P1-5 / R-08）：扩 `TestCrossSpaceAPIRegression`（RAG/feedback/retention/space 矩阵等）；events/artifacts retention 校验可选 `spaceId`；`make r08-cross-space-gate` 接入 `release-window-gate`；清单 `doc/checklists/r08-cross-space.md`。
 - Sprint CO（P2-5 / PRD §3）：三套组织样板（小团队/中大型/强合规）与付费·决策·审批约定；`GET/POST /api/v1/org-templates…` 一键开通；Space 控制台样板卡片；设计文档 `ORG-组织样板与商业落地.md`。
 - Sprint CN（P2-4 / R-02）：metrics overview 增加 KPI-11 场景稳定率与 `scenarioStability` 分解；Metrics 看板高亮低于 85% 门槛的场景；风险册 R-02 → Mitigating（度量侧）。

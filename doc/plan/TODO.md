@@ -89,6 +89,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CQ：KPI-08 SSE 稳定率口径修正（closed/(closed+failed)；中途 poll 失败记 session_failed）
 - Sprint CP：R-08 跨 space 发布窗口门禁（扩 `TestCrossSpaceAPIRegression` + retention spaceId 校验 + `r08-cross-space-gate`）
 - Sprint CO：商业组织样板（PRD §3：`orgtemplates` + `/org-templates` + Space 页）
 - Sprint CN：KPI-11 场景稳定率 + scenarioStability 分解（R-02 / P2-4 后半）
