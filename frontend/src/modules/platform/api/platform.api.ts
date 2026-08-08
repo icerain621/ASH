@@ -418,6 +418,50 @@ export function createOrg(body: { name: string; slug?: string }) {
   }).then(normalizeOrg);
 }
 
+export type OrgTemplate = {
+  id: string;
+  label: string;
+  description: string;
+  deployment: string;
+  payer: string;
+  decisionMaker: string;
+  approver: string;
+  defaultOrgName: string;
+  defaultOrgSlug: string;
+  recommendedKpis: string[];
+  scenarios: string[];
+};
+
+export type OrgTemplateProvisionResult = {
+  templateId: string;
+  org: Org;
+  spaces: Space[];
+  roles: Role[];
+};
+
+export function listOrgTemplates() {
+  return api<{ items?: OrgTemplate[] }>("/org-templates").then((res) => ({
+    items: res.items ?? [],
+  }));
+}
+
+export function provisionOrgTemplate(templateId: string, body?: { name?: string; slug?: string }) {
+  return api<RawRecord>(`/org-templates/${templateId}/provision`, {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  }).then((raw) => {
+    const org = normalizeOrg((raw.org as RawRecord) || {});
+    const spacesRaw = (raw.spaces as RawRecord[] | undefined) ?? [];
+    const rolesRaw = (raw.roles as RawRecord[] | undefined) ?? [];
+    return {
+      templateId: String(raw.templateId ?? templateId),
+      org,
+      spaces: spacesRaw.map(normalizeSpace),
+      roles: rolesRaw.map(normalizeRole),
+    } satisfies OrgTemplateProvisionResult;
+  });
+}
+
 export function createSpace(body: { orgId: string; name: string; slug?: string }) {
   return api<RawRecord>("/spaces", {
     method: "POST",

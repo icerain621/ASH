@@ -173,6 +173,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/auth/password", h.changePassword)
 		v1.GET("/orgs", h.listOrgs)
 		v1.POST("/orgs", h.createOrg)
+		v1.GET("/org-templates", h.listOrgTemplates)
+		v1.POST("/org-templates/:templateId/provision", h.provisionOrgTemplate)
 		v1.GET("/orgs/:orgId/roles", h.listRoles)
 		v1.POST("/orgs/:orgId/roles", h.createRole)
 		v1.GET("/spaces", h.listSpaces)

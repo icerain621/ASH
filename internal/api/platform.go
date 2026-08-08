@@ -23,6 +23,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/observability"
 	obsconfig "github.com/ash-repwiki/ash/internal/observability/config"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
+	"github.com/ash-repwiki/ash/internal/orgtemplates"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/security"
@@ -64,6 +65,15 @@ type FeedbackListResponse struct {
 type createOrgRequest struct {
 	Name string `json:"name" binding:"required"`
 	Slug string `json:"slug,omitempty"`
+}
+
+type provisionOrgTemplateRequest struct {
+	Name string `json:"name,omitempty"`
+	Slug string `json:"slug,omitempty"`
+}
+
+type orgTemplateListResponse struct {
+	Items []orgtemplates.Template `json:"items"`
 }
 
 type createSpaceRequest struct {
@@ -530,6 +540,61 @@ func (h *Handler) createOrg(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, org)
+}
+
+// ListOrgTemplates godoc
+// @Summary List commercial organization templates (PRD §3)
+// @Tags orgs
+// @Produce json
+// @Success 200 {object} orgTemplateListResponse
+// @Router /api/v1/org-templates [get]
+func (h *Handler) listOrgTemplates(c *gin.Context) {
+	c.JSON(http.StatusOK, orgTemplateListResponse{Items: orgtemplates.Catalog()})
+}
+
+// ProvisionOrgTemplate godoc
+// @Summary Provision org/spaces/roles from a commercial template
+// @Tags orgs
+// @Accept json
+// @Produce json
+// @Param templateId path string true "template id (small_team|mid_enterprise|strong_compliance)"
+// @Param body body provisionOrgTemplateRequest false "optional name/slug overrides"
+// @Success 201 {object} orgtemplates.ProvisionResult
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/org-templates/{templateId}/provision [post]
+func (h *Handler) provisionOrgTemplate(c *gin.Context) {
+	if !h.requirePermission(c, permOrgWrite) {
+		return
+	}
+	templateID := strings.TrimSpace(c.Param("templateId"))
+	if _, ok := orgtemplates.Get(templateID); !ok {
+		c.JSON(http.StatusBadRequest, errorBody("ORG_TEMPLATE_UNKNOWN", "unknown org template: "+templateID))
+		return
+	}
+	var req provisionOrgTemplateRequest
+	if c.Request.ContentLength > 0 {
+		if err := c.ShouldBindJSON(&req); err != nil {
+			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+			return
+		}
+	}
+	var result orgtemplates.ProvisionResult
+	if err := h.dbFor(c).Transaction(func(tx *gorm.DB) error {
+		var err error
+		result, err = orgtemplates.Provision(tx, templateID, orgtemplates.ProvisionRequest{
+			OrgName: req.Name,
+			OrgSlug: req.Slug,
+			ActorID: firstNonEmptyAPI(currentActor(c), "dev-user"),
+			SpaceID: currentSpace(c),
+		})
+		return err
+	}); err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("ORG_TEMPLATE_PROVISION_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusCreated, result)
 }
 
 func (h *Handler) listSpaces(c *gin.Context) {
@@ -1271,7 +1336,7 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "plugin.registered", map[string]any{
 		"pluginId": row.ID, "name": row.Name, "version": row.Version,
 		"protocol": row.Protocol, "abi": row.ABI, "compatible": row.Compatible,
-		"signed":   pluginabi.SigningKey() != "" && sig != "",
+		"signed": pluginabi.SigningKey() != "" && sig != "",
 	})).Error
 	c.JSON(http.StatusCreated, row)
 }

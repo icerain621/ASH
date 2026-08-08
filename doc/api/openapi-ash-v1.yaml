@@ -1443,6 +1443,62 @@ components:
       properties:
         name: { type: string }
         slug: { type: string }
+    OrgTemplate:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        description: { type: string }
+        deployment: { type: string }
+        payer: { type: string }
+        decisionMaker: { type: string }
+        approver: { type: string }
+        defaultOrgName: { type: string }
+        defaultOrgSlug: { type: string }
+        spaces:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              slug: { type: string }
+        extraRoles:
+          type: array
+          items:
+            type: object
+            properties:
+              name: { type: string }
+              permissions:
+                type: array
+                items: { type: string }
+        recommendedKpis:
+          type: array
+          items: { type: string }
+        scenarios:
+          type: array
+          items: { type: string }
+    OrgTemplateListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrgTemplate" }
+    ProvisionOrgTemplateRequest:
+      type: object
+      properties:
+        name: { type: string }
+        slug: { type: string }
+    OrgTemplateProvisionResult:
+      type: object
+      properties:
+        templateId: { type: string }
+        org: { $ref: "#/components/schemas/OrgItem" }
+        spaces:
+          type: array
+          items: { $ref: "#/components/schemas/SpaceItem" }
+        roles:
+          type: array
+          items: { $ref: "#/components/schemas/RoleItem" }
     SpaceItem:
       type: object
       properties:
@@ -3368,6 +3424,43 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/OrgItem" }
+
+  /api/v1/org-templates:
+    get:
+      tags: [Orgs]
+      summary: List commercial organization templates (PRD §3)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgTemplateListResponse" }
+
+  /api/v1/org-templates/{templateId}/provision:
+    post:
+      tags: [Orgs]
+      summary: Provision org/spaces/roles from a commercial template
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema: { type: string, enum: [small_team, mid_enterprise, strong_compliance] }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ProvisionOrgTemplateRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgTemplateProvisionResult" }
+        "400":
+          description: unknown template
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /api/v1/orgs/{orgId}/roles:
     get:

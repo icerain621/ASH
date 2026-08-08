@@ -127,6 +127,8 @@ var Catalog = map[string]Entry{
 	// orgs / spaces / permissions
 	"ORG_LIST_FAILED":                {Domain: "platform", Summary: "Failed to list organizations"},
 	"ORG_CREATE_FAILED":              {Domain: "platform", Summary: "Failed to create organization"},
+	"ORG_TEMPLATE_UNKNOWN":           {Domain: "platform", Summary: "Unknown organization commercial template"},
+	"ORG_TEMPLATE_PROVISION_FAILED":  {Domain: "platform", Summary: "Failed to provision organization template"},
 	"ORG_NOT_FOUND":                  {Domain: "platform", Summary: "Organization not found"},
 	"SPACE_LIST_FAILED":              {Domain: "platform", Summary: "Failed to list spaces"},
 	"SPACE_CREATE_FAILED":            {Domain: "platform", Summary: "Failed to create space"},

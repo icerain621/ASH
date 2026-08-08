@@ -9,12 +9,14 @@ import {
   createSpaceMember,
   devLogin,
   getAuthMe,
+  listOrgTemplates,
   listOrgs,
   listRoles,
   getPermissionMatrix,
   listSpaceMembers,
   listSpaceResourceScopes,
   listSpaces,
+  provisionOrgTemplate,
   updateSpaceResourceScope,
 } from "@/modules/platform/api/platform.api";
 import { getAuthToken, getCurrentSpaceId, setAuthSession } from "@/services/http/client";
@@ -22,9 +24,14 @@ import { getAuthToken, getCurrentSpaceId, setAuthSession } from "@/services/http
 export function SpacePage() {
   const qc = useQueryClient();
   const [activeSpaceId, setActiveSpaceId] = useState(getCurrentSpaceId());
+  const [templateId, setTemplateId] = useState("small_team");
   const orgsQuery = useQuery({
     queryKey: ["orgs"],
     queryFn: listOrgs,
+  });
+  const templatesQuery = useQuery({
+    queryKey: ["org-templates"],
+    queryFn: listOrgTemplates,
   });
   const spacesQuery = useQuery({
     queryKey: ["spaces"],
@@ -74,6 +81,19 @@ export function SpacePage() {
       await qc.invalidateQueries({ queryKey: ["orgs"] });
     },
   });
+  const provisionTemplateMut = useMutation({
+    mutationFn: (body: { templateId: string; name?: string; slug?: string }) =>
+      provisionOrgTemplate(body.templateId, { name: body.name, slug: body.slug }),
+    onSuccess: async (result) => {
+      await qc.invalidateQueries({ queryKey: ["orgs"] });
+      await qc.invalidateQueries({ queryKey: ["spaces"] });
+      await qc.invalidateQueries({ queryKey: ["roles"] });
+      const firstSpace = result.spaces[0]?.id;
+      if (firstSpace) {
+        loginMut.mutate(firstSpace);
+      }
+    },
+  });
   const createSpaceMut = useMutation({
     mutationFn: createSpace,
     onSuccess: async (space) => {
@@ -119,6 +139,17 @@ export function SpacePage() {
     });
   }
 
+  function submitTemplate(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const selected = String(formData.get("templateId") || templateId);
+    provisionTemplateMut.mutate({
+      templateId: selected,
+      name: String(formData.get("name") || "") || undefined,
+      slug: String(formData.get("slug") || "") || undefined,
+    });
+  }
+
   function submitSpace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
@@ -157,12 +188,15 @@ export function SpacePage() {
     });
   }
 
+  const selectedTemplate = templatesQuery.data?.items.find((item) => item.id === templateId);
   const err =
     orgsQuery.error?.message ||
+    templatesQuery.error?.message ||
     spacesQuery.error?.message ||
     rolesQuery.error?.message ||
     membersQuery.error?.message ||
     createOrgMut.error?.message ||
+    provisionTemplateMut.error?.message ||
     createSpaceMut.error?.message ||
     createRoleMut.error?.message ||
     createMemberMut.error?.message;
@@ -192,6 +226,47 @@ export function SpacePage() {
         </div>
       </div>
       {err && <p className="error-text">{err}</p>}
+      <div className="pane" style={{ marginBottom: "1rem" }} data-testid="org-templates-panel">
+        <div className="pane-title">
+          <h2>组织样板（PRD §3）</h2>
+          <span>{templatesQuery.data?.items.length ?? 0} 套</span>
+        </div>
+        <p className="muted-line">一键开通 Org / Space / 角色；标明谁付费、谁决策、谁审批。</p>
+        <form className="stack-form" onSubmit={submitTemplate}>
+          <label className="scenario-picker">
+            样板
+            <select
+              name="templateId"
+              value={templateId}
+              onChange={(e) => setTemplateId(e.target.value)}
+              disabled={!templatesQuery.data?.items.length || provisionTemplateMut.isPending}
+            >
+              {(templatesQuery.data?.items ?? []).map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.label}
+                </option>
+              ))}
+              {!templatesQuery.data?.items.length && <option value="small_team">小团队</option>}
+            </select>
+          </label>
+          {selectedTemplate && (
+            <p className="muted-line">
+              付费：{selectedTemplate.payer} · 决策：{selectedTemplate.decisionMaker} · 审批：{selectedTemplate.approver}
+            </p>
+          )}
+          <input name="name" placeholder="组织名称（可空=样板默认）" />
+          <input name="slug" placeholder="slug（可空）" />
+          <button className="btn primary icon-btn" type="submit" disabled={provisionTemplateMut.isPending}>
+            <Plus size={16} strokeWidth={1.8} />
+            {provisionTemplateMut.isPending ? "开通中…" : "一键开通样板"}
+          </button>
+        </form>
+        {provisionTemplateMut.isSuccess && (
+          <p className="muted-line">
+            已开通 {provisionTemplateMut.data.org.name}（{provisionTemplateMut.data.spaces.length} 个 Space）
+          </p>
+        )}
+      </div>
       <div className="split">
         <div className="pane">
           <div className="pane-title">

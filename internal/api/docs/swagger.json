@@ -2527,6 +2527,82 @@
                 }
             }
         },
+        "/api/v1/org-templates": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orgs"
+                ],
+                "summary": "List commercial organization templates (PRD §3)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.orgTemplateListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/org-templates/{templateId}/provision": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orgs"
+                ],
+                "summary": "Provision org/spaces/roles from a commercial template",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "template id (small_team|mid_enterprise|strong_compliance)",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "optional name/slug overrides",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.provisionOrgTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.ProvisionResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/orgs": {
             "post": {
                 "consumes": [
@@ -6385,6 +6461,111 @@
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_orgtemplates.ProvisionResult": {
+            "type": "object",
+            "properties": {
+                "org": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Org"
+                },
+                "roles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Role"
+                    }
+                },
+                "spaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Space"
+                    }
+                },
+                "templateId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_orgtemplates.RoleSpec": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "permissions": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_orgtemplates.Template": {
+            "type": "object",
+            "properties": {
+                "approver": {
+                    "type": "string"
+                },
+                "decisionMaker": {
+                    "type": "string"
+                },
+                "defaultOrgName": {
+                    "type": "string"
+                },
+                "defaultOrgSlug": {
+                    "type": "string"
+                },
+                "deployment": {
+                    "description": "internal_platform | saas | either",
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "extraRoles": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.RoleSpec"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "payer": {
+                    "type": "string"
+                },
+                "recommendedKpis": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "scenarios": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "spaces": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec"
+                    }
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_rag.Hit": {
             "type": "object",
             "properties": {
@@ -9633,6 +9814,17 @@
                 }
             }
         },
+        "internal_api.orgTemplateListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.Template"
+                    }
+                }
+            }
+        },
         "internal_api.patchReleaseChecklistRequest": {
             "type": "object",
             "properties": {
@@ -9654,6 +9846,17 @@
                     "type": "boolean"
                 },
                 "runId": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.provisionOrgTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "slug": {
                     "type": "string"
                 }
             }

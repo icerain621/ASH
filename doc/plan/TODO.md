@@ -67,7 +67,7 @@ make regression-short && make web-gate
 | 场景 | ~~Hotfix / Security 模板深化~~ | ✅ Sprint CH：v1.1.0 + human approve |
 | 前端 | ~~SSE 浏览器级 E2E~~ | ✅ Sprint CM：`make sse-browser-e2e` |
 | 度量 | ~~Agent 稳定性度量（R-02）~~ | ✅ Sprint CN：KPI-11 + `scenarioStability` |
-| 产品 | 付费/决策/组织样板 | PRD §3 |
+| 产品 | ~~付费/决策/组织样板~~ | ✅ Sprint CO：`org-templates` + ORG 文档 |
 
 ---
 
@@ -89,6 +89,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CO：商业组织样板（PRD §3：`orgtemplates` + `/org-templates` + Space 页）
 - Sprint CN：KPI-11 场景稳定率 + scenarioStability 分解（R-02 / P2-4 后半）
 - Sprint CM：SSE 浏览器级 E2E（P2-4 前半：Playwright + `sse-browser-e2e`）
 - Sprint CH：插件签名 + Hotfix/Security 场景 v1.1.0（P2-2/P2-3）

@@ -170,6 +170,63 @@ func TestGetWaterfallReturnsStructuredSpans(t *testing.T) {
 	}
 }
 
+func TestListAndProvisionOrgTemplates(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+
+	listResp := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/org-templates", nil)
+	r.ServeHTTP(listResp, listReq)
+	if listResp.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", listResp.Code, listResp.Body.String())
+	}
+	var listed struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(listResp.Body.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if len(listed.Items) != 3 {
+		t.Fatalf("templates=%d want 3", len(listed.Items))
+	}
+
+	body := []byte(`{"name":"Mid Demo","slug":"mid-demo"}`)
+	provResp := httptest.NewRecorder()
+	provReq := httptest.NewRequest(http.MethodPost, "/api/v1/org-templates/mid_enterprise/provision", bytes.NewReader(body))
+	provReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(provResp, provReq)
+	if provResp.Code != http.StatusCreated {
+		t.Fatalf("provision status=%d body=%s", provResp.Code, provResp.Body.String())
+	}
+	var result struct {
+		TemplateID string         `json:"templateId"`
+		Org        store.Org      `json:"org"`
+		Spaces     []store.Space  `json:"spaces"`
+		Roles      []store.Role   `json:"roles"`
+	}
+	if err := json.Unmarshal(provResp.Body.Bytes(), &result); err != nil {
+		t.Fatal(err)
+	}
+	if result.TemplateID != "mid_enterprise" || result.Org.Slug != "mid-demo" {
+		t.Fatalf("result=%+v", result)
+	}
+	if len(result.Spaces) != 2 {
+		t.Fatalf("spaces=%d want 2", len(result.Spaces))
+	}
+	if len(result.Roles) < 5 {
+		t.Fatalf("roles=%d want >=5", len(result.Roles))
+	}
+	var roleCount int64
+	if err := db.Model(&store.Role{}).Where("org_id = ?", result.Org.ID).Count(&roleCount).Error; err != nil {
+		t.Fatal(err)
+	}
+	if roleCount < 5 {
+		t.Fatalf("db roles=%d want >=5", roleCount)
+	}
+}
+
 func TestCreateOrgAndSpaceProvisionGovernanceRows(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	r, db := newPlatformTestRouter(t)

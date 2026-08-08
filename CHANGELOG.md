@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CO（P2-5 / PRD §3）：三套组织样板（小团队/中大型/强合规）与付费·决策·审批约定；`GET/POST /api/v1/org-templates…` 一键开通；Space 控制台样板卡片；设计文档 `ORG-组织样板与商业落地.md`。
 - Sprint CN（P2-4 / R-02）：metrics overview 增加 KPI-11 场景稳定率与 `scenarioStability` 分解；Metrics 看板高亮低于 85% 门槛的场景；风险册 R-02 → Mitigating（度量侧）。
 - Sprint CM（P2-4 SSE）：Playwright 浏览器级 SSE 烟测（`frontend/e2e/sse-run-stream.spec.ts` + `make sse-browser-e2e`）；Runs 页 `data-testid` 便于断言「已连接」与事件行。
 - Sprint CH（P2-2/P2-3）：插件注册 HMAC 签名（`ASH_PLUGIN_SIGNING_KEY` / `signature` / `ash.sign.hmac=`）；`plugins/abi` 暴露签名策略；hotfix/security_patch 场景升至 v1.1.0（blast radius / risk matrix / human approve）；附录 H §6。

@@ -36,7 +36,7 @@
 
 | 项 | 优先级 | 文档位置 | 影响 |
 |----|--------|----------|------|
-| 商业落地：谁付费/谁决策/组织样板 | P2 | PRD §3 | 产品化叙事，不阻塞技术发布 |
+| ~~商业落地：谁付费/谁决策/组织样板~~ | P2 | PRD §3 / ORG 文档 | **已关闭**（Sprint CO；`org-templates`） |
 | ~~数据分级与保留期~~ | P1（合规） | 附录 J / PRD §8 | **已关闭**（Sprint CF） |
 | ~~插件打包/签名策略~~ | P2 | ARCH §3.2 / 附录 H §6 | **骨架已关闭**（Sprint CH；生产密钥轮换 SOP 仍待） |
 | 向量库 / 符号索引路线 | P3 | ARCH §5–6 | RAG 增强，FTS 已够用 |
@@ -96,7 +96,7 @@
 | P2-2 | 插件 ABI 签名/打包策略 + 生产 gRPC 暴露策略 | ✅ Sprint CH |
 | P2-3 | Hotfix / Security Patch 场景模板深化 | ✅ Sprint CH |
 | P2-4 | SSE 浏览器级 E2E；Agent 稳定性度量（R-02） | ✅ SSE E2E（CM）+ KPI-11（CN） |
-| P2-5 | 商业组织样板与付费/决策模型 | PRD §3 |
+| P2-5 | 商业组织样板与付费/决策模型 | ✅ Sprint CO |
 
 ### P3 — 下一世代（明确不做进 v0.1）
 
@@ -115,11 +115,11 @@
 | **CH** | P2-2/P2-3 插件签名 + Hotfix/Security 深化 | ✅ 已完成 |
 | **CM** | P2-4 SSE 浏览器级 E2E（Playwright） | ✅ 已完成 |
 | **CN** | P2-4 R-02 场景稳定率（KPI-11） | ✅ 已完成 |
+| **CO** | P2-5 商业组织样板（PRD §3） | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
 | **CL** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
-| **CM+** | P2 余项（商业组织样板 PRD §3） | 范围解冻评审 |
 
 历史 Sprint AY–CE 明细与已完成清单见 [`TODO.md`](TODO.md)「已完成归档」节（仅保留摘要，细节以 CHANGELOG 为准）。
 

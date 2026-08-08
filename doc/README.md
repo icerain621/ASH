@@ -22,6 +22,7 @@ doc/
 | 文档 | 职责 | Owner 角色 |
 |------|------|------------|
 | [`PRD-需求文档.md`](design/PRD-需求文档.md) | 做什么、In/Out、成功指标 | 产品 |
+| [`ORG-组织样板与商业落地.md`](design/ORG-组织样板与商业落地.md) | 付费/决策/审批与三套组织样板（PRD §3） | 产品 |
 | [`HLD-总体设计.md`](design/HLD-总体设计.md) | 系统拆分、数据与安全概览 | 架构/后端 |
 | [`ARCH-架构与技术选型.md`](design/ARCH-架构与技术选型.md) | 为何这样选、可替换项 | 平台/架构 |
 | [`M3-多租户与Postgres演进.md`](design/M3-多租户与Postgres演进.md) | 多租户 / Postgres / RLS | 后端/运维 |
