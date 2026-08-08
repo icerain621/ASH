@@ -37,6 +37,21 @@ func scenarioKey(name, version string) string {
 }
 
 func defaultScenarioPolicies() map[string]ScenarioToolPolicy {
+	hotfix := ScenarioToolPolicy{
+		ToolMatrix: map[string]ToolRule{
+			"maintainer": {Allow: []string{"*"}},
+			"operator":   {Allow: []string{"git.*", "test.run", "apply_patch"}, Deny: []string{"runtime.command"}},
+			"reviewer":   {Allow: []string{"git.*", "test.run"}, Deny: []string{"runtime.command", "mcp.call"}, DenyMode: "block"},
+		},
+	}
+	security := ScenarioToolPolicy{
+		ToolMatrix: map[string]ToolRule{
+			"maintainer": {Allow: []string{"*"}},
+			"operator":   {Allow: []string{"git.*", "test.run"}, Deny: []string{"apply_patch", "runtime.command", "mcp.call"}, DenyMode: "block"},
+			"reviewer":   {Allow: []string{"git.status", "test.run"}, Deny: []string{"apply_patch", "runtime.command"}, DenyMode: "block"},
+			"auditor":    {Allow: []string{"git.status"}, Deny: []string{"*"}, DenyMode: "block"},
+		},
+	}
 	return map[string]ScenarioToolPolicy{
 		scenarioKey("feature_delivery", "1.0.0"): {
 			ToolMatrix: map[string]ToolRule{
@@ -46,21 +61,10 @@ func defaultScenarioPolicies() map[string]ScenarioToolPolicy {
 				"auditor":    {Allow: []string{"git.status"}, Deny: []string{"*"}, DenyMode: "block"},
 			},
 		},
-		scenarioKey("hotfix", "1.0.0"): {
-			ToolMatrix: map[string]ToolRule{
-				"maintainer": {Allow: []string{"*"}},
-				"operator":   {Allow: []string{"git.*", "test.run", "apply_patch"}, Deny: []string{"runtime.command"}},
-				"reviewer":   {Allow: []string{"git.*", "test.run"}, Deny: []string{"runtime.command", "mcp.call"}, DenyMode: "block"},
-			},
-		},
-		scenarioKey("security_patch", "1.0.0"): {
-			ToolMatrix: map[string]ToolRule{
-				"maintainer": {Allow: []string{"*"}},
-				"operator":   {Allow: []string{"git.*", "test.run"}, Deny: []string{"apply_patch", "runtime.command", "mcp.call"}, DenyMode: "block"},
-				"reviewer":   {Allow: []string{"git.status", "test.run"}, Deny: []string{"apply_patch", "runtime.command"}, DenyMode: "block"},
-				"auditor":    {Allow: []string{"git.status"}, Deny: []string{"*"}, DenyMode: "block"},
-			},
-		},
+		scenarioKey("hotfix", "1.1.0"):         hotfix,
+		scenarioKey("hotfix", "1.0.0"):         hotfix, // pre–Sprint CH seed alias
+		scenarioKey("security_patch", "1.1.0"): security,
+		scenarioKey("security_patch", "1.0.0"): security,
 	}
 }
 
@@ -151,8 +155,8 @@ func SeedScenarioScopesTx(tx *gorm.DB, spaceID string, now time.Time) error {
 func seedScenarioScopes(db *gorm.DB, spaceID string, now time.Time) error {
 	scenarios := []struct{ name, version string }{
 		{name: "feature_delivery", version: "1.0.0"},
-		{name: "hotfix", version: "1.0.0"},
-		{name: "security_patch", version: "1.0.0"},
+		{name: "hotfix", version: "1.1.0"},
+		{name: "security_patch", version: "1.1.0"},
 	}
 	for _, item := range scenarios {
 		key := scenarioKey(item.name, item.version)

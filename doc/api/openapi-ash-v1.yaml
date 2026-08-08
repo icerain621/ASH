@@ -1090,6 +1090,10 @@ components:
           items: { $ref: "#/components/schemas/PluginProtoFile" }
         grpcEnabled: { type: boolean }
         pluginGrpcAddr: { type: string }
+        signingAlg: { type: string, example: hmac-sha256 }
+        signingRequired: { type: boolean }
+        signingKeyConfigured: { type: boolean }
+        signCapabilityPrefix: { type: string, example: "ash.sign.hmac=" }
     MCPToolItem:
       type: object
       properties:

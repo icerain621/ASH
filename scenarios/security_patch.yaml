@@ -2,8 +2,8 @@ version: "ash.rules/v0.1"
 
 scenario:
   name: "security_patch"
-  scenarioVersion: "1.0.0"
-  description: "安全补丁与依赖升级流程（M1）"
+  scenarioVersion: "1.1.0"
+  description: "安全补丁/依赖升级：评估→补丁→回归→安全公告草稿（PRD §4.3）"
   policyProfile: "security"
   checkpoint:
     strategy: "per_step"
@@ -17,7 +17,7 @@ scenario:
 
   inputs:
     required: [issueOrSpec, repoRoot]
-    optional: [vulnerabilityEvidence, lockfiles, compatibilityDocs, targetBranch]
+    optional: [vulnerabilityEvidence, lockfiles, compatibilityDocs, targetBranch, cveIds]
 
   artifacts:
     required:
@@ -26,6 +26,17 @@ scenario:
       - { type: "release_notes" }
       - { type: "rollback_plan" }
 
+  gates:
+    - id: "gate.repo.clean"
+      when: "before.step.code.patch"
+      blocking: true
+      check:
+        tool: "git.status"
+        expect: { clean: true }
+      onFail:
+        message: "安全补丁前工作区须干净"
+        remediation:
+          - { tool: "git.diff" }
   steps:
     - id: "security.assess"
       role: "Security"
@@ -34,23 +45,56 @@ scenario:
       rag:
         sources: ["code", "docs", "memory:L1"]
         requireCitations: true
+        onMissingCitations: "block"
+      outputs:
+        memoryCandidates:
+          - { layer: "L1", title: "vuln assessment", evidenceFrom: ["vulnerabilityEvidence", "lockfiles"] }
+
+    - id: "security.risk_matrix"
+      role: "Security"
+      kind: "llm"
+      promptRef: "prompts/security_risk_matrix.md"
+      rag:
+        sources: ["docs", "memory:L1"]
+        requireCitations: true
 
     - id: "code.patch"
       role: "Coder"
       kind: "agent"
-      timeoutMs: 120000
+      timeoutMs: 180000
       agent:
         adapter: "codex"
         capabilities: ["code.modify", "dependency.upgrade", "test.run", "artifact.diff"]
-        prompt: "Apply the security patch or dependency upgrade with minimal compatibility risk. Preserve evidence for changed lockfiles."
+        prompt: |
+          Apply the security patch or dependency upgrade with minimal compatibility risk.
+          Preserve evidence for changed lockfiles and document residual risk.
 
     - id: "qa.regression"
       role: "QA"
       kind: "tool_chain"
       chain:
-        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
+        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 180000, retry: { maxAttempts: 1 } }
+
+    - id: "security.approve_ship"
+      role: "Security"
+      kind: "human"
+      promptRef: "prompts/security_approve_ship.md"
 
     - id: "ship.advisory"
       role: "Shipper"
       kind: "llm"
       promptRef: "prompts/security_advisory.md"
+      outputs:
+        artifacts:
+          - { type: "release_notes" }
+          - { type: "rollback_plan" }
+        memoryCandidates:
+          - { layer: "L2", title: "security advisory draft", evidenceFrom: ["vulnerabilityEvidence", "test_report"] }
+
+hooks:
+  - id: "hook.pre_tool"
+    on: "tool.called"
+    policy: "enforce"
+    rules:
+      - match: { tool: "shell.exec", risk: "danger" }
+        action: { deny: true, reason: "安全补丁场景禁止危险 shell" }

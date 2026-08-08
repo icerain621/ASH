@@ -8738,6 +8738,18 @@
                 "protoPackage": {
                     "type": "string"
                 },
+                "signCapabilityPrefix": {
+                    "type": "string"
+                },
+                "signingAlg": {
+                    "type": "string"
+                },
+                "signingKeyConfigured": {
+                    "type": "boolean"
+                },
+                "signingRequired": {
+                    "type": "boolean"
+                },
                 "supportedAbis": {
                     "type": "array",
                     "items": {
@@ -9706,6 +9718,9 @@
                     "type": "string"
                 },
                 "protocol": {
+                    "type": "string"
+                },
+                "signature": {
                     "type": "string"
                 },
                 "spaceId": {

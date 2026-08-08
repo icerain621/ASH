@@ -38,10 +38,10 @@
 |----|--------|----------|------|
 | 商业落地：谁付费/谁决策/组织样板 | P2 | PRD §3 | 产品化叙事，不阻塞技术发布 |
 | ~~数据分级与保留期~~ | P1（合规） | 附录 J / PRD §8 | **已关闭**（Sprint CF） |
-| 插件打包/签名策略 | P2 | ARCH §3.2 | 外部插件生产分发 |
+| ~~插件打包/签名策略~~ | P2 | ARCH §3.2 / 附录 H §6 | **骨架已关闭**（Sprint CH；生产密钥轮换 SOP 仍待） |
 | 向量库 / 符号索引路线 | P3 | ARCH §5–6 | RAG 增强，FTS 已够用 |
-| Artifacts 跨平台默认路径与权限 | P2 | 附录 F | Windows/WSL/Linux 运维一致性 |
-| Canonical JSON 实现说明（产物 digest） | P2 | 附录 F | 多实现 digest 一致性文档化 |
+| ~~Artifacts 跨平台默认路径与权限~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
+| ~~Canonical JSON 实现说明（产物 digest）~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
 | RACI（Epic owner） | P2 | 本文件曾遗留 | 协作清晰度 |
 | 强隔离沙箱 / IdP 联邦 / 技能市场 | P3 | PRD Out | 下一产品世代 |
 
@@ -93,8 +93,8 @@
 | ID | 任务 | 备注 |
 |----|------|------|
 | P2-1 | Artifacts 路径策略 + canonical JSON 说明写入实现文档 | ✅ Sprint CG |
-| P2-2 | 插件 ABI 签名/打包策略 + 生产 gRPC 暴露策略 | ARCH / 附录 H |
-| P2-3 | Hotfix / Security Patch 场景模板深化 | PRD §4.2/4.3 |
+| P2-2 | 插件 ABI 签名/打包策略 + 生产 gRPC 暴露策略 | ✅ Sprint CH |
+| P2-3 | Hotfix / Security Patch 场景模板深化 | ✅ Sprint CH |
 | P2-4 | SSE 浏览器级 E2E；Agent 稳定性度量（R-02） | 前端 + 算法 |
 | P2-5 | 商业组织样板与付费/决策模型 | PRD §3 |
 
@@ -112,11 +112,12 @@
 |--------|------|------|
 | **CF** | P1-4 数据分级与保留期（纯代码） | ✅ 已完成 |
 | **CG** | P2-1 Artifacts 路径 + canonical JSON（纯代码） | ✅ 已完成 |
-| **CH** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
-| **CI** | P0-3/P0-5 真人签字 + 切换日 rollback | CH |
-| **CJ** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
-| **CK** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
-| **CL+** | P2 硬化（场景/插件签名） | 范围解冻评审 |
+| **CH** | P2-2/P2-3 插件签名 + Hotfix/Security 深化 | ✅ 已完成 |
+| **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
+| **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
+| **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
+| **CL** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
+| **CM+** | P2 余项（SSE 浏览器 E2E / 商业样板） | 范围解冻评审 |
 
 历史 Sprint AY–CE 明细与已完成清单见 [`TODO.md`](TODO.md)「已完成归档」节（仅保留摘要，细节以 CHANGELOG 为准）。
 
@@ -138,7 +139,7 @@
 | 合规 / 权限 / Scale | ✅ | ✅ | |
 | CI / KPI / Feedback / Releases | ✅ | ✅ | 生产外部依赖待验 |
 | OTel 骨架 | ✅ | ✅ | 完整外发策略按组织开关 |
-| Proto 插件 ABI | ⚠️ 草案 | ✅ 基础 | 签名策略未决 |
+| Proto 插件 ABI | ⚠️ 草案 | ✅ 基础+签名骨架 | 生产密钥轮换 / 端到端打包验收待 |
 | 向量库 / 技能市场 | 展望 | ❌ | P3 |
 
 ---

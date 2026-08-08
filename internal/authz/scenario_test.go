@@ -18,7 +18,7 @@ func TestEvaluateScenarioToolReviewerDeniesPatch(t *testing.T) {
 }
 
 func TestEvaluateScenarioToolSecurityPatchOperator(t *testing.T) {
-	policy := DefaultScenarioPolicyJSON("security_patch", "1.0.0")
+	policy := DefaultScenarioPolicyJSON("security_patch", "1.1.0")
 	ok, _ := EvaluateScenarioTool(policy, "operator", "test.run")
 	if !ok {
 		t.Fatal("operator should run tests")

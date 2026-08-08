@@ -574,8 +574,8 @@ func (s *Service) tr0ScenarioCatalog() CaseResult {
 		version string
 	}{
 		{name: "feature_delivery", version: "1.0.0"},
-		{name: "hotfix", version: "1.0.0"},
-		{name: "security_patch", version: "1.0.0"},
+		{name: "hotfix", version: "1.1.0"},
+		{name: "security_patch", version: "1.1.0"},
 	}
 	for _, item := range required {
 		doc, err := s.scenarios.Get(item.name, item.version)
@@ -1089,7 +1089,7 @@ func (s *Service) m2PermissionMatrix() CaseResult {
 		res.Message = "reviewer should be denied apply_patch"
 		return res
 	}
-	secPolicy := authz.DefaultScenarioPolicyJSON("security_patch", "1.0.0")
+	secPolicy := authz.DefaultScenarioPolicyJSON("security_patch", "1.1.0")
 	ok, _ = authz.EvaluateScenarioTool(secPolicy, "operator", "apply_patch")
 	if ok {
 		res.Message = "security_patch operator must not apply_patch"

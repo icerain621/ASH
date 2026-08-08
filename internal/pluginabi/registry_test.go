@@ -14,6 +14,8 @@ import (
 )
 
 func TestRegistryServerRegisterHeartbeatStatus(t *testing.T) {
+	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "")
+	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "")
 	db := store.OpenTest(t, t.TempDir())
 	client, cleanup := registryClient(t, db)
 	defer cleanup()
@@ -67,6 +69,8 @@ func TestRegistryServerRegisterHeartbeatStatus(t *testing.T) {
 }
 
 func TestRegistryServerRejectsIncompatiblePlugin(t *testing.T) {
+	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "")
+	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "")
 	db := store.OpenTest(t, t.TempDir())
 	client, cleanup := registryClient(t, db)
 	defer cleanup()
@@ -95,6 +99,8 @@ func TestRegistryServerRejectsIncompatiblePlugin(t *testing.T) {
 }
 
 func TestStartRegistryServerListensOnTCP(t *testing.T) {
+	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "")
+	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "")
 	db := store.OpenTest(t, t.TempDir())
 	rt, err := StartRegistryServer("127.0.0.1:0", db)
 	if err != nil {

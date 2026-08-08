@@ -2508,6 +2508,14 @@ definitions:
         type: array
       protoPackage:
         type: string
+      signCapabilityPrefix:
+        type: string
+      signingAlg:
+        type: string
+      signingKeyConfigured:
+        type: boolean
+      signingRequired:
+        type: boolean
       supportedAbis:
         items:
           type: string
@@ -3140,6 +3148,8 @@ definitions:
       name:
         type: string
       protocol:
+        type: string
+      signature:
         type: string
       spaceId:
         type: string

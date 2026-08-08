@@ -45,6 +45,10 @@ func (h *Handler) getPluginABIProfile(c *gin.Context) {
 		GoPackage:          "github.com/ash-repwiki/ash/proto/ash/v1;ashv1",
 		BreakingPolicy:     "buf:FILE",
 		ProtoFiles:         files,
+		SigningAlg:         pluginabi.SignAlgHMAC,
+		SigningRequired:    pluginabi.SigningRequired(),
+		SigningKeyConfigured: pluginabi.SigningKey() != "",
+		SignCapabilityPrefix: pluginabi.CapabilitySignPrefix,
 	})
 }
 

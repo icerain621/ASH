@@ -8744,6 +8744,18 @@ const docTemplate = `{
                 "protoPackage": {
                     "type": "string"
                 },
+                "signCapabilityPrefix": {
+                    "type": "string"
+                },
+                "signingAlg": {
+                    "type": "string"
+                },
+                "signingKeyConfigured": {
+                    "type": "boolean"
+                },
+                "signingRequired": {
+                    "type": "boolean"
+                },
                 "supportedAbis": {
                     "type": "array",
                     "items": {
@@ -9712,6 +9724,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "protocol": {
+                    "type": "string"
+                },
+                "signature": {
                     "type": "string"
                 },
                 "spaceId": {

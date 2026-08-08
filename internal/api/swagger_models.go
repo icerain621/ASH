@@ -173,15 +173,19 @@ type ResourceScopeListResponse struct {
 }
 
 type PluginABIProfileResponse struct {
-	CurrentABI         string            `json:"currentAbi"`
-	SupportedABIs      []string          `json:"supportedAbis"`
-	SupportedProtocols []string          `json:"supportedProtocols"`
-	GRPCEnabled        bool              `json:"grpcEnabled"`
-	PluginGRPCAddr     string            `json:"pluginGrpcAddr,omitempty"`
-	ProtoPackage       string            `json:"protoPackage"`
-	GoPackage          string            `json:"goPackage"`
-	BreakingPolicy     string            `json:"breakingPolicy"`
-	ProtoFiles         []PluginProtoFile `json:"protoFiles"`
+	CurrentABI           string            `json:"currentAbi"`
+	SupportedABIs        []string          `json:"supportedAbis"`
+	SupportedProtocols   []string          `json:"supportedProtocols"`
+	GRPCEnabled          bool              `json:"grpcEnabled"`
+	PluginGRPCAddr       string            `json:"pluginGrpcAddr,omitempty"`
+	ProtoPackage         string            `json:"protoPackage"`
+	GoPackage            string            `json:"goPackage"`
+	BreakingPolicy       string            `json:"breakingPolicy"`
+	ProtoFiles           []PluginProtoFile `json:"protoFiles"`
+	SigningAlg           string            `json:"signingAlg,omitempty"`
+	SigningRequired      bool              `json:"signingRequired"`
+	SigningKeyConfigured bool              `json:"signingKeyConfigured"`
+	SignCapabilityPrefix string            `json:"signCapabilityPrefix,omitempty"`
 }
 
 type PluginProtoFile struct {

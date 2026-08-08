@@ -22,6 +22,8 @@ message RegisterRequest {
   repeated string capabilities = 7;
   repeated string supported_events = 8;
   TraceContext context = 9;
+  // Signature: pass HMAC hex via capability "ash.sign.hmac=<hex>" until field 10
+  // is generated (see pluginabi.SignMaterial / appendix H).
 }
 
 message RegisterResponse {

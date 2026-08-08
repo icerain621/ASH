@@ -2,22 +2,22 @@ version: "ash.rules/v0.1"
 
 scenario:
   name: "hotfix"
-  scenarioVersion: "1.0.0"
-  description: "故障热修复流程（M1）"
+  scenarioVersion: "1.1.0"
+  description: "故障热修复：定界→最小修复→定向验证→发布窗建议（PRD §4.2）"
   policyProfile: "hotfix"
   checkpoint:
     strategy: "per_step"
     retain: 50
 
   roles:
-    SRE:      { maxParallel: 1 }
-    Coder:    { maxParallel: 1 }
-    QA:       { maxParallel: 1 }
-    Shipper:  { maxParallel: 1 }
+    SRE:     { maxParallel: 1 }
+    Coder:   { maxParallel: 1 }
+    QA:      { maxParallel: 1 }
+    Shipper: { maxParallel: 1 }
 
   inputs:
     required: [issueOrSpec, repoRoot]
-    optional: [logs, recentChanges, targetBranch]
+    optional: [logs, recentChanges, targetBranch, incidentId, severity]
 
   artifacts:
     required:
@@ -26,11 +26,34 @@ scenario:
       - { type: "release_notes" }
       - { type: "rollback_plan" }
 
+  gates:
+    - id: "gate.repo.clean"
+      when: "before.step.code.fix"
+      blocking: true
+      check:
+        tool: "git.status"
+        expect: { clean: true }
+      onFail:
+        message: "热修复前工作区须干净，请提交或 stash 无关变更"
+        remediation:
+          - { tool: "git.diff" }
   steps:
     - id: "sre.triage"
       role: "SRE"
       kind: "llm"
       promptRef: "prompts/hotfix_triage.md"
+      rag:
+        sources: ["code", "docs", "memory:L1"]
+        requireCitations: true
+        onMissingCitations: "human_confirm"
+      outputs:
+        memoryCandidates:
+          - { layer: "L1", title: "hotfix triage notes", evidenceFrom: ["logs", "recentChanges"] }
+
+    - id: "sre.blast_radius"
+      role: "SRE"
+      kind: "llm"
+      promptRef: "prompts/hotfix_blast_radius.md"
       rag:
         sources: ["code", "docs", "memory:L1"]
         requireCitations: true
@@ -42,15 +65,37 @@ scenario:
       agent:
         adapter: "codex"
         capabilities: ["code.modify", "test.run", "artifact.diff"]
-        prompt: "Implement the smallest safe hotfix. Prefer targeted changes and preserve rollback safety."
+        prompt: |
+          Implement the smallest safe hotfix for the incident.
+          Prefer targeted changes; avoid refactors; preserve rollback safety.
+          Capture evidence for the blast radius called out by SRE.
 
     - id: "qa.verify"
       role: "QA"
       kind: "tool_chain"
       chain:
-        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
+        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000, retry: { maxAttempts: 1 } }
+
+    - id: "sre.approve_ship"
+      role: "SRE"
+      kind: "human"
+      promptRef: "prompts/hotfix_approve_ship.md"
 
     - id: "ship.release"
       role: "Shipper"
       kind: "llm"
       promptRef: "prompts/hotfix_release.md"
+      outputs:
+        artifacts:
+          - { type: "release_notes" }
+          - { type: "rollback_plan" }
+        memoryCandidates:
+          - { layer: "L1", title: "hotfix ship window", evidenceFrom: ["test_report", "rollback_plan"] }
+
+hooks:
+  - id: "hook.pre_tool"
+    on: "tool.called"
+    policy: "enforce"
+    rules:
+      - match: { tool: "shell.exec", risk: "danger" }
+        action: { deny: true, reason: "热修复场景禁止危险 shell；需人工批准或提升策略档" }

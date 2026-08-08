@@ -32,8 +32,7 @@ proto/
 - `EventEnvelope { string id; string trace_id; string run_id; int64 seq; int64 ts; string type; bytes payload_json; }`
   - 说明：payload 以 JSON bytes 透传，避免 proto 频繁改动；同时主进程仍以 JSON Schema 校验为准
 
-**TODO（负责人：后端）**：评估是否需要为 TR0 事件做强类型 proto（可选）。  
-**验收方式**：buf breaking 检查可通过；插件可消费事件流。
+**已决策（MVP）**：TR0 事件保持 JSON payload 透传 + JSON Schema 校验；不强类型 proto（降低 churn）。需要时再开 v1 事件强类型草案。
 
 ## 4. 服务定义（草案）
 ### 4.1 PluginRegistry（插件注册与健康）
@@ -65,6 +64,20 @@ proto/
 - `buf breaking`：保证版本兼容
 - `buf generate`：生成 Go/TS（可选）client/server stub
 
-**TODO（负责人：平台）**：确定生成目标（Go 必需；TS 可选用于前端工具）。  
-**验收方式**：CI 中强制 lint+breaking；生成物可编译。
+**已决策（MVP）**：Go 生成物进仓（`make proto-generate` / `proto-check`）；TS 客户端可选、非阻断。
+
+## 6. 打包与签名策略（已实现骨架）
+
+| 项 | 约定 |
+|----|------|
+| 算法 | `hmac-sha256`（`internal/pluginabi/sign.go`） |
+| 材料 | `name\\nversion\\nprotocol\\nabi\\nendpoint`（见 `SignMaterial`） |
+| 密钥 | `ASH_PLUGIN_SIGNING_KEY`；设为非空则注册必须带有效签名 |
+| 强制 | `ASH_PLUGIN_SIGNING_REQUIRED=1`（无密钥视为配置错误） |
+| HTTP | `POST /api/v1/plugins` 字段 `signature`（hex） |
+| gRPC | capability `ash.sign.hmac=<hex>`（proto `signature` 字段待下次 `proto-generate` 落地） |
+| 打包建议 | `plugin.json`（name/version/protocol/abi/endpoint/capabilities）+ 二进制/配置 + `signature.txt` |
+| 生产暴露 | `ASH_PLUGIN_GRPC_ADDR` 默认仅在 `ASH_AUTH_MODE=dev` 开启本机监听；生产显式配置并配合签名 |
+
+运行时：`GET /api/v1/plugins/abi` 返回 `signingAlg` / `signingRequired` / `signingKeyConfigured`。
 

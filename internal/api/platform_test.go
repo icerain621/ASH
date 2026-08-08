@@ -581,6 +581,8 @@ func TestAuditPolicyAndRetentionApplyAreSpaceScoped(t *testing.T) {
 func TestRegisterPluginValidatesABIAndListsCurrentSpace(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "jwt")
 	t.Setenv("ASH_JWT_SECRET", "test-secret")
+	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "")
+	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "")
 	r, db := newPlatformTestRouter(t)
 	now := time.Now().UTC()
 	org := store.Org{ID: "org_plugin", Name: "Plugin Org", Slug: "plugin-org", CreatedAt: now, UpdatedAt: now}

@@ -166,6 +166,7 @@ var Catalog = map[string]Entry{
 	// plugins
 	"PLUGIN_LIST_FAILED":            {Domain: "plugins", Summary: "Failed to list plugins"},
 	"PLUGIN_REGISTER_FAILED":        {Domain: "plugins", Summary: "Failed to register plugin"},
+	"PLUGIN_SIGNATURE_INVALID":      {Domain: "plugins", Summary: "Plugin registration signature missing or invalid"},
 	"PLUGIN_NOT_FOUND":              {Domain: "plugins", Summary: "Plugin id not found"},
 	"PLUGIN_VERIFY_FAILED":          {Domain: "plugins", Summary: "Plugin ABI verification failed"},
 	"PLUGIN_ABI_PROFILE_FAILED":     {Domain: "plugins", Summary: "Failed to load plugin ABI profile"},

@@ -102,6 +102,7 @@ type registerPluginRequest struct {
 	ABI          string   `json:"abi,omitempty"`
 	Endpoint     string   `json:"endpoint" binding:"required"`
 	Capabilities []string `json:"capabilities,omitempty"`
+	Signature    string   `json:"signature,omitempty"`
 	SpaceID      string   `json:"spaceId,omitempty"`
 }
 
@@ -1241,6 +1242,14 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 	}
 	protocol := firstNonEmptyAPI(strings.ToLower(strings.TrimSpace(req.Protocol)), "grpc")
 	abi := normalizePluginABI(req.ABI)
+	sig := strings.TrimSpace(req.Signature)
+	if sig == "" {
+		sig = pluginabi.SignatureFromCapabilities(req.Capabilities)
+	}
+	if err := pluginabi.VerifyRegistrationSignature(sig, req.Name, req.Version, protocol, abi, req.Endpoint); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("PLUGIN_SIGNATURE_INVALID", err.Error()))
+		return
+	}
 	caps, _ := json.Marshal(req.Capabilities)
 	compatible, lastErr := pluginCompatibility(protocol, abi, req.Name, req.Version, req.Endpoint)
 	status := "registered"
@@ -1262,6 +1271,7 @@ func (h *Handler) registerPlugin(c *gin.Context) {
 	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "plugin.registered", map[string]any{
 		"pluginId": row.ID, "name": row.Name, "version": row.Version,
 		"protocol": row.Protocol, "abi": row.ABI, "compatible": row.Compatible,
+		"signed":   pluginabi.SigningKey() != "" && sig != "",
 	})).Error
 	c.JSON(http.StatusCreated, row)
 }
