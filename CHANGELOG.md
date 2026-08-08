@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CV：Docker 复验 `postgres-app-gate` / `local-readiness-gate`；`postgres-app-gate` doctor 阶段不再误开 `ASH_MIGRATE_E2E`（M3-04 假红）。
 - Sprint CU：Doctor TR0 固定探测语料（`ash.doctor.probe/v1` + embed）；关闭附录 E §3.3 TODO；SpacePage vitest 补齐 org-templates mock；运行时 memory 检索对齐 AbsRepoRoot。
 - Sprint CT：`config.LoadDataPolicy` 不再依赖 `memory`，消除测试导入环并恢复 `make smoke-static`；hotfix/security_patch@1.1.0 场景测试走人工门禁；memory 注入测试对齐 AbsRepoRoot；PLAN 补齐 Epic owner RACI。
 - Sprint CS：内置工具风险目录（`GET /api/v1/tools/risk-catalog` + 自动化页）；Runs 门禁文案区分引用 / 危险工具 / 人工步骤；关闭 ARCH 危险操作产品化 TODO。

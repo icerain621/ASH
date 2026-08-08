@@ -37,6 +37,9 @@ fi
 echo "== RLS ash_app smoke (existing schema, no reset) =="
 export ASH_MIGRATE_E2E=1
 go test -tags=integration ./internal/store/ -run TestPostgresRLSE2EAfterMigrate -count=1
+# M3-04 needs a real SQLite source; this gate focuses H-02/H-03 (RLS + ash_app).
+# Full migrate verify stays in postgres-rds-e2e / cloud-acceptance.
+unset ASH_MIGRATE_E2E
 
 GATE_DATA="${ASH_DATA_DIR:-}"
 if [[ -z "$GATE_DATA" ]]; then
