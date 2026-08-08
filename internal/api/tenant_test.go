@@ -125,6 +125,13 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	r, db := newPlatformTestRouter(t)
 	now := time.Now().UTC()
+	otherSpace := store.Space{
+		ID: "space_other", OrgID: "org_cross_reg", Name: "Other", Slug: "other-reg",
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&otherSpace).Error; err != nil {
+		t.Fatal(err)
+	}
 	run := store.RunRecord{
 		ID: "run_cross_reg", TraceID: "trace_cross_reg", ScenarioName: "feature_delivery",
 		ScenarioVersion: "1.0.0", PolicyProfile: "default", Status: "waiting_approval",
@@ -162,12 +169,19 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		path   string
 		body   string
 	}{
+		{"getRun", http.MethodGet, "/api/v1/runs/" + run.ID, ""},
 		{"stream", http.MethodGet, "/api/v1/runs/" + run.ID + "/stream", ""},
 		{"provenance", http.MethodGet, "/api/v1/runs/" + run.ID + "/provenance", ""},
 		{"artifacts", http.MethodGet, "/api/v1/runs/" + run.ID + "/artifacts", ""},
 		{"artifactAccess", http.MethodGet, "/api/v1/runs/" + run.ID + "/artifacts/bundle.zip/access", ""},
 		{"checkpointAccess", http.MethodGet, "/api/v1/runs/" + run.ID + "/checkpoints/cp_missing/access", ""},
+		{"checkpoints", http.MethodGet, "/api/v1/runs/" + run.ID + "/checkpoints", ""},
 		{"timeline", http.MethodGet, "/api/v1/runs/" + run.ID + "/timeline", ""},
+		{"toolCalls", http.MethodGet, "/api/v1/runs/" + run.ID + "/tool-calls", ""},
+		{"agentTasks", http.MethodGet, "/api/v1/runs/" + run.ID + "/agent-tasks", ""},
+		{"qualityMetrics", http.MethodGet, "/api/v1/runs/" + run.ID + "/quality-metrics", ""},
+		{"obsQuality", http.MethodGet, "/api/v1/observability/quality/" + run.ID, ""},
+		{"waterfall", http.MethodGet, "/api/v1/observability/waterfall/" + run.ID, ""},
 		{"runCancel", http.MethodPost, "/api/v1/runs/" + run.ID + "/cancel", ""},
 		{"runResume", http.MethodPost, "/api/v1/runs/" + run.ID + "/resume", ""},
 		{"runReplay", http.MethodPost, "/api/v1/runs/" + run.ID + "/replay", `{"mode":"exact"}`},
@@ -181,10 +195,18 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		{"deleteSecret", http.MethodDelete, "/api/v1/secrets/" + secret.ID, ""},
 		{"reviewMemory", http.MethodPost, "/api/v1/memory/candidates/" + mem.ID + "/review", `{"decision":"approve","reason":"x","policyProfile":"default"}`},
 		{"getMemory", http.MethodGet, "/api/v1/memory/records/" + mem.ID, ""},
+		{"createFeedback", http.MethodPost, "/api/v1/feedback", `{"spaceId":"space_other","targetType":"run","targetId":"` + run.ID + `","rating":1}`},
+		{"ragQuery", http.MethodPost, "/api/v1/rag/query", `{"spaceId":"space_other","text":"cross","topK":3}`},
+		{"ragIndex", http.MethodPost, "/api/v1/rag/index", `{"spaceId":"space_other","repoRoot":"."}`},
 		{"adoptDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/adopt", `{"reason":"x"}`},
 		{"dismissDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/dismiss", `{"reason":"x"}`},
 		{"auditExport", http.MethodPost, "/api/v1/audit/export", `{"spaceId":"space_other"}`},
 		{"registerPlugin", http.MethodPost, "/api/v1/plugins", `{"spaceId":"space_other","name":"p","version":"1.0.0","endpoint":"http://127.0.0.1:9"}`},
+		{"eventsRetention", http.MethodPost, "/api/v1/events/retention/apply", `{"spaceId":"space_other","dryRun":true}`},
+		{"artifactsRetention", http.MethodPost, "/api/v1/artifacts/retention/apply", `{"spaceId":"space_other","dryRun":true}`},
+		{"spaceMembers", http.MethodGet, "/api/v1/spaces/space_other/members", ""},
+		{"spaceScopes", http.MethodGet, "/api/v1/spaces/space_other/resource-scopes", ""},
+		{"spaceMatrix", http.MethodGet, "/api/v1/spaces/space_other/permissions/matrix", ""},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {

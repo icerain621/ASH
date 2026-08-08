@@ -86,7 +86,7 @@
 | P1-2 | `ASH_EXECGO_E2E=1` ExecGo live（H-06） | Doctor M3-05 live |
 | P1-3 | T+1 生产 KPI vs `t1-metrics-gate` 偏差 &lt;5% | KPI §9 |
 | P1-4 | 数据分级与保留期草案落地（审计/事件/记忆） | ✅ 附录 J + data-policy / retention apply（Sprint CF） |
-| P1-5 | 发布窗口抽测跨 space + RLS e2e（R-08） | 无越权 |
+| P1-5 | 发布窗口抽测跨 space + RLS e2e（R-08） | ✅ API 门禁 Sprint CP；云 RLS live 随 H-01 |
 
 ### P2 — 硬化与产品化（发布后迭代）
 
@@ -116,6 +116,7 @@
 | **CM** | P2-4 SSE 浏览器级 E2E（Playwright） | ✅ 已完成 |
 | **CN** | P2-4 R-02 场景稳定率（KPI-11） | ✅ 已完成 |
 | **CO** | P2-5 商业组织样板（PRD §3） | ✅ 已完成 |
+| **CP** | P1-5 R-08 跨 space 发布窗口抽测门禁 | ✅ 已完成（云 RLS live 另轨） |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |

@@ -21,7 +21,7 @@
 | R-05 | 任务状态机异常流转 | 技术 | H | 出现非法状态跳转 | 状态异常告警、人工修复增加 | 状态表 + mid-loop Cancel + Replay/Approve/Resume 门禁（BT–BW） | 后端负责人 | Mitigating |
 | R-06 | 队列积压导致任务延迟 | 稳定性 | M | 峰值任务超出 worker 消费能力 | 队列积压时长、消费速率下降 | TTL queue-gate；Scale inflight；告警 `run_inflight_count` + Observability 治理面板（Sprint BY/CA/CE）；分级扩容仍待运维 | 后端/运维 | Mitigating |
 | R-07 | SSE 不稳定影响体验 | 前端/稳定性 | M | 日志流频繁中断 | SSE 断连率、前端报错率 | 自动重连 + Last-Event-ID + timeline 轮询回退（Sprint BM/BN）；生产观察断连率 | 前端负责人 | Mitigating |
-| R-08 | 权限策略缺陷导致越权 | 安全 | H | 非授权用户访问敏感接口 | 401/403 异常分布、审计告警 | RBAC + `TestCrossSpaceAPIRegression`（控制面 + secret/memory/CI/audit/plugin/access，Sprint BM/CC/CE）；CI diagnosis 跨 space 403；发布窗口抽测 | 后端负责人 | Mitigating |
+| R-08 | 权限策略缺陷导致越权 | 安全 | H | 非授权用户访问敏感接口 | 401/403 异常分布、审计告警 | RBAC + 扩面 `TestCrossSpaceAPIRegression` + retention `spaceId` 校验 + `make r08-cross-space-gate`（Sprint CP）；云 RLS live 随 H-01 | 后端负责人 | Mitigating |
 | R-09 | 关键依赖服务不稳定 | 外部依赖 | M | Repo/CI API 波动或限流 | 第三方错误率上升 | GitHub 429/5xx 退避重试 + 连续失败熔断；API `CI_PROVIDER_UNAVAILABLE`（Sprint BX） | 平台负责人 | Mitigating |
 | R-10 | 文档与实现不一致 | 协作 | M | 接口变更未同步文档 | 联调阻塞次数 | OpenAPI 控制面 409 / Scale backlog 字段已同步（Sprint BY）；变更继续走 openapi-check | 全体模块负责人 | Mitigating |
 | R-11 | 人员并行不足 | 资源 | M | 单点人员阻塞关键链路 | PR 积压、任务延期 | 明确备份人；关键模块双人覆盖 | 项目经理 | Open |
@@ -31,7 +31,7 @@
 1. **云切流未完成**（R-12 / H-01~H-03）— 本地 drill 已过，生产 RDS 与切换日签字仍缺
 2. R-03 CI 诊断准确率 — fixture 已扩；待真实 GitHub log（BJ）
 3. R-02 Agent 结果稳定性 — 度量已落地（KPI-11）；ExecGo live 与生产采纳率未验
-4. R-08 越权 — 单测覆盖强；发布窗口抽测待做
+4. R-08 越权 — 发布窗口 API 抽测已门禁化；云 RLS live 待 H-01
 5. R-01 需求变更 — scope-freeze 占位已过；需真人产品确认保持冻结
 
 ## 4. 风险评审节奏建议

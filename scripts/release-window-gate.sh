@@ -61,6 +61,7 @@ bash scripts/bootstrap-local-ash-db.sh | tee -a "$EVIDENCE/bootstrap.log"
 run_step config-env-gate bash scripts/config-env-gate.sh
 # Soft check by default; set ASH_REQUIRE_EVIDENCE_SHA=1 to hard-fail stale *-latest.md SHAs.
 ash_evidence_optional_step evidence-sha-gate bash scripts/evidence-sha-gate.sh
+run_step r08-cross-space-gate env ASH_R08_SKIP_POSTGRES="${ASH_R08_SKIP_POSTGRES:-1}" bash scripts/r08-cross-space-gate.sh
 run_step t0-alert-gate bash scripts/t0-alert-gate.sh
 run_step t1-metrics-gate bash scripts/t1-metrics-gate.sh
 run_step data-backup bash scripts/ash-data-backup.sh
@@ -117,6 +118,7 @@ write_report() {
     echo "| 门禁 | 命令 | 状态 |"
     echo "|------|------|------|"
     echo "| 配置核对 | \`make config-env-gate\` | $(gate_status config-env-gate) |"
+    echo "| R-08 跨 space | \`make r08-cross-space-gate\` | $(gate_status r08-cross-space-gate) |"
     echo "| T+0 告警 | \`make t0-alert-gate\` | $(gate_status t0-alert-gate) |"
     echo "| T+1 指标 | \`make t1-metrics-gate\` | $(gate_status t1-metrics-gate) |"
     echo "| 数据备份 | \`make data-backup\` | $(gate_status data-backup) |"

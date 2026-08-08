@@ -21,7 +21,8 @@ type DataPolicyResponse struct {
 }
 
 type dataRetentionApplyRequest struct {
-	DryRun bool `json:"dryRun,omitempty"`
+	SpaceID string `json:"spaceId,omitempty"`
+	DryRun  bool   `json:"dryRun,omitempty"`
 }
 
 type DataRetentionApplyResponse struct {
@@ -66,12 +67,18 @@ func (h *Handler) getDataPolicy(c *gin.Context) {
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/events/retention/apply [post]
 func (h *Handler) applyEventsRetention(c *gin.Context) {
+	var req dataRetentionApplyRequest
+	_ = c.ShouldBindJSON(&req)
 	space := currentSpace(c)
+	if strings.TrimSpace(req.SpaceID) != "" {
+		if !h.requireTargetSpace(c, req.SpaceID) {
+			return
+		}
+		space = strings.TrimSpace(req.SpaceID)
+	}
 	if !h.requirePermission(c, permAuditExport, space) {
 		return
 	}
-	var req dataRetentionApplyRequest
-	_ = c.ShouldBindJSON(&req)
 	days := config.EffectiveRetentionEventsDays()
 	cutoff := time.Now().UTC().AddDate(0, 0, -days)
 	db := h.dbFor(c)
@@ -110,12 +117,18 @@ func (h *Handler) applyEventsRetention(c *gin.Context) {
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/artifacts/retention/apply [post]
 func (h *Handler) applyArtifactsRetention(c *gin.Context) {
+	var req dataRetentionApplyRequest
+	_ = c.ShouldBindJSON(&req)
 	space := currentSpace(c)
+	if strings.TrimSpace(req.SpaceID) != "" {
+		if !h.requireTargetSpace(c, req.SpaceID) {
+			return
+		}
+		space = strings.TrimSpace(req.SpaceID)
+	}
 	if !h.requirePermission(c, permAuditExport, space) {
 		return
 	}
-	var req dataRetentionApplyRequest
-	_ = c.ShouldBindJSON(&req)
 	days := config.EffectiveRetentionArtifactsDays()
 	maxRuns := config.EffectiveRetentionArtifactsMaxRuns()
 	cutoff := time.Now().UTC().AddDate(0, 0, -days)

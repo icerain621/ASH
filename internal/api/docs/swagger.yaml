@@ -3121,6 +3121,8 @@ definitions:
     properties:
       dryRun:
         type: boolean
+      spaceId:
+        type: string
     type: object
   internal_api.decideCIDiagnosisRequest:
     properties:

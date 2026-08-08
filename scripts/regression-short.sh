@@ -10,7 +10,7 @@ _ash_go_env_bootstrap "$ROOT"
 
 go test ./internal/doctor/... -run 'TestM3Suite|TestTR3Suite|TestTR3PrometheusReplaySegmentWhenEnabled|TestM3ExecGoLiveSmoke' -count=1
 go test ./internal/alerts/... -count=1
-go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestSecretRotateRepoConnectionH07|TestHealthEndpointsLatencyBaseline|TestConcurrentRunsListBaseline|TestTTLQueueConsumeBaseline|TestCrossSpaceAPIRegression|TestStreamRunResumesFromQueryLastEventID|TestRunControlNegativeStatusCodes|TestScaleReadinessRunBacklogCounts|TestReleaseGovernanceAPI' -count=1
+go test ./internal/api/... -run 'TestHealthzAndReadyzSQLite|TestReadyzOpsSnapshot|TestReadyzIncludesRLSCatalogWhenEnabled|TestReadyzLiveGateHints|TestCISyncRunsWithFixture|TestSecretRotateRepoConnectionH07|TestHealthEndpointsLatencyBaseline|TestConcurrentRunsListBaseline|TestTTLQueueConsumeBaseline|TestCrossSpaceAPIRegression|TestReleaseSamplingH09CrossSpaceMemoryDenied|TestStreamRunResumesFromQueryLastEventID|TestRunControlNegativeStatusCodes|TestScaleReadinessRunBacklogCounts|TestReleaseGovernanceAPI' -count=1
 go test ./internal/runs/... -run 'TestCanTransitionMatrix|TestApplyRunStatusIllegal|TestCancelIdempotentAndFromRunning|TestFailRunDoesNotOverwriteCanceled|TestResumeNotResumable|TestObserveCanceled|TestMidLoopCancelStopsWithoutFinish|TestCanReplayMatrix|TestReplayRejectsNonTerminalSource|TestCanApproveCanResumeMatrix|TestApproveRejectsNonWaitingAndCanceled' -count=1
 go test ./internal/observability/derive/... -run 'TestReplay_runCanceledClearsInflight|TestCatalog_covers' -count=1
 go test ./internal/releases/... -run 'TestReleaseChecklistGateAndRollbackDrill' -count=1

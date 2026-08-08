@@ -9752,6 +9752,9 @@ const docTemplate = `{
             "properties": {
                 "dryRun": {
                     "type": "boolean"
+                },
+                "spaceId": {
+                    "type": "string"
                 }
             }
         },

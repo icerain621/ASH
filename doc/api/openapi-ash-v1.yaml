@@ -543,6 +543,7 @@ components:
     DataRetentionApplyRequest:
       type: object
       properties:
+        spaceId: { type: string, description: "Optional target space; must match caller space (R-08)" }
         dryRun: { type: boolean }
     DataRetentionApplyResponse:
       type: object
