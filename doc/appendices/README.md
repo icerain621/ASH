@@ -1,5 +1,8 @@
 # ASH 附录（Appendices）
 
+> **逻辑归属**：设计域（见 [`../design/README.md`](../design/README.md)）  
+> **路径稳定**：本目录勿移动（契约与历史链接依赖）。
+
 本目录存放“规范/Schema/指标/验收用例”等稳定材料，避免主文档过长。
 
 - `A-事件协议与Schema.md`：事件类型表、payload schema、SSE 续传规则

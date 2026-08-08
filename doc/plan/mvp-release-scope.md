@@ -1,6 +1,7 @@
 # ASH MVP v0.1 发布范围（冻结草案）
 
-> 状态：**已冻结**（2026-07-07，产品 `产品负责人（占位）` 确认）（对应 [`11-mvp-release-checklist.md`](11-mvp-release-checklist.md) §1）  
+> 状态：**已冻结**（2026-07-07，产品 `产品负责人（占位）` 确认）（对应 [`../progress/mvp-release-checklist.md`](../progress/mvp-release-checklist.md) §1）  
+> 归属：[`plan/`](README.md)  
 > 版本锚点：Doctor ALL **43/43** · SQL rev **20** · RLS **41**
 
 ## 1. 发布目标
@@ -17,7 +18,7 @@
 | 规模化 TR3 | Scale/readyz、OpenAPI 契约、Provenance |
 | M3 Postgres | SQL 迁移、RLS、本地 e2e 门禁 |
 | PRD MVP | CI 诊断、KPI、反馈/告警、发布灰度记录 |
-| 烟测 H-04~H-09 | 静态 + live 脚本（[`smoke-index.md`](checklists/smoke-index.md)） |
+| 烟测 H-04~H-09 | 静态 + live 脚本（[`smoke-index.md`](../checklists/smoke-index.md)） |
 | 发布门禁 | `make mvp-signoff` / `make web-gate` / `make queue-gate` |
 
 ## 3. 不包含范围（本版本）

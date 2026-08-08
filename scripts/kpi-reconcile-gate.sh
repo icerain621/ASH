@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# doc/14-kpi-dashboard-definition.md §9: KPI overview vs derive replay reconciliation.
+# doc/plan/kpi-dashboard-definition.md §9: KPI overview vs derive replay reconciliation.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"

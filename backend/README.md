@@ -1,13 +1,15 @@
 # ASH Worker（M0）
 
-Go 编排 Worker：**Gin + GORM + SQLite**，对齐 `../doc/design/appendices/` 中的 OpenAPI 与事件协议 v0.1。
+> **说明**：现行源码在仓库根目录 `cmd/` + `internal/`（不必再迁入本目录）。本 README 仅作历史指引。
 
-## 快速启动
+Go 编排 Worker：**Gin + GORM + SQLite/Postgres**，对齐 `../doc/appendices/` 与 `../doc/api/openapi-ash-v1.yaml`。
+
+## 快速启动（仓库根）
 
 ```bash
-cd backend
-go mod tidy
-go run ./cmd/worker
+cd ..
+make tidy
+make run
 ```
 
 ## Swagger

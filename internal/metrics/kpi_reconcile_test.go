@@ -9,7 +9,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
-// TestKPIOverviewMatchesDeriveReplay reconciles KPI-01 counts with derive replay (doc/14-kpi §9).
+// TestKPIOverviewMatchesDeriveReplay reconciles KPI-01 counts with derive replay (doc/plan/kpi-dashboard-definition.md §9).
 func TestKPIOverviewMatchesDeriveReplay(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)

@@ -58,8 +58,8 @@ fi
 
 SIG_LATEST="$ROOT/doc/evidence/mvp-signatures-latest.md"
 SIG_DATED="$ROOT/doc/evidence/mvp-signatures-${DATE_UTC}.md"
-CHECKLIST="$ROOT/doc/11-mvp-release-checklist.md"
-SCOPE_DOC="$ROOT/doc/mvp-release-scope.md"
+CHECKLIST="$ROOT/doc/progress/mvp-release-checklist.md"
+SCOPE_DOC="$ROOT/doc/plan/mvp-release-scope.md"
 MVP_LATEST="$ROOT/doc/evidence/mvp-signoff-latest.md"
 
 write_signatures() {
@@ -101,7 +101,7 @@ write_signatures() {
     echo
     echo "- [\`mvp-signoff-latest.md\`](mvp-signoff-latest.md)"
     echo "- [\`release-window-latest.md\`](release-window-latest.md)"
-    echo "- [\`11-mvp-release-checklist.md\`](../11-mvp-release-checklist.md) §11"
+    echo "- [\`mvp-release-checklist.md\`](../progress/mvp-release-checklist.md) §11"
   } >"$dest"
 }
 
@@ -145,7 +145,7 @@ sed -i "s/^- 测试负责人：\`.*\`  日期：\`.*\`/- 测试负责人：\`${A
 sed -i "s/^- 发布负责人：\`.*\`  日期：\`.*\`/- 发布负责人：\`${ASH_SIGNOFF_RELEASE_NAME}\`  日期：\`${ASH_SIGNOFF_RELEASE_DATE}\`/" "$CHECKLIST"
 
 # mvp-release-scope.md — status line (line 3)
-sed -i "3s|> 状态：.*|> 状态：${SCOPE_STATUS_LINE}（对应 [\`11-mvp-release-checklist.md\`](11-mvp-release-checklist.md) §1）  |" "$SCOPE_DOC"
+sed -i "3s|> 状态：.*|> 状态：${SCOPE_STATUS_LINE}（对应 [\`../progress/mvp-release-checklist.md\`](../progress/mvp-release-checklist.md) §1）  |" "$SCOPE_DOC"
 
 # §6 table — idempotent rewrite (empty or previously filled)
 perl -i -pe '
@@ -167,8 +167,8 @@ fi
 
 if [[ "${ASH_SCOPE_FREEZE_SIGNED:-0}" == "1" ]]; then
   patch_line "$CHECKLIST" \
-    '- [x] 本次发布目标、范围、不包含范围已在评审中确认（[`mvp-release-scope.md`](mvp-release-scope.md) 草案，待签字）' \
-    '- [x] 本次发布目标、范围、不包含范围已确认并冻结（[`mvp-release-scope.md`](mvp-release-scope.md)；`make signoff-gate`）'
+    '- [x] 本次发布目标、范围、不包含范围已在评审中确认（[`mvp-release-scope.md`](../plan/mvp-release-scope.md) 草案，待签字）' \
+    '- [x] 本次发布目标、范围、不包含范围已确认并冻结（[`mvp-release-scope.md`](../plan/mvp-release-scope.md)；`make signoff-gate`）'
 fi
 
 RUNBOOK="$ROOT/doc/checklists/release-window-runbook.md"

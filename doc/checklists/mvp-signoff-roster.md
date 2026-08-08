@@ -14,10 +14,10 @@
 
 ## 2. 评审会议议程（建议 30min）
 
-1. 过一遍 [`mvp-release-scope.md`](../mvp-release-scope.md) §2/§3（包含/不包含）
+1. 过一遍 [`mvp-release-scope.md`](../plan/mvp-release-scope.md) §2/§3（包含/不包含）
 2. 展示 [`mvp-signoff-latest.md`](../evidence/mvp-signoff-latest.md) 自动化验收表
 3. 展示 [`release-window-latest.md`](../evidence/release-window-latest.md) 切换检查
-4. 确认 [`11-mvp-release-checklist.md`](../11-mvp-release-checklist.md) 未勾项仅为云 RDS / 值班表
+4. 确认 [`mvp-release-checklist.md`](../progress/mvp-release-checklist.md) 未勾项仅为云 RDS / 值班表
 5. 四人当场确认并填写 `config/signoff.env`
 6. 产品负责人设置 `ASH_SCOPE_FREEZE_SIGNED=1`
 
@@ -39,8 +39,8 @@ make scope-freeze-gate    # 应无 WARN
 ```bash
 git add doc/evidence/mvp-signatures-latest.md \
         doc/evidence/mvp-signoff-latest.md \
-        doc/11-mvp-release-checklist.md \
-        doc/mvp-release-scope.md
+        doc/progress/mvp-release-checklist.md \
+        doc/plan/mvp-release-scope.md
 git commit -m "docs: MVP v0.1 sign-off roster and scope freeze"
 ```
 

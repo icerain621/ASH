@@ -1,0 +1,92 @@
+# ASH 待办 / 技术债（短清单）
+
+> 更新：2026-08-08  
+> **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
+> 归属：[`plan/`](README.md)  
+> 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
+
+## 基线
+
+| 项 | 值 |
+|----|-----|
+| Tag | `v0.1.0-mvp` |
+| Doctor | ALL 43/43 · M3 11/11 · TR3 10/10 |
+| Schema | SQL rev 20 · RLS 41 |
+| 结论 | 自动化门禁达 MVP 可发布水位；剩余以**环境验收 + 真人签字**为主 |
+
+---
+
+## P0 — 发布闭环（需环境 / 人工）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| H-01 | 云 RDS `make cloud-acceptance` | migrate v20 + Doctor M3/ALL | ⏸ 待 `cloud-rds.env`（本地 Docker ✅） |
+| H-02 | 云 RLS + `ash_app` | M3-06/07；本地 `postgres-app-gate` ✅ | ⏸ 云待签 |
+| H-03 | 生产 Worker `ASH_DATABASE_APP_URL` + RLS | `/readyz` dialect=postgres | ⏸ 云待签 |
+| BI-5 | 切换日备份→停 SQLite→migrate→t0 | runbook §4 证据 | ⏸ 生产日待执行 |
+| S-11 | 四人**真人**签字（替换占位） | `signoff.env` + `signoff-gate` | ⚠️ dry-run 已过 |
+| GIT | 远端 `main` 同步 / CI 绿确认 | Actions | ⚠️ 按仓库状态 |
+
+```bash
+cp config/cloud-rds.env.example config/cloud-rds.env
+bash scripts/source-cloud-rds-env.sh
+make cloud-acceptance
+make mvp-signoff
+```
+
+---
+
+## P1 — 生产可信度
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| H-04/05 | 真实 GitHub CI sync + diagnose | 非 fixture；rootCause 对齐真实 log | ⏸ |
+| H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke` | ⏸ |
+| BJ-3 | T+1 生产 KPI 对账 | vs `t1-metrics-gate` 偏差 &lt;5% | ⏸ 需上线后 |
+| PRD-8 | 数据分级与保留期 | 分级表 + 脱敏样例 + 导出流程 | ❌ 设计未完成 |
+| R-08 | 发布窗口跨 space / RLS 抽测 | 无越权 | 部分（单测已有） |
+
+本地不依赖云的替代门禁：
+
+```bash
+make smoke-static
+make postgres-app-gate
+make worker-local-gate
+make regression-short && make web-gate
+```
+
+---
+
+## P2 — 硬化（可代码 / 文档，范围解冻后）
+
+| 域 | 项 | 备注 |
+|----|-----|------|
+| 附录 F | Artifacts 默认路径与权限（Win/WSL/Linux） | 设计 TODO |
+| 附录 F | Canonical JSON 实现说明 | digest 一致性 |
+| ARCH | 插件打包/签名策略 | gRPC ABI 已有基础 |
+| 场景 | Hotfix / Security 模板深化 | PRD §4.2/4.3 |
+| 前端 | SSE 浏览器级 E2E | 钩子/轮询已落地 |
+| 产品 | 付费/决策/组织样板 | PRD §3 |
+
+---
+
+## P3 — Backlog（明确不做进 v0.1）
+
+- 向量库 / 符号索引 Hybrid RAG  
+- 完整沙箱隔离、外部 IdP 联邦、计费  
+- 多端网关 / Skill Marketplace / 知识图谱  
+
+---
+
+## 代码维护约定（持续）
+
+- 新表 DDL 必须同步 RLS（`000013` 租户 / run / memory / org）+ Doctor **M3-11**  
+- `PostgresRLSDeferredTables()` 应保持为空  
+- 公开 API 变更：handler 注释 → `make swagger` → OpenAPI → `make openapi-check`
+
+---
+
+## 已完成归档（摘要）
+
+自动化与门禁：T-01..T-15、H-04~H-09 **静态/fixture/本地 live**、Sprint AY–CE（SSE、跨 space、状态机、CI 韧性、rollback drill、evidence-sha、全页 vitest 等）。  
+详见 `CHANGELOG.md` `[Unreleased]` 与 `[v0.1.0-mvp]`。

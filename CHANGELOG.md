@@ -6,6 +6,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ## [Unreleased]
 
+### Changed
+
+- 文档归属重组：`doc/design/`（设计）、`doc/plan/`（计划/TODO/范围/风险/KPI）、`doc/progress/`（发布清单）；`checklists/`/`evidence/`/`api/`/`appendices/` 路径保持稳定；早期草案与 MySQL DDL 在 `doc/archive/`。索引见 `doc/README.md`。
+
 ### Added
 
 - Sprint CE：Observability 治理面板展示 `run_inflight_count`；`TestCrossSpaceAPIRegression` 扩 secret/memory/CI/audit/plugin/artifact·checkpoint access；CI diagnosis adopt/dismiss 先按 ID 鉴权再决策（跨 space 403）；`evidence-sha-gate`（默认 WARN，`ASH_REQUIRE_EVIDENCE_SHA=1` 硬失败）接入 release-window / mvp-signoff / `regression-short` smoke（R-06/R-08）。

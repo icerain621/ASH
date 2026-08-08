@@ -278,6 +278,6 @@ make cloud-acceptance
 
 ## 附录 B：相关文档
 
-- `doc/05-M3-多租户与Postgres演进.md` — M3 架构与 RLS 说明
-- `doc/TODO.md` — §1 Postgres E2E、§3 RLS 剩余项
+- `doc/design/M3-多租户与Postgres演进.md` — M3 架构与 RLS 说明
+- `doc/plan/TODO.md` — §1 Postgres E2E、§3 RLS 剩余项
 - `scripts/postgres-init/01-ash-roles.sql` — `ash_app` / `ash_rls_tester` DDL

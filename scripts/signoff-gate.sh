@@ -58,7 +58,7 @@ else
   FAIL=1
 fi
 
-SCOPE="$ROOT/doc/mvp-release-scope.md"
+SCOPE="$ROOT/doc/plan/mvp-release-scope.md"
 if [[ -f "$SCOPE" ]] && grep -q '已冻结' "$SCOPE"; then
   echo "OK mvp-release-scope.md marked frozen"
 else
@@ -66,12 +66,12 @@ else
   FAIL=1
 fi
 
-CHECKLIST="$ROOT/doc/11-mvp-release-checklist.md"
+CHECKLIST="$ROOT/doc/progress/mvp-release-checklist.md"
 if grep -q '__________' "$CHECKLIST" 2>/dev/null; then
-  echo "FAIL 11-mvp-release-checklist.md §11 still has placeholders" >&2
+  echo "FAIL doc/progress/mvp-release-checklist.md §11 still has placeholders" >&2
   FAIL=1
 else
-  echo "OK 11-mvp-release-checklist.md §11 filled"
+  echo "OK doc/progress/mvp-release-checklist.md §11 filled"
 fi
 
 if [[ "$FAIL" -ne 0 ]]; then

@@ -2,7 +2,9 @@
 
 > 目的：解释“为何这样选”，明确默认实现、可替换项、演进路线与风险。
 >
-> 文档状态：v0.1（可评审初稿）。未决项以 **TODO** 标注。
+> 文档状态：v0.2（对照 `v0.1.0-mvp` 实现修订，2026-08-08）。未决项以 **TODO** 标注；已落地项标注「已实现」。
+> 进度真相源：[`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。  
+> 归属：[`design/`](README.md)
 
 ## 1. 选型原则
 
@@ -13,11 +15,11 @@
 
 ## 2. 总体拓扑
 
-- **应用形态**：Monorepo（文档在 `docs/`，实现在 `ash/`）
-  - `ash/cmd/worker`（Go 编排服务：Gin + GORM + SSE）
-  - `ash/cmd/cli`（Go CLI：run/replay/doctor，待实现）
-  - `apps/web`（前端控制台，待实现）
-  - `docs/appendices/schemas`（JSON Schema 与规范资产）
+- **应用形态**：Monorepo（文档在 `doc/`，实现在仓库根）
+  - `cmd/worker`（Go 编排服务：Gin + GORM + SSE）— **已实现**
+  - `cmd/cli`（Go CLI：run/replay/doctor）— **已实现**
+  - `frontend/`（Vite + React 控制台，Worker `/ui/`）— **已实现**
+  - `doc/appendices/schemas`（JSON Schema 与规范资产）
 
 ## 3. 语言与运行时
 
@@ -34,7 +36,7 @@
 - **SSE**：基于 `net/http` 直接实现（`ResponseWriter` + flush），事件源来自 `run_events`
 - **Swagger / OpenAPI**：建议采用 `swaggo/swag`（Gin 生态成熟）生成 OpenAPI；或以 `openapi.yaml` 作为单一真相（P1+）
 - **Proto（gRPC）**：建议采用 `buf` 管理 proto（lint/breaking/check），并提供 gRPC 服务用于插件/内部服务调用（见 3.2）
-- **JSON Schema 校验**：运行时加载 `docs/appendices/schemas/*.json`，对事件 payload / manifest / run summary 做校验
+- **JSON Schema 校验**：运行时加载 `doc/appendices/schemas/*.json`（及 `internal/rules/schemas`），对事件 payload / manifest / run summary 做校验
 - **SQLite**：优先 `modernc.org/sqlite`（纯 Go，跨平台友好）或 `mattn/go-sqlite3`（需 CGO）；Windows 场景建议优先纯 Go
 - **配置**：`viper` 或自研小型配置加载（env + file + flags）
 - **可观测性**：
@@ -51,8 +53,9 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
   - 优点：跨平台、隔离更强、可控权限
 - **WASM 插件（P2+）**：用于更强的安全隔离与分发（可选）
 
-**TODO（负责人：平台）**：确定插件 ABI（gRPC 或 HTTP）与插件打包/签名策略（P2）。  
-**验收方式**：在 Windows 上加载一个外部观测插件，确保不影响主流程且可审计。
+**已实现（基础）**：HTTP 插件注册 + 可选 gRPC（`ASH_PLUGIN_GRPC_ADDR`，见 `internal/pluginabi`）。  
+**TODO（负责人：平台）**：确定插件**打包/签名**策略与生产暴露边界（P2）。  
+**验收方式**：在 Windows 上加载一个签名校验通过的外部观测插件，确保不影响主流程且可审计。
 
 ### 3.3 前端技术栈推荐
 
@@ -91,8 +94,8 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
   - **Qdrant**（服务化）
   - **Milvus**（大规模）
 
-**TODO（负责人：平台）**：明确 M0 默认是否启用向量库（建议：M0 不强制，P1 引入）。  
-**验收方式**：给出“向量库不可用”降级用例与指标。
+**已决策（M0/MVP）**：不强制向量库；默认 FTS（SQLite FTS5 / Postgres `tsvector`），不可用时 `retrievalMode=chunk|empty` 降级（Doctor TR3-06、derive 指标）。  
+**TODO（负责人：平台）**：P3 引入可插拔向量库时的接口与降级 SLO（非 v0.1 范围）。
 
 ### 5.3 审计（Audit）
 
@@ -104,7 +107,7 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 - **M0**：repo scan + 规则化引用输出（不做复杂 AST）
 - **P1**：Hybrid 检索（FTS/BM25 + 向量 + rerank）+ 轻量符号索引（ctags/tree-sitter/语言服务之一）
 
-**TODO（负责人：检索）**：确定 P1 的符号索引技术路线与性能基线（P95）。  
+**TODO（负责人：检索）**：确定符号索引技术路线与性能基线（P95）— **优先级降为 P3**（MVP 以 FTS 为准）。  
 **验收方式**：以 1 个中型 repo 跑检索基线（延迟/命中/引用准确率）。
 
 ## 7. MCP / Skills 集成
@@ -131,7 +134,8 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 - **M0**：策略门禁（policy/hook/gate）+ 最小工具集 + 危险工具 deny + 脱敏
 - **P2**：执行隔离（容器/沙箱/受控网络）+ 组织级审批
 
-**TODO（负责人：安全/平台）**：定义“危险操作列表”与人工批准流程（human step UX）。  
+**已实现（基础）**：M2 policy enforcement、`waiting_approval`、危险工具默认 deny、合规 Secret 扫描与 Redact。  
+**TODO（负责人：安全/平台）**：产品化「危险操作列表」清单与控制台 human-step UX 文案（P2 硬化）。  
 **验收方式**：TR2 红队用例集全部拦截；审计可追踪。
 
 ## 10. 与参考项目的映射（能力对齐）
@@ -199,7 +203,7 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
   - **告警/触发观察**：滚动 1h / 24h
   - **升级评审**：至少连续 7 天趋势 + 峰值日（高峰）数据
 - **来源**：
-  - Prometheus 指标（见 `docs/appendices/D-Observability-指标与告警.md`）
+  - Prometheus 指标（见 [`../appendices/D-Observability-指标与告警.md`](../appendices/D-Observability-指标与告警.md)）
   - run_events 离线重算报表（避免采样/外发影响口径）
 - **Owner（默认）**：
   - 性能/容量：SRE/平台
@@ -252,7 +256,7 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 
 - **回放一致性门禁**：TR0-03（以及 TR1/TR3 对应项）必须保持全绿
 - **安全门禁**：TR2 用例集（注入/secret/权限矩阵）不得回归
-- **数据迁移门禁**：至少 1 次 v1→v2 迁移演练可回滚（见 `docs/appendices/I-GORM-模型映射与迁移策略.md`）
+- **数据迁移门禁**：至少 1 次 v1→v2 迁移演练可回滚（见 [`../appendices/I-GORM-模型映射与迁移策略.md`](../appendices/I-GORM-模型映射与迁移策略.md)）
 - **成本门禁**：token/任务与 P95 延迟不应显著回归（定义阈值并记录基线）
 
 ### 13.5 Stage 1 → Stage 2（服务化拆分）的触发指标（量化）

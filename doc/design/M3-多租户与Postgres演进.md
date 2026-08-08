@@ -1,6 +1,7 @@
 # M3：多租户强隔离与 Postgres 演进 v0.1
 
-> 文档状态：展望 + 可执行检查清单。配合 Doctor `M3` 套件与 `/api/v1/scale/readiness` 数据库字段。
+> 文档状态：展望 + 可执行检查清单。配合 Doctor `M3` 套件与 `/api/v1/scale/readiness` 数据库字段。  
+> 归属：[`design/`](README.md) · 进度：[`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)
 
 ## 1. 目标
 
@@ -153,7 +154,7 @@ make postgres-down        # 停止并清理卷
 
 ## 5. 云 RDS E2E 清单
 
-生产切换前在目标 RDS 执行完整验证，见 **[`doc/checklists/postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md)**（迁移、RLS、`ash_app`、Doctor M3/ALL、业务抽样与回滚）。
+生产切换前在目标 RDS 执行完整验证，见 **[`../checklists/postgres-rds-e2e.md`](../checklists/postgres-rds-e2e.md)**（迁移、RLS、`ash_app`、Doctor M3/ALL、业务抽样与回滚）。
 
 ## 6. 验证命令
 

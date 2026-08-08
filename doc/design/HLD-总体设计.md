@@ -1,6 +1,7 @@
 # ASH HLD（总体设计）v0.1
 
-> 文档状态：v0.1（可评审初稿）。本设计以“事件可回放 + 交付闭环 + 记忆可治理”为核心约束。
+> 文档状态：v0.2（对照 MVP 实现，2026-08-08）。本设计以“事件可回放 + 交付闭环 + 记忆可治理”为核心约束。进度见 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。  
+> 归属：[`design/`](README.md)
 
 ## 1. 设计目标与约束
 - **交付闭环**：每个 Run 形成可验证 Artifacts（diff/test_report/release_notes/rollback_plan）。
@@ -9,7 +10,7 @@
 - **可插拔**：LLM provider / MCP / skills / RAG / 向量库 / 可观测性均插件化。
 
 ## 2. 总体架构概览
-（详见 `docs/03-ARCH-架构与技术选型.md` 的选型解释。）
+（详见 [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md) 的选型解释。）
 
 ```mermaid
 graph TB
@@ -130,7 +131,7 @@ MEM->>EV: memory.reviewed
 ## 6. 数据与存储
 - **run_events**：事件序列（真相来源）；SSE 续传与回放依赖。
 - **checkpoint**：per_step 快照 + retain；用于 resume 与回放。
-- **artifacts**：diff/test_report/release_notes/rollback_plan 等（引用+digest，见 `docs/appendices/F-Artifacts规范与Digest.md`）。
+- **artifacts**：diff/test_report/release_notes/rollback_plan 等（引用+digest，见 [`../appendices/F-Artifacts规范与Digest.md`](../appendices/F-Artifacts规范与Digest.md)）。
 - **memory_records/evidence/reviews/edges/migrations**：分层记忆治理。
 - **audit_log**：审计索引（生产建议 append-only/WORM 外置）。
 
@@ -138,8 +139,7 @@ MEM->>EV: memory.reviewed
 - M0 默认：SQLite（run_events、memory、audit、checkpoint 元信息）
 - P2 演进：Postgres（高并发/多租户）
 
-**TODO（负责人：后端）**：确定 GORM 的迁移策略（migrate 版本表/回滚策略）。  
-**验收方式**：提供一次 v1→v2 迁移演练（含回滚与 TR3-01 回归）。
+**已实现**：`golang-migrate` 嵌入 SQL（`internal/store/sqlmigrations`）、`ash migrate schema`、`ASH_SCHEMA_MODE=sql`、Doctor M3-03/08；Memory catalog v1→v2（`internal/memory/migrate.go`）。详见 [`../appendices/I-GORM-模型映射与迁移策略.md`](../appendices/I-GORM-模型映射与迁移策略.md) / [`M3-多租户与Postgres演进.md`](M3-多租户与Postgres演进.md)。
 
 ## 11. API 契约与接口生成（Swagger + Proto）
 ### 11.1 Swagger / OpenAPI（对外 HTTP）
@@ -153,7 +153,7 @@ MEM->>EV: memory.reviewed
   - gRPC 服务提供：插件注册/事件订阅/指标导出（P1+）
 
 
-Artifacts 的存储、digest、保留与导出规范见 `docs/appendices/F-Artifacts规范与Digest.md`。
+Artifacts 的存储、digest、保留与导出规范见 [`../appendices/F-Artifacts规范与Digest.md`](../appendices/F-Artifacts规范与Digest.md)。
 
 ## 7. 错误处理与降级策略
 - provider 不可用：路由到备用 provider 或降级为非工具模式。

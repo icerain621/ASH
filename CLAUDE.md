@@ -28,7 +28,7 @@ Primary stack:
 - `internal/artifacts/` - artifact bundling and manifest logic.
 - `frontend/src/` - React console source.
 - `scenarios/` - YAML scenarios such as `feature_delivery.yaml`, `hotfix.yaml`, and `security_patch.yaml`.
-- `doc/` - product, architecture, implementation, API, database, and milestone documentation.
+- `doc/` - ownership layout: `design/` (PRD/HLD/ARCH), `plan/` (PLAN/TODO/scope/risk/KPI), `progress/` (release checklist); plus `appendices/`, `api/`, `checklists/`, `evidence/`. Index: `doc/README.md`.
 
 ## Commands
 

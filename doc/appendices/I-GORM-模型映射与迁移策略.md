@@ -37,7 +37,7 @@
   - run 的索引字段（runId/status/startedAt/finishedAt）
   - manifest 摘要（digest/路径）
 
-**TODO（负责人：后端）**：明确“run 索引表”是否需要（推荐需要，用于 runs 列表）。  
+**已实现**：`runs` 表作为列表/状态索引（GORM + SQL rev）；事件详情在 `run_events`。  
 **验收方式**：`GET /runs` 不应扫描文件系统全量目录。
 
 ## 3. 迁移策略（M0→P2）

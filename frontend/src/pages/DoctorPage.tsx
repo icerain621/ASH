@@ -67,7 +67,7 @@ export function DoctorPage() {
           {suite === "M3" && (
             <p className="muted-line">
               M3 校验多租户隔离、Postgres 就绪与 migrate 表目录（M3-03），详见{" "}
-              <code>doc/05-M3-多租户与Postgres演进.md</code>。
+              <code>doc/design/M3-多租户与Postgres演进.md</code>。
             </p>
           )}
         </div>

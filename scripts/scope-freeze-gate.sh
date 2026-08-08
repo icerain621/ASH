@@ -3,7 +3,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCOPE="$ROOT/doc/mvp-release-scope.md"
+SCOPE="$ROOT/doc/plan/mvp-release-scope.md"
 
 if [[ ! -f "$SCOPE" ]]; then
   echo "missing $SCOPE" >&2

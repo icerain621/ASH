@@ -9,25 +9,20 @@
 
 ```txt
 ash/
-  backend/          # Go Worker（Gin + GORM + SQLite，M0）
-  doc/
-    product/        # MVP 产品/工程文档（01–17 编号）
-    design/         # v0.1 实现设计（PRD/HLD/ARCH/PLAN + appendices）
-    api/            # OpenAPI 草稿
-    db/             # MySQL DDL
-  frontend/         # Web 控制台（M0 静态 UI → /ui/）
-  reports/          # 调研与分析报告
-  scripts/          # 工具脚本
+  cmd/worker|cli    # Go Worker / CLI
+  internal/         # 业务包（api/runs/memory/store/...）
+  frontend/         # Web 控制台（Vite+React → /ui/）
+  scenarios/        # Rules DSL YAML
+  doc/              # 归属索引见 doc/README.md
+    design/         # 设计：PRD / HLD / ARCH / M3
+    plan/           # 计划：PLAN / TODO / 范围 / 风险 / KPI
+    progress/       # 进度：发布清单（+ checklists/ evidence/）
+    appendices/ api/
+    archive/        # 历史草案（勿作实现依据）
+  scripts/          # 工具与门禁脚本
 ```
 
-## 首次整理目录
-
-若从 `ash_repwiki/ash` 复制后尚未整理，在 **Git Bash** 中执行：
-
-```bash
-cd /c/Go_Work/src/ash
-bash scripts/reorganize.sh
-```
+**文档归属**：[`doc/README.md`](doc/README.md) · **计划**：[`doc/plan/PLAN-进度与里程碑.md`](doc/plan/PLAN-进度与里程碑.md) · **待办**：[`doc/plan/TODO.md`](doc/plan/TODO.md)
 
 ## 创建 Git 仓库并推送
 
@@ -194,5 +189,7 @@ PRD 后四项闭环入口：
 ## 文档索引
 
 - 变更记录：`CHANGELOG.md`
-- 产品/MVP：`doc/product/README.md`（见 `doc/README.md`）
-- 实现设计 v0.1：`doc/design/`（含 `appendices/`）
+- 文档总索引：[`doc/README.md`](doc/README.md)
+- 计划与进度：[`doc/plan/PLAN-进度与里程碑.md`](doc/plan/PLAN-进度与里程碑.md)
+- 待办短清单：[`doc/plan/TODO.md`](doc/plan/TODO.md)
+- 早期草案归档：[`doc/archive/`](doc/archive/README.md)
