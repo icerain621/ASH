@@ -805,6 +805,9 @@ func TestStorageProfileReportsDatabaseAndArtifactStore(t *testing.T) {
 	if resp.ArtifactStore.Kind != "fs" || !resp.ArtifactStore.Ready {
 		t.Fatalf("artifact store=%+v want ready fs", resp.ArtifactStore)
 	}
+	if resp.ArtifactPaths.RunsRoot == "" || resp.ArtifactPaths.DirPerm != "0755" {
+		t.Fatalf("artifactPaths=%+v want runsRoot and 0755", resp.ArtifactPaths)
+	}
 
 	t.Setenv("ASH_ARTIFACT_STORE", "s3-compatible")
 	w = httptest.NewRecorder()

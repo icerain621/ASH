@@ -92,7 +92,7 @@
 
 | ID | 任务 | 备注 |
 |----|------|------|
-| P2-1 | Artifacts 路径策略 + canonical JSON 说明写入实现文档 | 附录 F |
+| P2-1 | Artifacts 路径策略 + canonical JSON 说明写入实现文档 | ✅ Sprint CG |
 | P2-2 | 插件 ABI 签名/打包策略 + 生产 gRPC 暴露策略 | ARCH / 附录 H |
 | P2-3 | Hotfix / Security Patch 场景模板深化 | PRD §4.2/4.3 |
 | P2-4 | SSE 浏览器级 E2E；Agent 稳定性度量（R-02） | 前端 + 算法 |
@@ -111,11 +111,12 @@
 | Sprint | 焦点 | 依赖 |
 |--------|------|------|
 | **CF** | P1-4 数据分级与保留期（纯代码） | ✅ 已完成 |
-| **CG** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
-| **CH** | P0-3/P0-5 真人签字 + 切换日 rollback | CG |
-| **CI** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
-| **CJ** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
-| **CK+** | P2 硬化（场景/插件/Artifacts） | 范围解冻评审 |
+| **CG** | P2-1 Artifacts 路径 + canonical JSON（纯代码） | ✅ 已完成 |
+| **CH** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
+| **CI** | P0-3/P0-5 真人签字 + 切换日 rollback | CH |
+| **CJ** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
+| **CK** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
+| **CL+** | P2 硬化（场景/插件签名） | 范围解冻评审 |
 
 历史 Sprint AY–CE 明细与已完成清单见 [`TODO.md`](TODO.md)「已完成归档」节（仅保留摘要，细节以 CHANGELOG 为准）。
 

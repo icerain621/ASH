@@ -48,11 +48,20 @@
 ```
 
 ### 3.2 可配置项
-- `ASH_RUNS_DIR`：覆盖 `.ash/runs` 根目录
-- `ASH_ARTIFACTS_MAX_BYTES`：单 run artifacts 总大小上限（超过则阻断或压缩）
+- `ASH_DATA_DIR`：数据根（默认 `.ash`）；SQLite、`object_store/` 等落于此
+- `ASH_RUNS_DIR`：覆盖 runs 根目录（默认 `<ASH_DATA_DIR>/runs`）
+- `ASH_ARTIFACTS_MAX_BYTES`：单 run `artifacts/` 总大小上限（超过则阻断）
 
-**TODO（负责人：平台）**：确定 Windows/WSL/Linux 的默认路径策略与权限。  
-**验收方式**：在三平台上创建 run 目录并可导出/清理。
+### 3.3 跨平台路径与权限（已实现）
+
+| 平台 | 默认策略 | 权限 |
+|------|----------|------|
+| Linux/macOS | `<dataDir>/runs/<runId>/{artifacts,checkpoints,audit}` | 目录 `0755`、文件 `0644` |
+| Windows | 同上（`filepath`）；`MkdirAll` 继承父 ACL | 不依赖 Unix mode 语义 |
+| WSL | **建议**将 `ASH_DATA_DIR`/`ASH_RUNS_DIR` 置于 Linux 文件系统（如 `~/.ash`），避免 `/mnt/c` 上的 CRLF/权限噪音 | 同 Linux |
+
+实现：`internal/artifacts/paths.go`（`RunsRoot` / `EnsureRunLayout` / `DescribePaths`）；运行时见 `GET /api/v1/storage/profile` 的 `artifactPaths`。  
+相对 URI 一律 `/`（`filepath.ToSlash`）。
 
 ## 4. `manifest.json`（强制）
 每个 run 必须生成 artifact 清单，作为回放与审计锚点：
@@ -89,11 +98,12 @@
   - **M0 约束**：写 artifacts 时统一使用 LF（`\n`），避免跨平台漂移。
 
 ### 5.3 JSON 文件（test_report/结构化输出）
-- canonical bytes = **canonical JSON**（字段稳定排序 + 无多余空白 + 统一换行）
-- **M0 约束**：由统一的 JSON 序列化器生成（禁止手写拼接）。
-
-**TODO（负责人：后端）**：指定 canonical JSON 的实现方式（库/策略），并写入实现说明。  
-**验收方式**：同对象序列化 100 次 digest 不变；跨平台一致。
+- canonical bytes = **canonical JSON**（字段稳定排序 + 无多余空白 + 无 CR）
+- **实现**：`internal/artifacts/canonical.go`
+  - `MarshalCanonicalJSON`：`encoding/json` 解码为 `map`/`[]` 后递归按 key 字典序重写（无缩进）
+  - `DigestCanonicalJSON` / 清单 digest：对 `application/json` 产物先规范化再 `sha256`
+  - `test_report.json` 默认由 `MarshalCanonicalJSON` 落盘
+- **验收**：同对象多次序列化 digest 不变（见 `canonical_test.go`）；manifest 人类可读仍用缩进，但 JSON 产物 digest 走 canonical。
 
 ## 6. 保留、清理与导出（M0 最小策略）
 ### 6.1 保留策略

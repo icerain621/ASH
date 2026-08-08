@@ -14,6 +14,7 @@ import (
 	"gorm.io/gorm"
 	"gorm.io/gorm/logger"
 
+	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
 
@@ -236,7 +237,7 @@ func (db *DB) DataDir() string { return db.dataDir }
 func (db *DB) Dialect() string { return db.dialect }
 
 func (db *DB) RunDir(runID string) string {
-	return filepath.Join(db.dataDir, "runs", runID)
+	return artifacts.RunDir(db.dataDir, runID)
 }
 
 // BindContext returns a shallow copy of DB with the GORM handle bound to ctx (for Postgres RLS session vars).

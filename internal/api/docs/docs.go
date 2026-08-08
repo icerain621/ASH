@@ -5045,6 +5045,41 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_artifacts.PathProfile": {
+            "type": "object",
+            "properties": {
+                "dataDir": {
+                    "type": "string"
+                },
+                "dirPerm": {
+                    "type": "string"
+                },
+                "filePerm": {
+                    "type": "string"
+                },
+                "maxArtifactsBytes": {
+                    "type": "integer"
+                },
+                "notes": {
+                    "type": "string"
+                },
+                "objectStoreRoot": {
+                    "type": "string"
+                },
+                "pathSeparator": {
+                    "type": "string"
+                },
+                "platform": {
+                    "type": "string"
+                },
+                "runsDirOverride": {
+                    "type": "boolean"
+                },
+                "runsRoot": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_artifactstore.Profile": {
             "type": "object",
             "properties": {
@@ -9216,6 +9251,9 @@ const docTemplate = `{
         "internal_api.StorageProfileResponse": {
             "type": "object",
             "properties": {
+                "artifactPaths": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_artifacts.PathProfile"
+                },
                 "artifactStore": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_artifactstore.Profile"
                 },

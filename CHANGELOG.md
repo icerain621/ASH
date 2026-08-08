@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CG（P2-1）：Artifacts 跨平台路径策略（`ASH_RUNS_DIR` / `EnsureRunLayout` / `storage/profile.artifactPaths`）与 canonical JSON digest（`MarshalCanonicalJSON`）；附录 F TODO 关闭。
 - Sprint CF（P1-4）：附录 J 数据分级与保留期；`internal/config` data policy；`GET /api/v1/data-policy`；`POST /api/v1/events/retention/apply` 与 `/artifacts/retention/apply`；Scale/readyz 暴露保留默认值；关闭 PRD §8 TODO。
 
 ### Changed

@@ -3,6 +3,7 @@ package api
 import (
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/rules"
@@ -192,6 +193,7 @@ type PluginProtoFile struct {
 type StorageProfileResponse struct {
 	Database      DatabaseProfile       `json:"database"`
 	ArtifactStore artifactstore.Profile `json:"artifactStore"`
+	ArtifactPaths artifacts.PathProfile `json:"artifactPaths"`
 }
 
 type SecretListResponse struct {

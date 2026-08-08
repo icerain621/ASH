@@ -1,8 +1,6 @@
 package artifacts
 
 import (
-	"crypto/sha256"
-	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -49,10 +47,10 @@ type BundleMeta struct {
 
 // WriteBundle ensures four M0 artifacts exist and writes manifest.json.
 func WriteBundle(runDir string, meta BundleMeta) (*Manifest, error) {
-	artDir := filepath.Join(runDir, "artifacts")
-	if err := os.MkdirAll(artDir, 0o755); err != nil {
+	if err := EnsureRunLayout(runDir); err != nil {
 		return nil, err
 	}
+	artDir := filepath.Join(runDir, "artifacts")
 
 	if err := ensureDiff(artDir, meta.RepoRoot); err != nil {
 		return nil, err
@@ -72,8 +70,8 @@ func WriteBundle(runDir string, meta BundleMeta) (*Manifest, error) {
 		{"art_rollback", "rollback_plan", "rollback_plan.md", "rollback_plan.md", "text/markdown", rollback},
 	}
 
-	_ = os.WriteFile(filepath.Join(artDir, "release_notes.md"), []byte(normalizeLF(release)), 0o644)
-	_ = os.WriteFile(filepath.Join(artDir, "rollback_plan.md"), []byte(normalizeLF(rollback)), 0o644)
+	_ = os.WriteFile(filepath.Join(artDir, "release_notes.md"), []byte(normalizeLF(release)), DefaultFilePerm)
+	_ = os.WriteFile(filepath.Join(artDir, "rollback_plan.md"), []byte(normalizeLF(rollback)), DefaultFilePerm)
 
 	manifest := &Manifest{
 		RunID: meta.RunID,
@@ -119,6 +117,9 @@ func WriteBundle(runDir string, meta BundleMeta) (*Manifest, error) {
 	if err := SaveManifest(runDir, manifest); err != nil {
 		return nil, err
 	}
+	if err := enforceArtifactsBudget(artDir); err != nil {
+		return nil, err
+	}
 	return manifest, nil
 }
 
@@ -128,12 +129,21 @@ func appendManifestEntry(manifest *Manifest, artDir, id, typ, name, rel, ctype s
 	if err != nil {
 		return err
 	}
+	digestSrc := b
+	if ctype == "application/json" {
+		var node any
+		if err := json.Unmarshal(b, &node); err == nil {
+			if cb, err := MarshalCanonicalJSON(node); err == nil {
+				digestSrc = cb
+			}
+		}
+	}
 	manifest.Artifacts = append(manifest.Artifacts, Entry{
 		ID:          id,
 		Type:        typ,
 		Name:        name,
 		URI:         "artifacts/" + filepath.ToSlash(rel),
-		Digest:      digestBytes(b),
+		Digest:      DigestBytes(digestSrc),
 		ContentType: ctype,
 		SizeBytes:   int64(len(b)),
 		Producer:    producer,
@@ -147,7 +157,7 @@ func SaveManifest(runDir string, manifest *Manifest) error {
 		return err
 	}
 	text := normalizeLF(string(out)) + "\n"
-	return os.WriteFile(filepath.Join(runDir, "artifacts", "manifest.json"), []byte(text), 0o644)
+	return os.WriteFile(filepath.Join(runDir, "artifacts", "manifest.json"), []byte(text), DefaultFilePerm)
 }
 
 func ensureDiff(artDir, repoRoot string) error {
@@ -166,7 +176,7 @@ func ensureDiff(artDir, repoRoot string) error {
 	if strings.TrimSpace(diff) == "" {
 		diff = "# No working tree diff was produced.\n"
 	}
-	return os.WriteFile(path, []byte(normalizeLF(diff)), 0o644)
+	return os.WriteFile(path, []byte(normalizeLF(diff)), DefaultFilePerm)
 }
 
 func ensureTestReport(artDir string) error {
@@ -179,11 +189,37 @@ func ensureTestReport(artDir string) error {
 		"summary": map[string]any{"passed": 0, "failed": 0, "skipped": 0},
 		"error":   "test.run did not produce a report",
 	}
-	b, err := json.Marshal(report)
+	b, err := MarshalCanonicalJSON(report)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o644)
+	return os.WriteFile(path, b, DefaultFilePerm)
+}
+
+func enforceArtifactsBudget(artDir string) error {
+	max := MaxArtifactsBytes()
+	if max <= 0 {
+		return nil
+	}
+	var total int64
+	entries, err := os.ReadDir(artDir)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		if e.IsDir() {
+			continue
+		}
+		info, err := e.Info()
+		if err != nil {
+			continue
+		}
+		total += info.Size()
+	}
+	if total > max {
+		return fmt.Errorf("artifacts total size %d exceeds ASH_ARTIFACTS_MAX_BYTES=%d", total, max)
+	}
+	return nil
 }
 
 func inferStepIDFromArtifactName(name string) string {
@@ -274,11 +310,6 @@ func LoadManifest(runDir string) (*Manifest, error) {
 		return nil, err
 	}
 	return &m, nil
-}
-
-func digestBytes(b []byte) string {
-	h := sha256.Sum256(b)
-	return "sha256:" + hex.EncodeToString(h[:])
 }
 
 func normalizeLF(s string) string {

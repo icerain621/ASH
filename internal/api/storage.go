@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -37,6 +38,7 @@ func (h *Handler) getStorageProfile(c *gin.Context) {
 			PostgresRLSPolicyCount: dbProf.PostgresRLSPolicyCount,
 		},
 		ArtifactStore: artifactstore.Describe(cfg.ArtifactStore, h.db.DataDir()),
+		ArtifactPaths: artifacts.DescribePaths(h.db.DataDir()),
 	}
 	c.JSON(http.StatusOK, resp)
 }

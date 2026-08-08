@@ -682,12 +682,27 @@ components:
         objectStore: { type: boolean }
         supportsSignedUrl: { type: boolean }
         error: { type: string }
+    ArtifactPathsProfile:
+      type: object
+      description: Cross-platform artifact path strategy (appendix F §3.3).
+      properties:
+        platform: { type: string }
+        dataDir: { type: string }
+        runsRoot: { type: string }
+        objectStoreRoot: { type: string }
+        runsDirOverride: { type: boolean }
+        dirPerm: { type: string }
+        filePerm: { type: string }
+        maxArtifactsBytes: { type: integer, format: int64 }
+        pathSeparator: { type: string }
+        notes: { type: string }
     StorageProfileResponse:
       type: object
-      required: [artifactStore, database]
+      required: [artifactStore, database, artifactPaths]
       properties:
         artifactStore: { $ref: "#/components/schemas/ArtifactStoreProfile" }
         database: { $ref: "#/components/schemas/DatabaseProfile" }
+        artifactPaths: { $ref: "#/components/schemas/ArtifactPathsProfile" }
     ValidationIssue:
       type: object
       properties:

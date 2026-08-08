@@ -61,8 +61,8 @@ make regression-short && make web-gate
 
 | 域 | 项 | 备注 |
 |----|-----|------|
-| 附录 F | Artifacts 默认路径与权限（Win/WSL/Linux） | 设计 TODO |
-| 附录 F | Canonical JSON 实现说明 | digest 一致性 |
+| 附录 F | ~~Artifacts 默认路径与权限~~ | ✅ Sprint CG：`paths.go` + storage/profile |
+| 附录 F | ~~Canonical JSON~~ | ✅ Sprint CG：`canonical.go` |
 | ARCH | 插件打包/签名策略 | gRPC ABI 已有基础 |
 | 场景 | Hotfix / Security 模板深化 | PRD §4.2/4.3 |
 | 前端 | SSE 浏览器级 E2E | 钩子/轮询已落地 |
@@ -88,6 +88,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CG：Artifacts 路径策略 + canonical JSON（附录 F / P2-1）
 - Sprint CF：附录 J + data-policy + events/artifacts retention apply（PRD-8 / P1-4）
 - 自动化与门禁：T-01..T-15、H-04~H-09 **静态/fixture/本地 live**、Sprint AY–CE（SSE、跨 space、状态机、CI 韧性、rollback drill、evidence-sha、全页 vitest 等）。  
 
