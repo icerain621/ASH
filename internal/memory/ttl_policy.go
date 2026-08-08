@@ -7,6 +7,7 @@ import (
 )
 
 // Built-in default TTL when env overrides are unset (appendix C §4).
+// Keep numeric values aligned with config.BuiltinMemoryTTL* (config must not import memory).
 const (
 	BuiltinTTLDaysL1 = 90
 	BuiltinTTLDaysL2 = 365

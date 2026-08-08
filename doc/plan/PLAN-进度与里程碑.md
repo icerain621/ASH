@@ -42,7 +42,7 @@
 | 向量库 / 符号索引路线 | P3 | ARCH §5–6 | RAG 增强，FTS 已够用 |
 | ~~Artifacts 跨平台默认路径与权限~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
 | ~~Canonical JSON 实现说明（产物 digest）~~ | P2 | 附录 F | **已关闭**（Sprint CG） |
-| RACI（Epic owner） | P2 | 本文件曾遗留 | 协作清晰度 |
+| ~~RACI（Epic owner）~~ | P2 | 本文件 §7 | **已关闭**（发布阶段 RACI + Epic 归属） |
 | 强隔离沙箱 / IdP 联邦 / 技能市场 | P3 | PRD Out | 下一产品世代 |
 
 > HLD「GORM 迁移策略」、ARCH「CLI/Web 待实现」、附录 I「run 索引表」等历史 TODO：**已由代码落地**，见下文进度表。
@@ -120,6 +120,7 @@
 | **CQ** | KPI-08 SSE 稳定率口径硬化（R-07） | ✅ 已完成 |
 | **CR** | 插件签名轮换 SOP + CLI/烟测 | ✅ 已完成 |
 | **CS** | 危险操作目录 + human-step UX | ✅ 已完成 |
+| **CT** | data-policy 导入环修复 + RACI 闭环 | ✅ 已完成 |
 | **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
 | **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
 | **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
@@ -138,7 +139,7 @@
 | SSE 事件流 | ✅ | ✅ | 含轮询回退 |
 | Rules DSL + 三场景 | ✅ | ✅ | JSON Schema 校验 |
 | ToolBus / Policy / MCP | ✅ | ✅ | ExecGo 桥接需 live |
-| Artifacts 四件套 | ✅ | ✅ | 路径策略文档待补 |
+| Artifacts 四件套 | ✅ | ✅ | 附录 F §3.3 + canonical.go（CG） |
 | Memory 评审/治理/TTL | ✅ | ✅ | schema v2 |
 | RAG FTS（SQLite/Postgres） | ✅ | ✅ | 向量库未做（设计为 P1+/P3） |
 | Doctor TR0–TR3 / M2 / M3 | ✅ | ✅ | 43 cases |
@@ -175,6 +176,17 @@ make mvp-signoff
 ## 7. 团队假设与 RACI（精简）
 
 - **默认产能**：后端/平台 2 + 前端 1 + 全栈/测试 1（可按实际缩放）  
+- **Epic owner（MVP 域）**
+
+| Epic | Owner (A) | 主要执行 (R) |
+|------|-----------|--------------|
+| Control Plane / Runs / SSE | 技术负责人 | 后端 |
+| Memory / RAG / 合规保留 | 技术负责人 | 后端 |
+| ToolBus / Policy / 插件 ABI | 平台负责人 | 后端 |
+| Doctor / 发布门禁 / OpenAPI | 测试/平台 | 全栈 |
+| 控制台 / 组织样板 | 产品 + 前端 | 前端 |
+| 云切流 / 签字 / 切换日 | 发布负责人 | 运维 + 技术 |
+
 - **RACI（发布阶段）**
 
 | 事项 | R | A | C | I |

@@ -413,7 +413,8 @@ func TestRunInjectsApprovedMemoryAndRecordsHitUsed(t *testing.T) {
 	mem := store.MemoryRecord{
 		ID: "mem_run_inject", Layer: "L1", Status: "approved", SpaceID: "local",
 		SchemaVersion: 1, Title: issue, Body: "Use memory injection evidence during delivery.",
-		ScopeRepo: repo, Sensitivity: "normal", Confidence: 0.91,
+		// Empty scope matches any repoRoot after AbsRepoRoot normalization in Create.
+		ScopeRepo: "", Sensitivity: "normal", Confidence: 0.91,
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := svc.db.Create(&mem).Error; err != nil {

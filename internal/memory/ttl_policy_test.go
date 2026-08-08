@@ -4,8 +4,21 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/store"
 )
+
+func TestBuiltinTTLAlignedWithConfig(t *testing.T) {
+	if BuiltinTTLDaysL1 != config.BuiltinMemoryTTLL1Days {
+		t.Fatalf("L1 builtin memory=%d config=%d", BuiltinTTLDaysL1, config.BuiltinMemoryTTLL1Days)
+	}
+	if BuiltinTTLDaysL2 != config.BuiltinMemoryTTLL2Days {
+		t.Fatalf("L2 builtin memory=%d config=%d", BuiltinTTLDaysL2, config.BuiltinMemoryTTLL2Days)
+	}
+	if BuiltinTTLReviewLeadDays != config.BuiltinMemoryTTLReviewDays {
+		t.Fatalf("review builtin memory=%d config=%d", BuiltinTTLReviewLeadDays, config.BuiltinMemoryTTLReviewDays)
+	}
+}
 
 func TestEffectiveTTLDaysEnvOverride(t *testing.T) {
 	t.Setenv("ASH_MEMORY_TTL_L1_DAYS", "45")

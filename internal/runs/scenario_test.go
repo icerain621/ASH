@@ -17,7 +17,7 @@ func TestM1ScenariosExecuteWithStaticAgent(t *testing.T) {
 			svc, _ := testRunsService(t)
 			repo := repoWithEvidence(t, tc.issue)
 			created, err := svc.Create(CreateRequest{
-				Scenario: ScenarioRef{Name: tc.name, ScenarioVersion: "1.0.0"},
+				Scenario: ScenarioRef{Name: tc.name, ScenarioVersion: "1.1.0"},
 				Inputs: map[string]any{
 					"issueOrSpec": tc.issue,
 					"repoRoot":    repo,
@@ -31,6 +31,16 @@ func TestM1ScenariosExecuteWithStaticAgent(t *testing.T) {
 			sum, err := svc.Get(created.RunID)
 			if err != nil {
 				t.Fatal(err)
+			}
+			// Sprint CH: hotfix/security_patch@1.1.0 include a terminal human ship gate.
+			for i := 0; i < 4 && sum.Status == "waiting_approval"; i++ {
+				if _, err := svc.Approve(created.RunID, ApproveRequest{ActorID: "tester", Reason: "m1 scenario ship gate"}); err != nil {
+					t.Fatalf("approve: %v", err)
+				}
+				sum, err = svc.Get(created.RunID)
+				if err != nil {
+					t.Fatal(err)
+				}
 			}
 			if sum.Status != "finished" {
 				t.Fatalf("status=%q want finished", sum.Status)

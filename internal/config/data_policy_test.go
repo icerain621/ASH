@@ -24,8 +24,29 @@ func TestLoadDataPolicyDefaults(t *testing.T) {
 	if p.ArtifactsMaxRuns != BuiltinRetentionArtifactsMaxRuns {
 		t.Fatalf("artifactsMaxRuns=%d want %d", p.ArtifactsMaxRuns, BuiltinRetentionArtifactsMaxRuns)
 	}
-	if p.MemoryTTLL1Days <= 0 || p.MemoryTTLL2Days <= 0 {
-		t.Fatalf("memory ttl L1=%d L2=%d want positive", p.MemoryTTLL1Days, p.MemoryTTLL2Days)
+	if p.MemoryTTLL1Days != BuiltinMemoryTTLL1Days {
+		t.Fatalf("memory L1=%d want %d", p.MemoryTTLL1Days, BuiltinMemoryTTLL1Days)
+	}
+	if p.MemoryTTLL2Days != BuiltinMemoryTTLL2Days {
+		t.Fatalf("memory L2=%d want %d", p.MemoryTTLL2Days, BuiltinMemoryTTLL2Days)
+	}
+	if p.MemoryTTLReviewDays != BuiltinMemoryTTLReviewDays {
+		t.Fatalf("memory review=%d want %d", p.MemoryTTLReviewDays, BuiltinMemoryTTLReviewDays)
+	}
+}
+
+func TestMemoryTTLEnvOverrides(t *testing.T) {
+	t.Setenv("ASH_MEMORY_TTL_L1_DAYS", "45")
+	t.Setenv("ASH_MEMORY_TTL_L2_DAYS", "180")
+	t.Setenv("ASH_MEMORY_TTL_REVIEW_DAYS", "3")
+	if got := EffectiveMemoryTTLL1Days(); got != 45 {
+		t.Fatalf("L1=%d want 45", got)
+	}
+	if got := EffectiveMemoryTTLL2Days(); got != 180 {
+		t.Fatalf("L2=%d want 180", got)
+	}
+	if got := EffectiveMemoryTTLReviewDays(); got != 3 {
+		t.Fatalf("review=%d want 3", got)
 	}
 }
 

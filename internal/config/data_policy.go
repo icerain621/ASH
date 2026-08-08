@@ -4,8 +4,6 @@ import (
 	"os"
 	"strconv"
 	"strings"
-
-	"github.com/ash-repwiki/ash/internal/memory"
 )
 
 // Data classification levels (appendix J / PRD §8).
@@ -21,6 +19,13 @@ const (
 	BuiltinRetentionAuditDays        = 365
 	BuiltinRetentionArtifactsDays    = 30
 	BuiltinRetentionArtifactsMaxRuns = 200
+)
+
+// Memory TTL defaults mirrored from appendix C / internal/memory (avoid config→memory import).
+const (
+	BuiltinMemoryTTLL1Days     = 90
+	BuiltinMemoryTTLL2Days     = 365
+	BuiltinMemoryTTLReviewDays = 7
 )
 
 // DataPolicy is the effective org-wide classification + retention snapshot.
@@ -41,10 +46,25 @@ func LoadDataPolicy() DataPolicy {
 		AuditDays:           EffectiveRetentionAuditDays(),
 		ArtifactsDays:       EffectiveRetentionArtifactsDays(),
 		ArtifactsMaxRuns:    EffectiveRetentionArtifactsMaxRuns(),
-		MemoryTTLL1Days:     memory.EffectiveTTLDaysL1(),
-		MemoryTTLL2Days:     memory.EffectiveTTLDaysL2(),
-		MemoryTTLReviewDays: memory.EffectiveTTLReviewLeadDays(),
+		MemoryTTLL1Days:     EffectiveMemoryTTLL1Days(),
+		MemoryTTLL2Days:     EffectiveMemoryTTLL2Days(),
+		MemoryTTLReviewDays: EffectiveMemoryTTLReviewDays(),
 	}
+}
+
+// EffectiveMemoryTTLL1Days returns ASH_MEMORY_TTL_L1_DAYS (default 90).
+func EffectiveMemoryTTLL1Days() int {
+	return effectivePositiveInt("ASH_MEMORY_TTL_L1_DAYS", BuiltinMemoryTTLL1Days)
+}
+
+// EffectiveMemoryTTLL2Days returns ASH_MEMORY_TTL_L2_DAYS (default 365).
+func EffectiveMemoryTTLL2Days() int {
+	return effectivePositiveInt("ASH_MEMORY_TTL_L2_DAYS", BuiltinMemoryTTLL2Days)
+}
+
+// EffectiveMemoryTTLReviewDays returns ASH_MEMORY_TTL_REVIEW_DAYS (default 7).
+func EffectiveMemoryTTLReviewDays() int {
+	return effectivePositiveInt("ASH_MEMORY_TTL_REVIEW_DAYS", BuiltinMemoryTTLReviewDays)
 }
 
 // EffectiveRetentionEventsDays returns ASH_RETENTION_EVENTS_DAYS (default 90).
