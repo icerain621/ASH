@@ -223,6 +223,23 @@ definitions:
       status:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_config.DataPolicy:
+    properties:
+      artifactsDays:
+        type: integer
+      artifactsMaxRuns:
+        type: integer
+      auditDays:
+        type: integer
+      eventsDays:
+        type: integer
+      memoryTtlL1Days:
+        type: integer
+      memoryTtlL2Days:
+        type: integer
+      memoryTtlReviewDays:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_doctor.CaseResult:
     properties:
       evidence:
@@ -2314,6 +2331,38 @@ definitions:
       suite:
         type: string
     type: object
+  internal_api.DataPolicyResponse:
+    properties:
+      classification:
+        items:
+          type: string
+        type: array
+      docRef:
+        type: string
+      policy:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_config.DataPolicy'
+    type: object
+  internal_api.DataRetentionApplyResponse:
+    properties:
+      cutoff:
+        type: string
+      deleted:
+        type: integer
+      domain:
+        type: string
+      dryRun:
+        type: boolean
+      filesRemoved:
+        type: integer
+      matched:
+        type: integer
+      maxRuns:
+        type: integer
+      retentionDays:
+        type: integer
+      spaceId:
+        type: string
+    type: object
   internal_api.DatabaseProfile:
     properties:
       dataDir:
@@ -2367,6 +2416,18 @@ definitions:
         items:
           type: string
         type: array
+      retentionArtifactsDays:
+        example: 30
+        type: integer
+      retentionArtifactsMaxRuns:
+        example: 200
+        type: integer
+      retentionAuditDays:
+        example: 365
+        type: integer
+      retentionEventsDays:
+        example: 90
+        type: integer
       rlsCatalogSummary:
         type: string
       schemaMode:
@@ -2646,6 +2707,14 @@ definitions:
         items:
           type: string
         type: array
+      retentionArtifactsDays:
+        type: integer
+      retentionArtifactsMaxRuns:
+        type: integer
+      retentionAuditDays:
+        type: integer
+      retentionEventsDays:
+        type: integer
       rlsCatalogSummary:
         type: string
       runInflightCount:
@@ -2946,6 +3015,11 @@ definitions:
     - name
     - orgId
     type: object
+  internal_api.dataRetentionApplyRequest:
+    properties:
+      dryRun:
+        type: boolean
+    type: object
   internal_api.decideCIDiagnosisRequest:
     properties:
       reason:
@@ -3209,6 +3283,34 @@ paths:
       summary: Reject an approval request and cancel the run
       tags:
       - approvals
+  /api/v1/artifacts/retention/apply:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: retention request
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.dataRetentionApplyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DataRetentionApplyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Apply artifact_index retention for current space
+      tags:
+      - compliance
   /api/v1/audit/exports:
     get:
       produces:
@@ -3733,6 +3835,22 @@ paths:
       summary: Scan audit logs and run events for secret patterns
       tags:
       - compliance
+  /api/v1/data-policy:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DataPolicyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get effective data classification and retention policy
+      tags:
+      - compliance
   /api/v1/doctor/reports/{reportId}:
     get:
       parameters:
@@ -3780,6 +3898,34 @@ paths:
       summary: Run validation suite
       tags:
       - doctor
+  /api/v1/events/retention/apply:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: retention request
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.dataRetentionApplyRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.DataRetentionApplyResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Apply run_events retention for current space
+      tags:
+      - compliance
   /api/v1/feedback:
     get:
       parameters:

@@ -1432,7 +1432,7 @@ func (h *Handler) auditPolicy(c *gin.Context, space string) (*store.AuditPolicy,
 	}
 	now := time.Now().UTC()
 	policy = store.AuditPolicy{
-		SpaceID: space, RetentionDays: 365, RedactPayload: false,
+		SpaceID: space, RetentionDays: config.EffectiveRetentionAuditDays(), RedactPayload: false,
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if err := gdb.Create(&policy).Error; err != nil {

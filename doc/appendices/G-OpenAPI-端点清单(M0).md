@@ -107,6 +107,9 @@
 ### 8.2 合规（TR2）
 - `GET /compliance/secret-scan` — 审计/事件载荷 secret 模式扫描
 - `POST /compliance/export` — 审计包（含 Doctor 报告 + `secretScan` 摘要）
+- `GET /data-policy` — 数据分级与保留期生效快照（附录 J）
+- `POST /events/retention/apply` — 按空间清理过期 `run_events`
+- `POST /artifacts/retention/apply` — 按空间清理过期 `artifact_index`（可选删对象文件）
 
 ### 8.3 规模化（TR3）
 - `GET /scale/readiness` — `ScaleReadinessResponse`（见 §8.6）

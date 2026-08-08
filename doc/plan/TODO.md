@@ -43,7 +43,7 @@ make mvp-signoff
 | H-04/05 | 真实 GitHub CI sync + diagnose | 非 fixture；rootCause 对齐真实 log | ⏸ |
 | H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke` | ⏸ |
 | BJ-3 | T+1 生产 KPI 对账 | vs `t1-metrics-gate` 偏差 &lt;5% | ⏸ 需上线后 |
-| PRD-8 | 数据分级与保留期 | 分级表 + 脱敏样例 + 导出流程 | ❌ 设计未完成 |
+| PRD-8 | 数据分级与保留期 | 附录 J + `data-policy` + retention apply | ✅ Sprint CF |
 | R-08 | 发布窗口跨 space / RLS 抽测 | 无越权 | 部分（单测已有） |
 
 本地不依赖云的替代门禁：
@@ -88,5 +88,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
-自动化与门禁：T-01..T-15、H-04~H-09 **静态/fixture/本地 live**、Sprint AY–CE（SSE、跨 space、状态机、CI 韧性、rollback drill、evidence-sha、全页 vitest 等）。  
+- Sprint CF：附录 J + data-policy + events/artifacts retention apply（PRD-8 / P1-4）
+- 自动化与门禁：T-01..T-15、H-04~H-09 **静态/fixture/本地 live**、Sprint AY–CE（SSE、跨 space、状态机、CI 韧性、rollback drill、evidence-sha、全页 vitest 等）。  
+
 详见 `CHANGELOG.md` `[Unreleased]` 与 `[v0.1.0-mvp]`。

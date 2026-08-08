@@ -94,8 +94,7 @@
 - **可回放**：run_events + artifacts digest + memory version 锚定
 
 ## 8. 数据与合规
-**TODO（负责人：安全）**：定义数据分级（normal/restricted/secret）与保留期（事件/审计/记忆/产物）。  
-**验收方式**：给出分级表 + 样例脱敏规则 + 审计导出流程。
+**已实现（2026-08-08）**：分级表 + 默认保留期 + 样例脱敏 + 审计导出流程见 [`../appendices/J-数据分级与保留期.md`](../appendices/J-数据分级与保留期.md)；运行时 `GET /api/v1/data-policy` 与 events/artifacts retention apply。
 
 ## 9. 成功指标（Metrics / SLO）
 - 交付成功率、CI 一次通过率、回滚演练成功率

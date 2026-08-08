@@ -6,6 +6,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ## [Unreleased]
 
+### Added
+
+- Sprint CF（P1-4）：附录 J 数据分级与保留期；`internal/config` data policy；`GET /api/v1/data-policy`；`POST /api/v1/events/retention/apply` 与 `/artifacts/retention/apply`；Scale/readyz 暴露保留默认值；关闭 PRD §8 TODO。
+
 ### Changed
 
 - 文档归属重组：`doc/design/`（设计）、`doc/plan/`（计划/TODO/范围/风险/KPI）、`doc/progress/`（发布清单）；`checklists/`/`evidence/`/`api/`/`appendices/` 路径保持稳定；早期草案与 MySQL DDL 在 `doc/archive/`。索引见 `doc/README.md`。

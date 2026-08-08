@@ -312,6 +312,18 @@ components:
         memoryTTLSweepInterval:
           type: string
           description: ASH_MEMORY_TTL_SWEEP_INTERVAL duration (e.g. 24h0m0s).
+        retentionEventsDays:
+          type: integer
+          description: ASH_RETENTION_EVENTS_DAYS default (appendix J).
+        retentionAuditDays:
+          type: integer
+          description: ASH_RETENTION_AUDIT_DAYS default (appendix J).
+        retentionArtifactsDays:
+          type: integer
+          description: ASH_RETENTION_ARTIFACTS_DAYS default (appendix J).
+        retentionArtifactsMaxRuns:
+          type: integer
+          description: ASH_RETENTION_ARTIFACTS_MAX_RUNS default (appendix J).
         memoryTTLReviewDueCount:
           type: integer
           format: int64
@@ -505,6 +517,45 @@ components:
         alertsEvalInterval: { type: string, example: 5m0s }
         memoryTTLSweepInterval: { type: string, example: 24h0m0s }
         metricsEventReplayEnabled: { type: boolean }
+        retentionEventsDays: { type: integer, example: 90 }
+        retentionAuditDays: { type: integer, example: 365 }
+        retentionArtifactsDays: { type: integer, example: 30 }
+        retentionArtifactsMaxRuns: { type: integer, example: 200 }
+    DataPolicySnapshot:
+      type: object
+      properties:
+        eventsDays: { type: integer }
+        auditDays: { type: integer }
+        artifactsDays: { type: integer }
+        artifactsMaxRuns: { type: integer }
+        memoryTtlL1Days: { type: integer }
+        memoryTtlL2Days: { type: integer }
+        memoryTtlReviewDays: { type: integer }
+    DataPolicyResponse:
+      type: object
+      required: [policy, classification, docRef]
+      properties:
+        policy: { $ref: "#/components/schemas/DataPolicySnapshot" }
+        classification:
+          type: array
+          items: { type: string }
+        docRef: { type: string }
+    DataRetentionApplyRequest:
+      type: object
+      properties:
+        dryRun: { type: boolean }
+    DataRetentionApplyResponse:
+      type: object
+      properties:
+        spaceId: { type: string }
+        domain: { type: string }
+        retentionDays: { type: integer }
+        maxRuns: { type: integer }
+        cutoff: { type: string, format: date-time }
+        matched: { type: integer, format: int64 }
+        deleted: { type: integer, format: int64 }
+        filesRemoved: { type: integer, format: int64 }
+        dryRun: { type: boolean }
     RepoRef:
       type: object
       properties:
@@ -2750,6 +2801,47 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuditRetentionApplyResponse" }
+
+  /api/v1/data-policy:
+    get:
+      tags: [Compliance]
+      summary: Get effective data classification and retention policy
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataPolicyResponse" }
+
+  /api/v1/events/retention/apply:
+    post:
+      tags: [Compliance]
+      summary: Apply run_events retention for current space
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataRetentionApplyRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataRetentionApplyResponse" }
+
+  /api/v1/artifacts/retention/apply:
+    post:
+      tags: [Compliance]
+      summary: Apply artifact_index retention for current space
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DataRetentionApplyRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DataRetentionApplyResponse" }
 
   /api/v1/auth/login:
     post:

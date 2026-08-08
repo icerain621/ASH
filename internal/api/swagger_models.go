@@ -39,6 +39,10 @@ type HealthResponse struct {
 	AlertsEvalInterval        string   `json:"alertsEvalInterval,omitempty" example:"5m0s"`
 	MemoryTTLSweepInterval    string   `json:"memoryTTLSweepInterval,omitempty" example:"24h0m0s"`
 	MetricsEventReplayEnabled bool     `json:"metricsEventReplayEnabled,omitempty"`
+	RetentionEventsDays       int      `json:"retentionEventsDays,omitempty" example:"90"`
+	RetentionAuditDays        int      `json:"retentionAuditDays,omitempty" example:"365"`
+	RetentionArtifactsDays    int      `json:"retentionArtifactsDays,omitempty" example:"30"`
+	RetentionArtifactsMaxRuns int      `json:"retentionArtifactsMaxRuns,omitempty" example:"200"`
 }
 
 type AuthSessionResponse struct {

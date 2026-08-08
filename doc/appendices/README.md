@@ -14,4 +14,5 @@
 - `G-OpenAPI-端点清单(M0).md`：M0 必需 HTTP API 端点边界（Swagger/OpenAPI）
 - `H-Proto-服务定义(插件ABI)v0.1.md`：gRPC/Buf 插件 ABI 草案与目录结构
 - `I-GORM-模型映射与迁移策略.md`：GORM 模型映射与迁移路线（SQLite→Postgres）
+- `J-数据分级与保留期.md`：分级表、默认保留期、脱敏样例、审计导出流程（PRD §8）
 

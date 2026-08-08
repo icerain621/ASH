@@ -6,6 +6,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -64,6 +65,10 @@ type ScaleReadinessResponse struct {
 	AlertsEvalInterval             string   `json:"alertsEvalInterval,omitempty"`
 	MemoryTTLSweepInterval         string   `json:"memoryTTLSweepInterval,omitempty"`
 	MetricsEventReplayEnabled      bool     `json:"metricsEventReplayEnabled,omitempty"`
+	RetentionEventsDays            int      `json:"retentionEventsDays,omitempty"`
+	RetentionAuditDays             int      `json:"retentionAuditDays,omitempty"`
+	RetentionArtifactsDays         int      `json:"retentionArtifactsDays,omitempty"`
+	RetentionArtifactsMaxRuns      int      `json:"retentionArtifactsMaxRuns,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -176,6 +181,10 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		AlertsEvalInterval:            ops.AlertsEvalInterval,
 		MemoryTTLSweepInterval:        ops.MemoryTTLSweepInterval,
 		MetricsEventReplayEnabled:     ops.MetricsEventReplayEnabled,
+		RetentionEventsDays:           config.EffectiveRetentionEventsDays(),
+		RetentionAuditDays:            config.EffectiveRetentionAuditDays(),
+		RetentionArtifactsDays:        config.EffectiveRetentionArtifactsDays(),
+		RetentionArtifactsMaxRuns:     config.EffectiveRetentionArtifactsMaxRuns(),
 		PostgresRLSPolicyExpected:     dbProfile.PostgresRLSPolicyExpected,
 		RLSCatalogSummary:             rlsCatalogSummary(dbProfile),
 	})

@@ -158,6 +158,10 @@ var Catalog = map[string]Entry{
 	"AUDIT_POLICY_UPDATE_FAILED":   {Domain: "audit", Summary: "Failed to update audit policy"},
 	"AUDIT_RETENTION_COUNT_FAILED": {Domain: "audit", Summary: "Failed to count rows for retention"},
 	"AUDIT_RETENTION_APPLY_FAILED": {Domain: "audit", Summary: "Failed to apply audit retention"},
+	"EVENTS_RETENTION_COUNT_FAILED":    {Domain: "compliance", Summary: "Failed to count run_events for retention"},
+	"EVENTS_RETENTION_APPLY_FAILED":    {Domain: "compliance", Summary: "Failed to apply run_events retention"},
+	"ARTIFACTS_RETENTION_COUNT_FAILED": {Domain: "compliance", Summary: "Failed to count artifacts for retention"},
+	"ARTIFACTS_RETENTION_APPLY_FAILED": {Domain: "compliance", Summary: "Failed to apply artifacts retention"},
 
 	// plugins
 	"PLUGIN_LIST_FAILED":            {Domain: "plugins", Summary: "Failed to list plugins"},

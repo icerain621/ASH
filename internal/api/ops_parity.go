@@ -32,5 +32,17 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 	if readyz.MemoryTTLSweepInterval != scale.MemoryTTLSweepInterval {
 		return fmt.Errorf("ttlSweepInterval readyz=%q scale=%q", readyz.MemoryTTLSweepInterval, scale.MemoryTTLSweepInterval)
 	}
+	if readyz.RetentionEventsDays != scale.RetentionEventsDays {
+		return fmt.Errorf("retentionEventsDays readyz=%d scale=%d", readyz.RetentionEventsDays, scale.RetentionEventsDays)
+	}
+	if readyz.RetentionAuditDays != scale.RetentionAuditDays {
+		return fmt.Errorf("retentionAuditDays readyz=%d scale=%d", readyz.RetentionAuditDays, scale.RetentionAuditDays)
+	}
+	if readyz.RetentionArtifactsDays != scale.RetentionArtifactsDays {
+		return fmt.Errorf("retentionArtifactsDays readyz=%d scale=%d", readyz.RetentionArtifactsDays, scale.RetentionArtifactsDays)
+	}
+	if readyz.RetentionArtifactsMaxRuns != scale.RetentionArtifactsMaxRuns {
+		return fmt.Errorf("retentionArtifactsMaxRuns readyz=%d scale=%d", readyz.RetentionArtifactsMaxRuns, scale.RetentionArtifactsMaxRuns)
+	}
 	return nil
 }

@@ -37,7 +37,7 @@
 | 项 | 优先级 | 文档位置 | 影响 |
 |----|--------|----------|------|
 | 商业落地：谁付费/谁决策/组织样板 | P2 | PRD §3 | 产品化叙事，不阻塞技术发布 |
-| 数据分级与保留期 | P1（合规） | PRD §8 | 生产合规与审计保留 |
+| ~~数据分级与保留期~~ | P1（合规） | 附录 J / PRD §8 | **已关闭**（Sprint CF） |
 | 插件打包/签名策略 | P2 | ARCH §3.2 | 外部插件生产分发 |
 | 向量库 / 符号索引路线 | P3 | ARCH §5–6 | RAG 增强，FTS 已够用 |
 | Artifacts 跨平台默认路径与权限 | P2 | 附录 F | Windows/WSL/Linux 运维一致性 |
@@ -85,7 +85,7 @@
 | P1-1 | 真实 GitHub token：H-04/H-05 live | 诊断 rootCause 与真实 log 一致 |
 | P1-2 | `ASH_EXECGO_E2E=1` ExecGo live（H-06） | Doctor M3-05 live |
 | P1-3 | T+1 生产 KPI vs `t1-metrics-gate` 偏差 &lt;5% | KPI §9 |
-| P1-4 | 数据分级与保留期草案落地（审计/事件/记忆） | PRD §8 关闭 TODO |
+| P1-4 | 数据分级与保留期草案落地（审计/事件/记忆） | ✅ 附录 J + data-policy / retention apply（Sprint CF） |
 | P1-5 | 发布窗口抽测跨 space + RLS e2e（R-08） | 无越权 |
 
 ### P2 — 硬化与产品化（发布后迭代）
@@ -110,11 +110,12 @@
 
 | Sprint | 焦点 | 依赖 |
 |--------|------|------|
-| **CF** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
-| **CG** | P0-3/P0-5 真人签字 + 切换日 rollback | CF |
-| **CH** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
-| **CI** | P1-3/P1-4/P1-5 观察与合规草案 | 生产流量 |
-| **CJ+** | P2 硬化（场景/插件/Artifacts） | 范围解冻评审 |
+| **CF** | P1-4 数据分级与保留期（纯代码） | ✅ 已完成 |
+| **CG** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
+| **CH** | P0-3/P0-5 真人签字 + 切换日 rollback | CG |
+| **CI** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
+| **CJ** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
+| **CK+** | P2 硬化（场景/插件/Artifacts） | 范围解冻评审 |
 
 历史 Sprint AY–CE 明细与已完成清单见 [`TODO.md`](TODO.md)「已完成归档」节（仅保留摘要，细节以 CHANGELOG 为准）。
 

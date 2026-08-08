@@ -183,6 +183,50 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/artifacts/retention/apply": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compliance"
+                ],
+                "summary": "Apply artifact_index retention for current space",
+                "parameters": [
+                    {
+                        "description": "retention request",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.dataRetentionApplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.DataRetentionApplyResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/audit/exports": {
             "get": {
                 "produces": [
@@ -989,6 +1033,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/data-policy": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compliance"
+                ],
+                "summary": "Get effective data classification and retention policy",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.DataPolicyResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/doctor/reports/{reportId}": {
             "get": {
                 "produces": [
@@ -1055,6 +1124,50 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/events/retention/apply": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "compliance"
+                ],
+                "summary": "Apply run_events retention for current space",
+                "parameters": [
+                    {
+                        "description": "retention request",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.dataRetentionApplyRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.DataRetentionApplyResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -5144,6 +5257,32 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_config.DataPolicy": {
+            "type": "object",
+            "properties": {
+                "artifactsDays": {
+                    "type": "integer"
+                },
+                "artifactsMaxRuns": {
+                    "type": "integer"
+                },
+                "auditDays": {
+                    "type": "integer"
+                },
+                "eventsDays": {
+                    "type": "integer"
+                },
+                "memoryTtlL1Days": {
+                    "type": "integer"
+                },
+                "memoryTtlL2Days": {
+                    "type": "integer"
+                },
+                "memoryTtlReviewDays": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_doctor.CaseResult": {
             "type": "object",
             "properties": {
@@ -8339,6 +8478,55 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.DataPolicyResponse": {
+            "type": "object",
+            "properties": {
+                "classification": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "docRef": {
+                    "type": "string"
+                },
+                "policy": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_config.DataPolicy"
+                }
+            }
+        },
+        "internal_api.DataRetentionApplyResponse": {
+            "type": "object",
+            "properties": {
+                "cutoff": {
+                    "type": "string"
+                },
+                "deleted": {
+                    "type": "integer"
+                },
+                "domain": {
+                    "type": "string"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "filesRemoved": {
+                    "type": "integer"
+                },
+                "matched": {
+                    "type": "integer"
+                },
+                "maxRuns": {
+                    "type": "integer"
+                },
+                "retentionDays": {
+                    "type": "integer"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.DatabaseProfile": {
             "type": "object",
             "properties": {
@@ -8417,6 +8605,22 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "retentionArtifactsDays": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "retentionArtifactsMaxRuns": {
+                    "type": "integer",
+                    "example": 200
+                },
+                "retentionAuditDays": {
+                    "type": "integer",
+                    "example": 365
+                },
+                "retentionEventsDays": {
+                    "type": "integer",
+                    "example": 90
                 },
                 "rlsCatalogSummary": {
                     "type": "string"
@@ -8844,6 +9048,18 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "retentionArtifactsDays": {
+                    "type": "integer"
+                },
+                "retentionArtifactsMaxRuns": {
+                    "type": "integer"
+                },
+                "retentionAuditDays": {
+                    "type": "integer"
+                },
+                "retentionEventsDays": {
+                    "type": "integer"
                 },
                 "rlsCatalogSummary": {
                     "type": "string"
@@ -9297,6 +9513,14 @@ const docTemplate = `{
                 },
                 "slug": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.dataRetentionApplyRequest": {
+            "type": "object",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean"
                 }
             }
         },

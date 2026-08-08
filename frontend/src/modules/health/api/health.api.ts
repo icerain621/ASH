@@ -15,6 +15,10 @@ export type ReadyzResponse = {
   alertsEvalInterval?: string;
   memoryTTLSweepInterval?: string;
   metricsEventReplayEnabled?: boolean;
+  retentionEventsDays?: number;
+  retentionAuditDays?: number;
+  retentionArtifactsDays?: number;
+  retentionArtifactsMaxRuns?: number;
 };
 
 export async function getReadyz(): Promise<ReadyzResponse> {

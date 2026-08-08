@@ -253,6 +253,14 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>数据保留（附录 J）</td>
+              <td>
+                {r
+                  ? `事件 ${r.retentionEventsDays ?? "-"}d · 审计 ${r.retentionAuditDays ?? "-"}d · 产物 ${r.retentionArtifactsDays ?? "-"}d / 最近 ${r.retentionArtifactsMaxRuns ?? "-"} runs`
+                  : "-"}
+              </td>
+            </tr>
+            <tr>
               <td>插件导出健康</td>
               <td>
                 {pluginHealthQuery.data
@@ -464,6 +472,14 @@ export function ScalePage() {
               <td>
                 {z
                   ? `OTel ${z.otelEnabled ? "启用" : "关闭"}${z.alertsEvalInterval ? ` · 告警 ${z.alertsEvalInterval}` : ""}${z.memoryTTLSweepInterval ? ` · TTL sweep ${z.memoryTTLSweepInterval}` : ""}${z.metricsEventReplayEnabled ? " · replay" : ""}`
+                  : "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>数据保留</td>
+              <td>
+                {z
+                  ? `事件 ${z.retentionEventsDays ?? "-"}d · 审计 ${z.retentionAuditDays ?? "-"}d · 产物 ${z.retentionArtifactsDays ?? "-"}d / ${z.retentionArtifactsMaxRuns ?? "-"} runs`
                   : "—"}
               </td>
             </tr>

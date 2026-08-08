@@ -184,6 +184,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.GET("/compliance/secret-scan", h.complianceSecretScan)
 		v1.POST("/compliance/export", h.complianceExportBundle)
+		v1.GET("/data-policy", h.getDataPolicy)
+		v1.POST("/events/retention/apply", h.applyEventsRetention)
+		v1.POST("/artifacts/retention/apply", h.applyArtifactsRetention)
 
 		v1.GET("/scale/readiness", h.scaleReadiness)
 		v1.GET("/permissions/matrix", h.permissionMatrix)
@@ -267,6 +270,10 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 		AlertsEvalInterval:        ops.AlertsEvalInterval,
 		MemoryTTLSweepInterval:    ops.MemoryTTLSweepInterval,
 		MetricsEventReplayEnabled: ops.MetricsEventReplayEnabled,
+		RetentionEventsDays:       config.EffectiveRetentionEventsDays(),
+		RetentionAuditDays:        config.EffectiveRetentionAuditDays(),
+		RetentionArtifactsDays:    config.EffectiveRetentionArtifactsDays(),
+		RetentionArtifactsMaxRuns: config.EffectiveRetentionArtifactsMaxRuns(),
 	}
 	if rlsEnv && resp.PostgresRLSPolicyExpected == 0 {
 		resp.PostgresRLSPolicyExpected = int64(store.PostgresRLSExpectedPolicyCount())

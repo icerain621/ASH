@@ -52,6 +52,10 @@ export type ScaleReadiness = {
   alertsEvalInterval?: string;
   memoryTTLSweepInterval?: string;
   metricsEventReplayEnabled?: boolean;
+  retentionEventsDays?: number;
+  retentionAuditDays?: number;
+  retentionArtifactsDays?: number;
+  retentionArtifactsMaxRuns?: number;
 };
 
 export function getScaleReadiness() {
