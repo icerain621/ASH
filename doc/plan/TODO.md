@@ -65,7 +65,7 @@ make regression-short && make web-gate
 | 附录 F | ~~Canonical JSON~~ | ✅ Sprint CG：`canonical.go` |
 | ARCH | ~~插件打包/签名策略~~ | ✅ Sprint CH：`pluginabi/sign` + ABI profile |
 | 场景 | ~~Hotfix / Security 模板深化~~ | ✅ Sprint CH：v1.1.0 + human approve |
-| 前端 | SSE 浏览器级 E2E | 钩子/轮询已落地 |
+| 前端 | ~~SSE 浏览器级 E2E~~ | ✅ Sprint CM：`make sse-browser-e2e`（Playwright；R-02 度量仍待） |
 | 产品 | 付费/决策/组织样板 | PRD §3 |
 
 ---
@@ -88,6 +88,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint CM：SSE 浏览器级 E2E（P2-4 前半：Playwright + `sse-browser-e2e`）
 - Sprint CH：插件签名 + Hotfix/Security 场景 v1.1.0（P2-2/P2-3）
 - Sprint CG：Artifacts 路径策略 + canonical JSON（附录 F / P2-1）
 - Sprint CF：附录 J + data-policy + events/artifacts retention apply（PRD-8 / P1-4）

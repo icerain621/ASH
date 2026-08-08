@@ -14,6 +14,7 @@
 | Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排 |
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI + openapi + 可选 Postgres RLS |
 | 前端门禁 | `make web-gate` | eslint + vitest（7 文件 / 14 用例）+ build |
+| SSE 浏览器 E2E（可选） | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
 | 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |
 | 配置核对 | `make config-env-gate` | 模板 + production/scope gate |
 | 回滚演练 | `make rollback-drill` | 发布 API drill + 基线 + Doctor ALL |

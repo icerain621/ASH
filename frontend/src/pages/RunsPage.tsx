@@ -702,14 +702,14 @@ export function RunsPage() {
           )}
           <div className="pane-title subhead">
             <h3>事件流 (SSE)</h3>
-            <span>
+            <span data-testid="sse-stream-status" data-stream-status={streamStatus}>
               {streamLines.length} 条事件
               {streamStatus === "reconnecting" ? " · 重连中" : ""}
               {streamStatus === "polling" ? " · 轮询回退" : ""}
               {streamStatus === "open" && selectedId ? " · 已连接" : ""}
             </span>
           </div>
-          <div className="event-log">
+          <div className="event-log" data-testid="sse-event-log">
             {streamLines.map((line) => (
               <div
                 key={line.id}
@@ -718,6 +718,7 @@ export function RunsPage() {
                   (line.type.startsWith("memory.") ? " memory" : "") +
                   (line.type.includes("failed") ? " error" : "")
                 }
+                data-testid="sse-event-line"
               >
                 <span className="type">{line.type}</span> {line.payload}
               </div>
