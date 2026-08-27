@@ -1,7 +1,9 @@
-# ASH 项目计划与进度（Plan）v0.2
+# ASH 项目计划与进度（Plan）v0.3
 
-> **状态**：现行排期真相源（2026-08-08）  
-> **代码锚点**：`v0.1.0-mvp` · Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **20** · RLS **41**  
+> **状态**：现行排期真相源（2026-08-28）  
+> **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
+> **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
+> **代码锚点**：Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **20** · RLS **41**  
 > **归属**：[`plan/`](README.md)  
 > **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
@@ -125,10 +127,10 @@
 | **CV** | Docker 本地 Postgres 门禁复验 | ✅ 已完成 |
 | **CW** | 本地 sqlite→Postgres E2E（M3-04） | ✅ 已完成 |
 | **CX** | doctor static 全扫 + UI/文档门禁对齐 | ✅ 已完成 |
-| **CI** | P0-1/P0-2 云 RDS 切流演练（staging） | RDS + `cloud-rds.env` |
-| **CJ** | P0-3/P0-5 真人签字 + 切换日 rollback | CI |
-| **CK** | P1-1/P1-2 真实 CI / ExecGo | 外部 token / ExecGo |
-| **CL** | P1-3/P1-5 观察与跨 space 抽测 | 生产流量 |
+| **CY** | mvp-signoff 证据诚实性 + 清单死链 | ✅ 已完成 |
+| **CI–CJ** | P0-1/P0-2 云 RDS 切流 + P0-3/P0-5 真人签字 | RDS + `cloud-rds.env` |
+| **DH–DV** | **v2 双核心演进**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)） | v1 P0 或本地门禁稳定 |
+| **CK–CL** | P1-1/P1-2 真实 CI / ExecGo + P1-3 观察 | 外部 token / 上线后 |
 
 历史 Sprint AY–CE 明细与已完成清单见 [`TODO.md`](TODO.md)「已完成归档」节（仅保留摘要，细节以 CHANGELOG 为准）。
 
@@ -206,3 +208,17 @@ make mvp-signoff
 
 - 本文件取代旧版「仅 M0 Sprint 1–3」叙述及已归档的 10 周人天计划。  
 - 实现细节规范仍以 [`../appendices/`](../appendices/README.md) + OpenAPI 为准；进度只在本文件与 `TODO.md` 更新。
+
+---
+
+## 9. v2 路线图（摘要）
+
+| 版本 | 目标 Tag | 里程碑 | 关键 Sprint |
+|------|----------|--------|-------------|
+| v1.0 | `v1.0.0` | MVP 发布 | CI–CJ |
+| v2.0-alpha | `v2.0.0-alpha` | M4 | DH、DX、DY、DJ–DL |
+| v2.0-beta | `v2.0.0-beta` | M5 | DO–DZ、DX2、DQ |
+| v2.0 | `v2.0.0` | M6 | DS–DV |
+
+完整排期、DH/DX 验收与 KPI → [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)。  
+Harness/沙盒设计 → [`../design/HLD-Harness与沙盒.md`](../design/HLD-Harness与沙盒.md)。

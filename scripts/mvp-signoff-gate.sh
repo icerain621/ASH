@@ -14,7 +14,8 @@ ash_evidence_init mvp-signoff
 EVIDENCE="$ASH_EVIDENCE_DIR"
 echo "Evidence dir: $EVIDENCE"
 
-export ASH_REQUIRE_ROLLBACK_DRILL="${ASH_REQUIRE_ROLLBACK_DRILL:-1}"
+# Do NOT export ASH_REQUIRE_ROLLBACK_DRILL globally — it leaks into regression-short
+# (TestReleaseChecklistGateAndRollbackDrill expects default warn without the flag).
 # Nested audit/drill already covered by regression-short + doctor-all above.
 export ASH_RELEASE_AUDIT_SKIP_DOCTOR="${ASH_RELEASE_AUDIT_SKIP_DOCTOR:-1}"
 export ASH_RELEASE_AUDIT_SKIP_REGRESSION="${ASH_RELEASE_AUDIT_SKIP_REGRESSION:-1}"
@@ -59,6 +60,11 @@ fi
 if ash_evidence_has_docker_postgres; then
   run_step postgres-app-gate bash scripts/postgres-app-gate.sh
   H02_STATUS="✅ 本地 Docker"
+  # Default: local H-01 dry-run when SQLite source exists; skip with ASH_MVP_SKIP_LOCAL_RDS=1.
+  if [[ "${ASH_MVP_SKIP_LOCAL_RDS:-}" != "1" && -f "${ASH_SQLITE_PATH:-$ROOT/.ash/ash.db}" ]]; then
+    run_step postgres-local-rds-e2e bash scripts/postgres-local-rds-e2e.sh
+    H01_STATUS="✅ 本地 Docker dry-run（postgres-local-rds-e2e）"
+  fi
 else
   echo "postgres-app-gate skipped (docker ash-postgres-dev not running)" | tee -a "$EVIDENCE/skipped.txt"
   H02_STATUS="⏸ 需 Docker 或云 RDS"
@@ -67,12 +73,12 @@ fi
 if [[ -n "${ASH_DATABASE_URL:-}" ]]; then
   run_step cloud-h01-h03 bash scripts/cloud-acceptance-gate.sh
   H01_STATUS="✅ 云 RDS"
-else
-  echo "cloud-acceptance skipped (ASH_DATABASE_URL unset)" | tee -a "$EVIDENCE/skipped.txt"
-  H01_STATUS="⏸ 需 ASH_DATABASE_URL"
+elif [[ -z "${H01_STATUS:-}" ]]; then
+  echo "cloud-acceptance skipped (ASH_DATABASE_URL unset; Docker local-rds optional)" | tee -a "$EVIDENCE/skipped.txt"
+  H01_STATUS="⏸ 需 ASH_DATABASE_URL 或本地 Docker + .ash/ash.db"
 fi
 
-run_step rollback-drill bash scripts/rollback-drill-gate.sh
+run_step rollback-drill env ASH_REQUIRE_ROLLBACK_DRILL="${ASH_REQUIRE_ROLLBACK_DRILL:-1}" bash scripts/rollback-drill-gate.sh
 ash_evidence_optional_step worker-local-gate bash scripts/worker-local-gate.sh
 
 DATE_UTC="$(date -u +%Y-%m-%d)"
@@ -140,12 +146,12 @@ write_report() {
 
 mkdir -p "$(dirname "$REPORT")"
 write_report "$REPORT"
-cp "$REPORT" "$LATEST"
 
 if [[ "$FAIL" -ne 0 ]]; then
   echo "mvp-signoff-gate completed with failures; see $EVIDENCE/failures.txt" >&2
-  echo "Report: $REPORT"
+  echo "Report: $REPORT (mvp-signoff-latest.md not updated)"
   exit 1
 fi
 
+cp "$REPORT" "$LATEST"
 echo "OK mvp-signoff-gate; report: $REPORT"

@@ -32,4 +32,4 @@
 
 - [`mvp-signoff-latest.md`](mvp-signoff-latest.md)
 - [`release-window-latest.md`](release-window-latest.md)
-- [`11-mvp-release-checklist.md`](../11-mvp-release-checklist.md) §11
+- [`11-mvp-release-checklist.md`](../progress/mvp-release-checklist.md) §11

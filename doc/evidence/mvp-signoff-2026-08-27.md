@@ -1,9 +1,9 @@
-# MVP 发布签字证据（2026-07-05）
+# MVP 发布签字证据（2026-08-27）
 
-- 生成时间（UTC）：2026-07-05T14:09:41Z
-- Git：a56fc1b @ main
+- 生成时间（UTC）：2026-08-27T14:05:54Z
+- Git：ff35d5a @ main
 - 自动化步骤通过：**16**
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260705T135953Z`（本地，未入库）
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/mvp-signoff-20260827T135920Z`（本地，未入库）
 - 门禁命令：`make mvp-signoff`
 
 ## 自动化验收
@@ -20,7 +20,7 @@
 | release-sampling-static (H-09) | ✅ |
 | Doctor ALL 43/43 | ✅ |
 | release-window-audit (H-08) | ✅ |
-| H-01 云 RDS | ⏸ 需 ASH_DATABASE_URL |
+| H-01 云 RDS | ⏸ 需 ASH_DATABASE_URL 或本地 Docker + .ash/ash.db |
 | H-02/H-03 ash_app | ⏸ 需 Docker 或云 RDS |
 
 ## MVP 清单映射
@@ -36,11 +36,13 @@
 
 ## 待人工签字
 
-见 [`11-mvp-release-checklist.md`](../progress/mvp-release-checklist.md) §11 与 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。
+见 [`mvp-signoff-roster.md`](../checklists/mvp-signoff-roster.md)（`make signoff-apply` / `make signoff-gate`）。云 RDS：[`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。
+
+签字记录：[`mvp-signatures-latest.md`](../evidence/mvp-signatures-latest.md) ✅
 
 | 角色 | 姓名 | 日期 |
 |------|------|------|
-| 产品负责人 | 产品负责人（占位） | 2026-07-07 |
-| 技术负责人 | 技术负责人（占位） | 2026-07-07 |
-| 测试负责人 | 测试负责人（占位） | 2026-07-07 |
-| 发布负责人 | 发布负责人（占位） | 2026-07-07 |
+| 产品负责人 | | |
+| 技术负责人 | | |
+| 测试负责人 | | |
+| 发布负责人 | | |

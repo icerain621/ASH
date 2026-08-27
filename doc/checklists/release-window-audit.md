@@ -51,4 +51,4 @@
 
 - [`postgres-rds-e2e.md`](postgres-rds-e2e.md) — H-01～H-03、§7 抽样
 - [`postgres-production-config.md`](postgres-production-config.md) — 生产 env 模板
-- [`../11-mvp-release-checklist.md`](../11-mvp-release-checklist.md) — MVP 勾选清单
+- [`../progress/mvp-release-checklist.md`](../progress/mvp-release-checklist.md) — MVP 勾选清单

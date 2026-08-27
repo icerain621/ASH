@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint CY：`release-window` prior mvp-signoff 须 web-gate 绿且无 ❌；失败不覆盖 `mvp-signoff-latest`；mvp-signoff 默认本地 H-01 dry-run（`ASH_MVP_SKIP_LOCAL_RDS=1` 可跳过）；修复 `ASH_REQUIRE_ROLLBACK_DRILL` 泄漏导致 regression-short 假红；修复清单死链与 RunsPage tsc。
 - Sprint CX：本地 doctor 脚本统一 `--agent static`；smoke-index / H-01 清单对齐 `postgres-local-rds-e2e`；Runs 危险工具门禁与 Space 组织样板 vitest。
 - Sprint CW：`make postgres-local-rds-e2e`（Docker 本地模拟云 RDS migrate）；`postgres-rds-e2e` 在 M3-04 通过后取消 `ASH_MIGRATE_E2E`，避免 ALL 套件行数漂移假红；归档 2026-08-08 发布窗口证据。
 - Sprint CV：Docker 复验 `postgres-app-gate` / `local-readiness-gate`；`postgres-app-gate` doctor 阶段不再误开 `ASH_MIGRATE_E2E`（M3-04 假红）。

@@ -7,7 +7,8 @@
 
 1. [`PRD-需求文档.md`](PRD-需求文档.md) — 场景与范围  
 2. [`HLD-总体设计.md`](HLD-总体设计.md) — 模块与数据  
-3. [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md) — 技术选型与演进  
+3. [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md) — **v2** Harness + 沙盒（DH/DX）  
+4. [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md) — 技术选型与演进  
 4. [`M3-多租户与Postgres演进.md`](M3-多租户与Postgres演进.md) — 存储/租户专项  
 5. [`../appendices/`](../appendices/README.md) — 可执行规范与 Schema  
 

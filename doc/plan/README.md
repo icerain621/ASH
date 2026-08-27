@@ -9,6 +9,11 @@
 | [`mvp-release-scope.md`](mvp-release-scope.md) | 范围冻结（`scope-freeze-gate`） | 冻结变更评审 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
+| [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |
+| [`deepseek-harness-ash-comparison.md`](deepseek-harness-ash-comparison.md) | DeepSeek Harness 与 ASH 能力比对（调研稿） | DSH 重大版本或 ASH Agentic 架构调整时 |
+| [`pi-ash-comparison.md`](pi-ash-comparison.md) | Pi 与 ASH 能力比对（调研稿） | Pi 重大版本或 ASH 集成/CLI 调整时 |
+| [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
+| [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |
 
 ## 归属边界
 

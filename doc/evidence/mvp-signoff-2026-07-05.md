@@ -36,7 +36,7 @@
 
 ## 待人工签字
 
-见 [`11-mvp-release-checklist.md`](../11-mvp-release-checklist.md) §11 与 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。
+见 [`11-mvp-release-checklist.md`](../progress/mvp-release-checklist.md) §11 与 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。
 
 | 角色 | 姓名 | 日期 |
 |------|------|------|

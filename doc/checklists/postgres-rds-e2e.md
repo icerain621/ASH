@@ -2,7 +2,8 @@
 
 > 文档状态：可执行检查清单。在切换生产 `ASH_DATABASE_URL` / `ASH_DATABASE_APP_URL` 前，于目标云 RDS（AWS RDS、阿里云 RDS、自建云 Postgres 13+）按阶段执行。
 >
-> 本地 Docker 等价流程见 `make postgres-e2e`（`scripts/postgres-e2e-migrate.sh`）。云上无 `ash-postgres-dev` 容器，需按本文手工串联。
+> 本地 Docker **H-01 dry-run**：`make postgres-local-rds-e2e`（sqlite→Postgres + M3-04，需 `make postgres-up` + `.ash/ash.db`）。  
+> Schema 重置/全量 migrate 仍可用 `make postgres-e2e`。云上无 `ash-postgres-dev` 容器，需按本文手工串联。
 
 ## 0. 前置条件（一次性）
 
@@ -240,9 +241,10 @@ ASH_CI_FIXTURE=1 make live-smoke   # H-04/05/06/07/09 live 编排
 |------|-------------|
 | `make postgres-up` | RDS 实例 + 安全组 |
 | `docker exec … DROP SCHEMA` | 空库或审批后 `psql` 重置 |
-| `make postgres-e2e` | §1–§6 手工串联 |
+| `make postgres-local-rds-e2e` | H-01 dry-run（migrate verify + M3-04/06/07） |
+| `make postgres-e2e` | §1–§6 重置/全量 migrate |
 | `make postgres-sql-schema-e2e` | §2 SQL-only（`ASH_SCHEMA_MODE=sql`） |
-| `make postgres-roles` | `postgres-ensure-app-role.sh` + `psql` |
+| `make postgres-roles` / `make postgres-app-gate` | H-02/H-03 ash_app + RLS |
 | `make postgres-rls-e2e` | §4 集成测试 + M3 RLS 环境 |
 
 ---

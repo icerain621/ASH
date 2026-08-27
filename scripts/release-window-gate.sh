@@ -48,7 +48,11 @@ mvp_signoff_status() {
     return
   fi
   local prior="$ROOT/doc/evidence/mvp-signoff-latest.md"
-  if [[ -f "$prior" ]] && grep -q 'regression-short | ✅' "$prior" 2>/dev/null; then
+  # Require core gates green; reject any ❌ so a failed run cannot masquerade as prior pass.
+  if [[ -f "$prior" ]] \
+    && grep -q 'regression-short | ✅' "$prior" 2>/dev/null \
+    && grep -q 'web-gate (lint+test+build) | ✅' "$prior" 2>/dev/null \
+    && ! grep -qE '\| [^|]+ \| ❌' "$prior" 2>/dev/null; then
     echo "✅（prior mvp-signoff）"
     return
   fi

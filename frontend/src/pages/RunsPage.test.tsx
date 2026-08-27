@@ -1,5 +1,5 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { RunsPage } from "./RunsPage";
 import { renderPage } from "@/test/renderPage";
 import { useRunStream } from "@/services/sse/runStream";
@@ -15,19 +15,58 @@ import {
   getRunToolCalls,
   getRunWaterfall,
   listRuns,
+  type RunProvenance,
+  type RunWaterfall,
 } from "@/modules/runs/api/runs.api";
+
+const emptyWaterfall: RunWaterfall = {
+  runId: "",
+  traceId: "",
+  status: "",
+  generatedAt: 0,
+  spans: [],
+};
+const emptyProvenance: RunProvenance = {
+  runId: "",
+  traceId: "",
+  scenario: { name: "", scenarioVersion: "" },
+  status: "",
+  toolCalls: 0,
+  agentTasks: 0,
+  artifacts: 0,
+  events: 0,
+  modelUsage: 0,
+  links: [],
+};
 
 vi.mock("@/modules/runs/api/runs.api", () => ({
   listRuns: vi.fn().mockResolvedValue({ items: [] }),
   getRun: vi.fn(),
-  getRunArtifacts: vi.fn().mockResolvedValue({ items: [] }),
+  getRunArtifacts: vi.fn().mockResolvedValue({ artifacts: [] }),
   getRunCheckpoints: vi.fn().mockResolvedValue({ items: [] }),
   getRunTimeline: vi.fn().mockResolvedValue({ items: [] }),
   getRunToolCalls: vi.fn().mockResolvedValue({ items: [] }),
   getRunAgentTasks: vi.fn().mockResolvedValue({ items: [] }),
   getRunQualityMetrics: vi.fn().mockResolvedValue({ items: [] }),
-  getRunWaterfall: vi.fn().mockResolvedValue({ spans: [] }),
-  getRunProvenance: vi.fn().mockResolvedValue({ links: [] }),
+  getRunWaterfall: vi.fn().mockResolvedValue({
+    runId: "",
+    traceId: "",
+    status: "",
+    generatedAt: 0,
+    spans: [],
+  }),
+  getRunProvenance: vi.fn().mockResolvedValue({
+    runId: "",
+    traceId: "",
+    scenario: { name: "", scenarioVersion: "" },
+    status: "",
+    toolCalls: 0,
+    agentTasks: 0,
+    artifacts: 0,
+    events: 0,
+    modelUsage: 0,
+    links: [],
+  }),
   getRunArtifactAccess: vi.fn(),
   getRunCheckpointAccess: vi.fn(),
   createRun: vi.fn(),
@@ -48,8 +87,21 @@ vi.mock("@/services/sse/runStream", () => ({
 }));
 
 describe("RunsPage", () => {
-  it("renders runs console heading and create controls", async () => {
+  beforeEach(() => {
     vi.mocked(useRunStream).mockReturnValue({ lines: [], status: "idle" });
+    vi.mocked(listRuns).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRun).mockReset();
+    vi.mocked(getRunArtifacts).mockReset().mockResolvedValue({ artifacts: [] });
+    vi.mocked(getRunCheckpoints).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRunTimeline).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRunToolCalls).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRunAgentTasks).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRunQualityMetrics).mockReset().mockResolvedValue({ items: [] });
+    vi.mocked(getRunWaterfall).mockReset().mockResolvedValue(emptyWaterfall);
+    vi.mocked(getRunProvenance).mockReset().mockResolvedValue(emptyProvenance);
+  });
+
+  it("renders runs console heading and create controls", async () => {
     renderPage(<RunsPage />);
     expect(screen.getByRole("heading", { name: "运行" })).toBeInTheDocument();
     await waitFor(() => {
@@ -126,13 +178,13 @@ describe("RunsPage", () => {
         },
       ],
     });
-    vi.mocked(getRunArtifacts).mockResolvedValue({ items: [] });
+    vi.mocked(getRunArtifacts).mockResolvedValue({ artifacts: [] });
     vi.mocked(getRunCheckpoints).mockResolvedValue({ items: [] });
     vi.mocked(getRunToolCalls).mockResolvedValue({ items: [] });
     vi.mocked(getRunAgentTasks).mockResolvedValue({ items: [] });
     vi.mocked(getRunQualityMetrics).mockResolvedValue({ items: [] });
-    vi.mocked(getRunWaterfall).mockResolvedValue({ spans: [] });
-    vi.mocked(getRunProvenance).mockResolvedValue({ links: [] });
+    vi.mocked(getRunWaterfall).mockResolvedValue(emptyWaterfall);
+    vi.mocked(getRunProvenance).mockResolvedValue(emptyProvenance);
 
     renderPage(<RunsPage />);
     await waitFor(() => {
