@@ -1,0 +1,78 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://ash.local/schemas/ash.harness.profile.v1.json",
+  "title": "ash.harness/v1 HarnessProfileSpec",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["apiVersion", "kind", "spec"],
+  "properties": {
+    "apiVersion": { "const": "ash.harness/v1" },
+    "kind": { "const": "HarnessProfileSpec" },
+    "spec": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["provider", "sandbox", "tools", "policyProfile"],
+      "properties": {
+        "provider": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["kind"],
+          "properties": {
+            "kind": { "type": "string", "enum": ["static", "execgo", "acp_sdk"] },
+            "model": { "type": "string" }
+          }
+        },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["defaultMode"],
+          "properties": {
+            "defaultMode": {
+              "type": "string",
+              "enum": ["off", "read-only", "workspace-write", "isolated"]
+            },
+            "network": { "type": "string", "enum": ["deny", "allow"], "default": "deny" },
+            "spillMaxBytes": { "type": "integer", "minimum": 1024, "default": 65536 }
+          }
+        },
+        "tools": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "allowlist": { "type": "array", "items": { "type": "string" } },
+            "denylist": { "type": "array", "items": { "type": "string" } }
+          }
+        },
+        "policyProfile": {
+          "type": "string",
+          "enum": ["default", "strict", "hotfix", "security"]
+        },
+        "compaction": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "enabled": { "type": "boolean" },
+            "triggerTokenRatio": { "type": "number", "minimum": 0.1, "maximum": 1 }
+          }
+        },
+        "subRun": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "maxDepth": { "type": "integer", "minimum": 0, "maximum": 8 },
+            "inheritSandbox": { "type": "boolean" }
+          }
+        },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "integration": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "rpcEnabled": { "type": "boolean" },
+            "jsonEventsEnabled": { "type": "boolean" }
+          }
+        }
+      }
+    }
+  }
+}
