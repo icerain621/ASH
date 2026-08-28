@@ -16,10 +16,11 @@ const (
 
 // ToolRiskEntry is one row in the published dangerous-ops / risk catalog.
 type ToolRiskEntry struct {
-	Name        string `json:"name"`
-	Risk        Risk   `json:"risk"`
-	DefaultDeny bool   `json:"defaultDeny"`
-	Label       string `json:"label"`
+	Name           string `json:"name"`
+	Risk           Risk   `json:"risk"`
+	DefaultDeny    bool   `json:"defaultDeny"`
+	Label          string `json:"label"`
+	MinSandboxMode string `json:"minSandboxMode,omitempty"`
 }
 
 // Context carries run-scoped execution state for tools.
@@ -95,13 +96,25 @@ func (r *Registry) Catalog() []ToolRiskEntry {
 	for _, name := range names {
 		risk := r.Risk(name)
 		out = append(out, ToolRiskEntry{
-			Name:        name,
-			Risk:        risk,
-			DefaultDeny: risk == RiskDanger,
-			Label:       riskLabel(name, risk),
+			Name:           name,
+			Risk:           risk,
+			DefaultDeny:    risk == RiskDanger,
+			Label:          riskLabel(name, risk),
+			MinSandboxMode: minSandboxModeForRisk(risk),
 		})
 	}
 	return out
+}
+
+func minSandboxModeForRisk(risk Risk) string {
+	switch risk {
+	case RiskDanger:
+		return "isolated"
+	case RiskMedium:
+		return "workspace-write"
+	default:
+		return "off"
+	}
 }
 
 func riskLabel(name string, risk Risk) string {
