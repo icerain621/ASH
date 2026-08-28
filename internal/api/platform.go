@@ -18,6 +18,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
@@ -41,6 +42,7 @@ type registerMCPToolRequest struct {
 type createFeedbackRequest struct {
 	TargetType string `json:"targetType" binding:"required"`
 	TargetID   string `json:"targetId" binding:"required"`
+	RunID      string `json:"runId,omitempty"`
 	Rating     int    `json:"rating,omitempty"`
 	Category   string `json:"category,omitempty"`
 	Status     string `json:"status,omitempty"`
@@ -299,6 +301,11 @@ func (h *Handler) createFeedback(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
+	targetType, ok := evolve.NormalizeTargetType(req.TargetType)
+	if !ok {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_TARGET_TYPE", "unsupported feedback targetType"))
+		return
+	}
 	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
 	if !h.requireTargetSpace(c, space) {
 		return
@@ -306,10 +313,26 @@ func (h *Handler) createFeedback(c *gin.Context) {
 	if !h.requirePermission(c, permFeedbackWrite, space) {
 		return
 	}
+	runID := strings.TrimSpace(req.RunID)
+	if runID != "" {
+		var n int64
+		q := h.dbFor(c).Model(&store.Feedback{}).Where(
+			"space_id = ? AND target_type = ? AND target_id = ? AND run_id = ?",
+			space, targetType, req.TargetID, runID,
+		)
+		if err := q.Count(&n).Error; err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody("FEEDBACK_CREATE_FAILED", err.Error()))
+			return
+		}
+		if n > 0 {
+			c.JSON(http.StatusConflict, errorBody("FEEDBACK_DUPLICATE", "feedback already exists for this run target"))
+			return
+		}
+	}
 	now := time.Now().UTC()
 	row := store.Feedback{
 		ID: "fb_" + uuid.NewString(), SpaceID: space,
-		TargetType: req.TargetType, TargetID: req.TargetID, Rating: req.Rating,
+		TargetType: targetType, TargetID: req.TargetID, RunID: runID, Rating: req.Rating,
 		Category: normalizeFeedbackCategory(req.Category), Status: normalizeFeedbackStatus(req.Status),
 		Severity: normalizeFeedbackSeverity(req.Severity, req.Rating), Source: firstNonEmptyAPI(strings.TrimSpace(req.Source), "ui"),
 		Comment: req.Comment, ActorID: firstNonEmptyAPI(req.ActorID, currentActor(c)),
@@ -321,7 +344,7 @@ func (h *Handler) createFeedback(c *gin.Context) {
 	}
 	_ = h.dbFor(c).Create(auditRow(space, currentActor(c), "feedback.created", map[string]any{
 		"feedbackId": row.ID, "targetType": row.TargetType, "targetId": row.TargetID,
-		"rating": row.Rating, "category": row.Category, "severity": row.Severity,
+		"runId": row.RunID, "rating": row.Rating, "category": row.Category, "severity": row.Severity,
 	}))
 	if row.Rating > 0 && row.Rating <= 2 && h.alerts != nil {
 		if alert, err := h.alertsFor(c).RecordLowFeedback(row); err == nil && alert.ID != "" {
