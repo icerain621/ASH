@@ -15,12 +15,16 @@ import (
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
+	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
+	"github.com/ash-repwiki/ash/internal/sandbox"
+	sbxdocker "github.com/ash-repwiki/ash/internal/sandbox/docker"
+	sbxprocess "github.com/ash-repwiki/ash/internal/sandbox/process"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -169,6 +173,8 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		Inputs:   req.Inputs,
 	}
 
+	_ = s.loopFor().OnTurnStart(runID, traceID)
+
 	lastToolStep := struct{ id, role string }{"ship.release", "Shipper"}
 	agentTaskID := ""
 	issue := inputString(req.Inputs, "issueOrSpec")
@@ -197,6 +203,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 
 		stepStart := time.Now().UTC()
 		stepRow := s.startStep(runID, step, idx, stepStart)
+		_ = s.loopFor().OnStepStart(runID, traceID, step.ID)
 		if _, err := s.eventsFor().Append(runID, traceID, "step.started", "info", map[string]any{
 			"stepId": step.ID, "role": step.Role, "kind": step.Kind,
 		}); err != nil {
@@ -294,7 +301,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					})
 					continue
 				}
-				res := s.callToolWithRetry(runID, traceID, step.ID, risk, toolCtx, item)
+				res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, toolCtx, item)
 				if !res.OK {
 					s.finishStep(stepRow, "failed", stepStart, "TOOL_FAILED", res.Error)
 					_, ferr := s.failRun(rec, runID, traceID, started, "TOOL_FAILED", res.Error)
@@ -345,6 +352,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		}); err != nil {
 			return err
 		}
+		_ = s.loopFor().OnStepEnd(runID, traceID, step.ID)
 		s.finishStep(stepRow, "finished", stepStart, "", "")
 		stepSpan.End()
 
@@ -419,6 +427,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		"metrics":   map[string]any{"recovered": rec.Recovered, "steps": len(doc.Scenario.Steps)},
 	})
 	_ = s.writeAudit(runID, traceID, "run.finished", map[string]any{"artifacts": artifactRefs})
+	_ = s.loopFor().OnTurnEnd(runID, traceID)
 	return err
 }
 
@@ -674,19 +683,52 @@ func agentErrorCode(err error) string {
 	}
 }
 
-func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx toolbus.Context, item rules.ToolChainItem) toolbus.Result {
+func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID string, ctx toolbus.Context, item rules.ToolChainItem) toolbus.Result {
 	attempts := retryAttempts(item.Retry)
 	backoff := retryBackoff(item.Retry)
 	var last toolbus.Result
 	for attempt := 1; attempt <= attempts; attempt++ {
 		_, toolSpan := ashotel.StartToolCall(context.Background(), item.Tool, stepID)
 		timeout := toolTimeoutMs(item)
+		hookCtx := loop.ToolHookContext{
+			RunID: runID, TraceID: traceID, StepID: stepID, SpaceID: spaceID,
+			Tool: item.Tool, Risk: risk, RepoRoot: ctx.RepoRoot,
+		}
+		dec, routeErr := s.loopFor().OnBeforeTool(hookCtx)
+		if dec.Denied || routeErr != nil {
+			msg := dec.Reason
+			if msg == "" && routeErr != nil {
+				msg = routeErr.Error()
+			}
+			_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+				"target": "sandbox", "reason": msg, "action": "deny", "ref": item.Tool,
+				"risk": risk, "sandboxMode": dec.Mode,
+			})
+			_, _ = s.eventsFor().Append(runID, traceID, "tool.called", "info", map[string]any{
+				"tool": item.Tool, "risk": risk, "timeoutMs": timeout,
+				"attempt": attempt, "maxAttempts": attempts,
+				"argsDigest": digestString(fmt.Sprintf("%v", item.Args)),
+			})
+			last = toolbus.Result{Tool: item.Tool, OK: false, Error: msg, FailureClass: "sandbox_policy_denied"}
+			_, _ = s.eventsFor().Append(runID, traceID, "tool.result", "warn", map[string]any{
+				"tool": item.Tool, "ok": false, "durationMs": 0,
+				"attempt": attempt, "maxAttempts": attempts, "failureClass": last.FailureClass,
+				"error": msg,
+			})
+			_ = s.loopFor().OnAfterTool(hookCtx, dec, false, msg)
+			toolSpan.End()
+			return last
+		}
 		_, _ = s.eventsFor().Append(runID, traceID, "tool.called", "info", map[string]any{
 			"tool": item.Tool, "risk": risk, "timeoutMs": timeout,
 			"attempt": attempt, "maxAttempts": attempts,
 			"argsDigest": digestString(fmt.Sprintf("%v", item.Args)),
 		})
-		last = s.callTool(runID, traceID, stepID, ctx, item, attempt)
+		if (dec.Executor == "process" || dec.Executor == "docker") && item.Tool == "runtime.command" {
+			last = s.dispatchSandboxedTool(runID, traceID, stepID, ctx, item, dec, timeout)
+		} else {
+			last = s.callTool(runID, traceID, stepID, ctx, item, attempt)
+		}
 		failureClass := toolFailureClass(last, timeout)
 		severity := "info"
 		if !last.OK {
@@ -697,6 +739,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 			"attempt": attempt, "maxAttempts": attempts, "failureClass": failureClass,
 			"output": last.Output, "error": last.Error,
 		})
+		_ = s.loopFor().OnAfterTool(hookCtx, dec, last.OK, last.Error)
 		toolSpan.End()
 		if last.OK || attempt == attempts {
 			return last
@@ -710,6 +753,91 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk string, ctx too
 		}
 	}
 	return last
+}
+
+func (s *Service) dispatchSandboxedTool(runID, traceID, stepID string, ctx toolbus.Context, item rules.ToolChainItem, dec sandbox.Decision, timeoutMs int64) toolbus.Result {
+	start := time.Now().UTC()
+	program := firstStringFromArgs(item.Args, "program", "cmd")
+	args := stringSliceFromArgs(item.Args, "args")
+	_, _ = s.eventsFor().Append(runID, traceID, "sandbox.invoke", "info", map[string]any{
+		"tool": item.Tool, "mode": dec.Mode, "executor": dec.Executor, "cwd": ctx.RepoRoot,
+		"stepId": stepID, "program": program,
+	})
+	to := time.Duration(timeoutMs) * time.Millisecond
+	if to <= 0 {
+		to = 30 * time.Second
+	}
+	req := sandbox.DispatchRequest{
+		RunID: runID, StepID: stepID, Tool: item.Tool,
+		Program: program, Args: args, SandboxMode: dec.Mode,
+		RepoRoot: ctx.RepoRoot, Timeout: to,
+	}
+	var res *sandbox.DispatchResult
+	var err error
+	switch dec.Executor {
+	case "docker":
+		res, err = (sbxdocker.Executor{}).Dispatch(context.Background(), req)
+	case "process":
+		res, err = (sbxprocess.Executor{}).Dispatch(context.Background(), req)
+	default:
+		err = fmt.Errorf("unsupported sandbox executor %q", dec.Executor)
+	}
+	out := toolbus.Result{Tool: item.Tool, DurationMs: time.Since(start).Milliseconds()}
+	if err != nil {
+		out.OK = false
+		out.Error = err.Error()
+		out.FailureClass = "sandbox_dispatch_failed"
+		_, _ = s.eventsFor().Append(runID, traceID, "sandbox.failed", "warn", map[string]any{
+			"tool": item.Tool, "error": err.Error(), "executor": dec.Executor,
+		})
+		return out
+	}
+	if res == nil || !res.OK {
+		out.OK = false
+		if res != nil {
+			out.Error = res.Error
+			out.Output = map[string]any{"stdout": res.Stdout, "stderr": res.Stderr, "exitCode": res.ExitCode}
+		} else {
+			out.Error = "empty sandbox result"
+		}
+		out.FailureClass = "sandbox_failed"
+		_, _ = s.eventsFor().Append(runID, traceID, "sandbox.failed", "warn", map[string]any{
+			"tool": item.Tool, "error": out.Error, "executor": dec.Executor,
+		})
+		return out
+	}
+	out.OK = true
+	out.Output = map[string]any{"stdout": res.Stdout, "stderr": res.Stderr, "exitCode": res.ExitCode, "executor": dec.Executor}
+	_, _ = s.eventsFor().Append(runID, traceID, "sandbox.completed", "info", map[string]any{
+		"tool": item.Tool, "executor": dec.Executor, "exitCode": res.ExitCode,
+	})
+	return out
+}
+
+func firstStringFromArgs(args map[string]any, keys ...string) string {
+	for _, k := range keys {
+		if v, ok := args[k].(string); ok && strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func stringSliceFromArgs(args map[string]any, key string) []string {
+	switch items := args[key].(type) {
+	case []string:
+		return append([]string{}, items...)
+	case []any:
+		out := make([]string, 0, len(items))
+		for _, item := range items {
+			if str, ok := item.(string); ok {
+				out = append(out, str)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 func (s *Service) callTool(runID, traceID, stepID string, ctx toolbus.Context, item rules.ToolChainItem, attempt int) toolbus.Result {

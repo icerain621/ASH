@@ -15,8 +15,11 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 	"gorm.io/gorm"
@@ -117,14 +120,16 @@ type ApproveResponse struct {
 }
 
 type Service struct {
-	db        *store.DB
-	events    *events.Service
-	scenarios *rules.Loader
-	tools     *toolbus.Bus
-	agent     agentexec.Executor
-	rag       *rag.Service
-	artifacts artifactstore.Store
-	ctx       context.Context
+	db         *store.DB
+	events     *events.Service
+	scenarios  *rules.Loader
+	tools      *toolbus.Bus
+	agent      agentexec.Executor
+	rag        *rag.Service
+	artifacts  artifactstore.Store
+	harnessSvc *harness.Service
+	loopAd     *loop.Adapter
+	ctx        context.Context
 }
 
 func NewService(db *store.DB, ev *events.Service, scenarios *rules.Loader, tools *toolbus.Bus) *Service {
@@ -132,12 +137,53 @@ func NewService(db *store.DB, ev *events.Service, scenarios *rules.Loader, tools
 		tools = toolbus.DefaultBus()
 	}
 	cfg := config.Load()
-	return &Service{
+	s := &Service{
 		db: db, events: ev, scenarios: scenarios, tools: tools,
-		agent:     agentexec.NewExecGoCodexExecutor(),
-		rag:       rag.NewService(db),
-		artifacts: artifactstore.New(cfg.ArtifactStore, db.DataDir()),
+		agent:      agentexec.NewExecGoCodexExecutor(),
+		rag:        rag.NewService(db),
+		artifacts:  artifactstore.New(cfg.ArtifactStore, db.DataDir()),
+		harnessSvc: harness.NewService(db),
 	}
+	s.loopAd = loop.NewAdapter(
+		&runEventEmitter{svc: s},
+		sandbox.NewDefaultRouter(),
+		&harnessModeLoader{h: s.harnessSvc},
+	)
+	return s
+}
+
+type runEventEmitter struct {
+	svc *Service
+}
+
+func (e *runEventEmitter) Emit(runID, traceID, eventType, severity string, payload map[string]any) error {
+	if e == nil || e.svc == nil {
+		return nil
+	}
+	_, err := e.svc.eventsFor().Append(runID, traceID, eventType, severity, payload)
+	return err
+}
+
+type harnessModeLoader struct {
+	h *harness.Service
+}
+
+func (l *harnessModeLoader) ProfileDefaultSandboxMode(spaceID, name string) (string, error) {
+	if l == nil || l.h == nil {
+		return "", fmt.Errorf("harness unavailable")
+	}
+	view, err := l.h.LoadActive(spaceID, name)
+	if err != nil {
+		return "", err
+	}
+	return view.Spec.Sandbox.DefaultMode, nil
+}
+
+func (s *Service) loopFor() *loop.Adapter {
+	if s == nil || s.loopAd == nil {
+		return loop.NewAdapter(nil, sandbox.NoopRouter{}, nil)
+	}
+	return s.loopAd
 }
 
 func (s *Service) WithAgentExecutor(exec agentexec.Executor) *Service {
@@ -166,10 +212,20 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	if s == nil || ctx == nil {
 		return s
 	}
-	return &Service{
+	out := &Service{
 		db: s.db, events: s.events, scenarios: s.scenarios, tools: s.tools,
 		agent: s.agent, rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
+		harnessSvc: s.harnessSvc,
 	}
+	if s.harnessSvc != nil {
+		out.harnessSvc = s.harnessSvc.WithContext(ctx)
+	}
+	out.loopAd = loop.NewAdapter(
+		&runEventEmitter{svc: out},
+		sandbox.NewDefaultRouter(),
+		&harnessModeLoader{h: out.harnessSvc},
+	)
+	return out
 }
 
 func (s *Service) gdb() *gorm.DB {
