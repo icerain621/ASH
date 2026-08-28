@@ -307,6 +307,167 @@ definitions:
             type: integer
         type: object
     type: object
+  github_com_ash-repwiki_ash_internal_evolve.DecideRequest:
+    properties:
+      actorId:
+        type: string
+      decision:
+        type: string
+      policyProfile:
+        type: string
+      reason:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_evolve.DecideResponse:
+    properties:
+      decision:
+        type: string
+      id:
+        type: string
+      queue:
+        type: string
+      status:
+        type: string
+      targetId:
+        type: string
+      targetType:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_evolve.Item:
+    properties:
+      createdAt:
+        type: integer
+      diff:
+        type: string
+      id:
+        type: string
+      queue:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+      targetId:
+        type: string
+      targetType:
+        type: string
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.CompactionSpec:
+    properties:
+      enabled:
+        type: boolean
+      triggerTokenRatio:
+        type: number
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.CreateRequest:
+    properties:
+      createdBy:
+        type: string
+      name:
+        type: string
+      spaceId:
+        type: string
+      spec:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody'
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.IntegrationSpec:
+    properties:
+      jsonEventsEnabled:
+        type: boolean
+      rpcEnabled:
+        type: boolean
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody:
+    properties:
+      compaction:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.CompactionSpec'
+      integration:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.IntegrationSpec'
+      policyProfile:
+        type: string
+      provider:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProviderSpec'
+      sandbox:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.SandboxSpec'
+      skills:
+        items:
+          type: string
+        type: array
+      subRun:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.SubRunSpec'
+      tools:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ToolsSpec'
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.ProfileView:
+    properties:
+      createdAt:
+        type: integer
+      createdBy:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      parentVersion:
+        type: integer
+      promotedAt:
+        type: integer
+      promotedBy:
+        type: string
+      spaceId:
+        type: string
+      spec:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody'
+      status:
+        type: string
+      updatedAt:
+        type: integer
+      version:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.ProviderSpec:
+    properties:
+      kind:
+        type: string
+      model:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.SandboxSpec:
+    properties:
+      defaultMode:
+        type: string
+      network:
+        type: string
+      spillMaxBytes:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.SubRunSpec:
+    properties:
+      inheritSandbox:
+        type: boolean
+      maxDepth:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.ToolsSpec:
+    properties:
+      allowlist:
+        items:
+          type: string
+        type: array
+      denylist:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_harness.UpdateRequest:
+    properties:
+      spec:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody'
+    type: object
   github_com_ash-repwiki_ash_internal_improve.ArtifactCompare:
     properties:
       baselineRunId:
@@ -1540,6 +1701,54 @@ definitions:
       type:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_scenariopatch.CreateRequest:
+    properties:
+      createdBy:
+        type: string
+      diffText:
+        type: string
+      fromVersion:
+        type: string
+      scenarioName:
+        type: string
+      spaceId:
+        type: string
+      title:
+        type: string
+      toVersion:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scenariopatch.View:
+    properties:
+      createdAt:
+        type: integer
+      createdBy:
+        type: string
+      decidedAt:
+        type: integer
+      decidedBy:
+        type: string
+      decisionNote:
+        type: string
+      diffText:
+        type: string
+      fromVersion:
+        type: string
+      id:
+        type: string
+      scenarioName:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      toVersion:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_security.LeakFinding:
     properties:
       pattern:
@@ -1851,6 +2060,9 @@ definitions:
         type: string
       rating:
         type: integer
+      runID:
+        description: optional; uniqueness with target when set
+        type: string
       severity:
         type: string
       source:
@@ -2226,6 +2438,8 @@ definitions:
       defaultDeny:
         type: boolean
       label:
+        type: string
+      minSandboxMode:
         type: string
       name:
         type: string
@@ -3007,6 +3221,8 @@ definitions:
         type: string
       rating:
         type: integer
+      runId:
+        type: string
       severity:
         type: string
       source:
@@ -3175,6 +3391,18 @@ definitions:
       reportId:
         type: string
     type: object
+  internal_api.harnessListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+        type: array
+    type: object
+  internal_api.harnessLoadActiveResponse:
+    properties:
+      profile:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+    type: object
   internal_api.loginRequest:
     properties:
       email:
@@ -3273,6 +3501,15 @@ definitions:
       reason:
         type: string
     type: object
+  internal_api.reviewsQueueResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_evolve.Item'
+        type: array
+      queue:
+        type: string
+    type: object
   internal_api.rotateSecretRequest:
     properties:
       description:
@@ -3281,6 +3518,13 @@ definitions:
         type: string
     required:
     - value
+    type: object
+  internal_api.scenarioPatchListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View'
+        type: array
     type: object
   internal_api.toolRiskCatalogResponse:
     properties:
@@ -4188,6 +4432,174 @@ paths:
       summary: Update feedback handling state
       tags:
       - feedback
+  /api/v1/harness/profiles:
+    get:
+      parameters:
+      - description: draft|in_review|active|archived
+        in: query
+        name: status
+        type: string
+      - description: profile name
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.harnessListResponse'
+      summary: List harness profiles
+      tags:
+      - harness
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: profile
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Create draft harness profile
+      tags:
+      - harness
+  /api/v1/harness/profiles/{profileId}:
+    get:
+      parameters:
+      - description: profile id
+        in: path
+        name: profileId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get harness profile by id
+      tags:
+      - harness
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: profile id
+        in: path
+        name: profileId
+        required: true
+        type: string
+      - description: spec
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.UpdateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Update draft harness profile
+      tags:
+      - harness
+  /api/v1/harness/profiles/{profileId}/promote:
+    post:
+      parameters:
+      - description: profile id
+        in: path
+        name: profileId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+      summary: Promote harness profile to active
+      tags:
+      - harness
+  /api/v1/harness/profiles/{profileId}/rollback:
+    post:
+      parameters:
+      - description: active profile id
+        in: path
+        name: profileId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+      summary: Rollback active harness profile to previous archived version
+      tags:
+      - harness
+  /api/v1/harness/profiles/{profileId}/submit-review:
+    post:
+      parameters:
+      - description: profile id
+        in: path
+        name: profileId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+      summary: Submit harness profile for orchestration review
+      tags:
+      - harness
+  /api/v1/harness/profiles/active:
+    get:
+      parameters:
+      - default: default
+        description: profile name
+        in: query
+        name: name
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.harnessLoadActiveResponse'
+      summary: Load active harness profile (platform default if missing)
+      tags:
+      - harness
   /api/v1/improve/proposals:
     get:
       parameters:
@@ -5583,6 +5995,58 @@ paths:
       summary: Create a GitHub repository connection
       tags:
       - repo
+  /api/v1/reviews/{reviewId}/decide:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: memory:<id> or harness_profile:<id>
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      - description: decision
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_evolve.DecideRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_evolve.DecideResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Approve or reject a review queue item
+      tags:
+      - reviews
+  /api/v1/reviews/queue:
+    get:
+      parameters:
+      - description: memory|orchestration|all
+        in: query
+        name: queue
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.reviewsQueueResponse'
+      summary: List unified review queue (memory + orchestration)
+      tags:
+      - reviews
   /api/v1/runs:
     get:
       parameters:
@@ -6100,6 +6564,61 @@ paths:
       summary: TR3 scale readiness snapshot
       tags:
       - scale
+  /api/v1/scenario-patches:
+    get:
+      parameters:
+      - description: draft|in_review|approved|rejected|archived
+        in: query
+        name: status
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.scenarioPatchListResponse'
+      summary: List scenario patch drafts
+      tags:
+      - reviews
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View'
+      summary: Create scenario patch draft
+      tags:
+      - reviews
+  /api/v1/scenario-patches/{patchId}/submit-review:
+    post:
+      parameters:
+      - description: patch id
+        in: path
+        name: patchId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View'
+      summary: Submit scenario patch for orchestration review
+      tags:
+      - reviews
   /api/v1/scenarios:
     get:
       produces:

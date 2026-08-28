@@ -1346,6 +1346,266 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/harness/profiles": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "List harness profiles",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "draft|in_review|active|archived",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "profile name",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.harnessListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Create draft harness profile",
+                "parameters": [
+                    {
+                        "description": "profile",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/harness/profiles/active": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Load active harness profile (platform default if missing)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "default",
+                        "description": "profile name",
+                        "name": "name",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.harnessLoadActiveResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/harness/profiles/{profileId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Get harness profile by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "profile id",
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Update draft harness profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "profile id",
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "spec",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.UpdateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/harness/profiles/{profileId}/promote": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Promote harness profile to active",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "profile id",
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/harness/profiles/{profileId}/rollback": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Rollback active harness profile to previous archived version",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "active profile id",
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/harness/profiles/{profileId}/submit-review": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "harness"
+                ],
+                "summary": "Submit harness profile for orchestration review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "profile id",
+                        "name": "profileId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/improve/proposals": {
             "get": {
                 "produces": [
@@ -3493,6 +3753,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/reviews/queue": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "List unified review queue (memory + orchestration)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "memory|orchestration|all",
+                        "name": "queue",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.reviewsQueueResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/reviews/{reviewId}/decide": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Approve or reject a review queue item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "memory:\u003cid\u003e or harness_profile:\u003cid\u003e",
+                        "name": "reviewId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "decision",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_evolve.DecideRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_evolve.DecideResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs": {
             "get": {
                 "produces": [
@@ -4273,6 +4613,92 @@ const docTemplate = `{
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scenario-patches": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "List scenario patch drafts",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "draft|in_review|approved|rejected|archived",
+                        "name": "status",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.scenarioPatchListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Create scenario patch draft",
+                "parameters": [
+                    {
+                        "description": "patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.CreateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scenario-patches/{patchId}/submit-review": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Submit scenario patch for orchestration review",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "patch id",
+                        "name": "patchId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View"
                         }
                     }
                 }
@@ -5478,6 +5904,254 @@ const docTemplate = `{
                             "type": "integer"
                         }
                     }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_evolve.DecideRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "decision": {
+                    "type": "string"
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_evolve.DecideResponse": {
+            "type": "object",
+            "properties": {
+                "decision": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "queue": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "targetId": {
+                    "type": "string"
+                },
+                "targetType": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_evolve.Item": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "integer"
+                },
+                "diff": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "queue": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "targetId": {
+                    "type": "string"
+                },
+                "targetType": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.CompactionSpec": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "triggerTokenRatio": {
+                    "type": "number"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.CreateRequest": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "spec": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.IntegrationSpec": {
+            "type": "object",
+            "properties": {
+                "jsonEventsEnabled": {
+                    "type": "boolean"
+                },
+                "rpcEnabled": {
+                    "type": "boolean"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody": {
+            "type": "object",
+            "properties": {
+                "compaction": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.CompactionSpec"
+                },
+                "integration": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.IntegrationSpec"
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "provider": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProviderSpec"
+                },
+                "sandbox": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.SandboxSpec"
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "subRun": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.SubRunSpec"
+                },
+                "tools": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ToolsSpec"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.ProfileView": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "parentVersion": {
+                    "type": "integer"
+                },
+                "promotedAt": {
+                    "type": "integer"
+                },
+                "promotedBy": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "spec": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.ProviderSpec": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "model": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.SandboxSpec": {
+            "type": "object",
+            "properties": {
+                "defaultMode": {
+                    "type": "string"
+                },
+                "network": {
+                    "type": "string"
+                },
+                "spillMaxBytes": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.SubRunSpec": {
+            "type": "object",
+            "properties": {
+                "inheritSandbox": {
+                    "type": "boolean"
+                },
+                "maxDepth": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.ToolsSpec": {
+            "type": "object",
+            "properties": {
+                "allowlist": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "denylist": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_harness.UpdateRequest": {
+            "type": "object",
+            "properties": {
+                "spec": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileSpecBody"
                 }
             }
         },
@@ -7365,6 +8039,79 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_scenariopatch.CreateRequest": {
+            "type": "object",
+            "properties": {
+                "createdBy": {
+                    "type": "string"
+                },
+                "diffText": {
+                    "type": "string"
+                },
+                "fromVersion": {
+                    "type": "string"
+                },
+                "scenarioName": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "toVersion": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_scenariopatch.View": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "decidedAt": {
+                    "type": "integer"
+                },
+                "decidedBy": {
+                    "type": "string"
+                },
+                "decisionNote": {
+                    "type": "string"
+                },
+                "diffText": {
+                    "type": "string"
+                },
+                "fromVersion": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "scenarioName": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "toVersion": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_security.LeakFinding": {
             "type": "object",
             "properties": {
@@ -7836,6 +8583,10 @@ const docTemplate = `{
                 },
                 "rating": {
                     "type": "integer"
+                },
+                "runID": {
+                    "description": "optional; uniqueness with target when set",
+                    "type": "string"
                 },
                 "severity": {
                     "type": "string"
@@ -8405,6 +9156,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "label": {
+                    "type": "string"
+                },
+                "minSandboxMode": {
                     "type": "string"
                 },
                 "name": {
@@ -9602,6 +10356,9 @@ const docTemplate = `{
                 "rating": {
                     "type": "integer"
                 },
+                "runId": {
+                    "type": "string"
+                },
                 "severity": {
                     "type": "string"
                 },
@@ -9854,6 +10611,25 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.harnessListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                    }
+                }
+            }
+        },
+        "internal_api.harnessLoadActiveResponse": {
+            "type": "object",
+            "properties": {
+                "profile": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                }
+            }
+        },
         "internal_api.loginRequest": {
             "type": "object",
             "required": [
@@ -10003,6 +10779,20 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.reviewsQueueResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_evolve.Item"
+                    }
+                },
+                "queue": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.rotateSecretRequest": {
             "type": "object",
             "required": [
@@ -10014,6 +10804,17 @@ const docTemplate = `{
                 },
                 "value": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.scenarioPatchListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View"
+                    }
                 }
             }
         },

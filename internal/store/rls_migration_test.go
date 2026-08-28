@@ -22,8 +22,8 @@ func TestRLSMigration_coversCatalog(t *testing.T) {
 }
 
 func TestRLSExpectedPolicyCount(t *testing.T) {
-	if PostgresRLSExpectedPolicyCount() != 41 {
-		t.Fatalf("policy count=%d want 41", PostgresRLSExpectedPolicyCount())
+	if PostgresRLSExpectedPolicyCount() != 43 {
+		t.Fatalf("policy count=%d want 43", PostgresRLSExpectedPolicyCount())
 	}
 	if sqlmigrations.ExpectedVersion() < RLSPoliciesSQLRevision {
 		t.Fatalf("expectedVersion=%d want >= %d", sqlmigrations.ExpectedVersion(), RLSPoliciesSQLRevision)

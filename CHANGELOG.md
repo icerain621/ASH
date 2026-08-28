@@ -8,6 +8,11 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DZ（v2）：编排评审 UI + promote 硬化 — promote 仅 `in_review`；`POST .../rollback`；`scenario_patch_drafts`（SQL **23** / RLS **43**）+ `/scenario-patches*`；Reviews 页双队列 + Scenario patch 草稿；Automation Harness Profile 面板；Feedback targetType 对齐附录 K。
+- Sprint DY（v2）：演进平面基础 — feedback `targetType` 白名单（含 `harness_profile` 等）+ `runId` 去重；`GET /api/v1/reviews/queue`；`POST /api/v1/reviews/{id}/decide`（memory / harness）；SQL rev **22**（feedback.run_id）。
+- Sprint DX（v2）：Sandbox POC — `Authorize`（danger+`off` 拒绝）、`DefaultRouter`、process/Docker Executor、`deploy/sandbox/Dockerfile`、`make sandbox-smoke`（`ASH_SKIP_SANDBOX=1` 可跳过 Docker）；risk-catalog 增加 `minSandboxMode`。
+- Sprint DI（v2）：Harness Loop Adapter — `internal/harness/loop` 钩子 + `harness.*` 事件；`internal/sandbox` NoopRouter/`ResolveSandboxMode` stub；runs `callTool*` 接线；HAR-02 不变量包测。
+- Sprint DH（v2）：Harness Profile 骨架 — Schema `ash.harness.profile.v1`、表 `harness_profile_versions`（SQL rev **21** / RLS **42**）、`internal/harness` CRUD/LoadActive/promote、API `/api/v1/harness/profiles*`、`make harness-smoke`。
 - Sprint CY：`release-window` prior mvp-signoff 须 web-gate 绿且无 ❌；失败不覆盖 `mvp-signoff-latest`；mvp-signoff 默认本地 H-01 dry-run（`ASH_MVP_SKIP_LOCAL_RDS=1` 可跳过）；修复 `ASH_REQUIRE_ROLLBACK_DRILL` 泄漏导致 regression-short 假红；修复清单死链与 RunsPage tsc。
 - Sprint CX：本地 doctor 脚本统一 `--agent static`；smoke-index / H-01 清单对齐 `postgres-local-rds-e2e`；Runs 危险工具门禁与 Space 组织样板 vitest。
 - Sprint CW：`make postgres-local-rds-e2e`（Docker 本地模拟云 RDS migrate）；`postgres-rds-e2e` 在 M3-04 通过后取消 `ASH_MIGRATE_E2E`，避免 ALL 套件行数漂移假红；归档 2026-08-08 发布窗口证据。

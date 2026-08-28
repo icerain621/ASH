@@ -70,15 +70,55 @@ flowchart LR
 
 ## 2. 架构总览
 
-详见 [`HLD-Harness与沙盒.md`](../design/HLD-Harness与沙盒.md)；双核 + Harness + 演进平面架构图见该文档与下文 §4–§6（与 v1 规划稿一致，版本号已统一为 v2）。
+```mermaid
+flowchart TB
+  subgraph entry [入口]
+    WEB[Web / Quest]
+    CLI[CLI / Session RPC]
+    WH[Webhook]
+  end
 
-**设计文档索引**
+  subgraph gov [治理平面]
+    DSL[Scenario DSL]
+    GATE[Gates]
+    DOC[Doctor]
+  end
+
+  subgraph agent [智能体核心]
+    GOAL[Goal / Plan]
+    RUN[Run]
+    HAR[Harness]
+    SBX[Sandbox]
+    ART[Artifacts]
+  end
+
+  subgraph memory [记忆体核心]
+    KNOW[Profile / Wiki / Skills]
+    MEM[评审 merge]
+  end
+
+  subgraph evolve [演进平面]
+    FB[Feedback]
+    IMP[Improve]
+    REV[双评审]
+  end
+
+  WEB & CLI & WH --> GOAL --> RUN --> HAR --> SBX --> ART
+  HAR <--> KNOW & MEM
+  RUN & MEM & HAR --> FB --> IMP --> REV
+  DSL & GATE & DOC -.-> agent
+  REV -->|promote| MEM & HAR & DSL
+```
+
+**设计文档索引（已齐）**
 
 | 文档 | Sprint | 内容 |
 |------|--------|------|
+| [`HLD-双核心-v2.md`](../design/HLD-双核心-v2.md) | DH+ | 双核架构、主流程、协作契约 |
 | [`HLD-Harness与沙盒.md`](../design/HLD-Harness与沙盒.md) | DH, DX | Profile、Loop、Sandbox、API、DDL |
-| `HLD-双核心-v2.md` | DH | 双核契约（待起草） |
-| `附录-演进平面-v2.md` | DY, DZ | Feedback 全类型（待起草） |
+| [`K-演进平面-v2.md`](../appendices/K-演进平面-v2.md) | DY, DZ | Feedback、双评审、Improve 状态机 |
+| [`HLD-总体设计.md`](../design/HLD-总体设计.md) | — | v1/v2 总图对照 |
+| [`ARCH-架构与技术选型.md`](../design/ARCH-架构与技术选型.md) §12.2 | — | Stage 1 = v2 主路径 |
 
 ---
 
@@ -141,18 +181,18 @@ flowchart LR
 | 周次（累计） | Sprint | 版本增量 | 主题 | 交付物 |
 |--------------|--------|----------|------|--------|
 | 0–2 | **CI–CJ** | v1.0.0 | P0 发布 | 云 RDS、签字 |
-| 3–4 | **DH** | v2 开发启动 | Harness 骨架 | `internal/harness/`、Profile API、M4-HAR-01/03 |
-| 5–6 | **DI** | — | Loop 接缝 + RPC 草案 | 事件不变量、M4-HAR-02 |
-| 7–8 | **DX** | v2.0.0-alpha.1 | **沙盒 POC** | Docker executor、`make sandbox-smoke`、M4-SBX-* |
+| 3–4 | **DH** | v2 开发启动 | Harness 骨架 | ✅ Schema + 000021 + API + `harness-smoke` |
+| 5–6 | **DI** | — | Loop 接缝 + RPC 草案 | ✅ Adapter + harness 事件 + sandbox stub（RPC 仍预留） |
+| 7–8 | **DX** | v2.0.0-alpha.1 | **沙盒 POC** | ✅ process/Docker + `sandbox-smoke` + danger/`off` 拒绝 |
 | 9–10 | **DJ** | — | Goal→Run + Plan | `POST /runs/from-goal`、`ash quest` |
 | 11–12 | **DK** | — | Quest 工作台 v1 | 看板、Diff 审查、步骤评分 |
-| 13–14 | **DY** | — | 演进平面基础 | feedback 全类型、`/reviews/queue` |
+| 13–14 | **DY** | — | 演进平面基础 | ✅ feedback 全类型 + `/reviews/queue` + decide |
 | 15–16 | **DL** | — | Repo Profile + Wiki | 知识 Tab、contextRefs |
 | 17–18 | **DM** | — | Space Rules + 路由 | Goal 填槽增强 |
 | 19–20 | **DN** | v2.0.0-alpha | Skills 目录 | `SKILL.md`、场景绑定 |
 | 21–22 | **DO** | — | Sub-run | 事件树、Policy 白名单 |
 | 23–24 | **DP** | — | verify 步骤 | DSL 扩展、→ improve |
-| 25–26 | **DZ** | v2.0.0-beta.1 | **编排评审** | Harness promote、Scenario patch UI |
+| 25–26 | **DZ** | v2.0.0-beta.1 | **编排评审** | ✅ Reviews UI + promote 闸门 + scenario patch + rollback |
 | 27–28 | **DQ** | — | Provider + ExecGo live | H-06 |
 | 29–30 | **DX2** | v2.0.0-beta.2 | isolated 强制 | 场景策略、KPI-19 |
 | 31–32 | **DR** | — | compaction + Doctor M4/M5 | 全量探针 |
@@ -246,3 +286,4 @@ make signoff-gate         # v2 四人签字
 | 2026-08-27 | 初稿（v0.2 命名） |
 | 2026-08-28 | Harness/沙盒/演进平面 |
 | 2026-08-28 | **版本号升至 v2**；v1→v2 路线图；HLD 交付；Sprint 周次表 |
+| 2026-08-28 | 补全设计：双核 HLD、演进平面附录 K、总图/流程图；索引对齐 |

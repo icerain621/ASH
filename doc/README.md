@@ -1,7 +1,7 @@
 # ASH 文档归属索引
 
-> 更新：2026-08-08  
-> 代码水位：tag **`v0.1.0-mvp`** · Doctor ALL **43/43** · SQL rev **20** · RLS **41**
+> 更新：2026-08-28  
+> 代码水位：tag **`v0.1.0-mvp`** · Doctor ALL **43/43** · SQL rev **23** · RLS **43**（v2 DH–DZ）
 
 文档按**归属**分三类；契约与门禁路径保持稳定，避免打断脚本。
 
@@ -23,8 +23,10 @@ doc/
 |------|------|------------|
 | [`PRD-需求文档.md`](design/PRD-需求文档.md) | 做什么、In/Out、成功指标 | 产品 |
 | [`ORG-组织样板与商业落地.md`](design/ORG-组织样板与商业落地.md) | 付费/决策/审批与三套组织样板（PRD §3） | 产品 |
-| [`HLD-总体设计.md`](design/HLD-总体设计.md) | 系统拆分、数据与安全概览 | 架构/后端 |
-| [`ARCH-架构与技术选型.md`](design/ARCH-架构与技术选型.md) | 为何这样选、可替换项 | 平台/架构 |
+| [`HLD-总体设计.md`](design/HLD-总体设计.md) | 系统拆分、数据与安全概览（含 v1/v2 总图） | 架构/后端 |
+| [`HLD-双核心-v2.md`](design/HLD-双核心-v2.md) | **v2** 记忆体 × 智能体双核架构与契约 | 架构/后端 |
+| [`HLD-Harness与沙盒.md`](design/HLD-Harness与沙盒.md) | **v2** Harness Profile / Loop / Sandbox | 平台/安全 |
+| [`ARCH-架构与技术选型.md`](design/ARCH-架构与技术选型.md) | 为何这样选、可替换项；Stage1=v2 | 平台/架构 |
 | [`M3-多租户与Postgres演进.md`](design/M3-多租户与Postgres演进.md) | 多租户 / Postgres / RLS | 后端/运维 |
 | [`appendices/`](appendices/README.md) | 协议、Schema、Doctor、Artifacts | 对应域负责人 |
 
@@ -34,6 +36,11 @@ doc/
 |------|------|------------|
 | [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **排期与完成度真相源** | 项目经理/技术 |
 | [`TODO.md`](plan/TODO.md) | 未完成短清单（P0–P3） | 全员更新 |
+| [`v2-dual-core-evolution-plan.md`](plan/v2-dual-core-evolution-plan.md) | **v2** 双核心 + Harness 排期 | 项目经理/架构 |
+| [`sprint-dh-harness-implementation.md`](plan/sprint-dh-harness-implementation.md) | Sprint DH Harness 骨架任务板 | 后端 |
+| [`sprint-di-loop-implementation.md`](plan/sprint-di-loop-implementation.md) | Sprint DI Loop Adapter 任务板 | 后端 |
+| [`sprint-dx-sandbox-implementation.md`](plan/sprint-dx-sandbox-implementation.md) | Sprint DX Sandbox POC 任务板 | 后端/安全 |
+| [`sprint-dy-evolve-implementation.md`](plan/sprint-dy-evolve-implementation.md) | Sprint DY 演进平面任务板 | 后端 |
 | [`mvp-release-scope.md`](plan/mvp-release-scope.md) | MVP 范围冻结 | 产品 |
 | [`risk-register.md`](plan/risk-register.md) | 风险台账 | 项目经理 |
 | [`kpi-dashboard-definition.md`](plan/kpi-dashboard-definition.md) | KPI 口径 | 产品/后端 |

@@ -452,8 +452,72 @@ make harness-smoke    # DH：Profile CRUD + schema 校验
 
 ---
 
-## 12. 修订记录
+## 12. 端到端流程图（补全）
+
+### 12.1 Effective Config 解析
+
+```mermaid
+flowchart TD
+  A[平台默认 Profile] --> B[Space 默认 Profile]
+  B --> C[Run.harnessProfileId 可选]
+  C --> D[Scenario policyProfile + 步骤 gates]
+  D --> E[Effective Config]
+  E --> F[provider / sandboxMode / tools / skills]
+  NOTE[冲突：DSL gates 优先；promote 时冲突则拒绝]
+```
+
+### 12.2 Harness Loop 单 Turn
+
+```mermaid
+flowchart TD
+  T0[turn.start] --> S0[claim input + assemble prompt]
+  S0 --> S1[OnBeforeLLM]
+  S1 --> S2[Provider stream]
+  S2 --> S3{tool calls?}
+  S3 -->|否| T1[turn.end]
+  S3 -->|是| S4[OnBeforeTool]
+  S4 --> S5[Policy.Authorize]
+  S5 -->|deny| S6[policy.denied / waiting_approval]
+  S5 -->|allow| S7[ResolveSandboxMode]
+  S7 --> S8[Sandbox.Dispatch 或 in-process]
+  S8 --> S9[OnAfterTool + spill]
+  S9 --> S10[append tool.result 事件]
+  S10 --> S2
+```
+
+### 12.3 沙盒模式决策树
+
+```mermaid
+flowchart TD
+  T[tool call] --> R{tool_risk}
+  R -->|safe| M1{dev?}
+  M1 -->|是| OFF[off 允许]
+  M1 -->|否| WW[workspace-write 建议]
+  R -->|write| WW2[≥ workspace-write]
+  R -->|danger| ISO[≥ isolated + human]
+  R -->|network| ISO2[isolated + network 须 human]
+  WW & WW2 & ISO & ISO2 --> D[Dispatch]
+  OFF --> D
+```
+
+### 12.4 Profile 生命周期
+
+```mermaid
+stateDiagram-v2
+  [*] --> draft
+  draft --> in_review: submit-review
+  in_review --> draft: reject
+  in_review --> active: promote
+  active --> archived: 被新版本取代 / rollback
+  archived --> active: rollback 恢复
+  draft --> [*]: delete 仅 draft
+```
+
+---
+
+## 13. 修订记录
 
 | 日期 | 说明 |
 |------|------|
 | 2026-08-28 | 初稿：v2 Harness + 沙盒 HLD，对应 DH/DX Sprint |
+| 2026-08-28 | 补全：Effective Config、Loop、沙盒决策树、Profile 状态机流程图 |

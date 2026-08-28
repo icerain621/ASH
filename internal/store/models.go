@@ -296,6 +296,7 @@ type Feedback struct {
 	SpaceID    string `gorm:"size:64;not null;default:local;index"`
 	TargetType string `gorm:"size:64;not null;index"`
 	TargetID   string `gorm:"size:128;not null;index"`
+	RunID      string `gorm:"size:64;index"` // optional; uniqueness with target when set
 	Rating     int
 	Category   string `gorm:"size:64;not null;default:general;index"`
 	Status     string `gorm:"size:32;not null;default:open;index"`
@@ -690,6 +691,44 @@ type ImproveProposal struct {
 }
 
 func (ImproveProposal) TableName() string { return "improve_proposals" }
+
+// HarnessProfileVersion stores versioned agent harness configs (v2).
+type HarnessProfileVersion struct {
+	ID            string     `gorm:"primaryKey;size:64"`
+	SpaceID       string     `gorm:"index;size:64;not null;uniqueIndex:uidx_harness_space_name_ver"`
+	Name          string     `gorm:"size:128;not null;uniqueIndex:uidx_harness_space_name_ver"`
+	Version       int        `gorm:"not null;uniqueIndex:uidx_harness_space_name_ver"`
+	Status        string     `gorm:"size:32;not null;index"` // draft|in_review|active|archived
+	SpecJSON      string     `gorm:"type:text;not null"`
+	ParentVersion *int       `gorm:""`
+	CreatedBy     string     `gorm:"size:128"`
+	PromotedBy    string     `gorm:"size:128"`
+	CreatedAt     time.Time  `gorm:"not null"`
+	UpdatedAt     time.Time  `gorm:"not null"`
+	PromotedAt    *time.Time `gorm:""`
+}
+
+func (HarnessProfileVersion) TableName() string { return "harness_profile_versions" }
+
+// ScenarioPatchDraft stores orchestration scenario DSL patch drafts (v2 DZ).
+type ScenarioPatchDraft struct {
+	ID            string     `gorm:"primaryKey;size:64"`
+	SpaceID       string     `gorm:"index;size:64;not null"`
+	ScenarioName  string     `gorm:"size:128;not null;index"`
+	FromVersion   string     `gorm:"size:64"`
+	ToVersion     string     `gorm:"size:64"`
+	Title         string     `gorm:"size:256;not null"`
+	DiffText      string     `gorm:"type:text;not null"`
+	Status        string     `gorm:"size:32;not null;index"` // draft|in_review|approved|rejected|archived
+	CreatedBy     string     `gorm:"size:128"`
+	DecidedBy     string     `gorm:"size:128"`
+	DecisionNote  string     `gorm:"type:text"`
+	CreatedAt     time.Time  `gorm:"not null"`
+	UpdatedAt     time.Time  `gorm:"not null"`
+	DecidedAt     *time.Time `gorm:""`
+}
+
+func (ScenarioPatchDraft) TableName() string { return "scenario_patch_drafts" }
 
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`

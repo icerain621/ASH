@@ -2,8 +2,8 @@
 
 > 目的：解释“为何这样选”，明确默认实现、可替换项、演进路线与风险。
 >
-> 文档状态：v0.2（对照 `v0.1.0-mvp` 实现修订，2026-08-08）。未决项以 **TODO** 标注；已落地项标注「已实现」。
-> 进度真相源：[`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。  
+> 文档状态：v2 增补（2026-08-28）；对照 `v0.1.0-mvp` / v1。未决项以 **TODO** 标注；已落地项标注「已实现」。
+> 进度真相源：[`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md) · v2：[`../plan/v2-dual-core-evolution-plan.md`](../plan/v2-dual-core-evolution-plan.md)。  
 > 归属：[`design/`](README.md)
 
 ## 1. 选型原则
@@ -162,15 +162,43 @@ ASH 需要“可选插件”但 **Go 原生 `plugin` 在 Windows 不可用**，�
 - 扩展：内置插件（Prometheus/console/sqlite-only）+ 进程外插件接口预留（Proto/gRPC 优先，Buf 管理 breaking）。
 - 适用：单团队/内网、并发 run 较低、以快速迭代与语义收敛为主。
 
-### 12.2 Stage 1：单体 + 进程外插件（推荐的“准分布式”）
+### 12.2 Stage 1：单体 + 进程外插件 / 沙盒（v2 主路径）
 
 > 不拆核心状态机，只把高成本/高风险能力外置，仍保持回放与一致性简单。
 
+- **v2 已纳入主路径（设计）**
+  - **内置 Harness**：Profile + Loop + Provider（同进程包 `internal/harness`）
+  - **Executor Sandbox**：Docker / 进程 jail（`internal/sandbox`）；危险工具默认隔离
+  - **双核心包边界**：Agent Core ↔ Memory Core 契约（contextRefs / citation / candidate）
+  - **演进平面**：统一 Feedback + 编排/记忆双评审（附录 K）
 - **优先外置的插件（按收益排序）**
-  - **Executor Service（工具执行/沙箱）**：把危险工具与执行环境隔离（安全收益最高）
+  - **Executor Service（工具执行/沙盒）**：把危险工具与执行环境隔离（安全收益最高）— **v2 启动**
   - **RAG Indexer/Retriever（索引与检索）**：资源型能力弹性扩缩，避免拖慢编排主循环
   - **Observability Exporter**：对外发指标/trace/log，避免主进程受外部链路影响
 - 技术接口：**Proto/gRPC（Buf breaking check）** 为主，HTTP/MCP 为辅（按集成方生态选择）。
+- 设计文档：[`HLD-双核心-v2.md`](HLD-双核心-v2.md) · [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md) · [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md) · [`../plan/v2-dual-core-evolution-plan.md`](../plan/v2-dual-core-evolution-plan.md)
+
+```mermaid
+flowchart LR
+  subgraph stage0 [Stage 0 / v1]
+    W0[Worker 单体<br/>ToolBus in-process]
+  end
+  subgraph stage1 [Stage 1 / v2]
+    W1[Worker + Harness]
+    SB[Sandbox Docker/Process]
+    MC[Memory Core 包边界]
+    EV[Evolution Plane]
+  end
+  subgraph stage2 [Stage 2]
+    CP[Control Plane]
+    DP[Data Plane]
+    MS[Memory Service]
+  end
+  W0 --> W1
+  W1 --> SB
+  W1 --> MC --> EV
+  W1 --> CP & DP & MS
+```
 
 ### 12.3 Stage 2：服务化拆分（P2：组织级/多租户）
 

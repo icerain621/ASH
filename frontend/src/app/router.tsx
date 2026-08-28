@@ -8,6 +8,7 @@ import { MemoryPage } from "../pages/MemoryPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { ObservabilityPage } from "../pages/ObservabilityPage";
 import { ReleasesPage } from "../pages/ReleasesPage";
+import { ReviewsPage } from "../pages/ReviewsPage";
 import { RunsPage } from "../pages/RunsPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
@@ -33,6 +34,12 @@ const memoryRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/memory",
   component: MemoryPage,
+});
+
+const reviewsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/reviews",
+  component: ReviewsPage,
 });
 
 const automationRoute = createRoute({
@@ -99,6 +106,7 @@ const routeTree = rootRoute.addChildren([
   indexRoute,
   runsRoute,
   memoryRoute,
+  reviewsRoute,
 	automationRoute,
 	feedbackRoute,
 	ciRoute,

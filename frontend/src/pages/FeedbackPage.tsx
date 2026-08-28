@@ -3,6 +3,21 @@ import { MessageSquarePlus, RefreshCcw, Send } from "lucide-react";
 import { useState } from "react";
 import { createFeedback, listFeedback, updateFeedback, type Feedback } from "@/modules/closure/api/closure.api";
 
+/** Appendix K §3 (+ v1 compat). */
+const FEEDBACK_TARGET_TYPES = [
+  "run",
+  "run_step",
+  "memory",
+  "memory_hit",
+  "plan",
+  "artifact",
+  "skill",
+  "harness_profile",
+  "scenario_patch",
+  "ci_diagnosis",
+  "release",
+] as const;
+
 export function FeedbackPage() {
   const qc = useQueryClient();
   const [status, setStatus] = useState("open");
@@ -71,7 +86,17 @@ export function FeedbackPage() {
               <option value="ux">ux</option>
             </select>
           </label>
-          <input className="metric-filter" value={targetType} placeholder="target type" onChange={(e) => setTargetType(e.target.value)} />
+          <label className="scenario-picker">
+            对象类型
+            <select value={targetType} onChange={(e) => setTargetType(e.target.value)} data-testid="feedback-filter-target-type">
+              <option value="">全部</option>
+              {FEEDBACK_TARGET_TYPES.map((t) => (
+                <option key={t} value={t}>
+                  {t}
+                </option>
+              ))}
+            </select>
+          </label>
           <button className="btn icon-btn" onClick={() => feedbackQuery.refetch()} disabled={feedbackQuery.isFetching}>
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
@@ -98,11 +123,12 @@ export function FeedbackPage() {
           >
             <label>
               Target Type
-              <select name="targetType" defaultValue="run">
-                <option value="run">Run</option>
-                <option value="artifact">Artifact</option>
-                <option value="memory_hit">Memory Hit</option>
-                <option value="ci_diagnosis">CI Diagnosis</option>
+              <select name="targetType" defaultValue="run" data-testid="feedback-target-type">
+                {FEEDBACK_TARGET_TYPES.map((t) => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
               </select>
             </label>
             <label>

@@ -17,4 +17,12 @@ describe("FeedbackPage", () => {
       expect(screen.getByRole("button", { name: "提交反馈" })).toBeInTheDocument();
     });
   });
+
+  it("exposes appendix K target types", async () => {
+    renderPage(<FeedbackPage />);
+    const select = await screen.findByTestId("feedback-target-type");
+    expect(select).toBeInTheDocument();
+    expect(select.innerHTML).toContain("harness_profile");
+    expect(select.innerHTML).toContain("scenario_patch");
+  });
 });

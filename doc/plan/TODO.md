@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-08-08  
+> 更新：2026-08-28  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -11,8 +11,21 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL 43/43 · M3 11/11 · TR3 10/10 |
-| Schema | SQL rev 20 · RLS 41 |
-| 结论 | 自动化门禁达 MVP 可发布水位；剩余以**环境验收 + 真人签字**为主 |
+| Schema | SQL rev **23**（+scenario_patch_drafts）· RLS **43**（代码水位；云 H-01 仍按切流前验收） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ** |
+
+---
+
+## v2 — 双核心 / Harness（现行开发）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| DH | Harness 骨架 | Schema + 000021 + API + `make harness-smoke` | ✅ |
+| DI | Loop Adapter | `harness.*` 事件 + NoopRouter stub + HAR-02 | ✅ |
+| DX | Sandbox POC | process/Docker + `sandbox-smoke` + danger/`off` 拒绝 | ✅ |
+| DY | 演进平面 | feedback 全类型 + `/reviews/queue` + decide | ✅ |
+| DZ | 编排 UI / promote 硬化 | Reviews 页 + promote 闸门 + scenario patch + rollback | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · DH–DZ sprint 计划 | — |
 
 ---
 
@@ -90,6 +103,11 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
+- Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）
+- Sprint DX：Sandbox POC（Authorize + process/Docker + `sandbox-smoke`）
+- Sprint DI：Loop Adapter（`harness.*` 事件 + sandbox stub + HAR-02）
+- Sprint DH：Harness Profile 骨架（SQL 21 / RLS 42 / `/harness/profiles*` / `harness-smoke`）
 - Sprint CY：收紧 prior mvp-signoff；失败不覆盖 latest；默认本地 H-01 dry-run；修复 rollback-drill 环境泄漏与清单死链
 - Sprint CX：doctor 脚本统一 `--agent static`；smoke-index/H-01 文档对齐 `postgres-local-rds-e2e`；Runs 门禁 / Space 组织样板 vitest
 - Sprint CW：`make postgres-local-rds-e2e`（Docker 模拟云 migrate+M3-04）；修复 ALL 套件重复 M3-04 行数漂移；归档 release-window 证据

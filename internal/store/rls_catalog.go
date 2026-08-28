@@ -71,12 +71,22 @@ func VerifyRLSMigrationSQL() error {
 	if err != nil {
 		return err
 	}
-	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20
+	raw21, err := sqlmigrations.ReadPostgresUpSQL("000021_harness_profiles.up.sql")
+	if err != nil {
+		return err
+	}
+	raw23, err := sqlmigrations.ReadPostgresUpSQL("000023_scenario_patches.up.sql")
+	if err != nil {
+		return err
+	}
+	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20 + "\n" + raw21 + "\n" + raw23
+	tenantSQL := raw13 + "\n" + raw21 + "\n" + raw23
 
 	for _, tbl := range PostgresRLSTables() {
-		needle := "('" + tbl.Table + "'"
-		if !strings.Contains(raw13, needle) {
-			return fmt.Errorf("migration 000013 missing tenant table %q", tbl.Table)
+		needleParen := "('" + tbl.Table + "'"
+		needleQuoted := "'" + tbl.Table + "'"
+		if !strings.Contains(tenantSQL, needleParen) && !strings.Contains(tenantSQL, needleQuoted) {
+			return fmt.Errorf("tenant RLS migrations missing table %q", tbl.Table)
 		}
 	}
 	for _, tbl := range postgresRLSRunScopedTables() {

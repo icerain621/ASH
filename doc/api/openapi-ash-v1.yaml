@@ -39,6 +39,8 @@ tags:
   - name: Repo
   - name: CI
   - name: Feedback
+  - name: Harness
+  - name: Reviews
   - name: Metrics
   - name: Observability
   - name: Releases
@@ -1050,6 +1052,7 @@ components:
         spaceID: { type: string }
         targetType: { type: string }
         targetID: { type: string }
+        runID: { type: string }
         rating: { type: integer }
         category: { type: string }
         status: { type: string }
@@ -1066,6 +1069,170 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/FeedbackItem" }
+    ReviewsQueueItem:
+      type: object
+      properties:
+        id: { type: string }
+        queue: { type: string, enum: [memory, orchestration] }
+        targetType: { type: string }
+        targetId: { type: string }
+        title: { type: string }
+        summary: { type: string }
+        diff: { type: string }
+        status: { type: string }
+        spaceId: { type: string }
+        createdAt: { type: integer, format: int64 }
+    ReviewsQueueResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ReviewsQueueItem" }
+        queue: { type: string }
+    ReviewsDecideRequest:
+      type: object
+      required: [decision, reason]
+      properties:
+        decision: { type: string, enum: [approve, reject] }
+        reason: { type: string }
+        policyProfile: { type: string }
+        actorId: { type: string }
+    ReviewsDecideResponse:
+      type: object
+      properties:
+        id: { type: string }
+        queue: { type: string }
+        targetType: { type: string }
+        targetId: { type: string }
+        decision: { type: string }
+        status: { type: string }
+    HarnessProviderSpec:
+      type: object
+      required: [kind]
+      properties:
+        kind: { type: string, enum: [static, execgo, acp_sdk] }
+        model: { type: string }
+    HarnessSandboxSpec:
+      type: object
+      required: [defaultMode]
+      properties:
+        defaultMode: { type: string, enum: [off, read-only, workspace-write, isolated] }
+        network: { type: string, enum: [deny, allow] }
+        spillMaxBytes: { type: integer }
+    HarnessToolsSpec:
+      type: object
+      properties:
+        allowlist:
+          type: array
+          items: { type: string }
+        denylist:
+          type: array
+          items: { type: string }
+    HarnessCompactionSpec:
+      type: object
+      properties:
+        enabled: { type: boolean }
+        triggerTokenRatio: { type: number }
+    HarnessSubRunSpec:
+      type: object
+      properties:
+        maxDepth: { type: integer }
+        inheritSandbox: { type: boolean }
+    HarnessIntegrationSpec:
+      type: object
+      properties:
+        rpcEnabled: { type: boolean }
+        jsonEventsEnabled: { type: boolean }
+    HarnessProfileSpec:
+      type: object
+      required: [provider, sandbox, tools, policyProfile]
+      properties:
+        provider: { $ref: "#/components/schemas/HarnessProviderSpec" }
+        sandbox: { $ref: "#/components/schemas/HarnessSandboxSpec" }
+        tools: { $ref: "#/components/schemas/HarnessToolsSpec" }
+        policyProfile: { type: string, enum: [default, strict, hotfix, security] }
+        compaction: { $ref: "#/components/schemas/HarnessCompactionSpec" }
+        subRun: { $ref: "#/components/schemas/HarnessSubRunSpec" }
+        skills:
+          type: array
+          items: { type: string }
+        integration: { $ref: "#/components/schemas/HarnessIntegrationSpec" }
+    HarnessProfileView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        name: { type: string }
+        version: { type: integer }
+        status: { type: string, enum: [draft, in_review, active, archived] }
+        spec: { $ref: "#/components/schemas/HarnessProfileSpec" }
+        parentVersion: { type: integer }
+        createdBy: { type: string }
+        promotedBy: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+        promotedAt: { type: integer, format: int64 }
+    HarnessListProfilesResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/HarnessProfileView" }
+    HarnessCreateProfileRequest:
+      type: object
+      required: [name, spec]
+      properties:
+        spaceId: { type: string }
+        name: { type: string }
+        spec: { $ref: "#/components/schemas/HarnessProfileSpec" }
+        createdBy: { type: string }
+    HarnessUpdateProfileRequest:
+      type: object
+      required: [spec]
+      properties:
+        spec: { $ref: "#/components/schemas/HarnessProfileSpec" }
+    HarnessLoadActiveResponse:
+      type: object
+      required: [profile]
+      properties:
+        profile: { $ref: "#/components/schemas/HarnessProfileView" }
+    ScenarioPatchView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        scenarioName: { type: string }
+        fromVersion: { type: string }
+        toVersion: { type: string }
+        title: { type: string }
+        diffText: { type: string }
+        status: { type: string, enum: [draft, in_review, approved, rejected, archived] }
+        createdBy: { type: string }
+        decidedBy: { type: string }
+        decisionNote: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+        decidedAt: { type: integer, format: int64 }
+    ScenarioPatchListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/ScenarioPatchView" }
+    ScenarioPatchCreateRequest:
+      type: object
+      required: [scenarioName, title, diffText]
+      properties:
+        spaceId: { type: string }
+        scenarioName: { type: string }
+        fromVersion: { type: string }
+        toVersion: { type: string }
+        title: { type: string }
+        diffText: { type: string }
+        createdBy: { type: string }
     PluginProtoFile:
       type: object
       properties:
@@ -3084,6 +3251,220 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/FeedbackItem" }
+
+  /api/v1/reviews/queue:
+    get:
+      tags: [Reviews]
+      summary: List unified review queue
+      parameters:
+        - in: query
+          name: queue
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewsQueueResponse" }
+
+  /api/v1/reviews/{reviewId}/decide:
+    post:
+      tags: [Reviews]
+      summary: Approve or reject a review queue item
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewsDecideRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewsDecideResponse" }
+
+  /api/v1/harness/profiles:
+    get:
+      tags: [Harness]
+      summary: List harness profiles
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: name
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessListProfilesResponse" }
+    post:
+      tags: [Harness]
+      summary: Create draft harness profile
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HarnessCreateProfileRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+
+  /api/v1/harness/profiles/active:
+    get:
+      tags: [Harness]
+      summary: Load active harness profile (platform default if missing)
+      parameters:
+        - in: query
+          name: name
+          schema: { type: string, default: default }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessLoadActiveResponse" }
+
+  /api/v1/harness/profiles/{profileId}:
+    get:
+      tags: [Harness]
+      summary: Get harness profile by id
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+    put:
+      tags: [Harness]
+      summary: Update draft harness profile
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/HarnessUpdateProfileRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+
+  /api/v1/harness/profiles/{profileId}/promote:
+    post:
+      tags: [Harness]
+      summary: Promote harness profile to active
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+
+  /api/v1/harness/profiles/{profileId}/submit-review:
+    post:
+      tags: [Harness]
+      summary: Submit harness profile for orchestration review
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+
+  /api/v1/harness/profiles/{profileId}/rollback:
+    post:
+      tags: [Harness]
+      summary: Rollback active harness profile to previous archived version
+      parameters:
+        - in: path
+          name: profileId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/HarnessProfileView" }
+
+  /api/v1/scenario-patches:
+    get:
+      tags: [Reviews]
+      summary: List scenario patch drafts
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScenarioPatchListResponse" }
+    post:
+      tags: [Reviews]
+      summary: Create scenario patch draft
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ScenarioPatchCreateRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScenarioPatchView" }
+
+  /api/v1/scenario-patches/{patchId}/submit-review:
+    post:
+      tags: [Reviews]
+      summary: Submit scenario patch for orchestration review
+      parameters:
+        - in: path
+          name: patchId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ScenarioPatchView" }
 
   /api/v1/improve/proposals:
     get:

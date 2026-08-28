@@ -14,6 +14,8 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/evolve"
+	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
@@ -21,6 +23,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/scenariopatch"
 	"github.com/ash-repwiki/ash/internal/secrets"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -39,6 +42,9 @@ type Handler struct {
 	metrics       *metricssvc.Service
 	alerts        *alerts.Service
 	releases      *releases.Service
+	harness       *harness.Service
+	patches       *scenariopatch.Service
+	evolve        *evolve.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -52,18 +58,24 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		}
 		return secrets.Open(row.ValueCiphertext, config.Load().SecretKey)
 	}))
+	memSvc := memory.NewService(db, ev)
+	harSvc := harness.NewService(db)
+	patchSvc := scenariopatch.NewService(db)
 	return &Handler{
 		db:        db,
 		events:    ev,
 		scenarios: scenarios,
 		runs:      runsSvc,
 		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:    memory.NewService(db, ev),
+		memory:    memSvc,
 		improve:   improve.NewService(db, runsSvc, ev),
 		ci:        ciSvc,
 		metrics:   metricssvc.NewService(db),
 		alerts:    alerts.NewService(db),
 		releases:  releases.NewService(db),
+		harness:   harSvc,
+		patches:   patchSvc,
+		evolve:    evolve.NewService(db, memSvc, harSvc, patchSvc),
 	}
 }
 
@@ -146,6 +158,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/feedback", h.createFeedback)
 		v1.GET("/feedback", h.listFeedback)
 		v1.PATCH("/feedback/:feedbackId", h.updateFeedback)
+
+		v1.GET("/reviews/queue", h.listReviewsQueue)
+		v1.POST("/reviews/:reviewId/decide", h.decideReview)
 		v1.POST("/repo/connections", h.createRepoConnection)
 		v1.GET("/repo/connections", h.listRepoConnections)
 		v1.GET("/ci/runs", h.listCIRuns)
@@ -160,6 +175,19 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/secrets", h.createSecret)
 		v1.POST("/secrets/:secretId/rotate", h.rotateSecret)
 		v1.DELETE("/secrets/:secretId", h.deleteSecret)
+
+		v1.GET("/harness/profiles", h.listHarnessProfiles)
+		v1.POST("/harness/profiles", h.createHarnessProfile)
+		v1.GET("/harness/profiles/active", h.loadActiveHarnessProfile)
+		v1.GET("/harness/profiles/:profileId", h.getHarnessProfile)
+		v1.PUT("/harness/profiles/:profileId", h.updateHarnessProfile)
+		v1.POST("/harness/profiles/:profileId/submit-review", h.submitHarnessProfileReview)
+		v1.POST("/harness/profiles/:profileId/promote", h.promoteHarnessProfile)
+		v1.POST("/harness/profiles/:profileId/rollback", h.rollbackHarnessProfile)
+
+		v1.GET("/scenario-patches", h.listScenarioPatches)
+		v1.POST("/scenario-patches", h.createScenarioPatch)
+		v1.POST("/scenario-patches/:patchId/submit-review", h.submitScenarioPatchReview)
 
 		v1.POST("/releases", h.createRelease)
 		v1.GET("/releases", h.listReleases)

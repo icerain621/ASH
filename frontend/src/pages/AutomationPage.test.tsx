@@ -7,6 +7,10 @@ vi.mock("@/components/ImproveProposalsPane", () => ({
   ImproveProposalsPane: () => <div>Improve proposals</div>,
 }));
 
+vi.mock("@/components/HarnessProfilesPane", () => ({
+  HarnessProfilesPane: () => <div data-testid="harness-profiles-pane">Harness profiles</div>,
+}));
+
 vi.mock("@/modules/platform/api/platform.api", () => ({
   listModelProviders: vi.fn().mockResolvedValue({ items: [] }),
   listMCPTools: vi.fn().mockResolvedValue({ items: [] }),
@@ -59,6 +63,13 @@ describe("AutomationPage", () => {
       expect(screen.getByTestId("tool-risk-catalog")).toBeInTheDocument();
       expect(screen.getByText("runtime.command")).toBeInTheDocument();
       expect(screen.getByText("danger")).toBeInTheDocument();
+    });
+  });
+
+  it("renders harness profiles pane", async () => {
+    renderPage(<AutomationPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("harness-profiles-pane")).toBeInTheDocument();
     });
   });
 });

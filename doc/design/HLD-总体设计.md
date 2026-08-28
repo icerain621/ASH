@@ -1,16 +1,22 @@
-# ASH HLD（总体设计）v0.1
+# ASH HLD（总体设计）
 
-> 文档状态：v0.2（对照 MVP 实现，2026-08-08）。本设计以“事件可回放 + 交付闭环 + 记忆可治理”为核心约束。进度见 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。  
-> 归属：[`design/`](README.md)
+> 文档状态：v2 增补（2026-08-28）；v1 对照 `v0.1.0-mvp`。本设计以“事件可回放 + 交付闭环 + 记忆可治理”为核心约束。  
+> 进度：[`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md) · v2 计划：[`../plan/v2-dual-core-evolution-plan.md`](../plan/v2-dual-core-evolution-plan.md)  
+> 归属：[`design/`](README.md)  
+> **v2 专项**：[`HLD-双核心-v2.md`](HLD-双核心-v2.md) · [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md) · [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md)
 
 ## 1. 设计目标与约束
 - **交付闭环**：每个 Run 形成可验证 Artifacts（diff/test_report/release_notes/rollback_plan）。
 - **可回放**：run_events 持久化 + artifacts digest + memory 版本锚定。
 - **可审计**：工具调用与记忆写入全链路审计；危险操作默认 deny。
 - **可插拔**：LLM provider / MCP / skills / RAG / 向量库 / 可观测性均插件化。
+- **v2 增补**：双核心（记忆体 × 智能体）+ 内置 Harness + 沙盒隔离 + 统一演进平面（评分/评审/自进化）。
 
 ## 2. 总体架构概览
-（详见 [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md) 的选型解释。）
+
+### 2.1 v1 架构（MVP，已实现）
+
+（选型解释见 [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md)。）
 
 ```mermaid
 graph TB
@@ -30,6 +36,52 @@ graph TB
   MEM --> VEC["Vector Store(Optional)"]
   EV --> OBS["Observability Manager(Plugin Host)"]
 ```
+
+### 2.2 v2 架构（目标：双核 + Harness + 演进）
+
+```mermaid
+flowchart TB
+  subgraph entry [入口]
+    WEB2[Web / Quest]
+    CLI2[CLI / Session RPC]
+    WH[Webhook]
+  end
+
+  subgraph gov [治理平面]
+    DSL[Scenario DSL]
+    GATE[Gates]
+    DOC[Doctor]
+  end
+
+  subgraph agent [智能体核心]
+    GOAL[Goal / Plan]
+    RUN[Run + SSE]
+    HAR[Harness]
+    SBX[Sandbox]
+    ART[Artifacts]
+  end
+
+  subgraph memory [记忆体核心]
+    RAG2[RAG / Profile / Wiki]
+    MEM2[候选→评审→merge]
+    SK[Skills]
+  end
+
+  subgraph evolve [演进平面]
+    FB[Feedback]
+    IMP[Improve]
+    REV[双评审队列]
+  end
+
+  WEB2 & CLI2 & WH --> GOAL --> RUN --> HAR --> SBX
+  HAR --> ART
+  HAR <--> RAG2 & MEM2 & SK
+  RUN & MEM2 & HAR --> FB --> IMP --> REV
+  DSL & GATE & DOC -.-> agent
+  REV -->|人工 promote| MEM2 & HAR & DSL
+```
+
+详细逻辑/部署/包边界图见 [`HLD-双核心-v2.md`](HLD-双核心-v2.md)。
 
 ## 3. 关键流程（时序）
 ### 3.1 Run 执行主流程（start→steps→finish）
@@ -87,6 +139,31 @@ else allow
 end
 ```
 
+### 3.2.1 v2 工具调用（Harness + Sandbox）
+
+```mermaid
+sequenceDiagram
+  participant OR as Orchestrator
+  participant H as Harness
+  participant PL as Policy
+  participant SB as Sandbox
+  participant EV as EventBus
+
+  OR->>H: executeTool(call)
+  H->>PL: Authorize + minSandboxMode
+  alt denied
+    PL-->>OR: policy.denied
+  else allowed
+    H->>EV: sandbox.invoke
+    H->>SB: Dispatch(mode, repoRoot)
+    SB-->>H: result / error
+    H->>EV: sandbox.completed|failed
+    H-->>OR: ToolResult
+  end
+```
+
+完整设计见 [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md)。
+
 ### 3.3 记忆写入与评审（candidate→review→merge）
 
 ```mermaid
@@ -118,6 +195,15 @@ MEM->>EV: memory.reviewed
 - **Memory Service**：分层记忆与评审；schemaVersion 与迁移；hit_used 记录。
 - **EventBus**：run_events 持久化；SSE 续传；回放数据源。
 - **Observability Manager**：事件→metrics/spans/logs 的派生器；插件化输出。
+
+### 4.1 v2 模块增补
+- **Harness（智能体核心）**：Profile 版本、Loop 接缝、Provider 门面（[`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md)）。
+- **Sandbox**：Docker/进程隔离执行器；与 tool_risk 映射。
+- **Knowledge**：Repo Profile、Wiki 视图、Skills 索引（记忆体核心扩展）。
+- **Evolution**：统一 Feedback、双评审队列、Improve 升格（[`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md)）。
+- **Goal / Session**：NL 委派与 RPC/JSON 集成面（Agent Core）。
+
+双核职责与契约见 [`HLD-双核心-v2.md`](HLD-双核心-v2.md)。
 
 ## 5. 关键接口（契约冻结点）
 本节只列“必须冻结”的接口集合（详见后续附录或代码仓 `packages/*`）。

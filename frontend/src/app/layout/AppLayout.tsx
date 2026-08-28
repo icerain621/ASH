@@ -5,6 +5,7 @@ import {
 	Brain,
 	Building2,
 	ClipboardCheck,
+	ClipboardList,
 	Gauge,
 	HeartPulse,
 	MessageSquarePlus,
@@ -17,8 +18,9 @@ import {
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const tabs = [
-  { to: "/runs", label: "运行", icon: Activity },
+	{ to: "/runs", label: "运行", icon: Activity },
 	{ to: "/memory", label: "记忆", icon: Brain },
+	{ to: "/reviews", label: "评审", icon: ClipboardList },
 	{ to: "/automation", label: "自动化", icon: Workflow },
 	{ to: "/feedback", label: "反馈", icon: MessageSquarePlus },
 	{ to: "/ci", label: "CI", icon: GitBranch },

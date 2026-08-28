@@ -97,5 +97,7 @@ func migrationEntities() []migrationEntity {
 		{table: "audit_exports", model: &AuditExport{}, pk: "id", incremental: true},
 		{table: "plugin_registry", model: &PluginRegistry{}, pk: "id", incremental: true},
 		{table: "improve_proposals", model: &ImproveProposal{}, pk: "id", incremental: true},
+		{table: "harness_profile_versions", model: &HarnessProfileVersion{}, pk: "id", incremental: true},
+		{table: "scenario_patch_drafts", model: &ScenarioPatchDraft{}, pk: "id", incremental: true},
 	}
 }

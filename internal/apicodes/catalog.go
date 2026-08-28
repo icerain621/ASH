@@ -91,6 +91,26 @@ var Catalog = map[string]Entry{
 	"IMPROVE_PROMOTE_FAILED":    {Domain: "improve", Summary: "Promotion failed"},
 	"IMPROVE_ROLLBACK_FAILED":   {Domain: "improve", Summary: "Rollback failed"},
 
+	// harness (v2)
+	"HARNESS_LIST_FAILED":        {Domain: "harness", Summary: "Failed to list harness profiles"},
+	"HARNESS_CREATE_FAILED":      {Domain: "harness", Summary: "Failed to create harness profile"},
+	"HARNESS_GET_FAILED":         {Domain: "harness", Summary: "Failed to load harness profile"},
+	"HARNESS_UPDATE_FAILED":      {Domain: "harness", Summary: "Failed to update harness profile"},
+	"HARNESS_SUBMIT_FAILED":      {Domain: "harness", Summary: "Failed to submit harness profile for review"},
+	"HARNESS_PROMOTE_FAILED":     {Domain: "harness", Summary: "Failed to promote harness profile"},
+	"HARNESS_ROLLBACK_FAILED":    {Domain: "harness", Summary: "Failed to rollback harness profile"},
+	"HARNESS_LOAD_ACTIVE_FAILED": {Domain: "harness", Summary: "Failed to load active harness profile"},
+	"HARNESS_NOT_FOUND":          {Domain: "harness", Summary: "Harness profile not found"},
+	"SCENARIO_PATCH_LIST_FAILED":   {Domain: "evolve", Summary: "Failed to list scenario patches"},
+	"SCENARIO_PATCH_CREATE_FAILED": {Domain: "evolve", Summary: "Failed to create scenario patch"},
+	"SCENARIO_PATCH_SUBMIT_FAILED": {Domain: "evolve", Summary: "Failed to submit scenario patch"},
+	"SCENARIO_PATCH_NOT_FOUND":     {Domain: "evolve", Summary: "Scenario patch not found"},
+	"INVALID_TARGET_TYPE":        {Domain: "feedback", Summary: "Unsupported feedback targetType"},
+	"FEEDBACK_DUPLICATE":         {Domain: "feedback", Summary: "Duplicate feedback for run target"},
+	"REVIEWS_QUEUE_FAILED":       {Domain: "evolve", Summary: "Failed to list review queue"},
+	"INVALID_REVIEW_ID":          {Domain: "evolve", Summary: "Invalid review queue item id"},
+	"REVIEW_DECIDE_FAILED":       {Domain: "evolve", Summary: "Failed to decide review item"},
+
 	// ci / repo
 	"PLAINTEXT_TOKEN_REJECTED":      {Domain: "ci", Summary: "Repo connection must use secretId, not plaintext token"},
 	"INVALID_SECRET_REFERENCE":      {Domain: "ci", Summary: "secretId not found or inactive in space"},

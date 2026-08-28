@@ -38,6 +38,7 @@ import {
   updateAuditPolicy,
   verifyPlugin,
 } from "@/modules/platform/api/platform.api";
+import { HarnessProfilesPane } from "@/components/HarnessProfilesPane";
 import { ImproveProposalsPane } from "@/components/ImproveProposalsPane";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
@@ -790,6 +791,7 @@ export function AutomationPage() {
         </div>
       </div>
       <div className="split governance-grid">
+        <HarnessProfilesPane />
         <ImproveProposalsPane />
       </div>
     </section>

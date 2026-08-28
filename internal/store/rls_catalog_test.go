@@ -40,7 +40,7 @@ func TestPostgresRLSDeferredTables_notClassifiedAsProtected(t *testing.T) {
 
 func TestFormatRLSCatalogSummary(t *testing.T) {
 	s := FormatRLSCatalogSummary()
-	if !strings.Contains(s, "policies=41") || !strings.Contains(s, "org=4") {
+	if !strings.Contains(s, "policies=43") || !strings.Contains(s, "org=4") {
 		t.Fatalf("summary=%q", s)
 	}
 }

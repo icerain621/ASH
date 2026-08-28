@@ -15,4 +15,5 @@
 - `H-Proto-服务定义(插件ABI)v0.1.md`：gRPC/Buf 插件 ABI 草案与目录结构
 - `I-GORM-模型映射与迁移策略.md`：GORM 模型映射与迁移路线（SQLite→Postgres）
 - `J-数据分级与保留期.md`：分级表、默认保留期、脱敏样例、审计导出流程（PRD §8）
+- `K-演进平面-v2.md`：**v2** 统一 Feedback、双评审队列、Improve 自进化状态机与流程图
 
