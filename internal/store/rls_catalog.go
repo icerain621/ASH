@@ -79,8 +79,12 @@ func VerifyRLSMigrationSQL() error {
 	if err != nil {
 		return err
 	}
-	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20 + "\n" + raw21 + "\n" + raw23
-	tenantSQL := raw13 + "\n" + raw21 + "\n" + raw23
+	raw24, err := sqlmigrations.ReadPostgresUpSQL("000024_goal_plans.up.sql")
+	if err != nil {
+		return err
+	}
+	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24
+	tenantSQL := raw13 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24
 
 	for _, tbl := range PostgresRLSTables() {
 		needleParen := "('" + tbl.Table + "'"

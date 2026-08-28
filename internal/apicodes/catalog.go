@@ -110,6 +110,11 @@ var Catalog = map[string]Entry{
 	"REVIEWS_QUEUE_FAILED":       {Domain: "evolve", Summary: "Failed to list review queue"},
 	"INVALID_REVIEW_ID":          {Domain: "evolve", Summary: "Invalid review queue item id"},
 	"REVIEW_DECIDE_FAILED":       {Domain: "evolve", Summary: "Failed to decide review item"},
+	"GOAL_ROUTE_FAILED":          {Domain: "goal", Summary: "Failed to route goal to scenario"},
+	"GOAL_PLAN_NOT_FOUND":        {Domain: "goal", Summary: "Goal plan not found"},
+	"GOAL_PLAN_GET_FAILED":       {Domain: "goal", Summary: "Failed to load goal plan"},
+	"GOAL_PLAN_APPROVE_FAILED":   {Domain: "goal", Summary: "Failed to approve goal plan"},
+	"GOAL_PLAN_REJECT_FAILED":    {Domain: "goal", Summary: "Failed to reject goal plan"},
 
 	// ci / repo
 	"PLAINTEXT_TOKEN_REJECTED":      {Domain: "ci", Summary: "Repo connection must use secretId, not plaintext token"},

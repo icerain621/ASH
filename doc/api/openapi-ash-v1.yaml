@@ -595,6 +595,43 @@ components:
       properties:
         runId: { type: string }
         traceId: { type: string }
+    GoalFromRequest:
+      type: object
+      required: [goal]
+      properties:
+        goal: { type: string }
+        repoRoot: { type: string }
+        spaceId: { type: string }
+        actorRole: { type: string }
+        createdBy: { type: string }
+        autoApprove: { type: boolean }
+        policyProfile: { type: string }
+    GoalPlanStep:
+      type: object
+      properties:
+        id: { type: string }
+        role: { type: string }
+        kind: { type: string }
+    GoalPlanView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        goal: { type: string }
+        scenarioName: { type: string }
+        scenarioVersion: { type: string }
+        policyProfile: { type: string }
+        routeReason: { type: string }
+        inputs: { type: object, additionalProperties: true }
+        steps:
+          type: array
+          items: { $ref: "#/components/schemas/GoalPlanStep" }
+        status: { type: string, enum: [draft, approved, rejected, started] }
+        runId: { type: string }
+        traceId: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
     DoctorRunRequest:
       type: object
       required: [suite]
@@ -4076,6 +4113,70 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  /api/v1/runs/from-goal:
+    post:
+      tags: [Runs]
+      summary: Create a plan draft from a natural-language goal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/GoalFromRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalPlanView" }
+
+  /api/v1/runs/plans/{planId}:
+    get:
+      tags: [Runs]
+      summary: Get goal plan by id
+      parameters:
+        - in: path
+          name: planId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalPlanView" }
+
+  /api/v1/runs/plans/{planId}/approve:
+    post:
+      tags: [Runs]
+      summary: Approve goal plan and start a run
+      parameters:
+        - in: path
+          name: planId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalPlanView" }
+
+  /api/v1/runs/plans/{planId}/reject:
+    post:
+      tags: [Runs]
+      summary: Reject goal plan draft
+      parameters:
+        - in: path
+          name: planId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GoalPlanView" }
 
   /api/v1/runs/{runId}:
     get:

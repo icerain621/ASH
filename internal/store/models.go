@@ -730,6 +730,26 @@ type ScenarioPatchDraft struct {
 
 func (ScenarioPatchDraft) TableName() string { return "scenario_patch_drafts" }
 
+// GoalPlan stores NL goal → scenario plan drafts awaiting approval (v2 DJ).
+type GoalPlan struct {
+	ID              string    `gorm:"primaryKey;size:64"`
+	SpaceID         string    `gorm:"index;size:64;not null"`
+	Goal            string    `gorm:"type:text;not null"`
+	ScenarioName    string    `gorm:"size:128;not null;index"`
+	ScenarioVersion string    `gorm:"size:64;not null"`
+	PolicyProfile   string    `gorm:"size:64;not null;default:default"`
+	RouteReason     string    `gorm:"size:128"`
+	InputsJSON      string    `gorm:"type:text;not null;default:'{}'"`
+	StepsJSON       string    `gorm:"type:text;not null;default:'[]'"`
+	Status          string    `gorm:"size:32;not null;index"` // draft|approved|rejected|started
+	RunID           string    `gorm:"size:64;index"`
+	CreatedBy       string    `gorm:"size:128"`
+	CreatedAt       time.Time `gorm:"not null"`
+	UpdatedAt       time.Time `gorm:"not null"`
+}
+
+func (GoalPlan) TableName() string { return "goal_plans" }
+
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`
 	Value     string `gorm:"size:256;not null"`

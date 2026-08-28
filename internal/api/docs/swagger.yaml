@@ -356,6 +356,68 @@ definitions:
       title:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_goal.FromGoalRequest:
+    properties:
+      actorRole:
+        type: string
+      autoApprove:
+        type: boolean
+      createdBy:
+        type: string
+      goal:
+        type: string
+      policyProfile:
+        type: string
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_goal.PlanView:
+    properties:
+      createdAt:
+        type: integer
+      createdBy:
+        type: string
+      goal:
+        type: string
+      id:
+        type: string
+      inputs:
+        additionalProperties: {}
+        type: object
+      policyProfile:
+        type: string
+      routeReason:
+        type: string
+      runId:
+        type: string
+      scenarioName:
+        type: string
+      scenarioVersion:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      steps:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.StepPreview'
+        type: array
+      traceId:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_goal.StepPreview:
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+      role:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_harness.CompactionSpec:
     properties:
       enabled:
@@ -3196,6 +3258,13 @@ definitions:
       dryRun:
         type: boolean
     type: object
+  internal_api.approveGoalPlanRequest:
+    properties:
+      actorId:
+        type: string
+      reason:
+        type: string
+    type: object
   internal_api.artifactsManifestResponse:
     properties:
       artifacts: {}
@@ -3495,6 +3564,13 @@ definitions:
     - version
     type: object
   internal_api.rejectApprovalRequest:
+    properties:
+      actorId:
+        type: string
+      reason:
+        type: string
+    type: object
+  internal_api.rejectGoalPlanRequest:
     properties:
       actorId:
         type: string
@@ -6546,6 +6622,111 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: List run tool calls
+      tags:
+      - runs
+  /api/v1/runs/from-goal:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: goal
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.FromGoalRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Create a plan draft from a natural-language goal
+      tags:
+      - runs
+  /api/v1/runs/plans/{planId}:
+    get:
+      parameters:
+      - description: plan id
+        in: path
+        name: planId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get goal plan by id
+      tags:
+      - runs
+  /api/v1/runs/plans/{planId}/approve:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: plan id
+        in: path
+        name: planId
+        required: true
+        type: string
+      - description: approve
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.approveGoalPlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Approve goal plan and start a run
+      tags:
+      - runs
+  /api/v1/runs/plans/{planId}/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: plan id
+        in: path
+        name: planId
+        required: true
+        type: string
+      - description: reject
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.rejectGoalPlanRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Reject goal plan draft
       tags:
       - runs
   /api/v1/scale/readiness:

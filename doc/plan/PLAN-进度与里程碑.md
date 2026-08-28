@@ -3,7 +3,7 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **23** · RLS **43**（v2 DH–DZ）  
+> **代码锚点**：Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **24** · RLS **44**（v2 DH–DZ + DJ）  
 > **归属**：[`plan/`](README.md)  
 > **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
@@ -22,7 +22,7 @@
 | **M0** Feature 闭环 + 回放 + 记忆评审 + SSE + Prometheus + Doctor TR0 | ✅ 设计完成 | ✅ 已实现 | Runs/DSL/ToolBus/Artifacts/Memory/SSE/Doctor TR0 |
 | **M1** 三场景 + 引用门禁 + 记忆治理 + OTel/质量 + 自我迭代 + TR1/TR2 子集 | ✅ 设计完成 | ✅ 已实现 | hotfix/security_patch、citations、edges、improve、TR1/TR2 |
 | **M2** 组织权限/合规/多租户隔离 | ✅ 设计完成（基础） | ✅ 基础已实现 | `authz`、resource-scopes、policy.denied、合规导出 |
-| **M3** 规模化 / Postgres / RLS / Scale | ✅ 设计完成 | ✅ 本地已实现 | SQL **23**、RLS **43**（含 Harness + feedback.run_id + scenario_patch）；**云 RDS 切流未完成** |
+| **M3** 规模化 / Postgres / RLS / Scale | ✅ 设计完成 | ✅ 本地已实现 | SQL **24**、RLS **44**（含 Harness + feedback + scenario_patch + goal_plans）；**云 RDS 切流未完成** |
 | **PRD MVP 后四项** CI 诊断 / KPI / 反馈告警 / 发布治理 | ✅ 设计完成 | ✅ 已实现 | fixture 可验；**真实 GitHub/ExecGo 待生产验证** |
 | **P3 生态** 网关 / 技能市场 / 知识图谱 / 向量库 | ⚠️ 仅展望设计 | ❌ 未实现 | 范围冻结外 backlog |
 

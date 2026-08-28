@@ -260,6 +260,43 @@ export function createRun(body: CreateRunRequest) {
   });
 }
 
+export type GoalPlan = {
+  id: string;
+  spaceId: string;
+  goal: string;
+  scenarioName: string;
+  scenarioVersion: string;
+  policyProfile: string;
+  routeReason: string;
+  inputs: Record<string, unknown>;
+  steps: Array<{ id: string; role: string; kind: string }>;
+  status: string;
+  runId?: string;
+  traceId?: string;
+  createdAt: number;
+};
+
+export function createRunFromGoal(body: { goal: string; repoRoot?: string; autoApprove?: boolean; spaceId?: string }) {
+  return api<GoalPlan>("/runs/from-goal", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function approveGoalPlan(planId: string, body: { actorId?: string; reason?: string } = {}) {
+  return api<GoalPlan>(`/runs/plans/${planId}/approve`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function rejectGoalPlan(planId: string, body: { actorId?: string; reason?: string } = {}) {
+  return api<GoalPlan>(`/runs/plans/${planId}/reject`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function resumeRun(runId: string) {
   return api<{ runId: string; traceId: string; status: string }>(`/runs/${runId}/resume`, {
     method: "POST",

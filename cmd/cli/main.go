@@ -14,6 +14,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
@@ -29,6 +30,8 @@ func main() {
 	switch os.Args[1] {
 	case "run":
 		runScenario(os.Args[2:])
+	case "quest":
+		runQuest(os.Args[2:])
 	case "replay":
 		runReplay(os.Args[2:])
 	case "cancel":
@@ -46,7 +49,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
 }
 
 func runPluginSign(args []string) {
@@ -105,6 +108,51 @@ func runScenario(args []string) {
 		log.Fatalf("run failed: %v", err)
 	}
 	emitRunResult(runsSvc, resp.RunID, resp.TraceID, *format)
+}
+
+func runQuest(args []string) {
+	fs := flag.NewFlagSet("quest", flag.ExitOnError)
+	repo := fs.String("repo", ".", "repository root")
+	yes := fs.Bool("yes", false, "auto-approve plan and start run")
+	agent := fs.String("agent", "static", "agent executor: execgo_codex|static")
+	format := fs.String("format", "json", "output format: json|md")
+	_ = fs.Parse(args)
+	goalText := strings.TrimSpace(strings.Join(fs.Args(), " "))
+	if goalText == "" {
+		log.Fatal("quest requires a goal string, e.g. ash quest \"Add dark mode\"")
+	}
+	cfg := config.Load()
+	db, err := store.Open(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	scenariosDir := resolveScenariosDir(cfg.ScenariosDir)
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		log.Fatalf("load scenarios: %v", err)
+	}
+	ev := events.NewService(db)
+	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus())
+	if *agent == "static" {
+		runsSvc.WithAgentExecutor(agentexec.StaticExecutor{})
+	}
+	goalSvc := goal.NewService(db, loader, runsSvc, ev)
+	plan, err := goalSvc.FromGoal(goal.FromGoalRequest{
+		Goal: goalText, RepoRoot: *repo, SpaceID: "local", CreatedBy: "cli", AutoApprove: *yes,
+	})
+	if err != nil && plan == nil {
+		log.Fatalf("quest failed: %v", err)
+	}
+	if !*yes {
+		b, _ := json.MarshalIndent(plan, "", "  ")
+		fmt.Println(string(b))
+		fmt.Fprintf(os.Stderr, "Plan %s is draft. Re-run with --yes to approve, or POST /runs/plans/%s/approve\n", plan.ID, plan.ID)
+		return
+	}
+	if plan.RunID == "" {
+		log.Fatal("auto-approve did not produce runId")
+	}
+	emitRunResult(runsSvc, plan.RunID, plan.TraceID, *format)
 }
 
 func runReplay(args []string) {

@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL 43/43 · M3 11/11 · TR3 10/10 |
-| Schema | SQL rev **23**（+scenario_patch_drafts）· RLS **43**（代码水位；云 H-01 仍按切流前验收） |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ** |
+| Schema | SQL rev **24**（+goal_plans）· RLS **44**（代码水位；云 H-01 仍按切流前验收） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ** |
 
 ---
 
@@ -25,7 +25,8 @@
 | DX | Sandbox POC | process/Docker + `sandbox-smoke` + danger/`off` 拒绝 | ✅ |
 | DY | 演进平面 | feedback 全类型 + `/reviews/queue` + decide | ✅ |
 | DZ | 编排 UI / promote 硬化 | Reviews 页 + promote 闸门 + scenario patch + rollback | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · DH–DZ sprint 计划 | — |
+| DJ | Goal→Run + Plan | from-goal + approve + `ash quest` + Runs Quest UI | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DK** | — |
 
 ---
 
@@ -103,6 +104,7 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）
 - Sprint DX：Sandbox POC（Authorize + process/Docker + `sandbox-smoke`）

@@ -9,9 +9,11 @@ import { CheckCircle, Download, ExternalLink, GitBranch, Link2, Play, RefreshCw,
 import { useEffect, useMemo, useState } from "react";
 import { ApiError } from "@/services/http/client";
 import {
+  approveGoalPlan,
   approveRun,
   cancelRun,
   createRun,
+  createRunFromGoal,
   getRun,
   getRunArtifactAccess,
   getRunAgentTasks,
@@ -24,6 +26,7 @@ import {
   getRunProvenance,
   getRunWaterfall,
   listRuns,
+  rejectGoalPlan,
   replayRun,
   resumeRun,
   type ArtifactAccessResponse,
@@ -31,6 +34,7 @@ import {
   type AgentTask,
   type Checkpoint,
   type CheckpointAccessResponse,
+  type GoalPlan,
   type QualityMetric,
   type RunSummary,
   type TimelineItem,
@@ -288,6 +292,9 @@ export function RunsPage() {
   const [replayMode, setReplayMode] = useState<"exact" | "latest_memory">("exact");
   const [actionMessage, setActionMessage] = useState<string | null>(null);
   const [scenarioKeyValue, setScenarioKeyValue] = useState("feature_delivery@1.0.0");
+  const [goalText, setGoalText] = useState("");
+  const [goalRepo, setGoalRepo] = useState(".");
+  const [goalPlan, setGoalPlan] = useState<GoalPlan | null>(null);
   const [actorRole, setActorRole] = useState<(typeof ACTOR_ROLES)[number]>("maintainer");
 
   const scenariosQuery = useQuery({
@@ -414,6 +421,41 @@ export function RunsPage() {
     },
   });
 
+  const fromGoalMut = useMutation({
+    mutationFn: () =>
+      createRunFromGoal({
+        goal: goalText.trim(),
+        repoRoot: goalRepo.trim() || ".",
+        spaceId: activeSpaceId !== "local" ? activeSpaceId : undefined,
+      }),
+    onSuccess: (plan) => {
+      setGoalPlan(plan);
+      setActionMessage(`Plan ${shortId(plan.id)} → ${plan.scenarioName}@${plan.scenarioVersion}`);
+    },
+  });
+
+  const approvePlanMut = useMutation({
+    mutationFn: (planId: string) =>
+      approveGoalPlan(planId, { actorId: "console", reason: "approved from Runs Quest" }),
+    onSuccess: async (plan) => {
+      setGoalPlan(plan);
+      await qc.invalidateQueries({ queryKey: ["runs"] });
+      if (plan.runId) {
+        setSelectedId(plan.runId);
+        setActionMessage(`已启动 ${shortId(plan.runId)}`);
+      }
+    },
+  });
+
+  const rejectPlanMut = useMutation({
+    mutationFn: (planId: string) =>
+      rejectGoalPlan(planId, { actorId: "console", reason: "rejected from Runs Quest" }),
+    onSuccess: (plan) => {
+      setGoalPlan(plan);
+      setActionMessage("Plan 已拒绝");
+    },
+  });
+
   const resumeMut = useMutation({
     mutationFn: () => resumeRun(selectedId!),
     onSuccess: async () => {
@@ -476,6 +518,9 @@ export function RunsPage() {
   const err =
     formatControlError(runsQuery.error) ||
     formatControlError(createMut.error) ||
+    formatControlError(fromGoalMut.error) ||
+    formatControlError(approvePlanMut.error) ||
+    formatControlError(rejectPlanMut.error) ||
     formatControlError(resumeMut.error) ||
     formatControlError(replayMut.error) ||
     formatControlError(cancelMut.error) ||
@@ -548,6 +593,66 @@ export function RunsPage() {
         </div>
       </div>
       {err && <p className="error-text">{err}</p>}
+      <div className="pane" data-testid="quest-pane" style={{ marginBottom: "1rem" }}>
+        <div className="pane-title">
+          <h2>Quest · 从目标创建</h2>
+          <span>{goalPlan ? goalPlan.status : "draft plan"}</span>
+        </div>
+        <div className="secret-form">
+          <label className="wide-field">
+            Goal
+            <input
+              value={goalText}
+              onChange={(e) => setGoalText(e.target.value)}
+              placeholder="例如：紧急热修线上支付 或 Add dark mode"
+              data-testid="quest-goal-input"
+            />
+          </label>
+          <label>
+            repoRoot
+            <input value={goalRepo} onChange={(e) => setGoalRepo(e.target.value)} data-testid="quest-repo-input" />
+          </label>
+          <button
+            className="btn primary"
+            type="button"
+            disabled={fromGoalMut.isPending || !goalText.trim()}
+            onClick={() => fromGoalMut.mutate()}
+            data-testid="quest-route"
+          >
+            生成 Plan
+          </button>
+        </div>
+        {goalPlan ? (
+          <div data-testid="quest-plan-preview">
+            <p className="muted-line">
+              {goalPlan.scenarioName}@{goalPlan.scenarioVersion} · {goalPlan.routeReason} · {goalPlan.steps?.length ?? 0} steps
+            </p>
+            <pre className="code-block compact">{JSON.stringify({ inputs: goalPlan.inputs, steps: goalPlan.steps }, null, 2)}</pre>
+            {goalPlan.status === "draft" ? (
+              <div className="row-actions">
+                <button
+                  className="btn mini ok"
+                  type="button"
+                  disabled={approvePlanMut.isPending}
+                  onClick={() => approvePlanMut.mutate(goalPlan.id)}
+                  data-testid="quest-approve"
+                >
+                  批准并启动
+                </button>
+                <button
+                  className="btn mini err"
+                  type="button"
+                  disabled={rejectPlanMut.isPending}
+                  onClick={() => rejectPlanMut.mutate(goalPlan.id)}
+                  data-testid="quest-reject"
+                >
+                  拒绝
+                </button>
+              </div>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
       <div className="split runs-grid">
         <div className="pane">
           <div className="pane-title">

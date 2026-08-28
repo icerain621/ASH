@@ -3921,6 +3921,169 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/runs/from-goal": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Create a plan draft from a natural-language goal",
+                "parameters": [
+                    {
+                        "description": "goal",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.FromGoalRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/plans/{planId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Get goal plan by id",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "plan id",
+                        "name": "planId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/plans/{planId}/approve": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Approve goal plan and start a run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "plan id",
+                        "name": "planId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "approve",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.approveGoalPlanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/plans/{planId}/reject": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Reject goal plan draft",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "plan id",
+                        "name": "planId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "reject",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.rejectGoalPlanRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.PlanView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs/{runId}": {
             "get": {
                 "produces": [
@@ -5978,6 +6141,100 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_goal.FromGoalRequest": {
+            "type": "object",
+            "properties": {
+                "actorRole": {
+                    "type": "string"
+                },
+                "autoApprove": {
+                    "type": "boolean"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "goal": {
+                    "type": "string"
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_goal.PlanView": {
+            "type": "object",
+            "properties": {
+                "createdAt": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "goal": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inputs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "routeReason": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "scenarioName": {
+                    "type": "string"
+                },
+                "scenarioVersion": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "steps": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_goal.StepPreview"
+                    }
+                },
+                "traceId": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_goal.StepPreview": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "role": {
                     "type": "string"
                 }
             }
@@ -10315,6 +10572,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.approveGoalPlanRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.artifactsManifestResponse": {
             "type": "object",
             "properties": {
@@ -10769,6 +11037,17 @@ const docTemplate = `{
             }
         },
         "internal_api.rejectApprovalRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.rejectGoalPlanRequest": {
             "type": "object",
             "properties": {
                 "actorId": {

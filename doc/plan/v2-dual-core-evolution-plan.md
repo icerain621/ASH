@@ -184,7 +184,7 @@ flowchart TB
 | 3–4 | **DH** | v2 开发启动 | Harness 骨架 | ✅ Schema + 000021 + API + `harness-smoke` |
 | 5–6 | **DI** | — | Loop 接缝 + RPC 草案 | ✅ Adapter + harness 事件 + sandbox stub（RPC 仍预留） |
 | 7–8 | **DX** | v2.0.0-alpha.1 | **沙盒 POC** | ✅ process/Docker + `sandbox-smoke` + danger/`off` 拒绝 |
-| 9–10 | **DJ** | — | Goal→Run + Plan | `POST /runs/from-goal`、`ash quest` |
+| 9–10 | **DJ** | — | Goal→Run + Plan | ✅ from-goal + Plan 闸门 + `ash quest` + Runs Quest UI |
 | 11–12 | **DK** | — | Quest 工作台 v1 | 看板、Diff 审查、步骤评分 |
 | 13–14 | **DY** | — | 演进平面基础 | ✅ feedback 全类型 + `/reviews/queue` + decide |
 | 15–16 | **DL** | — | Repo Profile + Wiki | 知识 Tab、contextRefs |

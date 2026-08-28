@@ -15,6 +15,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/evolve"
+	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/memory"
@@ -45,6 +46,7 @@ type Handler struct {
 	harness       *harness.Service
 	patches       *scenariopatch.Service
 	evolve        *evolve.Service
+	goal          *goal.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -76,6 +78,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		harness:   harSvc,
 		patches:   patchSvc,
 		evolve:    evolve.NewService(db, memSvc, harSvc, patchSvc),
+		goal:      goal.NewService(db, scenarios, runsSvc, ev),
 	}
 }
 
@@ -92,6 +95,10 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 	v1.Use(h.rlsMiddleware())
 	{
 		v1.POST("/runs", h.createRun)
+		v1.POST("/runs/from-goal", h.fromGoal)
+		v1.GET("/runs/plans/:planId", h.getGoalPlan)
+		v1.POST("/runs/plans/:planId/approve", h.approveGoalPlan)
+		v1.POST("/runs/plans/:planId/reject", h.rejectGoalPlan)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)
 		v1.GET("/runs/:runId/stream", h.streamRun)

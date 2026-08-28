@@ -70,6 +70,9 @@ vi.mock("@/modules/runs/api/runs.api", () => ({
   getRunArtifactAccess: vi.fn(),
   getRunCheckpointAccess: vi.fn(),
   createRun: vi.fn(),
+  createRunFromGoal: vi.fn(),
+  approveGoalPlan: vi.fn(),
+  rejectGoalPlan: vi.fn(),
   cancelRun: vi.fn(),
   approveRun: vi.fn(),
   resumeRun: vi.fn(),
@@ -107,6 +110,7 @@ describe("RunsPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "新建运行" })).toBeInTheDocument();
     });
+    expect(screen.getByTestId("quest-pane")).toBeInTheDocument();
   });
 
   it("shows SSE reconnecting status label", async () => {
