@@ -14,13 +14,16 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/diffreview"
 	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/improve"
+	"github.com/ash-repwiki/ash/internal/knowledge"
 	"github.com/ash-repwiki/ash/internal/memory"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/opsenv"
+	"github.com/ash-repwiki/ash/internal/quest"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
@@ -47,6 +50,9 @@ type Handler struct {
 	patches       *scenariopatch.Service
 	evolve        *evolve.Service
 	goal          *goal.Service
+	quest         *quest.Service
+	diffReview    *diffreview.Service
+	knowledge     *knowledge.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -77,8 +83,11 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		releases:  releases.NewService(db),
 		harness:   harSvc,
 		patches:   patchSvc,
-		evolve:    evolve.NewService(db, memSvc, harSvc, patchSvc),
-		goal:      goal.NewService(db, scenarios, runsSvc, ev),
+		evolve:     evolve.NewService(db, memSvc, harSvc, patchSvc),
+		goal:       goal.NewService(db, scenarios, runsSvc, ev),
+		quest:      quest.NewService(db, runsSvc),
+		diffReview: diffreview.NewService(db, runsSvc),
+		knowledge:  knowledge.NewService(db, memSvc),
 	}
 }
 
@@ -99,6 +108,10 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/runs/plans/:planId", h.getGoalPlan)
 		v1.POST("/runs/plans/:planId/approve", h.approveGoalPlan)
 		v1.POST("/runs/plans/:planId/reject", h.rejectGoalPlan)
+		v1.GET("/quest/board", h.questBoard)
+		v1.GET("/repos/profile", h.getRepoProfile)
+		v1.GET("/wiki/pages", h.listWikiPages)
+		v1.GET("/wiki/pages/:pageId", h.getWikiPage)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)
 		v1.GET("/runs/:runId/stream", h.streamRun)
@@ -107,6 +120,10 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/runs/:runId/checkpoints", h.listRunCheckpoints)
 		v1.GET("/runs/:runId/checkpoints/:checkpointId/access", h.getRunCheckpointAccess)
 		v1.GET("/runs/:runId/timeline", h.getRunTimeline)
+		v1.GET("/runs/:runId/diff", h.getRunDiff)
+		v1.GET("/runs/:runId/diff/comments", h.listDiffComments)
+		v1.POST("/runs/:runId/diff/comments", h.createDiffComment)
+		v1.POST("/runs/:runId/steps/:stepId/rate", h.rateRunStep)
 		v1.GET("/runs/:runId/tool-calls", h.listRunToolCalls)
 		v1.GET("/runs/:runId/agent-tasks", h.listRunAgentTasks)
 		v1.GET("/runs/:runId/quality-metrics", h.listRunQualityMetrics)

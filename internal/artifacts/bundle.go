@@ -25,10 +25,11 @@ type Entry struct {
 
 // Manifest is the required artifact index for a run.
 type Manifest struct {
-	RunID     string         `json:"runId"`
-	Scenario  map[string]any `json:"scenario"`
-	CreatedAt int64          `json:"createdAt"`
-	Artifacts []Entry        `json:"artifacts"`
+	RunID        string         `json:"runId"`
+	Scenario     map[string]any `json:"scenario"`
+	CreatedAt    int64          `json:"createdAt"`
+	ContextRefs  []string       `json:"contextRefs,omitempty"`
+	Artifacts    []Entry        `json:"artifacts"`
 }
 
 // BundleMeta identifies the run for manifest generation.
@@ -79,7 +80,8 @@ func WriteBundle(runDir string, meta BundleMeta) (*Manifest, error) {
 			"name":            meta.ScenarioName,
 			"scenarioVersion": meta.ScenarioVersion,
 		},
-		CreatedAt: time.Now().UTC().UnixMilli(),
+		CreatedAt:   time.Now().UTC().UnixMilli(),
+		ContextRefs: append([]string(nil), meta.EvidenceRefs...),
 	}
 
 	coreProducer := map[string]any{

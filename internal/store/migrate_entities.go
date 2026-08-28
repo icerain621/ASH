@@ -100,5 +100,6 @@ func migrationEntities() []migrationEntity {
 		{table: "harness_profile_versions", model: &HarnessProfileVersion{}, pk: "id", incremental: true},
 		{table: "scenario_patch_drafts", model: &ScenarioPatchDraft{}, pk: "id", incremental: true},
 		{table: "goal_plans", model: &GoalPlan{}, pk: "id", incremental: true},
+		{table: "diff_review_comments", model: &DiffReviewComment{}, pk: "id", incremental: true},
 	}
 }

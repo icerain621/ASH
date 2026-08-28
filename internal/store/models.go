@@ -750,6 +750,22 @@ type GoalPlan struct {
 
 func (GoalPlan) TableName() string { return "goal_plans" }
 
+// DiffReviewComment stores line-anchored review notes on a run's unified diff (v2 DK).
+type DiffReviewComment struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"index;size:64;not null"`
+	RunID     string    `gorm:"index;size:64;not null"`
+	FilePath  string    `gorm:"size:512;not null;index"`
+	LineIndex int       `gorm:"not null"` // DiffLine.Index within file
+	Side      string    `gorm:"size:16;not null;default:new"` // new|old|context
+	Body      string    `gorm:"type:text;not null"`
+	CreatedBy string    `gorm:"size:128"`
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+}
+
+func (DiffReviewComment) TableName() string { return "diff_review_comments" }
+
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`
 	Value     string `gorm:"size:256;not null"`

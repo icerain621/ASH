@@ -115,6 +115,13 @@ var Catalog = map[string]Entry{
 	"GOAL_PLAN_GET_FAILED":       {Domain: "goal", Summary: "Failed to load goal plan"},
 	"GOAL_PLAN_APPROVE_FAILED":   {Domain: "goal", Summary: "Failed to approve goal plan"},
 	"GOAL_PLAN_REJECT_FAILED":    {Domain: "goal", Summary: "Failed to reject goal plan"},
+	"QUEST_BOARD_FAILED":         {Domain: "quest", Summary: "Failed to load quest board"},
+	"REPO_PROFILE_FAILED":        {Domain: "knowledge", Summary: "Failed to build repo profile"},
+	"WIKI_LIST_FAILED":           {Domain: "knowledge", Summary: "Failed to list wiki pages"},
+	"WIKI_GET_FAILED":            {Domain: "knowledge", Summary: "Failed to get wiki page"},
+	"DIFF_GET_FAILED":            {Domain: "quest", Summary: "Failed to load run diff"},
+	"DIFF_COMMENT_LIST_FAILED":   {Domain: "quest", Summary: "Failed to list diff comments"},
+	"DIFF_COMMENT_CREATE_FAILED": {Domain: "quest", Summary: "Failed to create diff comment"},
 
 	// ci / repo
 	"PLAINTEXT_TOKEN_REJECTED":      {Domain: "ci", Summary: "Repo connection must use secretId, not plaintext token"},

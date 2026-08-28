@@ -17,6 +17,8 @@ import (
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
+	"github.com/ash-repwiki/ash/internal/knowledge"
+	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/sandbox"
@@ -128,6 +130,7 @@ type Service struct {
 	rag        *rag.Service
 	artifacts  artifactstore.Store
 	harnessSvc *harness.Service
+	knowledge  *knowledge.Service
 	loopAd     *loop.Adapter
 	ctx        context.Context
 }
@@ -137,12 +140,14 @@ func NewService(db *store.DB, ev *events.Service, scenarios *rules.Loader, tools
 		tools = toolbus.DefaultBus()
 	}
 	cfg := config.Load()
+	memSvc := memory.NewService(db, ev)
 	s := &Service{
 		db: db, events: ev, scenarios: scenarios, tools: tools,
 		agent:      agentexec.NewExecGoCodexExecutor(),
 		rag:        rag.NewService(db),
 		artifacts:  artifactstore.New(cfg.ArtifactStore, db.DataDir()),
 		harnessSvc: harness.NewService(db),
+		knowledge:  knowledge.NewService(db, memSvc),
 	}
 	s.loopAd = loop.NewAdapter(
 		&runEventEmitter{svc: s},
@@ -215,7 +220,7 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	out := &Service{
 		db: s.db, events: s.events, scenarios: s.scenarios, tools: s.tools,
 		agent: s.agent, rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
-		harnessSvc: s.harnessSvc,
+		harnessSvc: s.harnessSvc, knowledge: s.knowledge,
 	}
 	if s.harnessSvc != nil {
 		out.harnessSvc = s.harnessSvc.WithContext(ctx)

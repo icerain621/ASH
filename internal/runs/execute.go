@@ -461,9 +461,7 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 			_, _ = s.eventsFor().Append(runID, traceID, "memory.query_failed", "warn", map[string]any{
 				"error": err.Error(),
 			})
-			return refs
-		}
-		if len(memories) > 0 {
+		} else if len(memories) > 0 {
 			recordIDs := make([]string, 0, len(memories))
 			memoryRefs := make([]string, 0, len(memories))
 			hitsByLayer := map[string]int{}
@@ -481,6 +479,15 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 			})
 			_ = s.writeAudit(runID, traceID, "memory.hit_used", map[string]any{
 				"recordIds": recordIDs, "actorId": "ash-runner",
+			})
+		}
+	}
+	if s.knowledge != nil {
+		krefs := s.knowledge.ContextRefsForRun(spaceID, repoRoot, issue)
+		if len(krefs) > 0 {
+			refs = appendUnique(refs, krefs...)
+			_, _ = s.eventsFor().Append(runID, traceID, "knowledge.injected", "info", map[string]any{
+				"count": len(krefs), "refs": krefs,
 			})
 		}
 	}

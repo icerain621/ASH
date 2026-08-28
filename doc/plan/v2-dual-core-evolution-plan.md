@@ -185,9 +185,9 @@ flowchart TB
 | 5–6 | **DI** | — | Loop 接缝 + RPC 草案 | ✅ Adapter + harness 事件 + sandbox stub（RPC 仍预留） |
 | 7–8 | **DX** | v2.0.0-alpha.1 | **沙盒 POC** | ✅ process/Docker + `sandbox-smoke` + danger/`off` 拒绝 |
 | 9–10 | **DJ** | — | Goal→Run + Plan | ✅ from-goal + Plan 闸门 + `ash quest` + Runs Quest UI |
-| 11–12 | **DK** | — | Quest 工作台 v1 | 看板、Diff 审查、步骤评分 |
+| 11–12 | **DK** | — | Quest 工作台 v1 | ✅ 看板 + 深 Diff 批注 + 步骤评分 + contextRefs |
 | 13–14 | **DY** | — | 演进平面基础 | ✅ feedback 全类型 + `/reviews/queue` + decide |
-| 15–16 | **DL** | — | Repo Profile + Wiki | 知识 Tab、contextRefs |
+| 15–16 | **DL** | — | Repo Profile + Wiki | ✅ 即时 Profile/Wiki + 知识 Tab + contextRefs（无新表） |
 | 17–18 | **DM** | — | Space Rules + 路由 | Goal 填槽增强 |
 | 19–20 | **DN** | v2.0.0-alpha | Skills 目录 | `SKILL.md`、场景绑定 |
 | 21–22 | **DO** | — | Sub-run | 事件树、Policy 白名单 |

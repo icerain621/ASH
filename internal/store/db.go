@@ -208,6 +208,7 @@ func (db *DB) migrate() error {
 		&HarnessProfileVersion{},
 		&ScenarioPatchDraft{},
 		&GoalPlan{},
+		&DiffReviewComment{},
 		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate: %w", err)

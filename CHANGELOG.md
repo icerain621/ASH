@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DL（v2）：Repo Profile + Wiki（方案 B）— `GET /repos/profile`、`/wiki/pages*` 即时投影（无新表）；Run `prepareExecutionContext` 注入 `profile:`/`wiki:`；控制台 `/ui/knowledge`。
+- Sprint DK（v2）：Quest 工作台 — `/ui/quest` 看板、unified Diff 行级批注、步骤评分；manifest `contextRefs`；表 `diff_review_comments`（SQL **25** / RLS **45**）。
 - Sprint DJ（v2）：Goal→Plan→Run — `POST /runs/from-goal`、Plan approve/reject、`ash quest`、Runs 页 Quest 表单；表 `goal_plans`（SQL **24** / RLS **44**）。
 - Sprint DZ（v2）：编排评审 UI + promote 硬化 — promote 仅 `in_review`；`POST .../rollback`；`scenario_patch_drafts`（SQL **23** / RLS **43**）+ `/scenario-patches*`；Reviews 页双队列 + Scenario patch 草稿；Automation Harness Profile 面板；Feedback targetType 对齐附录 K。
 - Sprint DY（v2）：演进平面基础 — feedback `targetType` 白名单（含 `harness_profile` 等）+ `runId` 去重；`GET /api/v1/reviews/queue`；`POST /api/v1/reviews/{id}/decide`（memory / harness）；SQL rev **22**（feedback.run_id）。

@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL 43/43 · M3 11/11 · TR3 10/10 |
-| Schema | SQL rev **24**（+goal_plans）· RLS **44**（代码水位；云 H-01 仍按切流前验收） |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ** |
+| Schema | SQL rev **25**（+diff_review_comments）· RLS **45** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ–DL** |
 
 ---
 
@@ -26,7 +26,9 @@
 | DY | 演进平面 | feedback 全类型 + `/reviews/queue` + decide | ✅ |
 | DZ | 编排 UI / promote 硬化 | Reviews 页 + promote 闸门 + scenario patch + rollback | ✅ |
 | DJ | Goal→Run + Plan | from-goal + approve + `ash quest` + Runs Quest UI | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DK** | — |
+| DK | Quest 工作台 v1 | 看板 + 深 Diff 批注 + 步骤评分 + contextRefs | ✅ |
+| DL | Repo Profile + Wiki | 即时 Profile/Wiki API + `/ui/knowledge` + contextRefs（无新表） | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DM** | — |
 
 ---
 
@@ -104,6 +106,8 @@ make regression-short && make web-gate
 
 ## 已完成归档（摘要）
 
+- Sprint DK：Quest 工作台（看板 / Diff 行批注 / 步骤评分 / contextRefs；SQL 25 / RLS 45）
+- Sprint DL：Repo Profile + Wiki（方案 B 即时投影、无新表；`/repos/profile` `/wiki/pages*`；Run `knowledge.injected`；`/ui/knowledge`）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

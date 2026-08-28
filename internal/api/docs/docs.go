@@ -3275,6 +3275,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/quest/board": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Quest workbench kanban board",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "default": 80,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_quest.BoardResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rag/index": {
             "post": {
                 "consumes": [
@@ -3748,6 +3776,34 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/repos/profile": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge"
+                ],
+                "summary": "Build ephemeral repo profile",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "repository root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_knowledge.RepoProfile"
                         }
                     }
                 }
@@ -4426,6 +4482,100 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/runs/{runId}/diff": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Get parsed unified diff for a run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.DiffView"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/{runId}/diff/comments": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "List line-level diff review comments",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.diffCommentListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Create a line-level diff review comment",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "comment",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CreateCommentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs/{runId}/provenance": {
             "get": {
                 "produces": [
@@ -4623,6 +4773,53 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/{runId}/steps/{stepId}/rate": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Rate a run step (feedback targetType=run_step)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "step id",
+                        "name": "stepId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "rating",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.rateStepRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback"
                         }
                     }
                 }
@@ -5535,6 +5732,79 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/wiki/pages": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge"
+                ],
+                "summary": "List ephemeral wiki page projections",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "repository root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "search query",
+                        "name": "q",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.wikiListAPIResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/wiki/pages/{pageId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "knowledge"
+                ],
+                "summary": "Get a wiki page projection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "page id",
+                        "name": "pageId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "repository root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_knowledge.WikiPage"
+                        }
+                    }
+                }
+            }
+        },
         "/healthz": {
             "get": {
                 "produces": [
@@ -5999,6 +6269,137 @@ const docTemplate = `{
                 },
                 "memoryTtlReviewDays": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffparse.DiffLine": {
+            "type": "object",
+            "properties": {
+                "index": {
+                    "description": "stable index within file for anchoring",
+                    "type": "integer"
+                },
+                "kind": {
+                    "description": "context|add|del|meta",
+                    "type": "string"
+                },
+                "newNo": {
+                    "type": "integer"
+                },
+                "oldNo": {
+                    "type": "integer"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffparse.FileDiff": {
+            "type": "object",
+            "properties": {
+                "hunks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffparse.Hunk"
+                    }
+                },
+                "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffparse.Hunk": {
+            "type": "object",
+            "properties": {
+                "header": {
+                    "type": "string"
+                },
+                "lines": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffparse.DiffLine"
+                    }
+                },
+                "newStart": {
+                    "type": "integer"
+                },
+                "oldStart": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffreview.CommentView": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "lineIndex": {
+                    "type": "integer"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "side": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffreview.CreateCommentRequest": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "createdBy": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "lineIndex": {
+                    "type": "integer"
+                },
+                "side": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffreview.DiffView": {
+            "type": "object",
+            "properties": {
+                "contextRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffparse.FileDiff"
+                    }
+                },
+                "raw": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
                 }
             }
         },
@@ -6549,6 +6950,80 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_knowledge.RepoProfile": {
+            "type": "object",
+            "properties": {
+                "contextRef": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "languages": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "markers": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "boolean"
+                    }
+                },
+                "modules": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                },
+                "testCommands": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_knowledge.WikiPage": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "contextRef": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "layer": {
+                    "type": "string"
+                },
+                "memoryId": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "memory|synthetic",
+                    "type": "string"
+                },
+                "tags": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "title": {
                     "type": "string"
                 }
             }
@@ -7518,6 +7993,56 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_quest.BoardItem": {
+            "type": "object",
+            "properties": {
+                "column": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "description": "plan|run",
+                    "type": "string"
+                },
+                "planId": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "scenario": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_quest.BoardResponse": {
+            "type": "object",
+            "properties": {
+                "columns": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_quest.BoardItem"
+                        }
                     }
                 }
             }
@@ -10857,6 +11382,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.diffCommentListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView"
+                    }
+                }
+            }
+        },
         "internal_api.doctorRunRequest": {
             "type": "object",
             "required": [
@@ -10971,6 +11507,23 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleInput"
                     }
+                }
+            }
+        },
+        "internal_api.rateStepRequest": {
+            "type": "object",
+            "required": [
+                "rating"
+            ],
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "comment": {
+                    "type": "string"
+                },
+                "rating": {
+                    "type": "integer"
                 }
             }
         },
@@ -11146,6 +11699,20 @@ const docTemplate = `{
             ],
             "properties": {
                 "policyJson": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.wikiListAPIResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_knowledge.WikiPage"
+                    }
+                },
+                "query": {
                     "type": "string"
                 }
             }

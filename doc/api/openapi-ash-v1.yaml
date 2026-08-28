@@ -41,6 +41,8 @@ tags:
   - name: Feedback
   - name: Harness
   - name: Reviews
+  - name: Quest
+  - name: Knowledge
   - name: Metrics
   - name: Observability
   - name: Releases
@@ -632,6 +634,133 @@ components:
         createdBy: { type: string }
         createdAt: { type: integer, format: int64 }
         updatedAt: { type: integer, format: int64 }
+    QuestBoardItem:
+      type: object
+      properties:
+        id: { type: string }
+        kind: { type: string }
+        title: { type: string }
+        status: { type: string }
+        column: { type: string }
+        scenario: { type: string }
+        runId: { type: string }
+        planId: { type: string }
+        spaceId: { type: string }
+        updatedAt: { type: integer, format: int64 }
+    QuestBoardResponse:
+      type: object
+      required: [columns]
+      properties:
+        columns:
+          type: object
+          additionalProperties:
+            type: array
+            items: { $ref: "#/components/schemas/QuestBoardItem" }
+    RepoProfile:
+      type: object
+      required: [id, repoRoot, summary, contextRef]
+      properties:
+        id: { type: string }
+        repoRoot: { type: string }
+        languages:
+          type: array
+          items: { type: string }
+        modules:
+          type: array
+          items: { type: string }
+        testCommands:
+          type: array
+          items: { type: string }
+        markers:
+          type: object
+          additionalProperties: { type: boolean }
+        summary: { type: string }
+        contextRef: { type: string }
+    WikiPage:
+      type: object
+      required: [id, title, body, source, contextRef]
+      properties:
+        id: { type: string }
+        title: { type: string }
+        body: { type: string }
+        layer: { type: string }
+        source: { type: string }
+        memoryId: { type: string }
+        contextRef: { type: string }
+        tags:
+          type: array
+          items: { type: string }
+    WikiListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WikiPage" }
+        query: { type: string }
+    RunDiffLine:
+      type: object
+      properties:
+        kind: { type: string }
+        text: { type: string }
+        oldNo: { type: integer }
+        newNo: { type: integer }
+        index: { type: integer }
+    RunDiffHunk:
+      type: object
+      properties:
+        header: { type: string }
+        oldStart: { type: integer }
+        newStart: { type: integer }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/RunDiffLine" }
+    RunDiffFile:
+      type: object
+      properties:
+        path: { type: string }
+        hunks:
+          type: array
+          items: { $ref: "#/components/schemas/RunDiffHunk" }
+    RunDiffView:
+      type: object
+      properties:
+        runId: { type: string }
+        raw: { type: string }
+        files:
+          type: array
+          items: { $ref: "#/components/schemas/RunDiffFile" }
+        contextRefs:
+          type: array
+          items: { type: string }
+    DiffCommentView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        runId: { type: string }
+        filePath: { type: string }
+        lineIndex: { type: integer }
+        side: { type: string }
+        body: { type: string }
+        createdBy: { type: string }
+        createdAt: { type: integer, format: int64 }
+    DiffCommentListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/DiffCommentView" }
+    DiffCommentCreateRequest:
+      type: object
+      required: [filePath, body]
+      properties:
+        filePath: { type: string }
+        lineIndex: { type: integer }
+        side: { type: string }
+        body: { type: string }
+        createdBy: { type: string }
     DoctorRunRequest:
       type: object
       required: [suite]
@@ -4129,6 +4258,158 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/GoalPlanView" }
+
+  /api/v1/quest/board:
+    get:
+      tags: [Quest]
+      summary: Quest workbench kanban board
+      parameters:
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/QuestBoardResponse" }
+
+  /api/v1/repos/profile:
+    get:
+      tags: [Knowledge]
+      summary: Build ephemeral repo profile (no persistence)
+      parameters:
+        - in: query
+          name: repoRoot
+          schema: { type: string, default: "." }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RepoProfile" }
+
+  /api/v1/wiki/pages:
+    get:
+      tags: [Knowledge]
+      summary: List ephemeral wiki page projections
+      parameters:
+        - in: query
+          name: repoRoot
+          schema: { type: string }
+        - in: query
+          name: q
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WikiListResponse" }
+
+  /api/v1/wiki/pages/{pageId}:
+    get:
+      tags: [Knowledge]
+      summary: Get a wiki page projection
+      parameters:
+        - in: path
+          name: pageId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: repoRoot
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WikiPage" }
+
+  /api/v1/runs/{runId}/diff:
+    get:
+      tags: [Quest]
+      summary: Get parsed unified diff for a run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunDiffView" }
+
+  /api/v1/runs/{runId}/diff/comments:
+    get:
+      tags: [Quest]
+      summary: List line-level diff review comments
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiffCommentListResponse" }
+    post:
+      tags: [Quest]
+      summary: Create a line-level diff review comment
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiffCommentCreateRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiffCommentView" }
+
+  /api/v1/runs/{runId}/steps/{stepId}/rate:
+    post:
+      tags: [Quest]
+      summary: Rate a run step
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+        - in: path
+          name: stepId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [rating]
+              properties:
+                rating: { type: integer }
+                comment: { type: string }
+                actorId: { type: string }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/FeedbackItem" }
 
   /api/v1/runs/plans/{planId}:
     get:

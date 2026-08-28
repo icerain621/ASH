@@ -263,6 +263,92 @@ definitions:
       memoryTtlReviewDays:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_diffparse.DiffLine:
+    properties:
+      index:
+        description: stable index within file for anchoring
+        type: integer
+      kind:
+        description: context|add|del|meta
+        type: string
+      newNo:
+        type: integer
+      oldNo:
+        type: integer
+      text:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffparse.FileDiff:
+    properties:
+      hunks:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffparse.Hunk'
+        type: array
+      path:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffparse.Hunk:
+    properties:
+      header:
+        type: string
+      lines:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffparse.DiffLine'
+        type: array
+      newStart:
+        type: integer
+      oldStart:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_diffreview.CommentView:
+    properties:
+      body:
+        type: string
+      createdAt:
+        type: integer
+      createdBy:
+        type: string
+      filePath:
+        type: string
+      id:
+        type: string
+      lineIndex:
+        type: integer
+      runId:
+        type: string
+      side:
+        type: string
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffreview.CreateCommentRequest:
+    properties:
+      body:
+        type: string
+      createdBy:
+        type: string
+      filePath:
+        type: string
+      lineIndex:
+        type: integer
+      side:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffreview.DiffView:
+    properties:
+      contextRefs:
+        items:
+          type: string
+        type: array
+      files:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffparse.FileDiff'
+        type: array
+      raw:
+        type: string
+      runId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_doctor.CaseResult:
     properties:
       evidence:
@@ -620,6 +706,55 @@ definitions:
       ok:
         type: boolean
       status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_knowledge.RepoProfile:
+    properties:
+      contextRef:
+        type: string
+      id:
+        type: string
+      languages:
+        items:
+          type: string
+        type: array
+      markers:
+        additionalProperties:
+          type: boolean
+        type: object
+      modules:
+        items:
+          type: string
+        type: array
+      repoRoot:
+        type: string
+      summary:
+        type: string
+      testCommands:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_knowledge.WikiPage:
+    properties:
+      body:
+        type: string
+      contextRef:
+        type: string
+      id:
+        type: string
+      layer:
+        type: string
+      memoryId:
+        type: string
+      source:
+        description: memory|synthetic
+        type: string
+      tags:
+        items:
+          type: string
+        type: array
+      title:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_memory.CreateCandidateRequest:
@@ -1257,6 +1392,39 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec'
         type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_quest.BoardItem:
+    properties:
+      column:
+        type: string
+      id:
+        type: string
+      kind:
+        description: plan|run
+        type: string
+      planId:
+        type: string
+      runId:
+        type: string
+      scenario:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_quest.BoardResponse:
+    properties:
+      columns:
+        additionalProperties:
+          items:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_quest.BoardItem'
+          type: array
+        type: object
     type: object
   github_com_ash-repwiki_ash_internal_rag.Hit:
     properties:
@@ -3446,6 +3614,13 @@ definitions:
       runId:
         type: string
     type: object
+  internal_api.diffCommentListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView'
+        type: array
+    type: object
   internal_api.doctorRunRequest:
     properties:
       format:
@@ -3520,6 +3695,17 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_alerts.RuleInput'
         type: array
+    type: object
+  internal_api.rateStepRequest:
+    properties:
+      actorId:
+        type: string
+      comment:
+        type: string
+      rating:
+        type: integer
+    required:
+    - rating
     type: object
   internal_api.registerMCPToolRequest:
     properties:
@@ -3635,6 +3821,15 @@ definitions:
         type: string
     required:
     - policyJson
+    type: object
+  internal_api.wikiListAPIResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_knowledge.WikiPage'
+        type: array
+      query:
+        type: string
     type: object
 host: localhost:8080
 info:
@@ -5760,6 +5955,24 @@ paths:
       summary: Plugin export health snapshot
       tags:
       - plugins
+  /api/v1/quest/board:
+    get:
+      parameters:
+      - default: 80
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_quest.BoardResponse'
+      summary: Quest workbench kanban board
+      tags:
+      - quest
   /api/v1/rag/index:
     post:
       consumes:
@@ -6071,6 +6284,24 @@ paths:
       summary: Create a GitHub repository connection
       tags:
       - repo
+  /api/v1/repos/profile:
+    get:
+      parameters:
+      - default: .
+        description: repository root
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_knowledge.RepoProfile'
+      summary: Build ephemeral repo profile
+      tags:
+      - knowledge
   /api/v1/reviews/{reviewId}/decide:
     post:
       consumes:
@@ -6406,6 +6637,67 @@ paths:
       summary: Get a signed checkpoint access URL
       tags:
       - runs
+  /api/v1/runs/{runId}/diff:
+    get:
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.DiffView'
+      summary: Get parsed unified diff for a run
+      tags:
+      - quest
+  /api/v1/runs/{runId}/diff/comments:
+    get:
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.diffCommentListResponse'
+      summary: List line-level diff review comments
+      tags:
+      - quest
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: comment
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CreateCommentRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView'
+      summary: Create a line-level diff review comment
+      tags:
+      - quest
   /api/v1/runs/{runId}/provenance:
     get:
       parameters:
@@ -6540,6 +6832,37 @@ paths:
       summary: Resume a failed run
       tags:
       - runs
+  /api/v1/runs/{runId}/steps/{stepId}/rate:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: step id
+        in: path
+        name: stepId
+        required: true
+        type: string
+      - description: rating
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.rateStepRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.Feedback'
+      summary: Rate a run step (feedback targetType=run_step)
+      tags:
+      - quest
   /api/v1/runs/{runId}/stream:
     get:
       description: Server-Sent Events; supports Last-Event-ID for resume.
@@ -7235,6 +7558,53 @@ paths:
       summary: List built-in tool risk catalog (dangerous-ops)
       tags:
       - tools
+  /api/v1/wiki/pages:
+    get:
+      parameters:
+      - description: repository root
+        in: query
+        name: repoRoot
+        type: string
+      - description: search query
+        in: query
+        name: q
+        type: string
+      - description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.wikiListAPIResponse'
+      summary: List ephemeral wiki page projections
+      tags:
+      - knowledge
+  /api/v1/wiki/pages/{pageId}:
+    get:
+      parameters:
+      - description: page id
+        in: path
+        name: pageId
+        required: true
+        type: string
+      - description: repository root
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_knowledge.WikiPage'
+      summary: Get a wiki page projection
+      tags:
+      - knowledge
   /healthz:
     get:
       produces:

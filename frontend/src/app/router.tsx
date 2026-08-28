@@ -7,6 +7,8 @@ import { FeedbackPage } from "../pages/FeedbackPage";
 import { MemoryPage } from "../pages/MemoryPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { ObservabilityPage } from "../pages/ObservabilityPage";
+import { QuestPage } from "../pages/QuestPage";
+import { KnowledgePage } from "../pages/KnowledgePage";
 import { ReleasesPage } from "../pages/ReleasesPage";
 import { ReviewsPage } from "../pages/ReviewsPage";
 import { RunsPage } from "../pages/RunsPage";
@@ -40,6 +42,18 @@ const reviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/reviews",
   component: ReviewsPage,
+});
+
+const questRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/quest",
+  component: QuestPage,
+});
+
+const knowledgeRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/knowledge",
+  component: KnowledgePage,
 });
 
 const automationRoute = createRoute({
@@ -107,6 +121,8 @@ const routeTree = rootRoute.addChildren([
   runsRoute,
   memoryRoute,
   reviewsRoute,
+  questRoute,
+  knowledgeRoute,
 	automationRoute,
 	feedbackRoute,
 	ciRoute,
