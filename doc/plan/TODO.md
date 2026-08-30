@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **53/53** · M3 11/11 · M4 6/6 · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1 开篇 DW（ACP）✅** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW + DX3 ✅** |
 
 ---
 
@@ -40,6 +40,7 @@
 | DU | 演进 KPI + 移动审阅 | KPI-17/18 + Metrics 演进区 + `/ui/m/reviews` | ✅ |
 | DV | v2 scope 冻结 + 签字 | `v2-release-scope.md` + `make v2-signoff`；tag 人工 | ✅ |
 | DW | ACP provider 骨架（v2.1） | `ACPExecutor` + Probe + `/providers/agent.acp` + fallback | ✅ |
+| DX3 | ACP ↔ Session 互通（v2.1） | Session `providerKind` + Run `session.linked` + AgentTask `sess_*` | ✅ |
 | 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · v2 功能收口；v2.1 见 [`v2.1-release-scope.md`](v2.1-release-scope.md) | — |
 
 ---
@@ -132,6 +133,7 @@ make regression-short && make web-gate
 - Sprint DU：演进 KPI + 移动审阅（KPI-17/18；Metrics 演进区；`/ui/m/reviews`；无新表）
 - Sprint DV：v2 scope 冻结（`v2-release-scope.md`；`make v2-signoff`；tag 人工）
 - Sprint DW：ACP provider 骨架（`ACPExecutor` / ProbeACP / `/providers/agent.acp`；无新表）
+- Sprint DX3：ACP ↔ Session 互通（`providerKind` / `EnsureForRun` / `session.linked`；无新表）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

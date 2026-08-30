@@ -1317,6 +1317,7 @@ components:
         actorRole: { type: string }
         createdBy: { type: string }
         autoApprove: { type: boolean }
+        providerKind: { type: string, enum: [static, execgo, acp_sdk], description: "Optional agent provider for this session" }
     AgentSessionTurnRequest:
       type: object
       required: [prompt]
@@ -1340,6 +1341,10 @@ components:
         traceId: { type: string }
         repoRoot: { type: string }
         streamUrl: { type: string }
+        providerKind: { type: string }
+        providerAdapter: { type: string }
+        providerFallback: { type: boolean }
+        providerReason: { type: string }
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }

@@ -76,6 +76,8 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	improveSvc := improve.NewService(db, runsSvc, ev)
 	runsSvc.SetImproveDrafter(improveSvc)
 	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
+	sessionSvc := session.NewService(db, goalSvc, ev)
+	runsSvc.WithSessionService(sessionRunLinker{svc: sessionSvc})
 	h := &Handler{
 		db:         db,
 		events:     ev,
@@ -96,7 +98,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		diffReview: diffreview.NewService(db, runsSvc),
 		knowledge:  knowledge.NewService(db, memSvc),
 		spaceRules: spacerules.NewService(db),
-		session:    session.NewService(db, goalSvc, ev),
+		session:    sessionSvc,
 	}
 	return h
 }

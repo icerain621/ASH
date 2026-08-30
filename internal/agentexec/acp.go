@@ -49,10 +49,12 @@ func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error)
 	if timeout <= 0 {
 		timeout = 120000
 	}
+	sessionID := firstNonEmpty(metaString(req.Metadata, "sessionId"), req.RunID)
 	body := map[string]any{
 		"schema":    "ash.acp.task.v1",
 		"agentId":   e.AgentID,
 		"runId":     req.RunID,
+		"sessionId": sessionID,
 		"traceId":   req.TraceID,
 		"stepId":    req.StepID,
 		"role":      req.Role,
@@ -115,7 +117,7 @@ func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error)
 	}
 	return &Result{
 		TaskID: taskID, ExecGoTaskID: taskID,
-		Adapter: e.AdapterName(), AgentID: e.AgentID, SessionID: req.RunID,
+		Adapter: e.AdapterName(), AgentID: e.AgentID, SessionID: sessionID,
 		ActionID: taskID, Status: status,
 		StdoutSummary: firstNonEmpty(parsed.Message, "acp task completed"),
 		DurationMs:    time.Since(start).Milliseconds(),
@@ -247,4 +249,20 @@ func truncate(s string, n int) string {
 		return s
 	}
 	return s[:n] + "…"
+}
+
+func metaString(meta map[string]any, key string) string {
+	if meta == nil {
+		return ""
+	}
+	v, ok := meta[key]
+	if !ok || v == nil {
+		return ""
+	}
+	switch t := v.(type) {
+	case string:
+		return strings.TrimSpace(t)
+	default:
+		return strings.TrimSpace(fmt.Sprint(t))
+	}
 }

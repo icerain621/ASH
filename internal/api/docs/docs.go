@@ -9720,6 +9720,9 @@ const docTemplate = `{
                 "goal": {
                     "type": "string"
                 },
+                "providerKind": {
+                    "type": "string"
+                },
                 "repoRoot": {
                     "type": "string"
                 },
@@ -9796,6 +9799,18 @@ const docTemplate = `{
                     "additionalProperties": {}
                 },
                 "planId": {
+                    "type": "string"
+                },
+                "providerAdapter": {
+                    "type": "string"
+                },
+                "providerFallback": {
+                    "type": "boolean"
+                },
+                "providerKind": {
+                    "type": "string"
+                },
+                "providerReason": {
                     "type": "string"
                 },
                 "repoRoot": {

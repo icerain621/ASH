@@ -46,11 +46,14 @@ func TestACPExecutorHealthAndExecute(t *testing.T) {
 	if err := e.health(ctx); err != nil {
 		t.Fatal(err)
 	}
-	res, err := e.Execute(ctx, Request{RunID: "r1", StepID: "s1", Prompt: "hi"})
+	res, err := e.Execute(ctx, Request{
+		RunID: "r1", StepID: "s1", Prompt: "hi",
+		Metadata: map[string]any{"sessionId": "sess_test"},
+	})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if res.TaskID != "t1" || res.Adapter != "acp_sdk" || res.Status != "success" {
+	if res.TaskID != "t1" || res.Adapter != "acp_sdk" || res.Status != "success" || res.SessionID != "sess_test" {
 		t.Fatalf("res=%+v", res)
 	}
 

@@ -24,20 +24,24 @@ const (
 
 // View is the public session document.
 type View struct {
-	ID        string         `json:"id"`
-	SpaceID   string         `json:"spaceId"`
-	Status    string         `json:"status"`
-	Goal      string         `json:"goal,omitempty"`
-	PlanID    string         `json:"planId,omitempty"`
-	RunID     string         `json:"runId,omitempty"`
-	TraceID   string         `json:"traceId,omitempty"`
-	RepoRoot  string         `json:"repoRoot,omitempty"`
-	StreamURL string         `json:"streamUrl,omitempty"`
-	Turns     []Turn         `json:"turns"`
-	CreatedBy string         `json:"createdBy,omitempty"`
-	CreatedAt int64          `json:"createdAt"`
-	UpdatedAt int64          `json:"updatedAt"`
-	Meta      map[string]any `json:"meta,omitempty"`
+	ID               string         `json:"id"`
+	SpaceID          string         `json:"spaceId"`
+	Status           string         `json:"status"`
+	Goal             string         `json:"goal,omitempty"`
+	PlanID           string         `json:"planId,omitempty"`
+	RunID            string         `json:"runId,omitempty"`
+	TraceID          string         `json:"traceId,omitempty"`
+	RepoRoot         string         `json:"repoRoot,omitempty"`
+	StreamURL        string         `json:"streamUrl,omitempty"`
+	ProviderKind     string         `json:"providerKind,omitempty"`
+	ProviderAdapter  string         `json:"providerAdapter,omitempty"`
+	ProviderFallback bool           `json:"providerFallback,omitempty"`
+	ProviderReason   string         `json:"providerReason,omitempty"`
+	Turns            []Turn         `json:"turns"`
+	CreatedBy        string         `json:"createdBy,omitempty"`
+	CreatedAt        int64          `json:"createdAt"`
+	UpdatedAt        int64          `json:"updatedAt"`
+	Meta             map[string]any `json:"meta,omitempty"`
 }
 
 type Turn struct {
@@ -47,13 +51,14 @@ type Turn struct {
 }
 
 type CreateRequest struct {
-	Goal        string `json:"goal"`
-	RunID       string `json:"runId"`
-	RepoRoot    string `json:"repoRoot"`
-	SpaceID     string `json:"spaceId"`
-	ActorRole   string `json:"actorRole"`
-	CreatedBy   string `json:"createdBy"`
-	AutoApprove bool   `json:"autoApprove"`
+	Goal         string `json:"goal"`
+	RunID        string `json:"runId"`
+	RepoRoot     string `json:"repoRoot"`
+	SpaceID      string `json:"spaceId"`
+	ActorRole    string `json:"actorRole"`
+	CreatedBy    string `json:"createdBy"`
+	AutoApprove  bool   `json:"autoApprove"`
+	ProviderKind string `json:"providerKind"`
 }
 
 type TurnRequest struct {
@@ -87,13 +92,21 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	if s.db != nil {
 		out.db = s.db.BindContext(ctx)
 	}
-	if s.goal != nil {
-		out.goal = s.goal.WithContext(ctx)
-	}
+	// Do not call goal.WithContext here: goal → runs → session forms a cycle.
 	if s.events != nil {
 		out.events = s.events.WithContext(ctx)
 	}
 	return &out
+}
+
+func (s *Service) goalFor() *goal.Service {
+	if s == nil || s.goal == nil {
+		return nil
+	}
+	if s.ctx != nil {
+		return s.goal.WithContext(s.ctx)
+	}
+	return s.goal
 }
 
 func (s *Service) q() *gorm.DB {
@@ -131,11 +144,12 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 			view.RepoRoot = rec.RepoRoot
 		}
 	} else if goalText != "" {
-		if s.goal == nil {
+		goalSvc := s.goalFor()
+		if goalSvc == nil {
 			return nil, fmt.Errorf("goal service is not configured")
 		}
 		view.Goal = goalText
-		plan, err := s.goal.FromGoal(goal.FromGoalRequest{
+		plan, err := goalSvc.FromGoal(goal.FromGoalRequest{
 			Goal: goalText, RepoRoot: firstNonEmpty(view.RepoRoot, "."),
 			SpaceID: space, ActorRole: firstNonEmpty(req.ActorRole, "maintainer"),
 			CreatedBy: firstNonEmpty(req.CreatedBy, "session"), AutoApprove: req.AutoApprove,
@@ -157,6 +171,7 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 		}
 	}
 	view.StreamURL = streamURL(view.RunID)
+	s.applyProviderKind(view, req.ProviderKind)
 	if err := s.save(view); err != nil {
 		return nil, err
 	}
