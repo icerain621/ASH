@@ -1996,6 +1996,45 @@ components:
         reviewDue: { type: integer }
         dryRun: { type: boolean }
         summary: { type: string }
+    WakerQueueItem:
+      type: object
+      properties:
+        runId: { type: string }
+        spaceId: { type: string }
+        status: { type: string }
+        ageMs: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+        reason: { type: string }
+    WakerQueueResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/WakerQueueItem" }
+        count: { type: integer }
+        maxAge: { type: string }
+        maxAgeMs: { type: integer, format: int64 }
+        inspectedAt: { type: string, format: date-time }
+    WakerSweepRequest:
+      type: object
+      properties:
+        spaceId: { type: string }
+        dryRun: { type: boolean }
+        maxAge: { type: string }
+        limit: { type: integer }
+        actorId: { type: string }
+    WakerSweepResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        dryRun: { type: boolean }
+        matched: { type: integer }
+        flagged: { type: integer }
+        runIds:
+          type: array
+          items: { type: string }
+        maxAge: { type: string }
+        summary: { type: string }
     OrgItem:
       type: object
       properties:
@@ -4251,6 +4290,42 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MemorySweepTTLResponse" }
+
+  /api/v1/waker/queue:
+    get:
+      tags: [Waker]
+      summary: List stale/stuck runs for waker inspection
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+        - in: query
+          name: maxAge
+          schema: { type: string, description: "Go duration e.g. 2h" }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WakerQueueResponse" }
+
+  /api/v1/waker/sweep:
+    post:
+      tags: [Waker]
+      summary: Sweep stale runs (report/flag; dryRun default true)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WakerSweepRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WakerSweepResponse" }
 
   /api/v1/model-router/providers:
     get:

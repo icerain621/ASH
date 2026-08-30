@@ -6256,6 +6256,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/waker/queue": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "List stale/stuck runs for waker inspection",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "duration e.g. 2h",
+                        "name": "maxAge",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.QueueResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/waker/sweep": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "Sweep stale runs (report/flag; dryRun default true)",
+                "parameters": [
+                    {
+                        "description": "sweep",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/webhooks/github": {
             "post": {
                 "description": "Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, optionally creates a hotfix Run when autoRun=1.",
@@ -11049,6 +11128,101 @@ const docTemplate = `{
                 },
                 "risk": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_toolbus.Risk"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.Item": {
+            "type": "object",
+            "properties": {
+                "ageMs": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.QueueResponse": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "inspectedAt": {
+                    "type": "string"
+                },
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.Item"
+                    }
+                },
+                "maxAge": {
+                    "type": "string"
+                },
+                "maxAgeMs": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.SweepRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "limit": {
+                    "type": "integer"
+                },
+                "maxAge": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.SweepResponse": {
+            "type": "object",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean"
+                },
+                "flagged": {
+                    "type": "integer"
+                },
+                "matched": {
+                    "type": "integer"
+                },
+                "maxAge": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "runIds": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "summary": {
+                    "type": "string"
                 }
             }
         },

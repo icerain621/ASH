@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX6（v2.2）：Waker 雏形（方案 C）— `GET /waker/queue` + `POST /waker/sweep`（dryRun 默认）；`ASH_WAKER_RUN_TTL` / `ASH_WAKER_INTERVAL`；审计 `waker.sweep_completed`；`make waker-smoke`；范围草案 `v2.2-release-scope.md`（无新表）。
 - Sprint DX5（v2.1）：范围冻结 + ACP Doctor（方案 C）— M4-ACP-01/02；Doctor ALL **55**/M4 **8**；`v2.1-release-scope` 已冻结；`make v2.1-signoff`；清单/签字模板；**不自动**打 `v2.1.0` tag。
 - Sprint DX4（v2.1）：ACP 任务契约硬化（方案 C）— `ash.acp.task.v1` 出入站校验；`cmd/acp-mock` + `make acp-smoke`；Session turn best-effort 转发 ACP；schema JSON + 清单 `acp-smoke.md`（无新表）。
 - Sprint DX3（v2.1）：ACP ↔ Session 互通（方案 C）— Session `providerKind` 探测字段；Run 在 `acp_sdk` 选型时 `EnsureForRun` + 事件 `session.linked`；AgentTask/ACP 使用 `sess_*`；清单 `acp-session.md`（无新表）。

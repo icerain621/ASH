@@ -2994,6 +2994,68 @@ definitions:
       risk:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_toolbus.Risk'
     type: object
+  github_com_ash-repwiki_ash_internal_waker.Item:
+    properties:
+      ageMs:
+        type: integer
+      reason:
+        type: string
+      runId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_waker.QueueResponse:
+    properties:
+      count:
+        type: integer
+      inspectedAt:
+        type: string
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.Item'
+        type: array
+      maxAge:
+        type: string
+      maxAgeMs:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_waker.SweepRequest:
+    properties:
+      actorId:
+        type: string
+      dryRun:
+        type: boolean
+      limit:
+        type: integer
+      maxAge:
+        type: string
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_waker.SweepResponse:
+    properties:
+      dryRun:
+        type: boolean
+      flagged:
+        type: integer
+      matched:
+        type: integer
+      maxAge:
+        type: string
+      ok:
+        type: boolean
+      runIds:
+        items:
+          type: string
+        type: array
+      summary:
+        type: string
+    type: object
   internal_api.APIError:
     properties:
       code:
@@ -8276,6 +8338,57 @@ paths:
       summary: List built-in tool risk catalog (dangerous-ops)
       tags:
       - tools
+  /api/v1/waker/queue:
+    get:
+      parameters:
+      - description: space id
+        in: query
+        name: spaceId
+        type: string
+      - description: duration e.g. 2h
+        in: query
+        name: maxAge
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.QueueResponse'
+      summary: List stale/stuck runs for waker inspection
+      tags:
+      - waker
+  /api/v1/waker/sweep:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: sweep
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Sweep stale runs (report/flag; dryRun default true)
+      tags:
+      - waker
   /api/v1/webhooks/github:
     post:
       consumes:

@@ -255,4 +255,8 @@ var Catalog = map[string]Entry{
 	"APPROVAL_LIST_FAILED":   {Domain: "approvals", Summary: "Failed to list approval requests"},
 	"APPROVAL_REJECT_FAILED": {Domain: "approvals", Summary: "Failed to reject approval"},
 	"APPROVAL_NOT_FOUND":     {Domain: "approvals", Summary: "Approval id not found"},
+
+	// waker
+	"WAKER_QUEUE_FAILED": {Domain: "waker", Summary: "Failed to list waker stale-run queue"},
+	"WAKER_SWEEP_FAILED": {Domain: "waker", Summary: "Waker stale-run sweep failed"},
 }
