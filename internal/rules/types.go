@@ -15,12 +15,18 @@ type Scenario struct {
 	Description     string            `yaml:"description,omitempty" json:"description,omitempty"`
 	PolicyProfile   string            `yaml:"policyProfile,omitempty" json:"policyProfile,omitempty"`
 	Skills          []string          `yaml:"skills,omitempty" json:"skills,omitempty"`
+	Sandbox         *ScenarioSandbox  `yaml:"sandbox,omitempty" json:"sandbox,omitempty"`
 	Checkpoint      *CheckpointConfig `yaml:"checkpoint,omitempty" json:"checkpoint,omitempty"`
 	Roles           map[string]Role   `yaml:"roles,omitempty" json:"roles,omitempty"`
 	Inputs          *InputsSpec       `yaml:"inputs,omitempty" json:"inputs,omitempty"`
 	Artifacts       *ArtifactsSpec    `yaml:"artifacts,omitempty" json:"artifacts,omitempty"`
 	Gates           []Gate            `yaml:"gates,omitempty" json:"gates,omitempty"`
 	Steps           []Step            `yaml:"steps" json:"steps"`
+}
+
+// ScenarioSandbox is the optional scenario-level sandbox floor (DX2).
+type ScenarioSandbox struct {
+	MinMode string `yaml:"minMode,omitempty" json:"minMode,omitempty"`
 }
 
 type CheckpointConfig struct {

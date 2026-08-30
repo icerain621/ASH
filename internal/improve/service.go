@@ -163,8 +163,8 @@ func (s *Service) StartCanary(spaceID, id string, req CanaryRequest) (*StatusRes
 	if row.Status != "experimenting" {
 		return nil, fmt.Errorf("%w: status=%s", ErrInvalidState, row.Status)
 	}
-	if req.Percent < 1 || req.Percent > 100 {
-		return nil, fmt.Errorf("canary percent must be 1..100")
+	if req.Percent < 1 || req.Percent > MaxCanaryPercent {
+		return nil, fmt.Errorf("canary percent must be 1..%d", MaxCanaryPercent)
 	}
 	row.Status = "canary"
 	row.CanaryPercent = req.Percent

@@ -5,6 +5,8 @@ scenario:
   scenarioVersion: "1.1.0"
   description: "安全补丁/依赖升级：评估→补丁→回归→安全公告草稿（PRD §4.3）"
   policyProfile: "security"
+  sandbox:
+    minMode: isolated
   checkpoint:
     strategy: "per_step"
     retain: 50

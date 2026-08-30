@@ -8,7 +8,7 @@
 |---|-----|-------------|------|
 | 1 | 云 RDS 全链路 | `make postgres-rds-e2e`（需 `ASH_DATABASE_URL`） | 脚本 stdout；Doctor M3/TR3/ALL md |
 | 2 | 本地四门 Postgres（对照） | `make postgres-e2e` + `postgres-sql-schema-e2e` + `postgres-rls-e2e` | CI workflow 绿或本地日志 |
-| 3 | 静态 Doctor | `make release-window-audit` 或 `go test ./internal/doctor/... -run TestALLSuite` | **43/43**（隔离测试库；CLI 报告需 `ASH_RELEASE_AUDIT_DATA_DIR`） |
+| 3 | 静态 Doctor | `make release-window-audit` 或 `go test ./internal/doctor/... -run TestALLSuite` | **53/53**（隔离测试库；CLI 报告需 `ASH_RELEASE_AUDIT_DATA_DIR`） |
 | 4 | 契约 | `make openapi-check` + `make regression-short` | openapicheck pass |
 | 4b | 一键静态审计 | `make release-window-audit` | 聚合 §3–§4 + API 抽样（可选 `ASH_WORKER_URL` live） |
 | 4c | 烟测索引 | [`smoke-index.md`](smoke-index.md) | H-04–H-09 静态/live 对照 |

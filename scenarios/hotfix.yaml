@@ -5,6 +5,8 @@ scenario:
   scenarioVersion: "1.1.0"
   description: "故障热修复：定界→最小修复→定向验证→发布窗建议（PRD §4.2）"
   policyProfile: "hotfix"
+  sandbox:
+    minMode: isolated
   checkpoint:
     strategy: "per_step"
     retain: 50

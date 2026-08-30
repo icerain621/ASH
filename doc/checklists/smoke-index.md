@@ -42,6 +42,8 @@
 | H-04 | CI runs sync | `TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05` | [`ci-fixture-smoke.sh`](../scripts/ci-fixture-smoke.sh) |
 | H-05 | CI jobs / 诊断 | 同上 | 同上（含 `jobId` 诊断） |
 | H-06 | ExecGo | `TestM3ExecGoLiveSmoke` | [`execgo-live-smoke.md`](execgo-live-smoke.md) |
+| — | Sandbox isolated (DX2) | KPI-19 / sandbox policy tests | [`sandbox-isolated.md`](sandbox-isolated.md) |
+| — | CI webhook (DS) | HMAC → diagnose → optional autoRun | [`ci-webhook.md`](ci-webhook.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

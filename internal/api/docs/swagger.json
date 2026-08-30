@@ -6071,6 +6071,98 @@
                 }
             }
         },
+        "/api/v1/webhooks/github": {
+            "post": {
+                "description": "Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, optionally creates a hotfix Run when autoRun=1.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "webhooks"
+                ],
+                "summary": "Ingest GitHub Actions webhook (HMAC)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "repo connection id",
+                        "name": "connectionId",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "boolean",
+                        "description": "create hotfix run on failure",
+                        "name": "autoRun",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "repo root for autoRun",
+                        "name": "repoRoot",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "sha256 HMAC of raw body",
+                        "name": "X-Hub-Signature-256",
+                        "in": "header",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "delivery id for idempotency",
+                        "name": "X-GitHub-Delivery",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "default": "workflow_run",
+                        "description": "event name",
+                        "name": "X-GitHub-Event",
+                        "in": "header"
+                    },
+                    {
+                        "description": "GitHub workflow_run payload",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "object"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.githubWebhookResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/wiki/pages": {
             "get": {
                 "produces": [
@@ -8838,6 +8930,9 @@
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.Role"
                     }
                 },
+                "sandbox": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.ScenarioSandbox"
+                },
                 "scenarioVersion": {
                     "type": "string"
                 },
@@ -8852,6 +8947,14 @@
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.Step"
                     }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rules.ScenarioSandbox": {
+            "type": "object",
+            "properties": {
+                "minMode": {
+                    "type": "string"
                 }
             }
         },
@@ -12087,6 +12190,56 @@
             "type": "object",
             "properties": {
                 "reportId": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.githubWebhookResponse": {
+            "type": "object",
+            "properties": {
+                "ashRunId": {
+                    "type": "string"
+                },
+                "ashTraceId": {
+                    "type": "string"
+                },
+                "ciJobId": {
+                    "type": "string"
+                },
+                "ciRunId": {
+                    "type": "string"
+                },
+                "conclusion": {
+                    "type": "string"
+                },
+                "connectionId": {
+                    "type": "string"
+                },
+                "diagnosis": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse"
+                },
+                "duplicate": {
+                    "type": "boolean"
+                },
+                "executionError": {
+                    "type": "string"
+                },
+                "ignored": {
+                    "type": "boolean"
+                },
+                "providerRunId": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "shouldStartRun": {
+                    "type": "boolean"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "workflow": {
                     "type": "string"
                 }
             }

@@ -22,6 +22,8 @@ type RouteRequest struct {
 	Risk               string
 	ProfileDefaultMode string
 	ModeOverride       string
+	ScenarioMinMode    string
+	PolicyProfile      string
 	RepoRoot           string
 	RunID              string
 	StepID             string
@@ -44,7 +46,10 @@ type Router interface {
 type NoopRouter struct{}
 
 func (NoopRouter) Route(req RouteRequest) (Decision, error) {
-	mode := ResolveSandboxMode(req.Risk, req.ProfileDefaultMode, req.ModeOverride)
+	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile)
+	if err := Authorize(req.Risk, mode); err != nil {
+		return Decision{Mode: mode, Executor: "none", Reason: err.Error(), Denied: true}, err
+	}
 	return Decision{Mode: mode, Executor: "in-process", Reason: "noop-router"}, nil
 }
 
@@ -62,17 +67,10 @@ func NewDefaultRouter() DefaultRouter {
 }
 
 func (r DefaultRouter) Route(req RouteRequest) (Decision, error) {
-	configured := req.ModeOverride
-	if configured == "" {
-		configured = req.ProfileDefaultMode
+	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile)
+	if err := Authorize(req.Risk, mode); err != nil {
+		return Decision{Mode: mode, Executor: "none", Reason: err.Error(), Denied: true}, err
 	}
-	if configured == "" {
-		configured = ModeOff
-	}
-	if err := Authorize(req.Risk, configured); err != nil {
-		return Decision{Mode: configured, Executor: "none", Reason: err.Error(), Denied: true}, err
-	}
-	mode := ResolveSandboxMode(req.Risk, req.ProfileDefaultMode, req.ModeOverride)
 	if mode == ModeOff {
 		return Decision{Mode: mode, Executor: "in-process", Reason: "mode-off"}, nil
 	}

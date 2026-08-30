@@ -104,6 +104,10 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
 	case "M3":
 		rep.Results = append(rep.Results, s.m3SuiteCases()...)
+	case "M4":
+		rep.Results = append(rep.Results, s.m4SuiteCases()...)
+	case "M5":
+		rep.Results = append(rep.Results, s.m5SuiteCases()...)
 	case "TR3":
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
@@ -139,6 +143,8 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyUpdate())
 		rep.Results = append(rep.Results, s.m2ScenarioPolicyEnforcement())
 		rep.Results = append(rep.Results, s.m3SuiteCases()...)
+		rep.Results = append(rep.Results, s.m4SuiteCases()...)
+		rep.Results = append(rep.Results, s.m5SuiteCases()...)
 		rep.Results = append(rep.Results, s.tr3MemoryMigration())
 		rep.Results = append(rep.Results, s.tr3RAGFallback())
 		rep.Results = append(rep.Results, s.tr3PostgresRAGFTS())

@@ -34,6 +34,17 @@
           "items": { "type": "string", "minLength": 1 },
           "description": "Skill ids (SKILL.md name) to inject as skill: contextRefs"
         },
+        "sandbox": {
+          "type": "object",
+          "additionalProperties": false,
+          "description": "Scenario sandbox floor (DX2)",
+          "properties": {
+            "minMode": {
+              "type": "string",
+              "enum": ["off", "read-only", "workspace-write", "isolated"]
+            }
+          }
+        },
         "checkpoint": {
           "type": "object",
           "additionalProperties": false,

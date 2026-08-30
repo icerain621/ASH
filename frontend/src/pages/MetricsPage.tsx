@@ -16,6 +16,7 @@ const KPI_ORDER = [
   "KPI-09",
   "KPI-10",
   "KPI-11",
+  "KPI-19",
 ];
 
 export function MetricsPage() {

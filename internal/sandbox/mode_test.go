@@ -13,10 +13,10 @@ func TestResolveSandboxMode_profileDefault(t *testing.T) {
 	}
 }
 
-func TestResolveSandboxMode_overrideWins(t *testing.T) {
+func TestResolveSandboxMode_overrideCannotLowerBelowRiskFloor(t *testing.T) {
 	got := sandbox.ResolveSandboxMode("danger", "isolated", "read-only")
-	if got != "read-only" {
-		t.Fatalf("got %q", got)
+	if got != "isolated" {
+		t.Fatalf("got %q want isolated", got)
 	}
 }
 

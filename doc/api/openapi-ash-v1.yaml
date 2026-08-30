@@ -1280,6 +1280,24 @@ components:
         decidedBy: { type: string }
         decidedAt: { type: string, format: date-time, nullable: true }
         createdAt: { type: string, format: date-time }
+    GitHubWebhookResponse:
+      type: object
+      properties:
+        duplicate: { type: boolean }
+        ignored: { type: boolean }
+        reason: { type: string }
+        connectionId: { type: string }
+        spaceId: { type: string }
+        ciRunId: { type: string }
+        ciJobId: { type: string }
+        providerRunId: { type: string }
+        conclusion: { type: string }
+        workflow: { type: string }
+        shouldStartRun: { type: boolean }
+        diagnosis: { $ref: "#/components/schemas/DiagnosisResponse" }
+        ashRunId: { type: string }
+        ashTraceId: { type: string }
+        executionError: { type: string }
     CIDiagnosisListResponse:
       type: object
       required: [items]
@@ -2897,6 +2915,55 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/DiagnosisResponse" }
+  /api/v1/webhooks/github:
+    post:
+      tags: [Webhooks]
+      summary: Ingest GitHub Actions webhook (HMAC)
+      description: |
+        Public path (no JWT). Verifies `X-Hub-Signature-256` using `ASH_GITHUB_WEBHOOK_SECRET`
+        or the connection secret. On workflow_run failure: upserts CI run/job, diagnoses,
+        and optionally creates a hotfix Run when `autoRun=1`. Idempotent via `X-GitHub-Delivery`.
+      parameters:
+        - in: query
+          name: connectionId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: autoRun
+          required: false
+          schema: { type: boolean }
+        - in: query
+          name: repoRoot
+          required: false
+          schema: { type: string, default: "." }
+        - in: header
+          name: X-Hub-Signature-256
+          required: true
+          schema: { type: string }
+        - in: header
+          name: X-GitHub-Delivery
+          required: false
+          schema: { type: string }
+        - in: header
+          name: X-GitHub-Event
+          required: false
+          schema: { type: string, default: workflow_run }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        "200":
+          description: accepted (may be duplicate or ignored)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/GitHubWebhookResponse" }
+        "401":
+          description: invalid signature
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /v1/spaces:
     post:
       tags: [Spaces]

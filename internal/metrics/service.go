@@ -158,6 +158,10 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 	if err != nil {
 		return out, err
 	}
+	sandboxStats, err := s.sandboxCoverageStats(gdb, req)
+	if err != nil {
+		return out, err
+	}
 
 	out.Summary = []MetricCard{
 		ratioCard("KPI-01", "任务成功率", runStats.success, runStats.started, "ratio"),
@@ -171,6 +175,7 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 		ratioCard("KPI-09", "API 错误率", apiStats.errors, apiStats.total, "ratio"),
 		durationCard("KPI-10", "队列积压时长", queueStats.totalWaitMs, queueStats.count),
 		scenarioCard,
+		sandboxCoverageCard(sandboxStats),
 	}
 	out.Trends = []MetricTrend{
 		{MetricID: "KPI-01", Points: s.runSuccessTrend(gdb, req)},
@@ -414,6 +419,57 @@ func sseStabilityCard(stats sseStatsResult) MetricCard {
 		"成功关闭 / (成功关闭 + 失败)；opened=%d closed=%d failed=%d。",
 		stats.opened, stats.closed, stats.failed,
 	)
+	return card
+}
+
+type sandboxCoverageResult struct {
+	dangerTotal    int64
+	dangerIsolated int64
+}
+
+func (s *Service) sandboxCoverageStats(gdb *gorm.DB, req OverviewRequest) (sandboxCoverageResult, error) {
+	var out sandboxCoverageResult
+	var rows []store.RunEvent
+	if err := s.runEventsQuery(gdb, req).
+		Where("type = ?", "harness.tool.routed").
+		Find(&rows).Error; err != nil {
+		return out, err
+	}
+	for _, row := range rows {
+		var payload map[string]any
+		if err := json.Unmarshal([]byte(row.PayloadJSON), &payload); err != nil {
+			continue
+		}
+		risk, _ := payload["risk"].(string)
+		if strings.ToLower(strings.TrimSpace(risk)) != "danger" {
+			continue
+		}
+		out.dangerTotal++
+		mode, _ := payload["sandboxMode"].(string)
+		if strings.EqualFold(strings.TrimSpace(mode), "isolated") {
+			out.dangerIsolated++
+		}
+	}
+	return out, nil
+}
+
+func sandboxCoverageCard(stats sandboxCoverageResult) MetricCard {
+	// KPI-19: danger tool routes with sandboxMode=isolated / all danger routes.
+	if stats.dangerTotal == 0 {
+		return MetricCard{
+			ID: "KPI-19", Label: "danger 沙盒覆盖率", Unit: "ratio", Status: "empty",
+			Description: "当前窗口尚无 risk=danger 的 harness.tool.routed 事件。",
+		}
+	}
+	card := ratioCard("KPI-19", "danger 沙盒覆盖率", stats.dangerIsolated, stats.dangerTotal, "ratio")
+	if card.Value < 1 {
+		card.Description = fmt.Sprintf(
+			"目标 100%%；isolated=%d / danger=%d。hotfix/security 与 danger 工具须 ≥ isolated（DX2）。",
+			stats.dangerIsolated, stats.dangerTotal,
+		)
+	} else {
+		card.Description = "danger 工具路由均达到 isolated（KPI-19）。"
+	}
 	return card
 }
 

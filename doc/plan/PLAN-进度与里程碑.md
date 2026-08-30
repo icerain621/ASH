@@ -3,7 +3,7 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **43/43** · M3 **11/11** · TR3 **10/10** · SQL rev **27** · RLS **46**（v2 DH–DZ + DJ–DQ）  
+> **代码锚点**：Doctor ALL **53/53** · M3 **11/11** · M4 **6/6** · M5 **4/4** · TR3 **10/10** · SQL rev **27** · RLS **46**（v2 DH–DZ + DJ–DS）  
 > **归属**：[`plan/`](README.md)  
 > **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 

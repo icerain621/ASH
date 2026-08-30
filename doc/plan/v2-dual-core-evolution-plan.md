@@ -194,9 +194,9 @@ flowchart TB
 | 23–24 | **DP** | — | verify 步骤 | ✅ DSL verify + 重试 + improve 草稿 |
 | 25–26 | **DZ** | v2.0.0-beta.1 | **编排评审** | ✅ Reviews UI + promote 闸门 + scenario patch + rollback |
 | 27–28 | **DQ** | — | Provider + ExecGo live | ✅ kind→agent + fallback + `/providers/agent`（H-06 环境⏸） |
-| 29–30 | **DX2** | v2.0.0-beta.2 | isolated 强制 | 场景策略、KPI-19 |
-| 31–32 | **DR** | — | compaction + Doctor M4/M5 | 全量探针 |
-| 33–34 | **DS** | — | Webhook 触发 | CI→Run |
+| 29–30 | **DX2** | v2.0.0-beta.2 | isolated 强制 | ✅ hotfix/security + minMode + KPI-19 |
+| 31–32 | **DR** | — | compaction + Doctor M4/M5 | ✅ spill + compaction + M4/M5；ALL 53 |
+| 33–34 | **DS** | — | Webhook 触发 | ✅ HMAC + diagnose + autoRun hotfix |
 | 35–36 | **DT** | — | Session RPC/JSON | `/agents/sessions` |
 | 37–38 | **DU** | — | 演进 KPI + 移动审阅 | KPI-17~19 看板 |
 | 39–40 | **DV** | **v2.0.0** | scope 冻结 + 签字 | `v2-release-scope.md`、`v2.0.0` tag |

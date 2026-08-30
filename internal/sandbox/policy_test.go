@@ -34,9 +34,39 @@ func TestAuthorize_safeOffOK(t *testing.T) {
 	}
 }
 
-func TestAuthorize_dangerWorkspaceWriteAllowed(t *testing.T) {
-	// Floor elevates to isolated at route time; authorize only blocks explicit off.
-	if err := sandbox.Authorize("danger", sandbox.ModeWorkspaceWrite); err != nil {
-		t.Fatal(err)
+func TestAuthorize_dangerWorkspaceWriteDenied(t *testing.T) {
+	err := sandbox.Authorize("danger", sandbox.ModeWorkspaceWrite)
+	if err == nil || !errors.Is(err, sandbox.ErrPolicyDenied) {
+		t.Fatalf("err=%v want ErrPolicyDenied", err)
+	}
+}
+
+func TestForceIsolatedPolicy(t *testing.T) {
+	if !sandbox.ForceIsolatedPolicy("hotfix") || !sandbox.ForceIsolatedPolicy("security") {
+		t.Fatal("expected force")
+	}
+	if sandbox.ForceIsolatedPolicy("default") {
+		t.Fatal("default should not force")
+	}
+}
+
+func TestResolveSandboxModeExt_hotfixForcesIsolated(t *testing.T) {
+	got := sandbox.ResolveSandboxModeExt("safe", "workspace-write", "", "", "hotfix")
+	if got != sandbox.ModeIsolated {
+		t.Fatalf("got %q want isolated", got)
+	}
+}
+
+func TestResolveSandboxModeExt_scenarioMin(t *testing.T) {
+	got := sandbox.ResolveSandboxModeExt("safe", "off", "", "isolated", "default")
+	if got != sandbox.ModeIsolated {
+		t.Fatalf("got %q", got)
+	}
+}
+
+func TestResolveSandboxModeExt_overrideCannotLowerRiskFloor(t *testing.T) {
+	got := sandbox.ResolveSandboxModeExt("danger", "isolated", "read-only", "", "")
+	if got != sandbox.ModeIsolated {
+		t.Fatalf("got %q want isolated (override cannot lower)", got)
 	}
 }

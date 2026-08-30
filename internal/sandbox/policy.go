@@ -9,6 +9,16 @@ import (
 // ErrPolicyDenied is returned when tool risk is incompatible with sandbox mode.
 var ErrPolicyDenied = errors.New("sandbox policy denied")
 
+// ForceIsolatedPolicy reports whether a scenario policyProfile requires ≥ isolated.
+func ForceIsolatedPolicy(policyProfile string) bool {
+	switch strings.ToLower(strings.TrimSpace(policyProfile)) {
+	case "hotfix", "security":
+		return true
+	default:
+		return false
+	}
+}
+
 // MinModeForRisk returns the lowest allowed sandbox mode for a tool risk class.
 func MinModeForRisk(risk string) string {
 	switch strings.ToLower(strings.TrimSpace(risk)) {
@@ -22,7 +32,7 @@ func MinModeForRisk(risk string) string {
 }
 
 func modeRank(mode string) int {
-	switch mode {
+	switch normalizeMode(mode) {
 	case ModeOff:
 		return 0
 	case ModeReadOnly:
@@ -36,32 +46,60 @@ func modeRank(mode string) int {
 	}
 }
 
-// ResolveSandboxMode picks effective mode: override > max(profile, risk floor) > off.
-func ResolveSandboxMode(toolRisk, profileDefault, override string) string {
-	if override != "" {
-		return override
+func normalizeMode(mode string) string {
+	m := strings.ToLower(strings.TrimSpace(mode))
+	switch m {
+	case ModeOff, ModeReadOnly, ModeWorkspaceWrite, ModeIsolated:
+		return m
+	default:
+		return m
 	}
-	base := profileDefault
-	if base == "" {
-		base = ModeOff
-	}
-	floor := MinModeForRisk(toolRisk)
-	if modeRank(floor) > modeRank(base) {
-		return floor
-	}
-	return base
 }
 
-// Authorize implements M4-SBX-02: danger/network tools cannot run under sandboxMode=off.
-// Stricter floors are applied by ResolveSandboxMode when selecting an executor.
+// ModeAtLeast reports whether got is at least as strict as want.
+func ModeAtLeast(got, want string) bool {
+	return modeRank(got) >= modeRank(want)
+}
+
+// ResolveSandboxMode picks effective mode as max of profile, risk floor, and optional override.
+// Override can only raise the floor (DX2); it cannot lower below risk requirements.
+func ResolveSandboxMode(toolRisk, profileDefault, override string) string {
+	return ResolveSandboxModeExt(toolRisk, profileDefault, override, "", "")
+}
+
+// ResolveSandboxModeExt merges scenario minMode and policyProfile force into the floor.
+func ResolveSandboxModeExt(toolRisk, profileDefault, override, scenarioMin, policyProfile string) string {
+	best := profileDefault
+	if strings.TrimSpace(best) == "" {
+		best = ModeOff
+	}
+	raise := func(m string) {
+		m = normalizeMode(m)
+		if m == "" {
+			return
+		}
+		if modeRank(m) > modeRank(best) {
+			best = m
+		}
+	}
+	raise(MinModeForRisk(toolRisk))
+	raise(scenarioMin)
+	if ForceIsolatedPolicy(policyProfile) {
+		raise(ModeIsolated)
+	}
+	raise(override)
+	return normalizeMode(best)
+}
+
+// Authorize implements M4-SBX-02 / DX2: danger/network require ≥ isolated.
 func Authorize(toolRisk, configuredMode string) error {
 	mode := configuredMode
 	if mode == "" {
 		mode = ModeOff
 	}
 	min := MinModeForRisk(toolRisk)
-	if min == ModeIsolated && mode == ModeOff {
-		return fmt.Errorf("%w: risk=%s requires mode>=%s got %s", ErrPolicyDenied, toolRisk, min, mode)
+	if modeRank(min) >= modeRank(ModeIsolated) && modeRank(mode) < modeRank(ModeIsolated) {
+		return fmt.Errorf("%w: risk=%s requires mode>=%s got %s", ErrPolicyDenied, toolRisk, ModeIsolated, mode)
 	}
 	return nil
 }

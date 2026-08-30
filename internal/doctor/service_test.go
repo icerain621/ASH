@@ -248,6 +248,47 @@ func TestM3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M3-11", "rlsOrg")
 }
 
+func TestM4Suite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M4")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Pass != 6 {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("M4 pass=%d fail=%d want pass=6", rep.Summary.Pass, rep.Summary.Fail)
+	}
+	assertCaseEvidence(t, rep, "M4-HAR-01", "harnessSchema")
+	assertCaseEvidence(t, rep, "M4-HAR-02", "harnessInvariant")
+	assertCaseEvidence(t, rep, "M4-HAR-03", "harnessActive")
+	assertCaseEvidence(t, rep, "M4-SBX-02", "sandboxPolicy")
+	assertCaseEvidence(t, rep, "M4-SBX-03", "pathJail")
+}
+
+func TestM5Suite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("M5")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.Summary.Pass != 4 {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("M5 pass=%d fail=%d want pass=4", rep.Summary.Pass, rep.Summary.Fail)
+	}
+	assertCaseEvidence(t, rep, "M4-EVO-01", "feedbackEnum")
+	assertCaseEvidence(t, rep, "M4-EVO-02", "reviewsQueue")
+	assertCaseEvidence(t, rep, "M5-EVO-03", "promoteGate")
+	assertCaseEvidence(t, rep, "M5-EVO-04", "canaryCeiling")
+}
+
 func TestALLSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("ALL suite is slow; run without -short")
@@ -258,7 +299,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 43
+	want := 53
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

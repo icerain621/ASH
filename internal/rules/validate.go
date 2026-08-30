@@ -52,6 +52,13 @@ func Validate(doc *Document) ValidationResult {
 	} else if _, ok := validPolicyProfiles[profile]; !ok {
 		res = fail(res, "$.scenario.policyProfile", "INVALID_ENUM", fmt.Sprintf("unknown policyProfile %q", profile))
 	}
+	if sc.Sandbox != nil && sc.Sandbox.MinMode != "" {
+		switch sc.Sandbox.MinMode {
+		case "off", "read-only", "workspace-write", "isolated":
+		default:
+			res = fail(res, "$.scenario.sandbox.minMode", "INVALID_ENUM", fmt.Sprintf("unknown sandbox.minMode %q", sc.Sandbox.MinMode))
+		}
+	}
 
 	if sc.Checkpoint != nil {
 		if _, ok := validCheckpointStrategies[sc.Checkpoint.Strategy]; !ok {

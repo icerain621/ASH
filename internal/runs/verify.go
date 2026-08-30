@@ -32,6 +32,7 @@ func (s *Service) executeVerifyStep(
 	step rules.Step,
 	toolCtx toolbus.Context,
 	req CreateRequest,
+	scenarioMin string,
 ) error {
 	if step.Verify == nil || len(step.Verify.Checks) == 0 {
 		msg := "verify step missing checks"
@@ -45,7 +46,7 @@ func (s *Service) executeVerifyStep(
 		_, _ = s.eventsFor().Append(runID, traceID, "verify.attempt", "info", map[string]any{
 			"stepId": step.ID, "attempt": attempt, "maxAttempts": attempts,
 		})
-		ok, detail := s.runVerifyChecks(rec, runID, traceID, step, toolCtx, req, attempt)
+		ok, detail := s.runVerifyChecks(rec, runID, traceID, step, toolCtx, req, attempt, scenarioMin)
 		if ok {
 			_, _ = s.eventsFor().Append(runID, traceID, "verify.passed", "info", map[string]any{
 				"stepId": step.ID, "attempt": attempt,
@@ -82,6 +83,7 @@ func (s *Service) runVerifyChecks(
 	toolCtx toolbus.Context,
 	req CreateRequest,
 	attempt int,
+	scenarioMin string,
 ) (bool, string) {
 	for _, item := range step.Verify.Checks {
 		if denied, reason := s.scenarioToolDenied(rec, item.Tool); denied {
@@ -91,7 +93,7 @@ func (s *Service) runVerifyChecks(
 		if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
 			return false, fmt.Sprintf("tool %s has danger risk and requires approval", item.Tool)
 		}
-		res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, toolCtx, item)
+		res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, rec.PolicyProfile, scenarioMin, toolCtx, item, nil)
 		if !res.OK {
 			msg := res.Error
 			if msg == "" {

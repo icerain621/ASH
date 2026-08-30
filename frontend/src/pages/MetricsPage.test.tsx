@@ -12,6 +12,7 @@ vi.mock("@/modules/metrics/api/metrics.api", () => ({
     summary: [
       { id: "KPI-01", label: "任务成功率", value: 1, unit: "ratio", status: "ok", denominator: 1 },
       { id: "KPI-11", label: "场景稳定率", value: 0.5, unit: "ratio", status: "ok", numerator: 1, denominator: 2 },
+      { id: "KPI-19", label: "danger 沙盒覆盖率", value: 1, unit: "ratio", status: "ok", numerator: 2, denominator: 2 },
     ],
     breakdowns: [
       {
@@ -42,6 +43,13 @@ describe("MetricsPage", () => {
       expect(screen.getByText("场景稳定率")).toBeInTheDocument();
       expect(screen.getByTestId("metrics-breakdown-scenarioStability")).toBeInTheDocument();
       expect(screen.getByText(/低于门槛/)).toBeInTheDocument();
+    });
+  });
+
+  it("renders KPI-19 danger sandbox coverage", async () => {
+    renderPage(<MetricsPage />);
+    await waitFor(() => {
+      expect(screen.getByText("danger 沙盒覆盖率")).toBeInTheDocument();
     });
   });
 });

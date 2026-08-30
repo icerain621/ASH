@@ -1720,6 +1720,8 @@ definitions:
         additionalProperties:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.Role'
         type: object
+      sandbox:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.ScenarioSandbox'
       scenarioVersion:
         type: string
       skills:
@@ -1730,6 +1732,11 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.Step'
         type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_rules.ScenarioSandbox:
+    properties:
+      minMode:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_rules.ScenarioSummary:
     properties:
@@ -3854,6 +3861,39 @@ definitions:
   internal_api.doctorRunResponse:
     properties:
       reportId:
+        type: string
+    type: object
+  internal_api.githubWebhookResponse:
+    properties:
+      ashRunId:
+        type: string
+      ashTraceId:
+        type: string
+      ciJobId:
+        type: string
+      ciRunId:
+        type: string
+      conclusion:
+        type: string
+      connectionId:
+        type: string
+      diagnosis:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_ci.DiagnosisResponse'
+      duplicate:
+        type: boolean
+      executionError:
+        type: string
+      ignored:
+        type: boolean
+      providerRunId:
+        type: string
+      reason:
+        type: string
+      shouldStartRun:
+        type: boolean
+      spaceId:
+        type: string
+      workflow:
         type: string
     type: object
   internal_api.harnessListResponse:
@@ -8003,6 +8043,69 @@ paths:
       summary: List built-in tool risk catalog (dangerous-ops)
       tags:
       - tools
+  /api/v1/webhooks/github:
+    post:
+      consumes:
+      - application/json
+      description: 'Public path: verifies X-Hub-Signature-256, upserts CI run/job,
+        diagnoses failures, optionally creates a hotfix Run when autoRun=1.'
+      parameters:
+      - description: repo connection id
+        in: query
+        name: connectionId
+        required: true
+        type: string
+      - description: create hotfix run on failure
+        in: query
+        name: autoRun
+        type: boolean
+      - default: .
+        description: repo root for autoRun
+        in: query
+        name: repoRoot
+        type: string
+      - description: sha256 HMAC of raw body
+        in: header
+        name: X-Hub-Signature-256
+        required: true
+        type: string
+      - description: delivery id for idempotency
+        in: header
+        name: X-GitHub-Delivery
+        type: string
+      - default: workflow_run
+        description: event name
+        in: header
+        name: X-GitHub-Event
+        type: string
+      - description: GitHub workflow_run payload
+        in: body
+        name: body
+        required: true
+        schema:
+          type: object
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.githubWebhookResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Ingest GitHub Actions webhook (HMAC)
+      tags:
+      - webhooks
   /api/v1/wiki/pages:
     get:
       parameters:

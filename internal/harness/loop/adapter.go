@@ -32,6 +32,8 @@ type ToolHookContext struct {
 	ProfileName        string
 	ProfileDefaultMode string
 	ModeOverride       string
+	ScenarioMinMode    string
+	PolicyProfile      string
 }
 
 // Adapter is the Harness Loop Adapter (thin hooks; does not own the run loop).
@@ -80,6 +82,7 @@ func (a *Adapter) OnBeforeTool(ctx ToolHookContext) (sandbox.Decision, error) {
 	if a == nil {
 		return sandbox.NoopRouter{}.Route(sandbox.RouteRequest{
 			Tool: ctx.Tool, Risk: ctx.Risk, ProfileDefaultMode: ctx.ProfileDefaultMode, ModeOverride: ctx.ModeOverride,
+			ScenarioMinMode: ctx.ScenarioMinMode, PolicyProfile: ctx.PolicyProfile,
 		})
 	}
 	mode := ctx.ProfileDefaultMode
@@ -97,6 +100,8 @@ func (a *Adapter) OnBeforeTool(ctx ToolHookContext) (sandbox.Decision, error) {
 		Risk:               ctx.Risk,
 		ProfileDefaultMode: mode,
 		ModeOverride:       ctx.ModeOverride,
+		ScenarioMinMode:    ctx.ScenarioMinMode,
+		PolicyProfile:      ctx.PolicyProfile,
 		RepoRoot:           ctx.RepoRoot,
 		RunID:              ctx.RunID,
 		StepID:             ctx.StepID,

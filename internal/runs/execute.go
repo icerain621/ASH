@@ -210,6 +210,8 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		})
 	}
 
+	compact := s.newCompactionTracker(rec.SpaceID)
+
 	for idx, step := range doc.Scenario.Steps {
 		if err := s.observeCanceled(rec); err != nil {
 			return err
@@ -331,7 +333,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					})
 					continue
 				}
-				res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, toolCtx, item)
+				res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, rec.PolicyProfile, scenarioMinMode(doc), toolCtx, item, compact)
 				if !res.OK {
 					s.finishStep(stepRow, "failed", stepStart, "TOOL_FAILED", res.Error)
 					_, ferr := s.failRun(rec, runID, traceID, started, "TOOL_FAILED", res.Error)
@@ -378,7 +380,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		case "verify":
 			lastToolStep.id = step.ID
 			lastToolStep.role = step.Role
-			if err := s.executeVerifyStep(rec, runID, traceID, started, stepStart, stepRow, step, toolCtx, req); err != nil {
+			if err := s.executeVerifyStep(rec, runID, traceID, started, stepStart, stepRow, step, toolCtx, req, scenarioMinMode(doc)); err != nil {
 				stepSpan.End()
 				return err
 			}
@@ -747,7 +749,7 @@ func agentErrorCode(err error) string {
 	}
 }
 
-func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID string, ctx toolbus.Context, item rules.ToolChainItem) toolbus.Result {
+func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID, policyProfile, scenarioMin string, ctx toolbus.Context, item rules.ToolChainItem, compact *compactionTracker) toolbus.Result {
 	attempts := retryAttempts(item.Retry)
 	backoff := retryBackoff(item.Retry)
 	var last toolbus.Result
@@ -757,6 +759,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID string
 		hookCtx := loop.ToolHookContext{
 			RunID: runID, TraceID: traceID, StepID: stepID, SpaceID: spaceID,
 			Tool: item.Tool, Risk: risk, RepoRoot: ctx.RepoRoot,
+			PolicyProfile: policyProfile, ScenarioMinMode: scenarioMin,
 		}
 		dec, routeErr := s.loopFor().OnBeforeTool(hookCtx)
 		if dec.Denied || routeErr != nil {
@@ -792,6 +795,15 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID string
 			last = s.dispatchSandboxedTool(runID, traceID, stepID, ctx, item, dec, timeout)
 		} else {
 			last = s.callTool(runID, traceID, stepID, ctx, item, attempt)
+		}
+		spillMax := 65536
+		if compact != nil && compact.spillMax > 0 {
+			spillMax = compact.spillMax
+		}
+		outBytes, _ := json.Marshal(last.Output)
+		s.maybeCompact(runID, traceID, stepID, compact, outBytes)
+		if last.Output != nil {
+			last.Output = s.maybeSpillToolOutput(runID, traceID, stepID, item.Tool, last.Output, spillMax)
 		}
 		failureClass := toolFailureClass(last, timeout)
 		severity := "info"
@@ -1326,6 +1338,13 @@ func approvedStepList(v any) []string {
 
 func isCitationHumanConfirm(step rules.Step) bool {
 	return step.RAG != nil && step.RAG.OnMissingCitations == "human_confirm"
+}
+
+func scenarioMinMode(doc *rules.Document) string {
+	if doc == nil || doc.Scenario.Sandbox == nil {
+		return ""
+	}
+	return strings.TrimSpace(doc.Scenario.Sandbox.MinMode)
 }
 
 func ragIndexRequest(spaceID, repoRoot string) rag.IndexRequest {

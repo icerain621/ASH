@@ -2,6 +2,9 @@ package improve
 
 import "time"
 
+// MaxCanaryPercent is the M5-EVO-04 default canary ceiling (≤10%).
+const MaxCanaryPercent = 10
+
 type CreateProposalRequest struct {
 	Title         string `json:"title" binding:"required"`
 	Description   string `json:"description"`

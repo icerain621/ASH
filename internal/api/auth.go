@@ -300,7 +300,7 @@ func authMiddleware(cfg config.Config) gin.HandlerFunc {
 
 func isPublicAuthPath(path string) bool {
 	switch path {
-	case "/api/v1/auth/login", "/api/v1/auth/dev-login":
+	case "/api/v1/auth/login", "/api/v1/auth/dev-login", "/api/v1/webhooks/github":
 		return true
 	default:
 		return false

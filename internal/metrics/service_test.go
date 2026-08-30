@@ -230,6 +230,40 @@ func TestOverviewScenarioStabilityR02(t *testing.T) {
 	}
 }
 
+func TestOverviewSandboxCoverageKPI19(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	if err := db.Create(&store.RunRecord{
+		ID: "run_kpi19", TraceID: "tr_kpi19", SpaceID: "local",
+		ScenarioName: "hotfix", ScenarioVersion: "1.1.0",
+		Status: "finished", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	events := []store.RunEvent{
+		{ID: "ev1", RunID: "run_kpi19", Seq: 1, TS: now.UnixMilli(), Type: "harness.tool.routed", Severity: "info",
+			PayloadJSON: `{"risk":"danger","sandboxMode":"isolated","tool":"runtime.command"}`, CreatedAt: now},
+		{ID: "ev2", RunID: "run_kpi19", Seq: 2, TS: now.UnixMilli(), Type: "harness.tool.routed", Severity: "info",
+			PayloadJSON: `{"risk":"danger","sandboxMode":"workspace-write","tool":"bash"}`, CreatedAt: now},
+		{ID: "ev3", RunID: "run_kpi19", Seq: 3, TS: now.UnixMilli(), Type: "harness.tool.routed", Severity: "info",
+			PayloadJSON: `{"risk":"safe","sandboxMode":"off","tool":"read"}`, CreatedAt: now},
+	}
+	for i := range events {
+		if err := db.Create(&events[i]).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	overview, err := svc.Overview(OverviewRequest{SpaceID: "local", From: now.Add(-time.Hour), To: now.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	kpi := card(overview, "KPI-19")
+	if kpi.Numerator != 1 || kpi.Denominator != 2 || kpi.Value != 0.5 {
+		t.Fatalf("KPI-19=%+v want 1/2", kpi)
+	}
+}
+
 func card(overview Overview, id string) MetricCard {
 	for _, item := range overview.Summary {
 		if item.ID == id {

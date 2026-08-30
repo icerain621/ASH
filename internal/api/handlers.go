@@ -203,6 +203,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/ci/diagnoses", h.listCIDiagnoses)
 		v1.POST("/ci/diagnoses/:diagnosisId/adopt", h.adoptCIDiagnosis)
 		v1.POST("/ci/diagnoses/:diagnosisId/dismiss", h.dismissCIDiagnosis)
+		v1.POST("/webhooks/github", h.githubWebhook)
 		v1.GET("/metrics/overview", h.getMetricsOverview)
 		v1.GET("/metrics/prometheus", h.getMetricsPrometheus)
 		v1.GET("/secrets", h.listSecrets)
