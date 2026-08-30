@@ -3026,7 +3026,11 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_waker.SweepRequest:
     properties:
+      action:
+        type: string
       actorId:
+        type: string
+      confirm:
         type: string
       dryRun:
         type: boolean
@@ -3039,6 +3043,10 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_waker.SweepResponse:
     properties:
+      action:
+        type: string
+      canceled:
+        type: integer
       dryRun:
         type: boolean
       flagged:
@@ -8386,7 +8394,7 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Sweep stale runs (report/flag; dryRun default true)
+      summary: Sweep stale runs (report/flag/cancel with safety gates)
       tags:
       - waker
   /api/v1/webhooks/github:

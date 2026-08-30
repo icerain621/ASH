@@ -2,6 +2,7 @@ package waker
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"os"
@@ -17,6 +18,14 @@ import (
 const (
 	defaultRunTTL   = 2 * time.Hour
 	defaultMaxItems = 50
+
+	// CancelConfirmPhrase must be sent with action=cancel (DX7 safety gate).
+	CancelConfirmPhrase = "CANCEL_STALE_RUNS"
+)
+
+var (
+	// ErrCancelDenied is returned when cancel safety gates fail.
+	ErrCancelDenied = errors.New("waker cancel denied")
 )
 
 // Item is one stale/stuck run candidate.
@@ -38,27 +47,32 @@ type QueueResponse struct {
 	Inspected time.Time `json:"inspectedAt"`
 }
 
-// SweepRequest is POST /waker/sweep (report-only stub; dryRun default true).
+// SweepRequest is POST /waker/sweep.
+// action: report (default) | cancel. Cancel requires dryRun=false, confirm phrase, ASH_WAKER_ALLOW_CANCEL=1.
 type SweepRequest struct {
 	SpaceID string `json:"spaceId,omitempty"`
 	DryRun  *bool  `json:"dryRun,omitempty"`
 	MaxAge  string `json:"maxAge,omitempty"`
 	Limit   int    `json:"limit,omitempty"`
+	Action  string `json:"action,omitempty"`
+	Confirm string `json:"confirm,omitempty"`
 	ActorID string `json:"actorId,omitempty"`
 }
 
 // SweepResponse summarizes one wake pass.
 type SweepResponse struct {
-	OK      bool     `json:"ok"`
-	DryRun  bool     `json:"dryRun"`
-	Matched int      `json:"matched"`
-	Flagged int      `json:"flagged"`
-	RunIDs  []string `json:"runIds,omitempty"`
-	MaxAge  string   `json:"maxAge"`
-	Summary string   `json:"summary,omitempty"`
+	OK       bool     `json:"ok"`
+	DryRun   bool     `json:"dryRun"`
+	Action   string   `json:"action"`
+	Matched  int      `json:"matched"`
+	Flagged  int      `json:"flagged"`
+	Canceled int      `json:"canceled,omitempty"`
+	RunIDs   []string `json:"runIds,omitempty"`
+	MaxAge   string   `json:"maxAge"`
+	Summary  string   `json:"summary,omitempty"`
 }
 
-// Service inspects long-lived non-terminal runs (Sprint DX6).
+// Service inspects long-lived non-terminal runs (Sprint DX6/DX7).
 type Service struct {
 	db  *store.DB
 	ctx context.Context
@@ -101,6 +115,11 @@ func EffectiveRunTTL() time.Duration {
 		return defaultRunTTL
 	}
 	return d
+}
+
+// AllowCancel reports ASH_WAKER_ALLOW_CANCEL=1.
+func AllowCancel() bool {
+	return os.Getenv("ASH_WAKER_ALLOW_CANCEL") == "1"
 }
 
 // ParseInterval reads ASH_WAKER_INTERVAL; empty/off disables background.
@@ -146,12 +165,20 @@ func (s *Service) Queue(spaceID, maxAge string, limit int) (QueueResponse, error
 	}, nil
 }
 
-// Sweep reports stale runs. When dryRun=false, Flagged equals Matched (audit left to API).
+// Sweep reports, flags, or (with gates) cancels stale runs.
 func (s *Service) Sweep(req SweepRequest) (SweepResponse, error) {
 	dryRun := true
 	if req.DryRun != nil {
 		dryRun = *req.DryRun
 	}
+	action := strings.ToLower(strings.TrimSpace(req.Action))
+	if action == "" {
+		action = "report"
+	}
+	if action != "report" && action != "cancel" {
+		return SweepResponse{}, fmt.Errorf("action must be report or cancel")
+	}
+
 	ttl := parseMaxAge(req.MaxAge)
 	limit := req.Limit
 	if limit <= 0 || limit > 200 {
@@ -162,18 +189,63 @@ func (s *Service) Sweep(req SweepRequest) (SweepResponse, error) {
 		return SweepResponse{}, err
 	}
 	out := SweepResponse{
-		OK: true, DryRun: dryRun, Matched: len(items), MaxAge: ttl.String(),
+		OK: true, DryRun: dryRun, Action: action,
+		Matched: len(items), MaxAge: ttl.String(),
 	}
 	for _, it := range items {
 		out.RunIDs = append(out.RunIDs, it.RunID)
 	}
-	if !dryRun {
-		out.Flagged = len(items)
-		out.Summary = fmt.Sprintf("flagged %d stale runs for operator review", len(items))
-	} else {
-		out.Summary = fmt.Sprintf("matched %d stale runs (dryRun)", len(items))
+
+	if action == "report" {
+		if !dryRun {
+			out.Flagged = len(items)
+			out.Summary = fmt.Sprintf("flagged %d stale runs for operator review", len(items))
+		} else {
+			out.Summary = fmt.Sprintf("matched %d stale runs (dryRun)", len(items))
+		}
+		return out, nil
 	}
+
+	// action=cancel
+	if err := assertCancelAllowed(dryRun, req.Confirm); err != nil {
+		return SweepResponse{}, err
+	}
+	if dryRun {
+		out.Summary = fmt.Sprintf("cancel dryRun: would cancel %d stale runs", len(items))
+		return out, nil
+	}
+	canceled := 0
+	now := time.Now().UTC()
+	for _, it := range items {
+		var rec store.RunRecord
+		if err := s.q().First(&rec, "id = ?", it.RunID).Error; err != nil {
+			continue
+		}
+		if err := runs.ApplyStatusTransition(&rec, runs.StatusCanceled); err != nil {
+			continue
+		}
+		rec.UpdatedAt = now
+		rec.FinishedAt = &now
+		if err := s.q().Save(&rec).Error; err != nil {
+			continue
+		}
+		canceled++
+	}
+	out.Canceled = canceled
+	out.Summary = fmt.Sprintf("canceled %d of %d stale runs", canceled, len(items))
 	return out, nil
+}
+
+func assertCancelAllowed(dryRun bool, confirm string) error {
+	if !AllowCancel() {
+		return fmt.Errorf("%w: set ASH_WAKER_ALLOW_CANCEL=1", ErrCancelDenied)
+	}
+	if strings.TrimSpace(confirm) != CancelConfirmPhrase {
+		return fmt.Errorf("%w: confirm must be %q", ErrCancelDenied, CancelConfirmPhrase)
+	}
+	// dryRun may be true for preview; live cancel also requires dryRun=false at call site
+	_ = dryRun
+	return nil
 }
 
 func (s *Service) listStale(spaceID string, ttl time.Duration, limit int) ([]Item, error) {
@@ -204,7 +276,7 @@ func (s *Service) listStale(spaceID string, ttl time.Duration, limit int) ([]Ite
 	return items, nil
 }
 
-// StartBackground periodically sweeps all spaces (report-only, dryRun=false flags via logs).
+// StartBackground periodically reports stale runs (never cancels).
 func StartBackground(db *store.DB, interval time.Duration) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 	if db == nil || interval <= 0 {
@@ -216,7 +288,7 @@ func StartBackground(db *store.DB, interval time.Duration) context.CancelFunc {
 		defer ticker.Stop()
 		run := func() {
 			dry := false
-			resp, err := svc.Sweep(SweepRequest{DryRun: &dry, Limit: defaultMaxItems})
+			resp, err := svc.Sweep(SweepRequest{DryRun: &dry, Action: "report", Limit: defaultMaxItems})
 			if err != nil {
 				log.Printf("waker: sweep: %v", err)
 				return

@@ -44,6 +44,7 @@
 | DX4 | ACP 任务契约硬化（v2.1） | `ash.acp.task.v1` + `make acp-smoke` + Session turn→ACP | ✅ |
 | DX5 | v2.1 scope 冻结 + ACP Doctor | M4-ACP-01/02；ALL **55**；`make v2.1-signoff`；tag 人工 | ✅ |
 | DX6 | Waker 雏形（v2.2） | `/waker/queue|sweep` + `ASH_WAKER_*`；无新表 | ✅ |
+| DX7 | Waker cancel 闸门（v2.2） | `ALLOW_CANCEL` + confirm + `waker.cancel_completed` | ✅ |
 | 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md) | — |
 
 ---
@@ -140,6 +141,7 @@ make regression-short && make web-gate
 - Sprint DX4：ACP 任务契约（`ash.acp.task.v1` / `acp-mock` / `make acp-smoke` / turn 转发；无新表）
 - Sprint DX5：v2.1 范围冻结（M4-ACP；ALL 55；`make v2.1-signoff`；tag 人工）
 - Sprint DX6：Waker 雏形（`/waker/queue|sweep`；无新表；v2.2 草案）
+- Sprint DX7：Waker cancel 安全闸门（ALLOW_CANCEL + confirm；无新表）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

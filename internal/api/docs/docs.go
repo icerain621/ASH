@@ -6307,7 +6307,7 @@ const docTemplate = `{
                 "tags": [
                     "waker"
                 ],
-                "summary": "Sweep stale runs (report/flag; dryRun default true)",
+                "summary": "Sweep stale runs (report/flag/cancel with safety gates)",
                 "parameters": [
                     {
                         "description": "sweep",
@@ -11180,7 +11180,13 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_waker.SweepRequest": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string"
+                },
                 "actorId": {
+                    "type": "string"
+                },
+                "confirm": {
                     "type": "string"
                 },
                 "dryRun": {
@@ -11200,6 +11206,12 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_waker.SweepResponse": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "canceled": {
+                    "type": "integer"
+                },
                 "dryRun": {
                     "type": "boolean"
                 },

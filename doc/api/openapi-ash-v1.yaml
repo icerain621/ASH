@@ -2022,14 +2022,18 @@ components:
         dryRun: { type: boolean }
         maxAge: { type: string }
         limit: { type: integer }
+        action: { type: string, enum: [report, cancel], description: "cancel requires ASH_WAKER_ALLOW_CANCEL=1 and confirm=CANCEL_STALE_RUNS" }
+        confirm: { type: string }
         actorId: { type: string }
     WakerSweepResponse:
       type: object
       properties:
         ok: { type: boolean }
         dryRun: { type: boolean }
+        action: { type: string }
         matched: { type: integer }
         flagged: { type: integer }
+        canceled: { type: integer }
         runIds:
           type: array
           items: { type: string }
@@ -4315,7 +4319,7 @@ paths:
   /api/v1/waker/sweep:
     post:
       tags: [Waker]
-      summary: Sweep stale runs (report/flag; dryRun default true)
+      summary: Sweep stale runs (report/flag/cancel with safety gates)
       requestBody:
         content:
           application/json:

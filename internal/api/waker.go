@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -34,7 +35,7 @@ func (h *Handler) getWakerQueue(c *gin.Context) {
 }
 
 // PostWakerSweep godoc
-// @Summary Sweep stale runs (report/flag; dryRun default true)
+// @Summary Sweep stale runs (report/flag/cancel with safety gates)
 // @Tags waker
 // @Accept json
 // @Produce json
@@ -60,11 +61,20 @@ func (h *Handler) postWakerSweep(c *gin.Context) {
 	}
 	resp, err := h.wakerFor(c).Sweep(req)
 	if err != nil {
+		if errors.Is(err, waker.ErrCancelDenied) {
+			c.JSON(http.StatusBadRequest, errorBody("WAKER_CANCEL_DENIED", err.Error()))
+			return
+		}
 		c.JSON(http.StatusBadRequest, errorBody("WAKER_SWEEP_FAILED", err.Error()))
 		return
 	}
-	_ = h.dbFor(c).Create(auditRow(req.SpaceID, req.ActorID, "waker.sweep_completed", map[string]any{
-		"matched": resp.Matched, "flagged": resp.Flagged, "dryRun": resp.DryRun,
+	eventType := "waker.sweep_completed"
+	if strings.EqualFold(resp.Action, "cancel") && resp.Canceled > 0 {
+		eventType = "waker.cancel_completed"
+	}
+	_ = h.dbFor(c).Create(auditRow(req.SpaceID, req.ActorID, eventType, map[string]any{
+		"matched": resp.Matched, "flagged": resp.Flagged, "canceled": resp.Canceled,
+		"dryRun": resp.DryRun, "action": resp.Action,
 		"maxAge": resp.MaxAge, "runIds": resp.RunIDs, "summary": resp.Summary,
 	})).Error
 	c.JSON(http.StatusOK, resp)

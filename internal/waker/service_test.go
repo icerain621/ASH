@@ -1,6 +1,7 @@
 package waker
 
 import (
+	"errors"
 	"path/filepath"
 	"testing"
 	"time"
@@ -56,6 +57,59 @@ func TestQueueAndSweepStaleRuns(t *testing.T) {
 	sw2, err := svc.Sweep(SweepRequest{SpaceID: "local", DryRun: &live, MaxAge: "1h"})
 	if err != nil || sw2.Flagged != 1 {
 		t.Fatalf("sweep live=%+v err=%v", sw2, err)
+	}
+}
+
+func TestCancelRequiresSafetyGates(t *testing.T) {
+	t.Setenv("ASH_WAKER_RUN_TTL", "1h")
+	t.Setenv("ASH_WAKER_ALLOW_CANCEL", "")
+	db, err := store.Open(filepath.Join(t.TempDir(), "ash.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	now := time.Now().UTC()
+	if err := db.Create(&store.RunRecord{
+		ID: "run_cancel", TraceID: "tr_c",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: runs.StatusRunning, SpaceID: "local",
+		RepoRoot: ".", StartedAt: now.Add(-3 * time.Hour),
+		CreatedAt: now.Add(-3 * time.Hour), UpdatedAt: now.Add(-3 * time.Hour),
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	svc := NewService(db)
+	dry := false
+	_, err = svc.Sweep(SweepRequest{
+		SpaceID: "local", DryRun: &dry, MaxAge: "1h",
+		Action: "cancel", Confirm: CancelConfirmPhrase,
+	})
+	if err == nil || !errors.Is(err, ErrCancelDenied) {
+		t.Fatalf("want ErrCancelDenied got %v", err)
+	}
+
+	t.Setenv("ASH_WAKER_ALLOW_CANCEL", "1")
+	_, err = svc.Sweep(SweepRequest{
+		SpaceID: "local", DryRun: &dry, MaxAge: "1h",
+		Action: "cancel", Confirm: "WRONG",
+	})
+	if err == nil || !errors.Is(err, ErrCancelDenied) {
+		t.Fatalf("want confirm deny got %v", err)
+	}
+
+	sw, err := svc.Sweep(SweepRequest{
+		SpaceID: "local", DryRun: &dry, MaxAge: "1h",
+		Action: "cancel", Confirm: CancelConfirmPhrase,
+	})
+	if err != nil || sw.Canceled != 1 {
+		t.Fatalf("cancel=%+v err=%v", sw, err)
+	}
+	var rec store.RunRecord
+	if err := db.First(&rec, "id = ?", "run_cancel").Error; err != nil {
+		t.Fatal(err)
+	}
+	if rec.Status != runs.StatusCanceled {
+		t.Fatalf("status=%s", rec.Status)
 	}
 }
 

@@ -257,6 +257,7 @@ var Catalog = map[string]Entry{
 	"APPROVAL_NOT_FOUND":     {Domain: "approvals", Summary: "Approval id not found"},
 
 	// waker
-	"WAKER_QUEUE_FAILED": {Domain: "waker", Summary: "Failed to list waker stale-run queue"},
-	"WAKER_SWEEP_FAILED": {Domain: "waker", Summary: "Waker stale-run sweep failed"},
+	"WAKER_QUEUE_FAILED":  {Domain: "waker", Summary: "Failed to list waker stale-run queue"},
+	"WAKER_SWEEP_FAILED":  {Domain: "waker", Summary: "Waker stale-run sweep failed"},
+	"WAKER_CANCEL_DENIED": {Domain: "waker", Summary: "Waker cancel blocked by safety gates"},
 }

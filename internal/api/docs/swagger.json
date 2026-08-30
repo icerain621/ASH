@@ -6301,7 +6301,7 @@
                 "tags": [
                     "waker"
                 ],
-                "summary": "Sweep stale runs (report/flag; dryRun default true)",
+                "summary": "Sweep stale runs (report/flag/cancel with safety gates)",
                 "parameters": [
                     {
                         "description": "sweep",
@@ -11174,7 +11174,13 @@
         "github_com_ash-repwiki_ash_internal_waker.SweepRequest": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string"
+                },
                 "actorId": {
+                    "type": "string"
+                },
+                "confirm": {
                     "type": "string"
                 },
                 "dryRun": {
@@ -11194,6 +11200,12 @@
         "github_com_ash-repwiki_ash_internal_waker.SweepResponse": {
             "type": "object",
             "properties": {
+                "action": {
+                    "type": "string"
+                },
+                "canceled": {
+                    "type": "integer"
+                },
                 "dryRun": {
                     "type": "boolean"
                 },
