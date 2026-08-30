@@ -3000,6 +3000,10 @@ definitions:
     type: object
   internal_api.AgentProviderStatus:
     properties:
+      acp:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport'
+      acpE2EEnabled:
+        type: boolean
       execGo:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport'
       execGoE2EEnabled:
@@ -6450,7 +6454,7 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/internal_api.AgentProviderStatus'
-      summary: Probe agent provider / ExecGo readiness
+      summary: Probe agent provider / ExecGo / ACP readiness
       tags:
       - providers
   /api/v1/quest/board:

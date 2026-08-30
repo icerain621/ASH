@@ -145,7 +145,7 @@ flowchart TB
 
 - **Harness Profile**：`draft → in_review → active`；`promote` 需人工批准  
 - **Loop 接缝**：`harness.turn/step/tool.*` 事件；`model-visible ⟺ logged`  
-- **Provider**：static / ExecGo（v2）；ACP 预留  
+- **Provider**：static / ExecGo（v2）；ACP 骨架（v2.1 DW：`ASH_ACP_ENDPOINT`）  
 - **包**：`internal/harness/`、`internal/agent/provider/`  
 
 ---
@@ -200,6 +200,7 @@ flowchart TB
 | 35–36 | **DT** | — | Session RPC/JSON | ✅ `/agents/sessions` + `ash session rpc` |
 | 37–38 | **DU** | — | 演进 KPI + 移动审阅 | ✅ KPI-17/18 + `/ui/m/reviews` |
 | 39–40 | **DV** | **v2.0.0** | scope 冻结 + 签字 | ✅ `v2-release-scope.md` + `make v2-signoff`（tag 人工） |
+| 41+ | **DW** | **v2.1 草案** | ACP provider 骨架 | ✅ `ACPExecutor` + Probe + `/providers/agent.acp` |
 
 **总工期**：约 **40 周**（含 P0 2 周 + v2 功能 38 周）；DH/DX 可并行 DK 需前端产能。
 

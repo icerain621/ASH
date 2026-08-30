@@ -26,7 +26,7 @@
 
 - 云 RDS 生产切流签字（H-01～H-03 仍 ⏸，本地 Postgres 门禁已有）
 - ExecGo/Codex **真实 live** 强制（H-06；代码就绪，需 `ASH_EXECGO_E2E=1`）
-- ACP SDK 真接线（`acp_sdk` 仍回退 static）
+- ACP SDK 真接线（~~`acp_sdk` 仍回退 static~~ → **v2.1 DW 骨架已接线**；完整协议/生产 ACP 服务仍后置）
 - 多区域 Active-Active / 计费 / 外部 IdP 联邦
 - Skill Marketplace 全量、向量库主路径、IDE 补全
 

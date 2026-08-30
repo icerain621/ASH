@@ -116,7 +116,7 @@ apiVersion: ash.harness/v1
 kind: HarnessProfileSpec
 spec:
   provider:
-    kind: execgo          # static | execgo | acp_sdk（v2 实现 static+execgo）
+    kind: execgo          # static | execgo | acp_sdk（v2.1 DW：ACP 需 ASH_ACP_ENDPOINT）
     model: ""             # 可选覆盖
   sandbox:
     defaultMode: workspace-write   # off | read-only | workspace-write | isolated

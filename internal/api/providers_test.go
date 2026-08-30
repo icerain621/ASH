@@ -41,4 +41,7 @@ func TestGetAgentProviderStatus(t *testing.T) {
 	if body.ExecGo.Kind != "execgo" {
 		t.Fatalf("execGo=%+v", body.ExecGo)
 	}
+	if body.ACP.Kind != "acp_sdk" {
+		t.Fatalf("acp=%+v", body.ACP)
+	}
 }

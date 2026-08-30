@@ -24,8 +24,7 @@ func Resolve(kind string) Executor {
 	case "static":
 		return StaticExecutor{}
 	case "acp_sdk":
-		// ACP reserved — fall back to static until DQ+/DT Session wiring.
-		return StaticExecutor{}
+		return NewACPExecutor()
 	default:
 		return StaticExecutor{}
 	}
@@ -76,7 +75,7 @@ func DescribeKind(kind string) string {
 	case "execgo":
 		return "execgo"
 	case "acp_sdk":
-		return "acp_sdk (fallback static)"
+		return "acp_sdk"
 	default:
 		return fmt.Sprintf("%s (fallback static)", kind)
 	}

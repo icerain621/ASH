@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-08-28  
+> 更新：2026-08-30  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **53/53** · M3 11/11 · M4 6/6 · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1 开篇 DW（ACP）✅** |
 
 ---
 
@@ -32,14 +32,15 @@
 | DN | Skills 目录 | SKILL.md 扫描 + 场景绑定 + `skill:` contextRefs | ✅ |
 | DO | Sub-run | spawn + 深度/白名单 + `/tree` + Quest 树 | ✅ |
 | DP | verify 步骤 | `kind: verify` + 重试 + improve 草稿 | ✅ |
-| DQ | Provider + ExecGo live | harness provider→agent + fallback 事件 + `/providers/agent` | ✅ 代码就绪；H-06 live ⏸ |
+| DQ | Provider + ExecGo live | harness provider→agent + fallback 事件 + `/providers/agent` | ✅ 代码就绪；H-06 live 脚本就绪 |
 | DX2 | isolated 强制 | hotfix/security 地板 + KPI-19 + `sandbox.minMode` | ✅ |
 | DR | compaction + Doctor M4/M5 | spill + compaction 事件 + M4/M5 探针；ALL 53 | ✅ |
 | DS | Webhook 触发 CI→Run | HMAC + diagnose + optional autoRun hotfix；清单 `ci-webhook.md` | ✅ |
 | DT | Session RPC/JSON | `/agents/sessions` + turns/events + `ash session rpc` | ✅ |
 | DU | 演进 KPI + 移动审阅 | KPI-17/18 + Metrics 演进区 + `/ui/m/reviews` | ✅ |
 | DV | v2 scope 冻结 + 签字 | `v2-release-scope.md` + `make v2-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · **v2 功能 Sprint 收口** | — |
+| DW | ACP provider 骨架（v2.1） | `ACPExecutor` + Probe + `/providers/agent.acp` + fallback | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · v2 功能收口；v2.1 见 [`v2.1-release-scope.md`](v2.1-release-scope.md) | — |
 
 ---
 
@@ -123,13 +124,14 @@ make regression-short && make web-gate
 - Sprint DN：Skills 目录（SKILL.md 扫描 / 场景绑定 / skill: contextRefs；无新表）
 - Sprint DO：Sub-run（谱系 SQL 27；spawn/tree；深度与工具白名单；Quest 树）
 - Sprint DP：verify 步骤（DSL kind:verify + 重试 + improve 草稿；无新表）
-- Sprint DQ：Provider + ExecGo（harness kind→agent；fallback 事件；`/providers/agent`；H-06 仍环境门禁）
+- Sprint DQ：Provider + ExecGo（harness kind→agent；fallback 事件；`/providers/agent`；H-06 脚本就绪）
 - Sprint DX2：isolated 强制（policy/scenario 地板 + KPI-19；无新表）
 - Sprint DR：compaction + Doctor M4/M5（spill / harness.compaction；ALL 53）
 - Sprint DS：Webhook CI→Run（HMAC `/webhooks/github` + diagnose + autoRun hotfix；无新表）
 - Sprint DT：Session RPC/JSON（`/agents/sessions` + turns/events + `ash session rpc`；无新表）
 - Sprint DU：演进 KPI + 移动审阅（KPI-17/18；Metrics 演进区；`/ui/m/reviews`；无新表）
 - Sprint DV：v2 scope 冻结（`v2-release-scope.md`；`make v2-signoff`；tag 人工）
+- Sprint DW：ACP provider 骨架（`ACPExecutor` / ProbeACP / `/providers/agent.acp`；无新表）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

@@ -11,6 +11,7 @@ var liveGateDefs = []liveGate{
 	{env: "ASH_CI_FIXTURE", hint: "CI sync uses fixture provider (no GitHub API)"},
 	{env: "ASH_MIGRATE_E2E", hint: "M3-04 live migrate verify"},
 	{env: "ASH_EXECGO_E2E", hint: "M3-05 ExecGo/Codex live smoke"},
+	{env: "ASH_ACP_E2E", hint: "ACP control-plane live (ASH_ACP_ENDPOINT)"},
 	{env: "ASH_POSTGRES_RLS", hint: "M3-06 Postgres RLS policies"},
 }
 

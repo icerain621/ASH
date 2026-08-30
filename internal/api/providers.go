@@ -13,18 +13,20 @@ import (
 
 // AgentProviderStatus mirrors runs.AgentProviderStatus for swagger.
 type AgentProviderStatus struct {
-	Pinned           bool                         `json:"pinned"`
-	PinnedAdapter    string                       `json:"pinnedAdapter,omitempty"`
-	HarnessKind      string                       `json:"harnessKind,omitempty"`
-	Selection        runs.ProviderSelectionDTO    `json:"selection"`
-	ExecGo           agentexec.ProbeReport        `json:"execGo"`
-	LiveGateHints    []string                     `json:"liveGateHints,omitempty"`
-	ExecGoE2EEnabled bool                         `json:"execGoE2EEnabled"`
-	LiveSmokeHint    string                       `json:"liveSmokeHint,omitempty"`
+	Pinned           bool                      `json:"pinned"`
+	PinnedAdapter    string                    `json:"pinnedAdapter,omitempty"`
+	HarnessKind      string                    `json:"harnessKind,omitempty"`
+	Selection        runs.ProviderSelectionDTO `json:"selection"`
+	ExecGo           agentexec.ProbeReport     `json:"execGo"`
+	ACP              agentexec.ProbeReport     `json:"acp"`
+	LiveGateHints    []string                  `json:"liveGateHints,omitempty"`
+	ExecGoE2EEnabled bool                      `json:"execGoE2EEnabled"`
+	ACPE2EEnabled    bool                      `json:"acpE2EEnabled"`
+	LiveSmokeHint    string                    `json:"liveSmokeHint,omitempty"`
 }
 
 // GetAgentProviderStatus godoc
-// @Summary Probe agent provider / ExecGo readiness
+// @Summary Probe agent provider / ExecGo / ACP readiness
 // @Tags providers
 // @Produce json
 // @Param spaceId query string false "space id" default(local)
@@ -46,8 +48,10 @@ func (h *Handler) getAgentProviderStatus(c *gin.Context) {
 		HarnessKind:      status.HarnessKind,
 		Selection:        status.Selection,
 		ExecGo:           status.ExecGo,
+		ACP:              status.ACP,
 		LiveGateHints:    status.LiveGateHints,
 		ExecGoE2EEnabled: status.ExecGoE2EEnabled,
+		ACPE2EEnabled:    status.ACPE2EEnabled,
 		LiveSmokeHint:    status.LiveSmokeHint,
 	})
 }

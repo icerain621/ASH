@@ -829,10 +829,19 @@ components:
             ok: { type: boolean }
             message: { type: string }
             checkedAt: { type: integer, format: int64 }
+        acp:
+          type: object
+          properties:
+            adapter: { type: string }
+            kind: { type: string }
+            ok: { type: boolean }
+            message: { type: string }
+            checkedAt: { type: integer, format: int64 }
         liveGateHints:
           type: array
           items: { type: string }
         execGoE2EEnabled: { type: boolean }
+        acpE2EEnabled: { type: boolean }
         liveSmokeHint: { type: string }
     RunDiffLine:
       type: object
@@ -4692,7 +4701,7 @@ paths:
   /api/v1/providers/agent:
     get:
       tags: [Providers]
-      summary: Probe agent provider / ExecGo readiness
+      summary: Probe agent provider / ExecGo / ACP readiness
       parameters:
         - in: query
           name: spaceId

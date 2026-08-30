@@ -3,15 +3,15 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **53/53** · M3 **11/11** · M4 **6/6** · M5 **4/4** · TR3 **10/10** · SQL rev **27** · RLS **46**（v2 DH–DV 收口；tag 待人工）  
+> **代码锚点**：Doctor ALL **53/53** · M3 **11/11** · M4 **6/6** · M5 **4/4** · TR3 **10/10** · SQL rev **27** · RLS **46**（v2 DH–DV 收口；**DW ACP**；tag 待人工）  
 > **归属**：[`plan/`](README.md)  
-> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
+> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
 ---
 
 ## 0. 一句话结论
 
-**MVP 功能与自动化门禁已完成**；当前主线不是新功能，而是 **生产环境验收（云 RDS / 真实 CI·ExecGo）→ 正式发布签字 → 上线观察**。设计上 M0–M3 主体已闭环，未完成项集中在「生产切流 + 合规/生态增强」。
+**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口，v2.1 开篇 **DW（ACP）** 已接线。当前并行线：**生产环境验收**（云 RDS / 真实 CI·ExecGo）与 v2.1 增量。
 
 ---
 

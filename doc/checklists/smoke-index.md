@@ -48,6 +48,7 @@
 | — | Session RPC (DT) | `/agents/sessions` + `ash session rpc` | [`session-rpc.md`](session-rpc.md) |
 | — | Evolve KPI + mobile (DU) | KPI-17~19 + `/ui/m/reviews` | [`evolve-kpi-mobile.md`](evolve-kpi-mobile.md) |
 | — | v2 signoff (DV) | scope freeze + `make v2-signoff` | [`v2-signoff.md`](v2-signoff.md) |
+| — | ACP provider (DW) | ProbeACP + harness `acp_sdk` fallback | [`acp-provider.md`](acp-provider.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |
@@ -60,6 +61,8 @@
 | `ASH_CI_FIXTURE=1` | Worker 进程启用 CI fixture（H-04/05/07 live） |
 | `ASH_CI_LIVE=1` | 真 GitHub sync/diagnose（禁 fixture；需 token 或 connection） |
 | `ASH_EXECGO_E2E=1` | ExecGo live doctor M3-05（H-06） |
+| `ASH_ACP_ENDPOINT` | ACP 控制面基址（Harness `acp_sdk`） |
+| `ASH_ACP_E2E=1` | ACP liveGateHints |
 | `ASH_SPACE_ID` | 默认 `local` |
 | `ASH_AUTH_HEADER` | 可选 Bearer |
 

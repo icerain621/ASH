@@ -2,6 +2,7 @@ package runs
 
 import (
 	"context"
+	"os"
 	"strings"
 	"sync"
 	"time"
@@ -20,9 +21,11 @@ type ProviderSelection struct {
 }
 
 type providerProbeCache struct {
-	mu     sync.Mutex
-	report agentexec.ProbeReport
-	at     time.Time
+	mu        sync.Mutex
+	execGo    agentexec.ProbeReport
+	execGoAt  time.Time
+	acp       agentexec.ProbeReport
+	acpAt     time.Time
 }
 
 func (s *Service) probeExecGoCached() agentexec.ProbeReport {
@@ -38,19 +41,42 @@ func (s *Service) probeExecGoCached() agentexec.ProbeReport {
 	c := s.providerProbe
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if !c.at.IsZero() && time.Since(c.at) < ttl {
-		return c.report
+	if !c.execGoAt.IsZero() && time.Since(c.execGoAt) < ttl {
+		return c.execGo
 	}
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
-	c.report = agentexec.ProbeExecGo(ctx)
-	c.at = time.Now()
-	return c.report
+	c.execGo = agentexec.ProbeExecGo(ctx)
+	c.execGoAt = time.Now()
+	return c.execGo
+}
+
+func (s *Service) probeACPCached() agentexec.ProbeReport {
+	const ttl = 30 * time.Second
+	if s == nil {
+		ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		return agentexec.ProbeACP(ctx)
+	}
+	if s.providerProbe == nil {
+		s.providerProbe = &providerProbeCache{}
+	}
+	c := s.providerProbe
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	if !c.acpAt.IsZero() && time.Since(c.acpAt) < ttl {
+		return c.acp
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+	defer cancel()
+	c.acp = agentexec.ProbeACP(ctx)
+	c.acpAt = time.Now()
+	return c.acp
 }
 
 // SelectProvider resolves the agent executor for a space.
 // CLI / WithAgentExecutor pins win; otherwise active Harness provider.kind is used.
-// execgo unhealthy → static + Fallback=true.
+// execgo / acp_sdk unhealthy → static + Fallback=true.
 func (s *Service) SelectProvider(spaceID string) ProviderSelection {
 	if s == nil {
 		return ProviderSelection{
@@ -87,10 +113,16 @@ func (s *Service) SelectProvider(spaceID string) ProviderSelection {
 
 	switch kind {
 	case "acp_sdk":
-		sel.Fallback = true
-		sel.Reason = "acp_sdk not wired; using static"
-		sel.Executor = agentexec.StaticExecutor{}
-		sel.Adapter = "static"
+		probe := s.probeACPCached()
+		if !probe.OK {
+			sel.Fallback = true
+			sel.Reason = probe.Message
+			if sel.Reason == "" {
+				sel.Reason = "acp_sdk probe failed"
+			}
+			sel.Executor = agentexec.StaticExecutor{}
+			sel.Adapter = "static"
+		}
 	case "execgo":
 		probe := s.probeExecGoCached()
 		if !probe.OK {
@@ -113,8 +145,10 @@ type AgentProviderStatus struct {
 	HarnessKind      string                `json:"harnessKind,omitempty"`
 	Selection        ProviderSelectionDTO  `json:"selection"`
 	ExecGo           agentexec.ProbeReport `json:"execGo"`
+	ACP              agentexec.ProbeReport `json:"acp"`
 	LiveGateHints    []string              `json:"liveGateHints,omitempty"`
 	ExecGoE2EEnabled bool                  `json:"execGoE2EEnabled"`
+	ACPE2EEnabled    bool                  `json:"acpE2EEnabled"`
 	LiveSmokeHint    string                `json:"liveSmokeHint,omitempty"`
 }
 
@@ -137,6 +171,7 @@ func (s *Service) ProviderStatus(spaceID string, liveHints []string, execGoE2E b
 	}
 	sel := s.SelectProvider(spaceID)
 	probe := s.probeExecGoCached()
+	acpProbe := s.probeACPCached()
 	out := AgentProviderStatus{
 		Pinned:      s != nil && s.agentPinned,
 		HarnessKind: harnessKind,
@@ -148,9 +183,11 @@ func (s *Service) ProviderStatus(spaceID string, liveHints []string, execGoE2E b
 			Reason:        sel.Reason,
 		},
 		ExecGo:           probe,
+		ACP:              acpProbe,
 		LiveGateHints:    liveHints,
 		ExecGoE2EEnabled: execGoE2E,
-		LiveSmokeHint:    "ASH_EXECGO_E2E=1 make execgo-live-smoke (requires --agent execgo_codex / pinned execgo)",
+		ACPE2EEnabled:    os.Getenv("ASH_ACP_E2E") == "1",
+		LiveSmokeHint:    "ASH_EXECGO_E2E=1 make execgo-live-smoke; ACP: ASH_ACP_ENDPOINT + harness provider.kind=acp_sdk",
 	}
 	if s != nil && s.agentPinned {
 		out.PinnedAdapter = s.AgentAdapter()

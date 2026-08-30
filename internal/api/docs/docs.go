@@ -3462,7 +3462,7 @@ const docTemplate = `{
                 "tags": [
                     "providers"
                 ],
-                "summary": "Probe agent provider / ExecGo readiness",
+                "summary": "Probe agent provider / ExecGo / ACP readiness",
                 "parameters": [
                     {
                         "type": "string",
@@ -11061,6 +11061,12 @@ const docTemplate = `{
         "internal_api.AgentProviderStatus": {
             "type": "object",
             "properties": {
+                "acp": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport"
+                },
+                "acpE2EEnabled": {
+                    "type": "boolean"
+                },
                 "execGo": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport"
                 },

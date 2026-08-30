@@ -9,8 +9,8 @@ func TestResolveAndNormalize(t *testing.T) {
 	if AdapterNameOf(Resolve("execgo")) != "execgo_codex" {
 		t.Fatal("execgo")
 	}
-	if AdapterNameOf(Resolve("acp_sdk")) != "static" {
-		t.Fatal("acp fallback")
+	if AdapterNameOf(Resolve("acp_sdk")) != "acp_sdk" {
+		t.Fatal("acp_sdk adapter")
 	}
 	if NormalizeProviderKind("") != "execgo" {
 		t.Fatal("default kind")
