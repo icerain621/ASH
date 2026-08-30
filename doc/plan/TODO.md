@@ -67,8 +67,8 @@ make mvp-signoff
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| H-04/05 | 真实 GitHub CI sync + diagnose | 非 fixture；rootCause 对齐真实 log | ⏸ |
-| H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke`；也可 `GET /providers/agent` 看探测 | ⏸ 环境门禁（DQ 代码就绪） |
+| H-04/05 | 真实 GitHub CI sync + diagnose | `ASH_CI_LIVE=1 make ci-live-smoke`；禁 fixture；见 [`p1-live-credibility.md`](../checklists/p1-live-credibility.md) | ✅ 脚本就绪；跑通仍需 token/Worker |
+| H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke`（证据 + 可选 `/providers/agent`） | ✅ 脚本就绪；跑通仍需 ExecGo/Codex |
 | BJ-3 | T+1 生产 KPI 对账 | vs `t1-metrics-gate` 偏差 &lt;5% | ⏸ 需上线后 |
 | PRD-8 | 数据分级与保留期 | 附录 J + `data-policy` + retention apply | ✅ Sprint CF |
 | R-08 | 发布窗口跨 space / RLS 抽测 | 无越权 | ✅ Sprint CP：`make r08-cross-space-gate`（云 RLS live 随 H-01） |

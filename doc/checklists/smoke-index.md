@@ -12,7 +12,8 @@
 | Postgres 本地 RDS（H-01 dry-run） | `make postgres-local-rds-e2e` | Docker + `.ash/ash.db`：sqlite→Postgres + M3-04（Sprint CW） |
 | 业务抽样（静态） | `make release-sampling-static` | H-09 §7 API 单测 |
 | 业务抽样（静态+live） | `ASH_WORKER_URL=... make release-sampling-smoke` | H-09 |
-| Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排 |
+| Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排（`ASH_CI_LIVE=1` 时追加真 GitHub） |
+| P1 真 CI + ExecGo | `make p1-live-credibility` | H-04/05 真 GitHub + H-06；缺 env 则 SKIP |
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI（`--agent static`）+ openapi + 可选 Postgres；`ASH_VERIFY_LOCAL_RDS=1` 时含 local-rds |
 | 前端门禁 | `make web-gate` | eslint + vitest（全页 smoke）+ build |
 | SSE 浏览器 E2E（可选） | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
@@ -39,9 +40,9 @@
 
 | # | 项 | 静态 | Live |
 |---|-----|------|------|
-| H-04 | CI runs sync | `TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05` | [`ci-fixture-smoke.sh`](../scripts/ci-fixture-smoke.sh) |
+| H-04 | CI runs sync | `TestCISyncRunsWithFixture` / `TestReleaseSamplingCIFixtureH04H05` | fixture: [`ci-fixture-smoke.sh`](../scripts/ci-fixture-smoke.sh)；真 GitHub: [`ci-live-smoke.sh`](../scripts/ci-live-smoke.sh) + [`p1-live-credibility.md`](p1-live-credibility.md) |
 | H-05 | CI jobs / 诊断 | 同上 | 同上（含 `jobId` 诊断） |
-| H-06 | ExecGo | `TestM3ExecGoLiveSmoke` | [`execgo-live-smoke.md`](execgo-live-smoke.md) |
+| H-06 | ExecGo | `TestM3ExecGoLiveSmoke` | [`execgo-live-smoke.md`](execgo-live-smoke.md)（证据落盘） |
 | — | Sandbox isolated (DX2) | KPI-19 / sandbox policy tests | [`sandbox-isolated.md`](sandbox-isolated.md) |
 | — | CI webhook (DS) | HMAC → diagnose → optional autoRun | [`ci-webhook.md`](ci-webhook.md) |
 | — | Session RPC (DT) | `/agents/sessions` + `ash session rpc` | [`session-rpc.md`](session-rpc.md) |
@@ -57,6 +58,7 @@
 |------|------|
 | `ASH_WORKER_URL` | Worker 基址（live-smoke / release-sampling 必需） |
 | `ASH_CI_FIXTURE=1` | Worker 进程启用 CI fixture（H-04/05/07 live） |
+| `ASH_CI_LIVE=1` | 真 GitHub sync/diagnose（禁 fixture；需 token 或 connection） |
 | `ASH_EXECGO_E2E=1` | ExecGo live doctor M3-05（H-06） |
 | `ASH_SPACE_ID` | 默认 `local` |
 | `ASH_AUTH_HEADER` | 可选 Bearer |

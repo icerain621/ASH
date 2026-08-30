@@ -84,8 +84,8 @@
 
 | ID | 任务 | 验收 |
 |----|------|------|
-| P1-1 | 真实 GitHub token：H-04/H-05 live | 诊断 rootCause 与真实 log 一致 |
-| P1-2 | `ASH_EXECGO_E2E=1` ExecGo live（H-06） | Doctor M3-05 live |
+| P1-1 | 真实 GitHub token：H-04/H-05 live | ✅ `make ci-live-smoke` / `p1-live-credibility`（跑通需 token） |
+| P1-2 | `ASH_EXECGO_E2E=1` ExecGo live（H-06） | ✅ `make execgo-live-smoke` 证据+providers 探测（跑通需 ExecGo） |
 | P1-3 | T+1 生产 KPI vs `t1-metrics-gate` 偏差 &lt;5% | KPI §9 |
 | P1-4 | 数据分级与保留期草案落地（审计/事件/记忆） | ✅ 附录 J + data-policy / retention apply（Sprint CF） |
 | P1-5 | 发布窗口抽测跨 space + RLS e2e（R-08） | ✅ API 门禁 Sprint CP；云 RLS live 随 H-01 |

@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- P1 可信度（方案 C）：真 GitHub CI live（`make ci-live-smoke`，`ASH_CI_LIVE=1`，禁 fixture）+ ExecGo live 证据/providers 探测；编排 `make p1-live-credibility`；清单 [`p1-live-credibility.md`](doc/checklists/p1-live-credibility.md)。
 - Sprint DV（v2）：scope 冻结 + 签字（方案 C）— `doc/plan/v2-release-scope.md`；`scope-freeze-gate` 校验 MVP+v2；`make v2-signoff`；清单/签字模板；**不自动**打 `v2.0.0` tag。
 - Sprint DU（v2）：演进 KPI + 移动审阅（方案 C）— Metrics **KPI-17**（编排评审积压）/ **KPI-18**（Improve 回滚率）与 17–19 演进区；`/ui/m/reviews` 精简批准/拒绝；清单 `evolve-kpi-mobile.md`（无新表）。
 - Sprint DT（v2）：Session RPC/JSON（方案 C）— `POST/GET /api/v1/agents/sessions`、turns、events/`streamUrl`；CLI `ash session rpc`（LF-JSON `session.start`/`turn.prompt`）；会话落 `audit_log`（无新表）。

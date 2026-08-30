@@ -32,6 +32,13 @@ else
   echo "== H-04/H-05/H-07 fixture smokes skipped (Worker without ASH_CI_FIXTURE) =="
 fi
 
+if [[ "${ASH_CI_LIVE:-}" == "1" ]]; then
+  echo "== H-04/H-05 CI live (real GitHub) =="
+  bash scripts/ci-live-smoke.sh
+else
+  echo "== H-04/H-05 CI live skipped (set ASH_CI_LIVE=1 + token/connection) =="
+fi
+
 if [[ "${ASH_EXECGO_E2E:-}" == "1" ]]; then
   echo "== H-06 ExecGo live smoke =="
   bash scripts/execgo-live-smoke.sh
