@@ -36,7 +36,7 @@ func TestACPExecutorHealthAndExecute(t *testing.T) {
 			return
 		}
 		w.Header().Set("Content-Type", "application/json")
-		_, _ = w.Write([]byte(`{"ok":true,"taskId":"t1","status":"success","message":"done","output":{"n":1}}`))
+		_, _ = w.Write([]byte(`{"ok":true,"schema":"ash.acp.task.v1","taskId":"t1","status":"success","message":"done","output":{"n":1}}`))
 	})
 	srv := httptest.NewServer(mux)
 	t.Cleanup(srv.Close)

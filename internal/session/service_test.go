@@ -3,6 +3,8 @@ package session
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
 	"time"
@@ -93,6 +95,76 @@ func TestCreateWithProviderKindACPFallsBack(t *testing.T) {
 	}
 	if view.Meta["providerKind"] != "acp_sdk" {
 		t.Fatalf("meta=%+v", view.Meta)
+	}
+}
+
+func TestPromptTurnForwardsACPWhenHealthy(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/readyz", func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	})
+	mux.HandleFunc("/v1/tasks", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"ok":true,"schema":"ash.acp.task.v1","taskId":"fwd1","status":"success","message":"ok"}`))
+	})
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	t.Setenv("ASH_ACP_ENDPOINT", srv.URL)
+	t.Setenv("ASH_ACP_URL", srv.URL)
+
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := NewService(db, nil, ev)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_fwd_1", TraceID: "trace_fwd_1",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	view, err := svc.Create(CreateRequest{
+		RunID: run.ID, SpaceID: "local", CreatedBy: "test", ProviderKind: "acp_sdk",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.ProviderFallback {
+		// probe should succeed against httptest
+		t.Fatalf("unexpected fallback: %+v", view)
+	}
+	_, _, err = svc.PromptTurn(view.ID, TurnRequest{Prompt: "forward me"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Meta["lastAcpTaskId"] != "fwd1" {
+		t.Fatalf("meta=%+v", got.Meta)
+	}
+	items, err := ev.ListAfter(run.ID, 0, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range items {
+		if item.Type != "session.turn" {
+			continue
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(item.Payload, &payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["acpForwarded"] == true && payload["acpTaskId"] == "fwd1" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("events=%+v", items)
 	}
 }
 

@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX4（v2.1）：ACP 任务契约硬化（方案 C）— `ash.acp.task.v1` 出入站校验；`cmd/acp-mock` + `make acp-smoke`；Session turn best-effort 转发 ACP；schema JSON + 清单 `acp-smoke.md`（无新表）。
 - Sprint DX3（v2.1）：ACP ↔ Session 互通（方案 C）— Session `providerKind` 探测字段；Run 在 `acp_sdk` 选型时 `EnsureForRun` + 事件 `session.linked`；AgentTask/ACP 使用 `sess_*`；清单 `acp-session.md`（无新表）。
 - Sprint DW（v2.1）：ACP provider 骨架（方案 C）— `ACPExecutor` + `ProbeACP`；Harness `acp_sdk` 按端点探测，失败回退 static；`GET /providers/agent` 增加 `acp`/`acpE2EEnabled`；清单 `acp-provider.md`；范围草案 `v2.1-release-scope.md`（无新表）。
 - P1 可信度（方案 C）：真 GitHub CI live（`make ci-live-smoke`，`ASH_CI_LIVE=1`，禁 fixture）+ ExecGo live 证据/providers 探测；编排 `make p1-live-credibility`；清单 [`p1-live-credibility.md`](doc/checklists/p1-live-credibility.md)。

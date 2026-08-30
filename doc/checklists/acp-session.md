@@ -19,7 +19,11 @@ curl -s -X POST "$ASH_WORKER_URL/api/v1/agents/sessions" \
 3. 事件流出现 `session.linked` 与 `provider.selected.sessionId`
 4. `AgentTask.sessionId` 为 `sess_*`（非 run id）
 
+## Turn → ACP（DX4）
+
+`providerKind=acp_sdk` 且端点可达时，`POST .../turns` best-effort 转发；见 [`acp-smoke.md`](acp-smoke.md)。
+
 ## 相关
 
 - [`../plan/sprint-dx3-acp-session.md`](../plan/sprint-dx3-acp-session.md)
-- [`acp-provider.md`](acp-provider.md) · [`session-rpc.md`](session-rpc.md)
+- [`acp-provider.md`](acp-provider.md) · [`session-rpc.md`](session-rpc.md) · [`acp-smoke.md`](acp-smoke.md)

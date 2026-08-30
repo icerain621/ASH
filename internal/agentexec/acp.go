@@ -45,25 +45,11 @@ func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error)
 	if err := e.health(ctx); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBridgeUnavailable, err)
 	}
-	timeout := req.TimeoutMs
-	if timeout <= 0 {
-		timeout = 120000
+	task, err := NewACPTaskV1(e.AgentID, req)
+	if err != nil {
+		return nil, err
 	}
-	sessionID := firstNonEmpty(metaString(req.Metadata, "sessionId"), req.RunID)
-	body := map[string]any{
-		"schema":    "ash.acp.task.v1",
-		"agentId":   e.AgentID,
-		"runId":     req.RunID,
-		"sessionId": sessionID,
-		"traceId":   req.TraceID,
-		"stepId":    req.StepID,
-		"role":      req.Role,
-		"repoRoot":  req.RepoRoot,
-		"prompt":    req.Prompt,
-		"issue":     req.Issue,
-		"timeoutMs": timeout,
-	}
-	raw, err := json.Marshal(body)
+	raw, err := json.Marshal(task)
 	if err != nil {
 		return nil, err
 	}
@@ -86,24 +72,11 @@ func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error)
 		}
 		return nil, fmt.Errorf("%w: acp task HTTP %d: %s", ErrAgentTaskFailed, resp.StatusCode, truncate(msg, 240))
 	}
-	var parsed struct {
-		OK      bool           `json:"ok"`
-		TaskID  string         `json:"taskId"`
-		Status  string         `json:"status"`
-		Output  map[string]any `json:"output"`
-		Message string         `json:"message"`
+	parsed, err := ParseACPTaskResultV1(respBody)
+	if err != nil {
+		return nil, err
 	}
-	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return nil, fmt.Errorf("%w: acp task decode: %v", ErrAgentOutputInvalid, err)
-	}
-	status := parsed.Status
-	if status == "" {
-		if parsed.OK {
-			status = "success"
-		} else {
-			status = "failed"
-		}
-	}
+	status := parsed.EffectiveStatus()
 	if !parsed.OK && status != "success" {
 		msg := parsed.Message
 		if msg == "" {
@@ -113,11 +86,11 @@ func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error)
 	}
 	taskID := parsed.TaskID
 	if taskID == "" {
-		taskID = "acp-" + req.StepID
+		taskID = "acp-" + firstNonEmpty(req.StepID, "task")
 	}
 	return &Result{
 		TaskID: taskID, ExecGoTaskID: taskID,
-		Adapter: e.AdapterName(), AgentID: e.AgentID, SessionID: sessionID,
+		Adapter: e.AdapterName(), AgentID: e.AgentID, SessionID: task.SessionID,
 		ActionID: taskID, Status: status,
 		StdoutSummary: firstNonEmpty(parsed.Message, "acp task completed"),
 		DurationMs:    time.Since(start).Milliseconds(),

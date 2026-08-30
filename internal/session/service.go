@@ -192,6 +192,7 @@ func (s *Service) Get(sessionID string) (*View, error) {
 }
 
 // PromptTurn records a turn and emits session.turn on the bound run when present.
+// When providerKind=acp_sdk and ACP is healthy, best-effort forwards the prompt to ACP (DX4).
 func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, error) {
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
@@ -209,11 +210,18 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	}
 	view.Turns = append(view.Turns, turn)
 	view.UpdatedAt = turn.CreatedAt
+
+	acpPayload := s.forwardTurnACP(view, turn)
+
 	if view.RunID != "" && s.events != nil {
 		trace := firstNonEmpty(view.TraceID, view.RunID)
-		_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", map[string]any{
+		payload := map[string]any{
 			"sessionId": view.ID, "turnId": turn.ID, "prompt": prompt,
-		})
+		}
+		for k, v := range acpPayload {
+			payload[k] = v
+		}
+		_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 	}
 	if err := s.save(view); err != nil {
 		return nil, nil, err
