@@ -16,8 +16,12 @@ const KPI_ORDER = [
   "KPI-09",
   "KPI-10",
   "KPI-11",
+  "KPI-17",
+  "KPI-18",
   "KPI-19",
 ];
+
+const EVOLVE_KPI = new Set(["KPI-17", "KPI-18", "KPI-19"]);
 
 export function MetricsPage() {
   const activeSpaceId = getCurrentSpaceId();
@@ -36,6 +40,8 @@ export function MetricsPage() {
   });
   const overview = overviewQuery.data;
   const cards = KPI_ORDER.map((id) => overview?.summary.find((item) => item.id === id)).filter(Boolean) as MetricCard[];
+  const deliveryCards = cards.filter((c) => !EVOLVE_KPI.has(c.id));
+  const evolveCards = cards.filter((c) => EVOLVE_KPI.has(c.id));
 
   return (
     <section className="panel active">
@@ -46,7 +52,7 @@ export function MetricsPage() {
       <div className="page-heading">
         <div>
           <h1>指标看板</h1>
-          <p>按 ASH KPI 口径查看交付、CI、反馈、记忆与场景可重复性（R-02）聚合结果。</p>
+          <p>按 ASH KPI 口径查看交付、CI、反馈、记忆与场景可重复性（R-02）聚合结果；演进区含 KPI-17~19。</p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar metrics-toolbar">
@@ -81,10 +87,24 @@ export function MetricsPage() {
       {overviewQuery.isError && <p className="error-text">{(overviewQuery.error as Error).message}</p>}
 
       <div className="metrics-grid">
-        {cards.map((card) => (
+        {deliveryCards.map((card) => (
           <MetricSummaryCard key={card.id} card={card} />
         ))}
       </div>
+
+      {evolveCards.length > 0 ? (
+        <div className="metrics-evolve" data-testid="metrics-evolve-section">
+          <div className="pane-title">
+            <h2>演进 KPI（17–19）</h2>
+            <span>{evolveCards.length} 项</span>
+          </div>
+          <div className="metrics-grid">
+            {evolveCards.map((card) => (
+              <MetricSummaryCard key={card.id} card={card} />
+            ))}
+          </div>
+        </div>
+      ) : null}
 
       <div className="split metrics-split">
         <div className="pane">

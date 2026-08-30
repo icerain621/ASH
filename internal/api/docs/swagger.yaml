@@ -406,6 +406,27 @@ definitions:
             type: integer
         type: object
     type: object
+  github_com_ash-repwiki_ash_internal_events.Envelope:
+    properties:
+      id:
+        type: string
+      payload:
+        items:
+          type: integer
+        type: array
+      runId:
+        type: string
+      seq:
+        type: integer
+      severity:
+        type: string
+      traceId:
+        type: string
+      ts:
+        type: integer
+      type:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_evolve.DecideRequest:
     properties:
       actorId:
@@ -2085,6 +2106,86 @@ definitions:
         type: string
       source:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.CreateRequest:
+    properties:
+      actorRole:
+        type: string
+      autoApprove:
+        type: boolean
+      createdBy:
+        type: string
+      goal:
+        type: string
+      repoRoot:
+        type: string
+      runId:
+        type: string
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.EventsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_events.Envelope'
+        type: array
+      runId:
+        type: string
+      sessionId:
+        type: string
+      streamUrl:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.Turn:
+    properties:
+      createdAt:
+        type: integer
+      id:
+        type: string
+      prompt:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.TurnRequest:
+    properties:
+      prompt:
+        type: string
+    required:
+    - prompt
+    type: object
+  github_com_ash-repwiki_ash_internal_session.View:
+    properties:
+      createdAt:
+        type: integer
+      createdBy:
+        type: string
+      goal:
+        type: string
+      id:
+        type: string
+      meta:
+        additionalProperties: {}
+        type: object
+      planId:
+        type: string
+      repoRoot:
+        type: string
+      runId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      streamUrl:
+        type: string
+      traceId:
+        type: string
+      turns:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.Turn'
+        type: array
+      updatedAt:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_skills.ListResponse:
     properties:
@@ -4102,6 +4203,124 @@ info:
   title: ASH Worker API
   version: "0.1"
 paths:
+  /api/v1/agents/sessions:
+    post:
+      consumes:
+      - application/json
+      description: Bind an existing runId or route a goal (optional autoApprove) into
+        a long-lived session document.
+      parameters:
+      - description: session create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Create an agent session
+      tags:
+      - agents
+  /api/v1/agents/sessions/{sessionId}:
+    get:
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get agent session
+      tags:
+      - agents
+  /api/v1/agents/sessions/{sessionId}/events:
+    get:
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: return events after this seq
+        in: query
+        name: afterSeq
+        type: integer
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.EventsResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List session events (bound run events + streamUrl)
+      tags:
+      - agents
+  /api/v1/agents/sessions/{sessionId}/turns:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: turn
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.TurnRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Submit a turn.prompt to a session
+      tags:
+      - agents
   /api/v1/approvals:
     get:
       parameters:

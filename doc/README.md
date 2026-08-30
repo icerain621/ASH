@@ -1,7 +1,7 @@
 # ASH 文档归属索引
 
 > 更新：2026-08-28  
-> 代码水位：tag **`v0.1.0-mvp`** · Doctor ALL **53/53** · SQL rev **27** · RLS **46**（v2 DH–DZ + DJ–DS）
+> 代码水位：tag **`v0.1.0-mvp`** · Doctor ALL **53/53** · SQL rev **27** · RLS **46**（v2 DH–DZ + DJ–DU）
 
 文档按**归属**分三类；契约与门禁路径保持稳定，避免打断脚本。
 

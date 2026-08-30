@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **53/53** · M3 11/11 · M4 6/6 · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ–DS** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ–DU** |
 
 ---
 
@@ -36,7 +36,9 @@
 | DX2 | isolated 强制 | hotfix/security 地板 + KPI-19 + `sandbox.minMode` | ✅ |
 | DR | compaction + Doctor M4/M5 | spill + compaction 事件 + M4/M5 探针；ALL 53 | ✅ |
 | DS | Webhook 触发 CI→Run | HMAC + diagnose + optional autoRun hotfix；清单 `ci-webhook.md` | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DT** | — |
+| DT | Session RPC/JSON | `/agents/sessions` + turns/events + `ash session rpc` | ✅ |
+| DU | 演进 KPI + 移动审阅 | KPI-17/18 + Metrics 演进区 + `/ui/m/reviews` | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DV** | — |
 
 ---
 
@@ -124,6 +126,8 @@ make regression-short && make web-gate
 - Sprint DX2：isolated 强制（policy/scenario 地板 + KPI-19；无新表）
 - Sprint DR：compaction + Doctor M4/M5（spill / harness.compaction；ALL 53）
 - Sprint DS：Webhook CI→Run（HMAC `/webhooks/github` + diagnose + autoRun hotfix；无新表）
+- Sprint DT：Session RPC/JSON（`/agents/sessions` + turns/events + `ash session rpc`；无新表）
+- Sprint DU：演进 KPI + 移动审阅（KPI-17/18；Metrics 演进区；`/ui/m/reviews`；无新表）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

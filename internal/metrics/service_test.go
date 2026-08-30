@@ -1,6 +1,7 @@
 package metrics
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -261,6 +262,51 @@ func TestOverviewSandboxCoverageKPI19(t *testing.T) {
 	kpi := card(overview, "KPI-19")
 	if kpi.Numerator != 1 || kpi.Denominator != 2 || kpi.Value != 0.5 {
 		t.Fatalf("KPI-19=%+v want 1/2", kpi)
+	}
+}
+
+func TestOverviewEvolveKPI17AndImproveKPI18(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	now := time.Now().UTC()
+	stale := now.Add(-10 * 24 * time.Hour)
+	rows := []any{
+		&store.HarnessProfileVersion{
+			ID: "hp_rev", SpaceID: "local", Name: "default", Version: 2, Status: "in_review",
+			SpecJSON: `{}`, CreatedAt: stale, UpdatedAt: stale,
+		},
+		&store.ScenarioPatchDraft{
+			ID: "sp_rev", SpaceID: "local", ScenarioName: "feature_delivery", Title: "x",
+			DiffText: "diff", Status: "in_review", CreatedAt: now, UpdatedAt: now,
+		},
+		&store.ImproveProposal{
+			ID: "imp_ok", SpaceID: "local", Title: "a", Status: "promoted",
+			CompareJSON: "{}", CreatedAt: now, UpdatedAt: now,
+		},
+		&store.ImproveProposal{
+			ID: "imp_bad", SpaceID: "local", Title: "b", Status: "rolled_back",
+			CompareJSON: "{}", CreatedAt: now, UpdatedAt: now,
+		},
+	}
+	for _, row := range rows {
+		if err := db.Create(row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	overview, err := svc.Overview(OverviewRequest{SpaceID: "local", From: now.Add(-time.Hour), To: now.Add(time.Hour)})
+	if err != nil {
+		t.Fatal(err)
+	}
+	k17 := card(overview, "KPI-17")
+	if k17.Numerator != 2 || k17.Status != "ok" {
+		t.Fatalf("KPI-17=%+v want backlog=2 ok", k17)
+	}
+	if !strings.Contains(k17.Description, ">7天未清=1") {
+		t.Fatalf("KPI-17 desc=%q want stale=1", k17.Description)
+	}
+	k18 := card(overview, "KPI-18")
+	if k18.Numerator != 1 || k18.Denominator != 2 || k18.Value != 0.5 || k18.Status != "warn" {
+		t.Fatalf("KPI-18=%+v want 1/2 warn", k18)
 	}
 }
 

@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DU（v2）：演进 KPI + 移动审阅（方案 C）— Metrics **KPI-17**（编排评审积压）/ **KPI-18**（Improve 回滚率）与 17–19 演进区；`/ui/m/reviews` 精简批准/拒绝；清单 `evolve-kpi-mobile.md`（无新表）。
+- Sprint DT（v2）：Session RPC/JSON（方案 C）— `POST/GET /api/v1/agents/sessions`、turns、events/`streamUrl`；CLI `ash session rpc`（LF-JSON `session.start`/`turn.prompt`）；会话落 `audit_log`（无新表）。
 - Sprint DS（v2）：Webhook 触发 CI→Run（方案 C）— `POST /api/v1/webhooks/github` HMAC；失败 `workflow_run` → upsert CI + Diagnose；`autoRun=1` 创建 hotfix Run；`X-GitHub-Delivery` 幂等；清单 `ci-webhook.md`（无新表）。
 - Sprint DR（v2）：compaction + Doctor M4/M5（方案 C）— 工具大输出 spill + `harness.compaction`；Doctor **M4**（HAR/SBX）与 **M5**（EVO）；canary 上限 10%；ALL **53/53**（无新表）。
 - Sprint DX2（v2）：isolated 强制（方案 C）— hotfix/security 与 `sandbox.minMode` 地板；danger &lt; isolated 拒绝；KPI-19 danger 沙盒覆盖率；清单 `sandbox-isolated.md`（无新表）。

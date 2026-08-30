@@ -11,6 +11,7 @@ import { QuestPage } from "../pages/QuestPage";
 import { KnowledgePage } from "../pages/KnowledgePage";
 import { ReleasesPage } from "../pages/ReleasesPage";
 import { ReviewsPage } from "../pages/ReviewsPage";
+import { MobileReviewsPage } from "../pages/MobileReviewsPage";
 import { RunsPage } from "../pages/RunsPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
@@ -42,6 +43,12 @@ const reviewsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/reviews",
   component: ReviewsPage,
+});
+
+const mobileReviewsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/m/reviews",
+  component: MobileReviewsPage,
 });
 
 const questRoute = createRoute({
@@ -121,6 +128,7 @@ const routeTree = rootRoute.addChildren([
   runsRoute,
   memoryRoute,
   reviewsRoute,
+  mobileReviewsRoute,
   questRoute,
   knowledgeRoute,
 	automationRoute,

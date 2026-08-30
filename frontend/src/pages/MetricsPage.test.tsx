@@ -12,6 +12,8 @@ vi.mock("@/modules/metrics/api/metrics.api", () => ({
     summary: [
       { id: "KPI-01", label: "任务成功率", value: 1, unit: "ratio", status: "ok", denominator: 1 },
       { id: "KPI-11", label: "场景稳定率", value: 0.5, unit: "ratio", status: "ok", numerator: 1, denominator: 2 },
+      { id: "KPI-17", label: "编排评审积压", value: 2, unit: "count", status: "ok", numerator: 2, denominator: 50 },
+      { id: "KPI-18", label: "Improve 误升格回滚率", value: 0.01, unit: "ratio", status: "ok", numerator: 1, denominator: 100 },
       { id: "KPI-19", label: "danger 沙盒覆盖率", value: 1, unit: "ratio", status: "ok", numerator: 2, denominator: 2 },
     ],
     breakdowns: [
@@ -50,6 +52,15 @@ describe("MetricsPage", () => {
     renderPage(<MetricsPage />);
     await waitFor(() => {
       expect(screen.getByText("danger 沙盒覆盖率")).toBeInTheDocument();
+    });
+  });
+
+  it("renders evolve KPI section 17-19", async () => {
+    renderPage(<MetricsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("metrics-evolve-section")).toBeInTheDocument();
+      expect(screen.getByText("编排评审积压")).toBeInTheDocument();
+      expect(screen.getByText("Improve 误升格回滚率")).toBeInTheDocument();
     });
   });
 });

@@ -1,4 +1,4 @@
-import { Link, Outlet } from "@tanstack/react-router";
+import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
 	Activity,
 	BarChart3,
@@ -39,6 +39,19 @@ const tabs = [
 
 export function AppLayout() {
   const activeSpaceId = getCurrentSpaceId();
+  const pathname = useRouterState({ select: (s) => s.location.pathname });
+  const mobileShell = pathname.startsWith("/m/");
+
+  if (mobileShell) {
+    return (
+      <div className="app-shell mobile-shell" data-testid="mobile-shell">
+        <main>
+          <Outlet />
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="app-shell">
       <header className="header">

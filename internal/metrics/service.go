@@ -162,6 +162,14 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 	if err != nil {
 		return out, err
 	}
+	evolveBacklog, err := s.evolveBacklogStats(gdb, req)
+	if err != nil {
+		return out, err
+	}
+	improveRollback, err := s.improveRollbackStats(gdb, req)
+	if err != nil {
+		return out, err
+	}
 
 	out.Summary = []MetricCard{
 		ratioCard("KPI-01", "任务成功率", runStats.success, runStats.started, "ratio"),
@@ -175,6 +183,8 @@ func (s *Service) overview(req OverviewRequest) (Overview, error) {
 		ratioCard("KPI-09", "API 错误率", apiStats.errors, apiStats.total, "ratio"),
 		durationCard("KPI-10", "队列积压时长", queueStats.totalWaitMs, queueStats.count),
 		scenarioCard,
+		evolveBacklogCard(evolveBacklog),
+		improveRollbackCard(improveRollback),
 		sandboxCoverageCard(sandboxStats),
 	}
 	out.Trends = []MetricTrend{
@@ -469,6 +479,114 @@ func sandboxCoverageCard(stats sandboxCoverageResult) MetricCard {
 		)
 	} else {
 		card.Description = "danger 工具路由均达到 isolated（KPI-19）。"
+	}
+	return card
+}
+
+const evolveBacklogTarget = int64(50)
+
+type evolveBacklogResult struct {
+	harnessInReview int64
+	patchInReview   int64
+	staleOver7d     int64
+}
+
+func (s *Service) evolveBacklogStats(gdb *gorm.DB, req OverviewRequest) (evolveBacklogResult, error) {
+	var out evolveBacklogResult
+	space := req.SpaceID
+	if err := gdb.Model(&store.HarnessProfileVersion{}).
+		Where("space_id = ? AND status = ?", space, "in_review").
+		Count(&out.harnessInReview).Error; err != nil {
+		return out, err
+	}
+	if err := gdb.Model(&store.ScenarioPatchDraft{}).
+		Where("space_id = ? AND status = ?", space, "in_review").
+		Count(&out.patchInReview).Error; err != nil {
+		return out, err
+	}
+	cutoff := time.Now().UTC().Add(-7 * 24 * time.Hour)
+	var staleH, staleP int64
+	if err := gdb.Model(&store.HarnessProfileVersion{}).
+		Where("space_id = ? AND status = ? AND created_at < ?", space, "in_review", cutoff).
+		Count(&staleH).Error; err != nil {
+		return out, err
+	}
+	if err := gdb.Model(&store.ScenarioPatchDraft{}).
+		Where("space_id = ? AND status = ? AND created_at < ?", space, "in_review", cutoff).
+		Count(&staleP).Error; err != nil {
+		return out, err
+	}
+	out.staleOver7d = staleH + staleP
+	return out, nil
+}
+
+func evolveBacklogCard(stats evolveBacklogResult) MetricCard {
+	// KPI-17: orchestration review backlog (harness + scenario_patch in_review).
+	backlog := stats.harnessInReview + stats.patchInReview
+	status := "ok"
+	if backlog >= evolveBacklogTarget {
+		status = "warn"
+	}
+	desc := fmt.Sprintf(
+		"目标 < %d/space；harness=%d patch=%d；>7天未清=%d。",
+		evolveBacklogTarget, stats.harnessInReview, stats.patchInReview, stats.staleOver7d,
+	)
+	if backlog == 0 {
+		return MetricCard{
+			ID: "KPI-17", Label: "编排评审积压", Unit: "count", Status: "ok",
+			Numerator: 0, Denominator: evolveBacklogTarget, Description: desc + " 队列为空。",
+		}
+	}
+	return MetricCard{
+		ID: "KPI-17", Label: "编排评审积压", Value: float64(backlog), Unit: "count", Status: status,
+		Numerator: backlog, Denominator: evolveBacklogTarget, Description: desc,
+	}
+}
+
+type improveRollbackResult struct {
+	promoted   int64
+	rolledBack int64
+}
+
+func (s *Service) improveRollbackStats(gdb *gorm.DB, req OverviewRequest) (improveRollbackResult, error) {
+	var out improveRollbackResult
+	// Window filter on updated_at so recent promotes/rollbacks are visible.
+	if err := gdb.Model(&store.ImproveProposal{}).
+		Where("space_id = ? AND updated_at >= ? AND updated_at <= ? AND status = ?",
+			req.SpaceID, req.From, req.To, "promoted").
+		Count(&out.promoted).Error; err != nil {
+		return out, err
+	}
+	if err := gdb.Model(&store.ImproveProposal{}).
+		Where("space_id = ? AND updated_at >= ? AND updated_at <= ? AND status = ?",
+			req.SpaceID, req.From, req.To, "rolled_back").
+		Count(&out.rolledBack).Error; err != nil {
+		return out, err
+	}
+	return out, nil
+}
+
+func improveRollbackCard(stats improveRollbackResult) MetricCard {
+	// KPI-18: rolled_back / (promoted + rolled_back); target < 2%.
+	denom := stats.promoted + stats.rolledBack
+	if denom == 0 {
+		return MetricCard{
+			ID: "KPI-18", Label: "Improve 误升格回滚率", Unit: "ratio", Status: "empty",
+			Description: "当前窗口尚无 promoted/rolled_back 的 Improve 提案。",
+		}
+	}
+	card := ratioCard("KPI-18", "Improve 误升格回滚率", stats.rolledBack, denom, "ratio")
+	if card.Value >= 0.02 {
+		card.Status = "warn"
+		card.Description = fmt.Sprintf(
+			"目标 < 2%%；rolled_back=%d / (promoted+rolled_back)=%d。",
+			stats.rolledBack, denom,
+		)
+	} else {
+		card.Description = fmt.Sprintf(
+			"目标 < 2%%；rolled_back=%d / (promoted+rolled_back)=%d。",
+			stats.rolledBack, denom,
+		)
 	}
 	return card
 }

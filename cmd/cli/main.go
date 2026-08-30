@@ -18,6 +18,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/session"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -32,6 +33,8 @@ func main() {
 		runScenario(os.Args[2:])
 	case "quest":
 		runQuest(os.Args[2:])
+	case "session":
+		runSession(os.Args[2:])
 	case "replay":
 		runReplay(os.Args[2:])
 	case "cancel":
@@ -49,7 +52,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
 }
 
 func runPluginSign(args []string) {
@@ -153,6 +156,35 @@ func runQuest(args []string) {
 		log.Fatal("auto-approve did not produce runId")
 	}
 	emitRunResult(runsSvc, plan.RunID, plan.TraceID, *format)
+}
+
+func runSession(args []string) {
+	if len(args) < 1 || args[0] != "rpc" {
+		log.Fatal("usage: ash session rpc [--agent static|execgo_codex]")
+	}
+	fs := flag.NewFlagSet("session rpc", flag.ExitOnError)
+	agent := fs.String("agent", "static", "agent executor: execgo_codex|static")
+	_ = fs.Parse(args[1:])
+	cfg := config.Load()
+	db, err := store.Open(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	scenariosDir := resolveScenariosDir(cfg.ScenariosDir)
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		log.Fatalf("load scenarios: %v", err)
+	}
+	ev := events.NewService(db)
+	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus())
+	if *agent == "static" {
+		runsSvc.WithAgentExecutor(agentexec.StaticExecutor{})
+	}
+	goalSvc := goal.NewService(db, loader, runsSvc, ev)
+	svc := session.NewService(db, goalSvc, ev)
+	if err := svc.ServeRPC(os.Stdin, os.Stdout); err != nil {
+		log.Fatalf("session rpc: %v", err)
+	}
 }
 
 func runReplay(args []string) {

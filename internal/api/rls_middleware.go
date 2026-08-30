@@ -13,6 +13,7 @@ import (
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/session"
 	"github.com/ash-repwiki/ash/internal/store"
 	"gorm.io/gorm"
 )
@@ -127,6 +128,13 @@ func (h *Handler) improveFor(c *gin.Context) *improve.Service {
 		return h.improve
 	}
 	return h.improve.WithContext(c.Request.Context())
+}
+
+func (h *Handler) sessionFor(c *gin.Context) *session.Service {
+	if h == nil || h.session == nil {
+		return h.session
+	}
+	return h.session.WithContext(c.Request.Context())
 }
 
 func (h *Handler) metricsFor(c *gin.Context) *metricssvc.Service {

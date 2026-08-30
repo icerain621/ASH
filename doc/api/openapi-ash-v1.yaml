@@ -1298,6 +1298,57 @@ components:
         ashRunId: { type: string }
         ashTraceId: { type: string }
         executionError: { type: string }
+    CreateAgentSessionRequest:
+      type: object
+      properties:
+        goal: { type: string }
+        runId: { type: string }
+        repoRoot: { type: string }
+        spaceId: { type: string }
+        actorRole: { type: string }
+        createdBy: { type: string }
+        autoApprove: { type: boolean }
+    AgentSessionTurnRequest:
+      type: object
+      required: [prompt]
+      properties:
+        prompt: { type: string }
+    AgentSessionTurn:
+      type: object
+      properties:
+        id: { type: string }
+        prompt: { type: string }
+        createdAt: { type: integer, format: int64 }
+    AgentSessionView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        status: { type: string }
+        goal: { type: string }
+        planId: { type: string }
+        runId: { type: string }
+        traceId: { type: string }
+        repoRoot: { type: string }
+        streamUrl: { type: string }
+        turns:
+          type: array
+          items: { $ref: "#/components/schemas/AgentSessionTurn" }
+        createdBy: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+        meta:
+          type: object
+          additionalProperties: true
+    AgentSessionEventsResponse:
+      type: object
+      properties:
+        sessionId: { type: string }
+        runId: { type: string }
+        streamUrl: { type: string }
+        items:
+          type: array
+          items: { type: object, additionalProperties: true }
     CIDiagnosisListResponse:
       type: object
       required: [items]
@@ -2964,6 +3015,78 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+  /api/v1/agents/sessions:
+    post:
+      tags: [Agents]
+      summary: Create agent session
+      description: Bind runId or route goal into a session (persisted in audit_log; no new table).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAgentSessionRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
+  /api/v1/agents/sessions/{sessionId}:
+    get:
+      tags: [Agents]
+      summary: Get agent session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
+  /api/v1/agents/sessions/{sessionId}/turns:
+    post:
+      tags: [Agents]
+      summary: Submit turn.prompt
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentSessionTurnRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
+  /api/v1/agents/sessions/{sessionId}/events:
+    get:
+      tags: [Agents]
+      summary: List session events (bound run) + streamUrl
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: afterSeq
+          schema: { type: integer, format: int64 }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionEventsResponse" }
   /v1/spaces:
     post:
       tags: [Spaces]

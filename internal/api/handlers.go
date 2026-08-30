@@ -12,9 +12,9 @@ import (
 	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/diffreview"
 	"github.com/ash-repwiki/ash/internal/doctor"
 	"github.com/ash-repwiki/ash/internal/events"
-	"github.com/ash-repwiki/ash/internal/diffreview"
 	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/harness"
@@ -29,6 +29,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/scenariopatch"
 	"github.com/ash-repwiki/ash/internal/secrets"
+	"github.com/ash-repwiki/ash/internal/session"
 	"github.com/ash-repwiki/ash/internal/spacerules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -55,6 +56,7 @@ type Handler struct {
 	diffReview    *diffreview.Service
 	knowledge     *knowledge.Service
 	spaceRules    *spacerules.Service
+	session       *session.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -73,27 +75,30 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	patchSvc := scenariopatch.NewService(db)
 	improveSvc := improve.NewService(db, runsSvc, ev)
 	runsSvc.SetImproveDrafter(improveSvc)
-	return &Handler{
-		db:        db,
-		events:    ev,
-		scenarios: scenarios,
-		runs:      runsSvc,
-		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:    memSvc,
-		improve:   improveSvc,
-		ci:        ciSvc,
-		metrics:   metricssvc.NewService(db),
-		alerts:    alerts.NewService(db),
-		releases:  releases.NewService(db),
-		harness:   harSvc,
-		patches:   patchSvc,
+	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
+	h := &Handler{
+		db:         db,
+		events:     ev,
+		scenarios:  scenarios,
+		runs:       runsSvc,
+		doctor:     doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
+		memory:     memSvc,
+		improve:    improveSvc,
+		ci:         ciSvc,
+		metrics:    metricssvc.NewService(db),
+		alerts:     alerts.NewService(db),
+		releases:   releases.NewService(db),
+		harness:    harSvc,
+		patches:    patchSvc,
 		evolve:     evolve.NewService(db, memSvc, harSvc, patchSvc),
-		goal:       goal.NewService(db, scenarios, runsSvc, ev),
+		goal:       goalSvc,
 		quest:      quest.NewService(db, runsSvc),
 		diffReview: diffreview.NewService(db, runsSvc),
 		knowledge:  knowledge.NewService(db, memSvc),
 		spaceRules: spacerules.NewService(db),
+		session:    session.NewService(db, goalSvc, ev),
 	}
+	return h
 }
 
 func (h *Handler) Register(r *gin.Engine, webDir string) {
@@ -120,6 +125,10 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/skills", h.listSkills)
 		v1.GET("/skills/:skillId", h.getSkill)
 		v1.GET("/providers/agent", h.getAgentProviderStatus)
+		v1.POST("/agents/sessions", h.createAgentSession)
+		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
+		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
+		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)
 		v1.GET("/runs/:runId/tree", h.getRunTree)

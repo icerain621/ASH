@@ -121,7 +121,7 @@ func TestKPIOverviewSummaryCatalog(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"KPI-01", "KPI-02", "KPI-03", "KPI-04", "KPI-05", "KPI-06", "KPI-07", "KPI-08", "KPI-09", "KPI-10", "KPI-11", "KPI-19"}
+	want := []string{"KPI-01", "KPI-02", "KPI-03", "KPI-04", "KPI-05", "KPI-06", "KPI-07", "KPI-08", "KPI-09", "KPI-10", "KPI-11", "KPI-17", "KPI-18", "KPI-19"}
 	seen := map[string]bool{}
 	for _, c := range overview.Summary {
 		seen[c.ID] = true
