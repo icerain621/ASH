@@ -199,7 +199,7 @@ flowchart TB
 | 33–34 | **DS** | — | Webhook 触发 | ✅ HMAC + diagnose + autoRun hotfix |
 | 35–36 | **DT** | — | Session RPC/JSON | ✅ `/agents/sessions` + `ash session rpc` |
 | 37–38 | **DU** | — | 演进 KPI + 移动审阅 | ✅ KPI-17/18 + `/ui/m/reviews` |
-| 39–40 | **DV** | **v2.0.0** | scope 冻结 + 签字 | `v2-release-scope.md`、`v2.0.0` tag |
+| 39–40 | **DV** | **v2.0.0** | scope 冻结 + 签字 | ✅ `v2-release-scope.md` + `make v2-signoff`（tag 人工） |
 
 **总工期**：约 **40 周**（含 P0 2 周 + v2 功能 38 周）；DH/DX 可并行 DK 需前端产能。
 

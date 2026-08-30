@@ -1,14 +1,8 @@
 #!/usr/bin/env bash
-# MVP §1: validate release scope doc structure before freeze sign-off.
+# MVP §1 + v2: validate release scope doc structure before freeze sign-off.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-SCOPE="$ROOT/doc/plan/mvp-release-scope.md"
-
-if [[ ! -f "$SCOPE" ]]; then
-  echo "missing $SCOPE" >&2
-  exit 2
-fi
 
 required=(
   "## 1. 发布目标"
@@ -19,15 +13,30 @@ required=(
   "## 6. 评审签字"
 )
 
-for heading in "${required[@]}"; do
-  if ! grep -qF "$heading" "$SCOPE"; then
-    echo "scope doc missing section: $heading" >&2
-    exit 1
+check_scope() {
+  local scope="$1"
+  local label="$2"
+  if [[ ! -f "$scope" ]]; then
+    echo "missing $scope" >&2
+    exit 2
   fi
-done
+  for heading in "${required[@]}"; do
+    if ! grep -qF "$heading" "$scope"; then
+      echo "$label scope doc missing section: $heading ($scope)" >&2
+      exit 1
+    fi
+  done
+  if grep -q '待产品评审签字' "$scope" && [[ "${ASH_SCOPE_FREEZE_SIGNED:-0}" != "1" ]] && ! grep -q '已冻结' "$scope"; then
+    echo "WARN $label scope doc still marked draft (set ASH_SCOPE_FREEZE_SIGNED=1 after product sign-off)"
+  fi
+  if grep -q '已冻结' "$scope"; then
+    echo "OK $label scope marked 已冻结"
+  else
+    echo "WARN $label scope not yet marked 已冻结"
+  fi
+}
 
-if grep -q '待产品评审签字' "$SCOPE" && [[ "${ASH_SCOPE_FREEZE_SIGNED:-0}" != "1" ]] && ! grep -q '已冻结' "$SCOPE"; then
-  echo "WARN scope doc still marked draft (set ASH_SCOPE_FREEZE_SIGNED=1 after product sign-off)"
-fi
+check_scope "$ROOT/doc/plan/mvp-release-scope.md" "mvp"
+check_scope "$ROOT/doc/plan/v2-release-scope.md" "v2"
 
 echo "OK scope-freeze-gate"

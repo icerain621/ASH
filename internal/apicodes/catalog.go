@@ -137,6 +137,7 @@ var Catalog = map[string]Entry{
 	"INVALID_SECRET_REFERENCE":      {Domain: "ci", Summary: "secretId not found or inactive in space"},
 	"REPO_CONNECTION_CREATE_FAILED": {Domain: "ci", Summary: "Failed to create repo connection"},
 	"REPO_CONNECTION_LIST_FAILED":   {Domain: "ci", Summary: "Failed to list repo connections"},
+	"REPO_CONNECTION_NOT_FOUND":     {Domain: "ci", Summary: "Repo connection id not found for webhook or CI"},
 	"CI_RUN_LIST_FAILED":            {Domain: "ci", Summary: "Failed to list CI runs"},
 	"CI_JOB_LIST_FAILED":            {Domain: "ci", Summary: "Failed to list CI jobs"},
 	"CI_PROVIDER_UNAVAILABLE":       {Domain: "ci", Summary: "GitHub CI provider unavailable after retry/circuit open"},
@@ -144,6 +145,14 @@ var Catalog = map[string]Entry{
 	"CI_DIAGNOSIS_LIST_FAILED":      {Domain: "ci", Summary: "Failed to list CI diagnoses"},
 	"CI_DIAGNOSIS_NOT_FOUND":        {Domain: "ci", Summary: "CI diagnosis not found"},
 	"CI_DIAGNOSIS_DECISION_FAILED":  {Domain: "ci", Summary: "Failed to adopt/dismiss diagnosis"},
+	"WEBHOOK_SIGNATURE_INVALID":     {Domain: "ci", Summary: "GitHub webhook HMAC signature invalid"},
+	"WEBHOOK_SECRET_UNRESOLVED":     {Domain: "ci", Summary: "Webhook HMAC secret could not be resolved"},
+	"WEBHOOK_INGEST_FAILED":         {Domain: "ci", Summary: "Failed to ingest GitHub webhook payload"},
+
+	// agents / session
+	"SESSION_CREATE_FAILED": {Domain: "agents", Summary: "Failed to create agent session"},
+	"SESSION_NOT_FOUND":     {Domain: "agents", Summary: "Agent session id not found"},
+	"SESSION_TURN_FAILED":   {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
 	"INVALID_FROM":                  {Domain: "metrics", Summary: "metrics overview from timestamp invalid"},
 	"INVALID_TO":                    {Domain: "metrics", Summary: "metrics overview to timestamp invalid"},
 	"METRICS_OVERVIEW_FAILED":       {Domain: "metrics", Summary: "KPI overview query failed"},

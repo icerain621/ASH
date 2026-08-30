@@ -46,6 +46,7 @@
 | — | CI webhook (DS) | HMAC → diagnose → optional autoRun | [`ci-webhook.md`](ci-webhook.md) |
 | — | Session RPC (DT) | `/agents/sessions` + `ash session rpc` | [`session-rpc.md`](session-rpc.md) |
 | — | Evolve KPI + mobile (DU) | KPI-17~19 + `/ui/m/reviews` | [`evolve-kpi-mobile.md`](evolve-kpi-mobile.md) |
+| — | v2 signoff (DV) | scope freeze + `make v2-signoff` | [`v2-signoff.md`](v2-signoff.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |
