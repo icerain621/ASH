@@ -8,6 +8,11 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DQ（v2）：Provider + ExecGo live（方案 C）— Harness `provider.kind` → agent 选型；ExecGo 探测失败回退 static 并发 `provider.fallback`；`GET /api/v1/providers/agent`；平台默认 provider=`execgo`；H-06 代码就绪（真实 live 仍需 `ASH_EXECGO_E2E=1`）。
+- Sprint DP（v2）：verify 步骤（方案 C）— DSL `kind: verify` + `verify.checks`/`onFail`；执行重试；失败可自动 improve draft（`improve.draft_created`）；`feature_delivery` qa.verify 升级（无新表）。
+- Sprint DO（v2）：Sub-run（方案 C）— runs 谱系字段（SQL **27**）；`POST /runs/{id}/sub-runs` + 深度/工具白名单；`GET /runs/{id}/tree`；`run.spawned`；Quest Sub-run 树。
+- Sprint DN（v2）：Skills 目录（方案 C）— `.ash/skills/*/SKILL.md` 扫描；`GET /skills`；场景 `skills:` + Harness `skills[]` 绑定；Run `skills.injected` / `skill:` contextRefs；Automation 页 Skills 面板（无新表）。
+- Sprint DM（v2）：Space Rules（方案 C）— 表 `space_rules`（SQL **26** / RLS **46**）；`GET/PUT /spaces/{id}/rules` + import/export/preview；`from-goal` 注入；Space 页 Rules 面板；与 `.ash/rules.yaml` 双向同步。
 - Sprint DL（v2）：Repo Profile + Wiki（方案 B）— `GET /repos/profile`、`/wiki/pages*` 即时投影（无新表）；Run `prepareExecutionContext` 注入 `profile:`/`wiki:`；控制台 `/ui/knowledge`。
 - Sprint DK（v2）：Quest 工作台 — `/ui/quest` 看板、unified Diff 行级批注、步骤评分；manifest `contextRefs`；表 `diff_review_comments`（SQL **25** / RLS **45**）。
 - Sprint DJ（v2）：Goal→Plan→Run — `POST /runs/from-goal`、Plan approve/reject、`ash quest`、Runs 页 Quest 表单；表 `goal_plans`（SQL **24** / RLS **44**）。

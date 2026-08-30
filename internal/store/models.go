@@ -14,6 +14,10 @@ type RunRecord struct {
 	ActorRole       string     `gorm:"size:64;not null;default:maintainer"`
 	InputsDigest    string     `gorm:"size:128"`
 	RepoRoot        string     `gorm:"size:512"`
+	ParentRunID     string     `gorm:"size:64;index"`
+	RootRunID       string     `gorm:"size:64;index"`
+	Depth           int        `gorm:"not null;default:0"`
+	ToolAllowlistJSON string   `gorm:"type:text"`
 	StartedAt       time.Time  `gorm:"not null"`
 	FinishedAt      *time.Time `gorm:"index"`
 	Recovered       bool       `gorm:"not null;default:false"`
@@ -765,6 +769,21 @@ type DiffReviewComment struct {
 }
 
 func (DiffReviewComment) TableName() string { return "diff_review_comments" }
+
+// SpaceRule stores Space-scoped Goal routing / defaults (v2 DM).
+type SpaceRule struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"uniqueIndex;size:64;not null"`
+	Version   int       `gorm:"not null;default:1"`
+	BodyYAML  string    `gorm:"type:text;not null"`
+	Source    string    `gorm:"size:32;not null;default:api"` // api|file|default
+	FilePath  string    `gorm:"size:512"`
+	UpdatedBy string    `gorm:"size:128"`
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+}
+
+func (SpaceRule) TableName() string { return "space_rules" }
 
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`

@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL 43/43 · M3 11/11 · TR3 10/10 |
-| Schema | SQL rev **25**（+diff_review_comments）· RLS **45** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ–DL** |
+| Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 已完成 DH–DZ + DJ–DQ** |
 
 ---
 
@@ -28,7 +28,12 @@
 | DJ | Goal→Run + Plan | from-goal + approve + `ash quest` + Runs Quest UI | ✅ |
 | DK | Quest 工作台 v1 | 看板 + 深 Diff 批注 + 步骤评分 + contextRefs | ✅ |
 | DL | Repo Profile + Wiki | 即时 Profile/Wiki API + `/ui/knowledge` + contextRefs（无新表） | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DM** | — |
+| DM | Space Rules + 路由 | DB + `.ash/rules.yaml` 双向同步 + from-goal 注入 | ✅ |
+| DN | Skills 目录 | SKILL.md 扫描 + 场景绑定 + `skill:` contextRefs | ✅ |
+| DO | Sub-run | spawn + 深度/白名单 + `/tree` + Quest 树 | ✅ |
+| DP | verify 步骤 | `kind: verify` + 重试 + improve 草稿 | ✅ |
+| DQ | Provider + ExecGo live | harness provider→agent + fallback 事件 + `/providers/agent` | ✅ 代码就绪；H-06 live ⏸ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · 下一 Sprint **DX2** | — |
 
 ---
 
@@ -57,7 +62,7 @@ make mvp-signoff
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
 | H-04/05 | 真实 GitHub CI sync + diagnose | 非 fixture；rootCause 对齐真实 log | ⏸ |
-| H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke` | ⏸ |
+| H-06 | ExecGo live | `ASH_EXECGO_E2E=1 make execgo-live-smoke`；也可 `GET /providers/agent` 看探测 | ⏸ 环境门禁（DQ 代码就绪） |
 | BJ-3 | T+1 生产 KPI 对账 | vs `t1-metrics-gate` 偏差 &lt;5% | ⏸ 需上线后 |
 | PRD-8 | 数据分级与保留期 | 附录 J + `data-policy` + retention apply | ✅ Sprint CF |
 | R-08 | 发布窗口跨 space / RLS 抽测 | 无越权 | ✅ Sprint CP：`make r08-cross-space-gate`（云 RLS live 随 H-01） |
@@ -108,6 +113,11 @@ make regression-short && make web-gate
 
 - Sprint DK：Quest 工作台（看板 / Diff 行批注 / 步骤评分 / contextRefs；SQL 25 / RLS 45）
 - Sprint DL：Repo Profile + Wiki（方案 B 即时投影、无新表；`/repos/profile` `/wiki/pages*`；Run `knowledge.injected`；`/ui/knowledge`）
+- Sprint DM：Space Rules（方案 C：DB + `.ash/rules.yaml` 双向同步；SQL 26 / RLS 46；Goal 路由；Space 页面板）
+- Sprint DN：Skills 目录（SKILL.md 扫描 / 场景绑定 / skill: contextRefs；无新表）
+- Sprint DO：Sub-run（谱系 SQL 27；spawn/tree；深度与工具白名单；Quest 树）
+- Sprint DP：verify 步骤（DSL kind:verify + 重试 + improve 草稿；无新表）
+- Sprint DQ：Provider + ExecGo（harness kind→agent；fallback 事件；`/providers/agent`；H-06 仍环境门禁）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）

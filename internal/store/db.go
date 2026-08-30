@@ -209,6 +209,7 @@ func (db *DB) migrate() error {
 		&ScenarioPatchDraft{},
 		&GoalPlan{},
 		&DiffReviewComment{},
+		&SpaceRule{},
 		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate: %w", err)

@@ -40,6 +40,7 @@ import {
 } from "@/modules/platform/api/platform.api";
 import { HarnessProfilesPane } from "@/components/HarnessProfilesPane";
 import { ImproveProposalsPane } from "@/components/ImproveProposalsPane";
+import { listSkills } from "@/modules/skills/api/skills.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
 
@@ -71,9 +72,14 @@ export function AutomationPage() {
   const [secretDescription, setSecretDescription] = useState("");
   const [secretMessage, setSecretMessage] = useState("");
   const [rotateValues, setRotateValues] = useState<Record<string, string>>({});
+  const [skillsRepoRoot, setSkillsRepoRoot] = useState(".");
   const providersQuery = useQuery({
     queryKey: ["model-providers", activeSpaceId],
     queryFn: listModelProviders,
+  });
+  const skillsQuery = useQuery({
+    queryKey: ["skills", skillsRepoRoot],
+    queryFn: () => listSkills(skillsRepoRoot),
   });
   const toolsQuery = useQuery({
     queryKey: ["mcp-tools", activeSpaceId],
@@ -262,7 +268,7 @@ export function AutomationPage() {
       <div className="page-heading">
         <div>
           <h1>自动化</h1>
-          <p>查看模型路由、内置工具风险目录、MCP 工具和执行边界状态。</p>
+          <p>查看模型路由、Skills、内置工具风险目录、MCP 工具和执行边界状态。</p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
       </div>
@@ -293,6 +299,46 @@ export function AutomationPage() {
               {!providersQuery.data?.items.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无 provider 配置。</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="pane" data-testid="skills-catalog">
+          <div className="pane-title">
+            <h2>Skills</h2>
+            <span>{skillsQuery.data?.items.length ?? 0} 个</span>
+          </div>
+          <p className="muted-line">扫描 <code>.ash/skills/*/SKILL.md</code>；场景/Harness 声明后注入 <code>skill:</code> contextRefs。</p>
+          <label className="scenario-picker">
+            repoRoot
+            <input
+              value={skillsRepoRoot}
+              onChange={(e) => setSkillsRepoRoot(e.target.value)}
+              data-testid="skills-repo-root"
+            />
+          </label>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Description</th>
+                <th>contextRef</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(skillsQuery.data?.items ?? []).map((sk) => (
+                <tr key={sk.id}>
+                  <td>{sk.id}</td>
+                  <td>{sk.description}</td>
+                  <td>
+                    <code>{sk.contextRef}</code>
+                  </td>
+                </tr>
+              ))}
+              {!skillsQuery.isLoading && !(skillsQuery.data?.items ?? []).length && (
+                <tr className="empty-row">
+                  <td colSpan={3}>未发现 SKILL.md（可放在 .ash/skills/&lt;name&gt;/）。</td>
                 </tr>
               )}
             </tbody>

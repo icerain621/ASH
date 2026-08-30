@@ -37,6 +37,18 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   createRole: vi.fn(),
   createSpaceMember: vi.fn(),
   updateSpaceResourceScope: vi.fn(),
+  getSpaceRules: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    version: 1,
+    source: "default",
+    builtin: true,
+    updatedAt: 0,
+    document: { version: 1, route: { hotfix: ["hotfix"] }, defaults: { policyProfile: "default" } },
+  }),
+  putSpaceRules: vi.fn(),
+  importSpaceRules: vi.fn(),
+  exportSpaceRules: vi.fn(),
+  previewSpaceRules: vi.fn(),
   devLogin: vi.fn().mockResolvedValue({ token: "t", spaceId: "local" }),
 }));
 
@@ -54,6 +66,14 @@ describe("SpacePage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("org-templates-panel")).toBeInTheDocument();
       expect(screen.getByText("小型团队")).toBeInTheDocument();
+    });
+  });
+
+  it("renders space rules panel", async () => {
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("space-rules-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("space-rules-editor")).toBeInTheDocument();
     });
   });
 });

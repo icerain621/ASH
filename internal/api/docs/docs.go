@@ -3275,6 +3275,34 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/providers/agent": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "providers"
+                ],
+                "summary": "Probe agent provider / ExecGo readiness",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": "local",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AgentProviderStatus"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/quest/board": {
             "get": {
                 "produces": [
@@ -4872,6 +4900,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/runs/{runId}/sub-runs": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Spawn a child run under a parent",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "parent run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "spawn request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.SpawnRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.CreateResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/runs/{runId}/timeline": {
             "get": {
                 "produces": [
@@ -4948,6 +5016,34 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/{runId}/tree": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "runs"
+                ],
+                "summary": "Get spawn tree for a run (rooted at rootRunId)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeResponse"
                         }
                     }
                 }
@@ -5372,6 +5468,69 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/skills": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "List SKILL.md skills in a repository",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "repository root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.ListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/skills/{skillId}": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "Get a skill by id (includes body)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "skill id",
+                        "name": "skillId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "repository root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/spaces": {
             "post": {
                 "consumes": [
@@ -5688,6 +5847,192 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/spaces/{spaceId}/rules": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Get Space Rules (builtin defaults if unset)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View"
+                        }
+                    }
+                }
+            },
+            "put": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Upsert Space Rules in DB",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "rules",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PutRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/spaces/{spaceId}/rules/export": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Export Space Rules to .ash/rules.yaml",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "sync",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.SyncRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/spaces/{spaceId}/rules/import": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Import Space Rules from .ash/rules.yaml",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "sync",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.SyncRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/spaces/{spaceId}/rules/preview": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Preview Goal routing under Space Rules",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "preview",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PreviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PreviewResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/storage/profile": {
             "get": {
                 "produces": [
@@ -5871,6 +6216,26 @@ const docTemplate = `{
         }
     },
     "definitions": {
+        "github_com_ash-repwiki_ash_internal_agentexec.ProbeReport": {
+            "type": "object",
+            "properties": {
+                "adapter": {
+                    "type": "string"
+                },
+                "checkedAt": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_alerts.EvaluationResult": {
             "type": "object",
             "properties": {
@@ -8482,6 +8847,12 @@ const docTemplate = `{
                 "scenarioVersion": {
                     "type": "string"
                 },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "steps": {
                     "type": "array",
                     "items": {
@@ -8554,6 +8925,9 @@ const docTemplate = `{
                 },
                 "timeoutMs": {
                     "type": "integer"
+                },
+                "verify": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.VerifySpec"
                 }
             }
         },
@@ -8605,6 +8979,21 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "path": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rules.VerifySpec": {
+            "type": "object",
+            "properties": {
+                "checks": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.ToolChainItem"
+                    }
+                },
+                "onFail": {
+                    "description": "fail|improve",
                     "type": "string"
                 }
             }
@@ -8681,6 +9070,26 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_runs.ProviderSelectionDTO": {
+            "type": "object",
+            "properties": {
+                "adapter": {
+                    "type": "string"
+                },
+                "fallback": {
+                    "type": "boolean"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "requestedKind": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_runs.ReplayRequest": {
             "type": "object",
             "required": [
@@ -8751,16 +9160,53 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_runs.SpawnRequest": {
+            "type": "object",
+            "required": [
+                "inputs",
+                "scenario"
+            ],
+            "properties": {
+                "actorRole": {
+                    "type": "string"
+                },
+                "allowedTools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "inputs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "scenario": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.ScenarioRef"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_runs.Summary": {
             "type": "object",
             "properties": {
                 "actorRole": {
                     "type": "string"
                 },
+                "depth": {
+                    "type": "integer"
+                },
                 "finishedAt": {
                     "type": "integer"
                 },
                 "inputsDigest": {
+                    "type": "string"
+                },
+                "parentRunId": {
                     "type": "string"
                 },
                 "policyProfile": {
@@ -8771,6 +9217,9 @@ const docTemplate = `{
                 },
                 "repo": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.RepoRef"
+                },
+                "rootRunId": {
+                    "type": "string"
                 },
                 "runId": {
                     "type": "string"
@@ -8786,6 +9235,12 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "toolAllowlist": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "traceId": {
                     "type": "string"
@@ -8818,6 +9273,31 @@ const docTemplate = `{
                 },
                 "type": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_runs.TreeNode": {
+            "type": "object",
+            "properties": {
+                "children": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeNode"
+                    }
+                },
+                "summary": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.Summary"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_runs.TreeResponse": {
+            "type": "object",
+            "properties": {
+                "rootRunId": {
+                    "type": "string"
+                },
+                "tree": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeNode"
                 }
             }
         },
@@ -8908,6 +9388,164 @@ const docTemplate = `{
                 },
                 "source": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_skills.ListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill"
+                    }
+                },
+                "repoRoot": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_skills.Skill": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "contextRef": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "license": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "relPath": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.Defaults": {
+            "type": "object",
+            "properties": {
+                "inputs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "policyProfile": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.Document": {
+            "type": "object",
+            "properties": {
+                "defaults": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Defaults"
+                },
+                "preferScenario": {
+                    "type": "string"
+                },
+                "route": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    }
+                },
+                "version": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.PreviewRequest": {
+            "type": "object",
+            "properties": {
+                "goal": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.PreviewResponse": {
+            "type": "object",
+            "properties": {
+                "inputs": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "policyProfile": {
+                    "type": "string"
+                },
+                "routeReason": {
+                    "type": "string"
+                },
+                "scenarioName": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.PutRequest": {
+            "type": "object",
+            "properties": {
+                "document": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Document"
+                },
+                "updatedBy": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.SyncRequest": {
+            "type": "object",
+            "properties": {
+                "repoRoot": {
+                    "type": "string"
+                },
+                "updatedBy": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacerules.View": {
+            "type": "object",
+            "properties": {
+                "builtin": {
+                    "type": "boolean"
+                },
+                "document": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Document"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "source": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "integer"
+                },
+                "updatedBy": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "integer"
                 }
             }
         },
@@ -9798,6 +10436,9 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "string"
                 },
+                "depth": {
+                    "type": "integer"
+                },
                 "errorCode": {
                     "type": "string"
                 },
@@ -9813,6 +10454,9 @@ const docTemplate = `{
                 "inputsDigest": {
                     "type": "string"
                 },
+                "parentRunID": {
+                    "type": "string"
+                },
                 "policyProfile": {
                     "type": "string"
                 },
@@ -9820,6 +10464,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "repoRoot": {
+                    "type": "string"
+                },
+                "rootRunID": {
                     "type": "string"
                 },
                 "scenarioName": {
@@ -9835,6 +10482,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "toolAllowlistJSON": {
                     "type": "string"
                 },
                 "traceID": {
@@ -9969,6 +10619,38 @@ const docTemplate = `{
             "properties": {
                 "error": {
                     "$ref": "#/definitions/internal_api.APIError"
+                }
+            }
+        },
+        "internal_api.AgentProviderStatus": {
+            "type": "object",
+            "properties": {
+                "execGo": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport"
+                },
+                "execGoE2EEnabled": {
+                    "type": "boolean"
+                },
+                "harnessKind": {
+                    "type": "string"
+                },
+                "liveGateHints": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "liveSmokeHint": {
+                    "type": "string"
+                },
+                "pinned": {
+                    "type": "boolean"
+                },
+                "pinnedAdapter": {
+                    "type": "string"
+                },
+                "selection": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_runs.ProviderSelectionDTO"
                 }
             }
         },

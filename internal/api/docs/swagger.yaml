@@ -1,5 +1,18 @@
 basePath: /
 definitions:
+  github_com_ash-repwiki_ash_internal_agentexec.ProbeReport:
+    properties:
+      adapter:
+        type: string
+      checkedAt:
+        type: integer
+      kind:
+        type: string
+      message:
+        type: string
+      ok:
+        type: boolean
+    type: object
   github_com_ash-repwiki_ash_internal_alerts.EvaluationResult:
     properties:
       evaluatedAt:
@@ -1709,6 +1722,10 @@ definitions:
         type: object
       scenarioVersion:
         type: string
+      skills:
+        items:
+          type: string
+        type: array
       steps:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.Step'
@@ -1757,6 +1774,8 @@ definitions:
         type: string
       timeoutMs:
         type: integer
+      verify:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.VerifySpec'
     type: object
   github_com_ash-repwiki_ash_internal_rules.StepOutputs:
     properties:
@@ -1790,6 +1809,16 @@ definitions:
       message:
         type: string
       path:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_rules.VerifySpec:
+    properties:
+      checks:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.ToolChainItem'
+        type: array
+      onFail:
+        description: fail|improve
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_runs.ApproveRequest:
@@ -1839,6 +1868,19 @@ definitions:
       traceId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_runs.ProviderSelectionDTO:
+    properties:
+      adapter:
+        type: string
+      fallback:
+        type: boolean
+      reason:
+        type: string
+      requestedKind:
+        type: string
+      source:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_runs.ReplayRequest:
     properties:
       mode:
@@ -1885,13 +1927,38 @@ definitions:
     - name
     - scenarioVersion
     type: object
+  github_com_ash-repwiki_ash_internal_runs.SpawnRequest:
+    properties:
+      actorRole:
+        type: string
+      allowedTools:
+        items:
+          type: string
+        type: array
+      inputs:
+        additionalProperties: {}
+        type: object
+      policyProfile:
+        type: string
+      reason:
+        type: string
+      scenario:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.ScenarioRef'
+    required:
+    - inputs
+    - scenario
+    type: object
   github_com_ash-repwiki_ash_internal_runs.Summary:
     properties:
       actorRole:
         type: string
+      depth:
+        type: integer
       finishedAt:
         type: integer
       inputsDigest:
+        type: string
+      parentRunId:
         type: string
       policyProfile:
         type: string
@@ -1899,6 +1966,8 @@ definitions:
         type: boolean
       repo:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.RepoRef'
+      rootRunId:
+        type: string
       runId:
         type: string
       scenario:
@@ -1909,6 +1978,10 @@ definitions:
         type: integer
       status:
         type: string
+      toolAllowlist:
+        items:
+          type: string
+        type: array
       traceId:
         type: string
     type: object
@@ -1930,6 +2003,22 @@ definitions:
         type: integer
       type:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_runs.TreeNode:
+    properties:
+      children:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeNode'
+        type: array
+      summary:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.Summary'
+    type: object
+  github_com_ash-repwiki_ash_internal_runs.TreeResponse:
+    properties:
+      rootRunId:
+        type: string
+      tree:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeNode'
     type: object
   github_com_ash-repwiki_ash_internal_scenariopatch.CreateRequest:
     properties:
@@ -1989,6 +2078,109 @@ definitions:
         type: string
       source:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_skills.ListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill'
+        type: array
+      repoRoot:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_skills.Skill:
+    properties:
+      body:
+        type: string
+      contextRef:
+        type: string
+      description:
+        type: string
+      id:
+        type: string
+      license:
+        type: string
+      name:
+        type: string
+      path:
+        type: string
+      relPath:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.Defaults:
+    properties:
+      inputs:
+        additionalProperties: {}
+        type: object
+      policyProfile:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.Document:
+    properties:
+      defaults:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Defaults'
+      preferScenario:
+        type: string
+      route:
+        additionalProperties:
+          items:
+            type: string
+          type: array
+        type: object
+      version:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.PreviewRequest:
+    properties:
+      goal:
+        type: string
+      repoRoot:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.PreviewResponse:
+    properties:
+      inputs:
+        additionalProperties: {}
+        type: object
+      policyProfile:
+        type: string
+      routeReason:
+        type: string
+      scenarioName:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.PutRequest:
+    properties:
+      document:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Document'
+      updatedBy:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.SyncRequest:
+    properties:
+      repoRoot:
+        type: string
+      updatedBy:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacerules.View:
+    properties:
+      builtin:
+        type: boolean
+      document:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.Document'
+      filePath:
+        type: string
+      source:
+        type: string
+      spaceId:
+        type: string
+      updatedAt:
+        type: integer
+      updatedBy:
+        type: string
+      version:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_store.AgentTask:
     properties:
@@ -2574,6 +2766,8 @@ definitions:
         type: string
       createdAt:
         type: string
+      depth:
+        type: integer
       errorCode:
         type: string
       errorMessage:
@@ -2584,11 +2778,15 @@ definitions:
         type: string
       inputsDigest:
         type: string
+      parentRunID:
+        type: string
       policyProfile:
         type: string
       recovered:
         type: boolean
       repoRoot:
+        type: string
+      rootRunID:
         type: string
       scenarioName:
         type: string
@@ -2599,6 +2797,8 @@ definitions:
       startedAt:
         type: string
       status:
+        type: string
+      toolAllowlistJSON:
         type: string
       traceID:
         type: string
@@ -2689,6 +2889,27 @@ definitions:
     properties:
       error:
         $ref: '#/definitions/internal_api.APIError'
+    type: object
+  internal_api.AgentProviderStatus:
+    properties:
+      execGo:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentexec.ProbeReport'
+      execGoE2EEnabled:
+        type: boolean
+      harnessKind:
+        type: string
+      liveGateHints:
+        items:
+          type: string
+        type: array
+      liveSmokeHint:
+        type: string
+      pinned:
+        type: boolean
+      pinnedAdapter:
+        type: string
+      selection:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.ProviderSelectionDTO'
     type: object
   internal_api.AgentTaskListResponse:
     properties:
@@ -5955,6 +6176,24 @@ paths:
       summary: Plugin export health snapshot
       tags:
       - plugins
+  /api/v1/providers/agent:
+    get:
+      parameters:
+      - default: local
+        description: space id
+        in: query
+        name: spaceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AgentProviderStatus'
+      summary: Probe agent provider / ExecGo readiness
+      tags:
+      - providers
   /api/v1/quest/board:
     get:
       parameters:
@@ -6894,6 +7133,32 @@ paths:
       summary: Stream run events (SSE)
       tags:
       - runs
+  /api/v1/runs/{runId}/sub-runs:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: parent run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: spawn request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.SpawnRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.CreateResponse'
+      summary: Spawn a child run under a parent
+      tags:
+      - runs
   /api/v1/runs/{runId}/timeline:
     get:
       parameters:
@@ -6945,6 +7210,24 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: List run tool calls
+      tags:
+      - runs
+  /api/v1/runs/{runId}/tree:
+    get:
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.TreeResponse'
+      summary: Get spawn tree for a run (rooted at rootRunId)
       tags:
       - runs
   /api/v1/runs/from-goal:
@@ -7323,6 +7606,47 @@ paths:
       summary: Rotate a secret value
       tags:
       - secrets
+  /api/v1/skills:
+    get:
+      parameters:
+      - default: .
+        description: repository root
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.ListResponse'
+      summary: List SKILL.md skills in a repository
+      tags:
+      - skills
+  /api/v1/skills/{skillId}:
+    get:
+      parameters:
+      - description: skill id
+        in: path
+        name: skillId
+        required: true
+        type: string
+      - default: .
+        description: repository root
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill'
+      summary: Get a skill by id (includes body)
+      tags:
+      - skills
   /api/v1/spaces:
     post:
       consumes:
@@ -7528,6 +7852,127 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Update a space resource scope policy (scenario tool matrix)
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/rules:
+    get:
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View'
+      summary: Get Space Rules (builtin defaults if unset)
+      tags:
+      - spaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: rules
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PutRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View'
+      summary: Upsert Space Rules in DB
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/rules/export:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: sync
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.SyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View'
+      summary: Export Space Rules to .ash/rules.yaml
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/rules/import:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: sync
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.SyncRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.View'
+      summary: Import Space Rules from .ash/rules.yaml
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/rules/preview:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: preview
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PreviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacerules.PreviewResponse'
+      summary: Preview Goal routing under Space Rules
       tags:
       - spaces
   /api/v1/storage/profile:

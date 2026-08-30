@@ -25,6 +25,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	sbxdocker "github.com/ash-repwiki/ash/internal/sandbox/docker"
 	sbxprocess "github.com/ash-repwiki/ash/internal/sandbox/process"
+	"github.com/ash-repwiki/ash/internal/skills"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -67,9 +68,17 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		SpaceID:         firstNonEmpty(req.SpaceID, "local"),
 		ActorRole:       firstNonEmpty(req.ActorRole, "maintainer"),
 		InputsDigest:    inputsDigest,
+		ParentRunID:     opts.parentRunID,
+		RootRunID:       opts.rootRunID,
+		Depth:           opts.depth,
 		StartedAt:       now,
 		CreatedAt:       now,
 		UpdatedAt:       now,
+	}
+	if len(opts.toolAllowlist) > 0 {
+		if b, err := json.Marshal(opts.toolAllowlist); err == nil {
+			rec.ToolAllowlistJSON = string(b)
+		}
 	}
 	repoRoot := ""
 	if req.Repo != nil {
@@ -126,6 +135,12 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		startedPayload["sourceRunId"] = opts.sourceRunID
 		startedPayload["replayMode"] = opts.replayMode
 	}
+	if opts.parentRunID != "" {
+		startedPayload["parentRunId"] = opts.parentRunID
+		startedPayload["rootRunId"] = opts.rootRunID
+		startedPayload["depth"] = opts.depth
+		startedPayload["toolAllowlist"] = opts.toolAllowlist
+	}
 
 	if _, err := s.eventsFor().Append(runID, traceID, "run.started", "info", startedPayload); err != nil {
 		return nil, err
@@ -178,7 +193,22 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	lastToolStep := struct{ id, role string }{"ship.release", "Shipper"}
 	agentTaskID := ""
 	issue := inputString(req.Inputs, "issueOrSpec")
-	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue)
+	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue, doc.Scenario.Skills)
+
+	providerSel := s.SelectProvider(rec.SpaceID)
+	_, _ = s.eventsFor().Append(runID, traceID, "provider.selected", "info", map[string]any{
+		"requestedKind": providerSel.RequestedKind,
+		"adapter":       providerSel.Adapter,
+		"source":        providerSel.Source,
+		"fallback":      providerSel.Fallback,
+	})
+	if providerSel.Fallback {
+		_, _ = s.eventsFor().Append(runID, traceID, "provider.fallback", "warn", map[string]any{
+			"requestedKind": providerSel.RequestedKind,
+			"adapter":       providerSel.Adapter,
+			"reason":        providerSel.Reason,
+		})
+	}
 
 	for idx, step := range doc.Scenario.Steps {
 		if err := s.observeCanceled(rec); err != nil {
@@ -238,7 +268,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		case "agent":
 			lastToolStep.id = step.ID
 			lastToolStep.role = step.Role
-			res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs)
+			res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs, providerSel.Executor)
 			if res != nil {
 				agentTaskID = firstNonEmpty(res.ExecGoTaskID, res.TaskID, res.ActionID)
 			}
@@ -345,6 +375,13 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 			_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{"stepId": step.ID})
 			s.requestApproval(rec, stepRow, "human", "", "human approval required", map[string]any{"stepId": step.ID})
 			return ErrWaitingApproval
+		case "verify":
+			lastToolStep.id = step.ID
+			lastToolStep.role = step.Role
+			if err := s.executeVerifyStep(rec, runID, traceID, started, stepStart, stepRow, step, toolCtx, req); err != nil {
+				stepSpan.End()
+				return err
+			}
 		}
 
 		if _, err := s.eventsFor().Append(runID, traceID, "step.finished", "info", map[string]any{
@@ -431,7 +468,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	return err
 }
 
-func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, issue string) []string {
+func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, issue string, scenarioSkills []string) []string {
 	var refs []string
 	if repoRoot != "" {
 		if resp, err := s.rag.Index(ragIndexRequest(spaceID, repoRoot)); err == nil {
@@ -490,6 +527,18 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 				"count": len(krefs), "refs": krefs,
 			})
 		}
+	}
+	wantedSkills := append([]string(nil), scenarioSkills...)
+	if s.harnessSvc != nil {
+		if view, err := s.harnessSvc.LoadActive(firstNonEmpty(spaceID, "local"), "default"); err == nil && view != nil {
+			wantedSkills = append(wantedSkills, view.Spec.Skills...)
+		}
+	}
+	if srefs := skills.ContextRefsForWanted(repoRoot, wantedSkills); len(srefs) > 0 {
+		refs = appendUnique(refs, srefs...)
+		_, _ = s.eventsFor().Append(runID, traceID, "skills.injected", "info", map[string]any{
+			"count": len(srefs), "refs": srefs, "wanted": wantedSkills,
+		})
 	}
 	return refs
 }
@@ -617,7 +666,14 @@ func (s *Service) finishStep(row *store.RunStep, status string, started time.Tim
 	_ = s.gdb().Save(row).Error
 }
 
-func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any) (*agentexec.Result, error) {
+func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any, exec agentexec.Executor) (*agentexec.Result, error) {
+	if exec == nil {
+		exec = s.agent
+	}
+	if exec == nil {
+		exec = agentexec.StaticExecutor{}
+	}
+	adapter := agentexec.AdapterNameOf(exec)
 	timeout := step.TimeoutMs
 	if timeout <= 0 {
 		timeout = 120000
@@ -632,17 +688,18 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		Inputs: inputs, TimeoutMs: timeout,
 	}
 	now := time.Now().UTC()
+	agentID := "ash-" + adapter
 	task := store.AgentTask{
 		ID: "agt_" + uuid.NewString(), RunID: runID, TraceID: traceID, StepID: step.ID,
-		Adapter: "codex", AgentID: "ash-codex", SessionID: runID,
+		Adapter: adapter, AgentID: agentID, SessionID: runID,
 		Status: "running", PromptDigest: digestString(issue + "\n" + prompt),
 		TimeoutMs: timeout, CreatedAt: now, StartedAt: &now,
 	}
 	_ = s.gdb().Create(&task).Error
 	_, _ = s.eventsFor().Append(runID, traceID, "agent.called", "info", map[string]any{
-		"stepId": step.ID, "adapter": "codex", "timeoutMs": timeout,
+		"stepId": step.ID, "adapter": adapter, "timeoutMs": timeout,
 	})
-	res, err := s.agent.Execute(context.Background(), req)
+	res, err := exec.Execute(context.Background(), req)
 	finished := time.Now().UTC()
 	task.CompletedAt = &finished
 	task.DurationMs = finished.Sub(now).Milliseconds()
@@ -927,6 +984,11 @@ func toolFailureClass(res toolbus.Result, timeoutMs int64) string {
 }
 
 func (s *Service) scenarioToolDenied(rec *store.RunRecord, tool string) (bool, string) {
+	if allow := parseAllowlistJSON(rec.ToolAllowlistJSON); len(allow) > 0 {
+		if !allowlistPermits(allow, tool) {
+			return true, fmt.Sprintf("tool %q not in sub-run allowlist", tool)
+		}
+	}
 	policy, err := authz.LoadScenarioPolicy(s.db, rec.SpaceID, rec.ScenarioName, rec.ScenarioVersion)
 	if err != nil {
 		return false, ""

@@ -76,7 +76,7 @@ func TestLoadActivePlatformDefault(t *testing.T) {
 	if view.ID != "hprof_platform_default" {
 		t.Fatalf("id=%s", view.ID)
 	}
-	if view.Spec.Provider.Kind != "static" {
+	if view.Spec.Provider.Kind != "execgo" {
 		t.Fatalf("provider=%s", view.Spec.Provider.Kind)
 	}
 }

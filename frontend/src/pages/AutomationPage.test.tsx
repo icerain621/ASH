@@ -11,6 +11,23 @@ vi.mock("@/components/HarnessProfilesPane", () => ({
   HarnessProfilesPane: () => <div data-testid="harness-profiles-pane">Harness profiles</div>,
 }));
 
+vi.mock("@/modules/skills/api/skills.api", () => ({
+  listSkills: vi.fn().mockResolvedValue({
+    items: [
+      {
+        id: "ash-test-discipline",
+        name: "ash-test-discipline",
+        description: "Prefer smallest safe change",
+        path: ".ash/skills/ash-test-discipline/SKILL.md",
+        relPath: ".ash/skills/ash-test-discipline/SKILL.md",
+        contextRef: "skill:ash-test-discipline",
+      },
+    ],
+    repoRoot: ".",
+  }),
+  getSkill: vi.fn(),
+}));
+
 vi.mock("@/modules/platform/api/platform.api", () => ({
   listModelProviders: vi.fn().mockResolvedValue({ items: [] }),
   listMCPTools: vi.fn().mockResolvedValue({ items: [] }),
@@ -70,6 +87,14 @@ describe("AutomationPage", () => {
     renderPage(<AutomationPage />);
     await waitFor(() => {
       expect(screen.getByTestId("harness-profiles-pane")).toBeInTheDocument();
+    });
+  });
+
+  it("renders skills catalog", async () => {
+    renderPage(<AutomationPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("skills-catalog")).toBeInTheDocument();
+      expect(screen.getByText("ash-test-discipline")).toBeInTheDocument();
     });
   });
 });

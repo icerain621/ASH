@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Building2, KeyRound, Plus, ShieldCheck, UsersRound } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import {
   createOrg,
   createRole,
@@ -9,6 +9,11 @@ import {
   createSpaceMember,
   devLogin,
   getAuthMe,
+  getSpaceRules,
+  putSpaceRules,
+  importSpaceRules,
+  exportSpaceRules,
+  previewSpaceRules,
   listOrgTemplates,
   listOrgs,
   listRoles,
@@ -67,6 +72,36 @@ export function SpacePage() {
     enabled: canManageActiveSpace,
   });
   const [policyDrafts, setPolicyDrafts] = useState<Record<string, string>>({});
+  const [rulesYamlHint, setRulesYamlHint] = useState(".");
+  const [previewGoal, setPreviewGoal] = useState("fix CVE in auth");
+  const [rulesDraft, setRulesDraft] = useState("");
+  const rulesQuery = useQuery({
+    queryKey: ["space-rules", activeSpaceId],
+    queryFn: () => getSpaceRules(activeSpaceId || "local"),
+  });
+  const rulesMut = useMutation({
+    mutationFn: () => {
+      const document = JSON.parse(rulesDraft || "{}");
+      return putSpaceRules(activeSpaceId || "local", document);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["space-rules"] }),
+  });
+  const importRulesMut = useMutation({
+    mutationFn: () => importSpaceRules(activeSpaceId || "local", rulesYamlHint),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["space-rules"] }),
+  });
+  const exportRulesMut = useMutation({
+    mutationFn: () => exportSpaceRules(activeSpaceId || "local", rulesYamlHint),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["space-rules"] }),
+  });
+  const previewRulesMut = useMutation({
+    mutationFn: () => previewSpaceRules(activeSpaceId || "local", { goal: previewGoal, repoRoot: rulesYamlHint }),
+  });
+  useEffect(() => {
+    if (rulesQuery.data?.document) {
+      setRulesDraft(JSON.stringify(rulesQuery.data.document, null, 2));
+    }
+  }, [rulesQuery.data]);
   const loginMut = useMutation({
     mutationFn: (spaceId?: string) => devLogin(spaceId),
     onSuccess: async (data) => {
@@ -265,6 +300,52 @@ export function SpacePage() {
           <p className="muted-line">
             已开通 {provisionTemplateMut.data.org.name}（{provisionTemplateMut.data.spaces.length} 个 Space）
           </p>
+        )}
+      </div>
+      <div className="pane" style={{ marginBottom: "1rem" }} data-testid="space-rules-panel">
+        <div className="pane-title">
+          <h2>Space Rules</h2>
+          <span>{rulesQuery.data?.builtin ? "builtin" : rulesQuery.data?.source || "—"}</span>
+        </div>
+        <p className="muted-line">
+          Goal 路由关键词与默认 policy；DB 持久化，可与仓库 <code>.ash/rules.yaml</code> 双向同步。
+        </p>
+        <label className="scenario-picker">
+          repoRoot（同步）
+          <input value={rulesYamlHint} onChange={(e) => setRulesYamlHint(e.target.value)} data-testid="space-rules-repo-root" />
+        </label>
+        <textarea
+          data-testid="space-rules-editor"
+          value={rulesDraft}
+          onChange={(e) => setRulesDraft(e.target.value)}
+          rows={12}
+          style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }}
+        />
+        <div className="toolbar" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
+          <button className="btn primary" type="button" onClick={() => rulesMut.mutate()} disabled={rulesMut.isPending}>
+            保存到 DB
+          </button>
+          <button className="btn" type="button" onClick={() => importRulesMut.mutate()} disabled={importRulesMut.isPending}>
+            Import 文件→DB
+          </button>
+          <button className="btn" type="button" onClick={() => exportRulesMut.mutate()} disabled={exportRulesMut.isPending}>
+            Export DB→文件
+          </button>
+        </div>
+        <label className="scenario-picker" style={{ marginTop: "0.75rem" }}>
+          预览 Goal
+          <input value={previewGoal} onChange={(e) => setPreviewGoal(e.target.value)} data-testid="space-rules-preview-goal" />
+        </label>
+        <button className="btn" type="button" onClick={() => previewRulesMut.mutate()} disabled={previewRulesMut.isPending}>
+          预览路由
+        </button>
+        {previewRulesMut.data && (
+          <p className="muted-line" data-testid="space-rules-preview-result">
+            → {previewRulesMut.data.scenarioName}（{previewRulesMut.data.routeReason}）· policy={previewRulesMut.data.policyProfile}
+          </p>
+        )}
+        {(rulesMut.isError || importRulesMut.isError || exportRulesMut.isError || previewRulesMut.isError) && (
+          <p className="error-text">Rules 操作失败，请检查 JSON / 路径权限。</p>
         )}
       </div>
       <div className="split">

@@ -13,6 +13,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/rules"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/testutil"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -940,7 +941,9 @@ esac
 `)
 	t.Setenv("EXECGO_EXECGOCLI", cli)
 	ev := events.NewService(db)
-	svc := NewService(db, ev, loader, toolbus.DefaultBus()).WithAgentExecutor(agentexec.StaticExecutor{})
+	svc := NewService(db, ev, loader, toolbus.DefaultBus()).
+		WithAgentExecutor(agentexec.StaticExecutor{}).
+		WithSandboxRouter(sandbox.NoopRouter{})
 
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "runtime_tool", ScenarioVersion: "1.0.0"},

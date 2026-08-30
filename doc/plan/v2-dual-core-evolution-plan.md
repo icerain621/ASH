@@ -188,12 +188,12 @@ flowchart TB
 | 11–12 | **DK** | — | Quest 工作台 v1 | ✅ 看板 + 深 Diff 批注 + 步骤评分 + contextRefs |
 | 13–14 | **DY** | — | 演进平面基础 | ✅ feedback 全类型 + `/reviews/queue` + decide |
 | 15–16 | **DL** | — | Repo Profile + Wiki | ✅ 即时 Profile/Wiki + 知识 Tab + contextRefs（无新表） |
-| 17–18 | **DM** | — | Space Rules + 路由 | Goal 填槽增强 |
-| 19–20 | **DN** | v2.0.0-alpha | Skills 目录 | `SKILL.md`、场景绑定 |
-| 21–22 | **DO** | — | Sub-run | 事件树、Policy 白名单 |
-| 23–24 | **DP** | — | verify 步骤 | DSL 扩展、→ improve |
+| 17–18 | **DM** | — | Space Rules + 路由 | ✅ DB + `.ash/rules.yaml` 双向同步 + from-goal |
+| 19–20 | **DN** | v2.0.0-alpha | Skills 目录 | ✅ SKILL.md 扫描 + 场景绑定 + `skill:` contextRefs |
+| 21–22 | **DO** | — | Sub-run | ✅ spawn + 深度/白名单 + 事件树 + Quest 树 |
+| 23–24 | **DP** | — | verify 步骤 | ✅ DSL verify + 重试 + improve 草稿 |
 | 25–26 | **DZ** | v2.0.0-beta.1 | **编排评审** | ✅ Reviews UI + promote 闸门 + scenario patch + rollback |
-| 27–28 | **DQ** | — | Provider + ExecGo live | H-06 |
+| 27–28 | **DQ** | — | Provider + ExecGo live | ✅ kind→agent + fallback + `/providers/agent`（H-06 环境⏸） |
 | 29–30 | **DX2** | v2.0.0-beta.2 | isolated 强制 | 场景策略、KPI-19 |
 | 31–32 | **DR** | — | compaction + Doctor M4/M5 | 全量探针 |
 | 33–34 | **DS** | — | Webhook 触发 | CI→Run |

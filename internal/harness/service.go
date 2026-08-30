@@ -122,7 +122,7 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 
 func DefaultSpec() ProfileSpecBody {
 	return ProfileSpecBody{
-		Provider:      ProviderSpec{Kind: "static"},
+		Provider:      ProviderSpec{Kind: "execgo"},
 		Sandbox:       SandboxSpec{DefaultMode: "workspace-write", Network: "deny", SpillMaxBytes: 65536},
 		Tools:         ToolsSpec{Allowlist: []string{"read", "write", "edit", "bash", "grep", "find", "ls"}},
 		PolicyProfile: "default",

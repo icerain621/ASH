@@ -14,9 +14,12 @@
 | # | 动作 | 期望 |
 |---|------|------|
 | 1 | `make execgo-health` | 分类通过（execgocli / runtime / codex 可达） |
+| 1b | `curl -s 'http://<worker>/api/v1/providers/agent' \| jq .` | `execGo.ok=true`；`selection` 反映 harness/pin |
 | 2 | `ASH_EXECGO_E2E=1 make execgo-live-smoke` | `execgo-health` + Doctor **M3-05** passed（非 skipped） |
 | 2b | 等价 CLI | `ASH_EXECGO_E2E=1 go run ./cmd/cli doctor --suite M3 --require M3-05 --agent execgo_codex` |
 | 3 | `curl -s http://<worker>/readyz \| jq .liveGateHints` | 含 `ASH_EXECGO_E2E=1` 条目（Worker 进程需带该 env） |
+
+> Sprint DQ：未钉死 agent 时，Worker 按 Harness `provider.kind` 选型；`execgo` 探测失败则回退 `static` 并写 `provider.fallback`。Live Doctor 仍须 `--agent execgo_codex` 钉死真实桥接。
 
 ## 失败分类（execgo-health）
 

@@ -29,6 +29,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/scenariopatch"
 	"github.com/ash-repwiki/ash/internal/secrets"
+	"github.com/ash-repwiki/ash/internal/spacerules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -53,6 +54,7 @@ type Handler struct {
 	quest         *quest.Service
 	diffReview    *diffreview.Service
 	knowledge     *knowledge.Service
+	spaceRules    *spacerules.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -69,6 +71,8 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	memSvc := memory.NewService(db, ev)
 	harSvc := harness.NewService(db)
 	patchSvc := scenariopatch.NewService(db)
+	improveSvc := improve.NewService(db, runsSvc, ev)
+	runsSvc.SetImproveDrafter(improveSvc)
 	return &Handler{
 		db:        db,
 		events:    ev,
@@ -76,7 +80,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		runs:      runsSvc,
 		doctor:    doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
 		memory:    memSvc,
-		improve:   improve.NewService(db, runsSvc, ev),
+		improve:   improveSvc,
 		ci:        ciSvc,
 		metrics:   metricssvc.NewService(db),
 		alerts:    alerts.NewService(db),
@@ -88,6 +92,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		quest:      quest.NewService(db, runsSvc),
 		diffReview: diffreview.NewService(db, runsSvc),
 		knowledge:  knowledge.NewService(db, memSvc),
+		spaceRules: spacerules.NewService(db),
 	}
 }
 
@@ -112,8 +117,13 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/repos/profile", h.getRepoProfile)
 		v1.GET("/wiki/pages", h.listWikiPages)
 		v1.GET("/wiki/pages/:pageId", h.getWikiPage)
+		v1.GET("/skills", h.listSkills)
+		v1.GET("/skills/:skillId", h.getSkill)
+		v1.GET("/providers/agent", h.getAgentProviderStatus)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)
+		v1.GET("/runs/:runId/tree", h.getRunTree)
+		v1.POST("/runs/:runId/sub-runs", h.spawnSubRun)
 		v1.GET("/runs/:runId/stream", h.streamRun)
 		v1.GET("/runs/:runId/artifacts", h.listRunArtifacts)
 		v1.GET("/runs/:runId/artifacts/:artifactName/access", h.getRunArtifactAccess)
@@ -236,6 +246,11 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/spaces/:spaceId/members", h.createSpaceMember)
 		v1.GET("/spaces/:spaceId/resource-scopes", h.listSpaceResourceScopes)
 		v1.PUT("/spaces/:spaceId/resource-scopes/:scopeId", h.updateSpaceResourceScope)
+		v1.GET("/spaces/:spaceId/rules", h.getSpaceRules)
+		v1.PUT("/spaces/:spaceId/rules", h.putSpaceRules)
+		v1.POST("/spaces/:spaceId/rules/import", h.importSpaceRules)
+		v1.POST("/spaces/:spaceId/rules/export", h.exportSpaceRules)
+		v1.POST("/spaces/:spaceId/rules/preview", h.previewSpaceRules)
 
 		v1.GET("/compliance/secret-scan", h.complianceSecretScan)
 		v1.POST("/compliance/export", h.complianceExportBundle)

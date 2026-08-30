@@ -11,7 +11,7 @@ import {
   type DiffComment,
   type DiffFile,
 } from "@/modules/quest/api/quest.api";
-import { getRunTimeline, type TimelineItem } from "@/modules/runs/api/runs.api";
+import { getRunTimeline, getRunTree, type RunTreeNode, type TimelineItem } from "@/modules/runs/api/runs.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
 
@@ -50,6 +50,11 @@ export function QuestPage() {
   const timelineQuery = useQuery({
     queryKey: ["quest-timeline", selectedRunId],
     queryFn: () => getRunTimeline(selectedRunId!),
+    enabled: !!selectedRunId,
+  });
+  const treeQuery = useQuery({
+    queryKey: ["quest-run-tree", selectedRunId],
+    queryFn: () => getRunTree(selectedRunId!),
     enabled: !!selectedRunId,
   });
 
@@ -113,6 +118,29 @@ export function QuestPage() {
     }
   }
 
+  function renderTree(node: RunTreeNode, depth = 0) {
+    const id = node.summary.runId;
+    return (
+      <li key={id} style={{ marginLeft: depth * 12 }}>
+        <button
+          type="button"
+          className="btn linkish"
+          onClick={() => {
+            setSelectedRunId(id);
+            setMessage(`树节点 ${shortId(id)} · depth ${node.summary.depth ?? 0}`);
+          }}
+          data-testid={`quest-tree-node-${id}`}
+        >
+          {shortId(id)} · {node.summary.status} · d{node.summary.depth ?? 0}
+          {node.summary.parentRunId ? " · child" : " · root"}
+        </button>
+        {node.children?.length ? (
+          <ul style={{ listStyle: "none", paddingLeft: 0 }}>{node.children.map((c) => renderTree(c, depth + 1))}</ul>
+        ) : null}
+      </li>
+    );
+  }
+
   return (
     <section className="panel active" data-testid="quest-page">
       <div className="page-kicker">
@@ -122,7 +150,7 @@ export function QuestPage() {
       <div className="page-heading">
         <div>
           <h1>Quest 工作台</h1>
-          <p>看板跟踪 Plan/Run；深 Diff 行级批注；步骤评分。</p>
+          <p>看板跟踪 Plan/Run；深 Diff 行级批注；步骤评分；Sub-run 树。</p>
           <span className="scope-badge">Space: {spaceId}</span>
         </div>
         <button type="button" className="btn icon-btn" onClick={() => boardQuery.refetch()}>
@@ -162,6 +190,20 @@ export function QuestPage() {
 
       {selectedRunId ? (
         <div className="split ops-split">
+          <div className="pane" data-testid="quest-run-tree">
+            <div className="pane-title">
+              <h2>Sub-run 树</h2>
+              <span>{treeQuery.data?.rootRunId ? shortId(treeQuery.data.rootRunId) : "—"}</span>
+            </div>
+            {treeQuery.isError ? <p className="error-text">加载树失败</p> : null}
+            {treeQuery.data?.tree ? (
+              <ul style={{ listStyle: "none", padding: 0 }} data-testid="quest-run-tree-list">
+                {renderTree(treeQuery.data.tree)}
+              </ul>
+            ) : (
+              <p className="muted-line">选择 Run 后显示 spawn 树。</p>
+            )}
+          </div>
           <div className="pane" data-testid="quest-diff-pane">
             <div className="pane-title">
               <h2>Diff 审查</h2>

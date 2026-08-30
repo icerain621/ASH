@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"strings"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
@@ -90,6 +91,10 @@ type Summary struct {
 	Repo          *RepoRef    `json:"repo,omitempty"`
 	SpaceID       string      `json:"spaceId,omitempty"`
 	ActorRole     string      `json:"actorRole,omitempty"`
+	ParentRunID   string      `json:"parentRunId,omitempty"`
+	RootRunID     string      `json:"rootRunId,omitempty"`
+	Depth         int         `json:"depth,omitempty"`
+	ToolAllowlist []string    `json:"toolAllowlist,omitempty"`
 }
 
 type TimelineResponse struct {
@@ -127,12 +132,15 @@ type Service struct {
 	scenarios  *rules.Loader
 	tools      *toolbus.Bus
 	agent      agentexec.Executor
+	agentPinned bool
 	rag        *rag.Service
 	artifacts  artifactstore.Store
 	harnessSvc *harness.Service
 	knowledge  *knowledge.Service
+	improve    ImproveDrafter
 	loopAd     *loop.Adapter
 	ctx        context.Context
+	providerProbe *providerProbeCache
 }
 
 func NewService(db *store.DB, ev *events.Service, scenarios *rules.Loader, tools *toolbus.Bus) *Service {
@@ -191,9 +199,26 @@ func (s *Service) loopFor() *loop.Adapter {
 	return s.loopAd
 }
 
+// WithSandboxRouter replaces the loop sandbox router (tests may inject NoopRouter).
+func (s *Service) WithSandboxRouter(r sandbox.Router) *Service {
+	if s == nil {
+		return s
+	}
+	if r == nil {
+		r = sandbox.NewDefaultRouter()
+	}
+	s.loopAd = loop.NewAdapter(
+		&runEventEmitter{svc: s},
+		r,
+		&harnessModeLoader{h: s.harnessSvc},
+	)
+	return s
+}
+
 func (s *Service) WithAgentExecutor(exec agentexec.Executor) *Service {
 	if exec != nil {
 		s.agent = exec
+		s.agentPinned = true
 	}
 	return s
 }
@@ -219,8 +244,10 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	}
 	out := &Service{
 		db: s.db, events: s.events, scenarios: s.scenarios, tools: s.tools,
-		agent: s.agent, rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
-		harnessSvc: s.harnessSvc, knowledge: s.knowledge,
+		agent: s.agent, agentPinned: s.agentPinned,
+		rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
+		harnessSvc: s.harnessSvc, knowledge: s.knowledge, improve: s.improve,
+		providerProbe: s.providerProbe,
 	}
 	if s.harnessSvc != nil {
 		out.harnessSvc = s.harnessSvc.WithContext(ctx)
@@ -626,6 +653,7 @@ func recordToSummary(rec store.RunRecord) *Summary {
 		PolicyProfile: rec.PolicyProfile, Status: rec.Status,
 		StartedAt: rec.StartedAt.UnixMilli(), Recovered: rec.Recovered, InputsDigest: rec.InputsDigest,
 		SpaceID: rec.SpaceID, ActorRole: rec.ActorRole,
+		ParentRunID: rec.ParentRunID, RootRunID: rec.RootRunID, Depth: rec.Depth,
 	}
 	if rec.FinishedAt != nil {
 		ms := rec.FinishedAt.UnixMilli()
@@ -633,6 +661,12 @@ func recordToSummary(rec store.RunRecord) *Summary {
 	}
 	if rec.RepoRoot != "" {
 		sum.Repo = &RepoRef{Root: rec.RepoRoot}
+	}
+	if strings.TrimSpace(rec.ToolAllowlistJSON) != "" {
+		var tools []string
+		if json.Unmarshal([]byte(rec.ToolAllowlistJSON), &tools) == nil {
+			sum.ToolAllowlist = tools
+		}
 	}
 	return sum
 }

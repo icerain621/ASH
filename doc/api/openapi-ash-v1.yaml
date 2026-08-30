@@ -43,6 +43,7 @@ tags:
   - name: Reviews
   - name: Quest
   - name: Knowledge
+  - name: Skills
   - name: Metrics
   - name: Observability
   - name: Releases
@@ -584,6 +585,38 @@ components:
         repo: { $ref: "#/components/schemas/RepoRef" }
         spaceId: { type: string }
         actorRole: { type: string }
+        parentRunId: { type: string }
+        rootRunId: { type: string }
+        depth: { type: integer }
+        toolAllowlist:
+          type: array
+          items: { type: string }
+    RunSpawnRequest:
+      type: object
+      required: [scenario, inputs]
+      properties:
+        scenario: { $ref: "#/components/schemas/ScenarioRef" }
+        inputs: { type: object, additionalProperties: true }
+        policyProfile: { type: string }
+        allowedTools:
+          type: array
+          items: { type: string }
+        reason: { type: string }
+        actorRole: { type: string }
+    RunTreeNode:
+      type: object
+      required: [summary]
+      properties:
+        summary: { $ref: "#/components/schemas/RunSummaryResponse" }
+        children:
+          type: array
+          items: { $ref: "#/components/schemas/RunTreeNode" }
+    RunTreeResponse:
+      type: object
+      required: [rootRunId, tree]
+      properties:
+        rootRunId: { type: string }
+        tree: { $ref: "#/components/schemas/RunTreeNode" }
     RunListResponse:
       type: object
       required: [items]
@@ -634,6 +667,62 @@ components:
         createdBy: { type: string }
         createdAt: { type: integer, format: int64 }
         updatedAt: { type: integer, format: int64 }
+    SpaceRulesDocument:
+      type: object
+      properties:
+        version: { type: integer }
+        preferScenario: { type: string }
+        route:
+          type: object
+          additionalProperties:
+            type: array
+            items: { type: string }
+        defaults:
+          type: object
+          properties:
+            policyProfile: { type: string }
+            inputs:
+              type: object
+              additionalProperties: true
+    SpaceRulesView:
+      type: object
+      required: [spaceId, document]
+      properties:
+        spaceId: { type: string }
+        version: { type: integer }
+        source: { type: string }
+        filePath: { type: string }
+        updatedBy: { type: string }
+        updatedAt: { type: integer, format: int64 }
+        document: { $ref: "#/components/schemas/SpaceRulesDocument" }
+        builtin: { type: boolean }
+    SpaceRulesPutRequest:
+      type: object
+      required: [document]
+      properties:
+        document: { $ref: "#/components/schemas/SpaceRulesDocument" }
+        updatedBy: { type: string }
+    SpaceRulesSyncRequest:
+      type: object
+      required: [repoRoot]
+      properties:
+        repoRoot: { type: string }
+        updatedBy: { type: string }
+    SpaceRulesPreviewRequest:
+      type: object
+      required: [goal]
+      properties:
+        goal: { type: string }
+        repoRoot: { type: string }
+    SpaceRulesPreviewResponse:
+      type: object
+      properties:
+        scenarioName: { type: string }
+        routeReason: { type: string }
+        policyProfile: { type: string }
+        inputs:
+          type: object
+          additionalProperties: true
     QuestBoardItem:
       type: object
       properties:
@@ -698,6 +787,53 @@ components:
           type: array
           items: { $ref: "#/components/schemas/WikiPage" }
         query: { type: string }
+    SkillItem:
+      type: object
+      required: [id, name, description, contextRef]
+      properties:
+        id: { type: string }
+        name: { type: string }
+        description: { type: string }
+        license: { type: string }
+        path: { type: string }
+        relPath: { type: string }
+        body: { type: string }
+        contextRef: { type: string }
+    SkillsListResponse:
+      type: object
+      required: [items, repoRoot]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SkillItem" }
+        repoRoot: { type: string }
+    AgentProviderStatus:
+      type: object
+      properties:
+        pinned: { type: boolean }
+        pinnedAdapter: { type: string }
+        harnessKind: { type: string }
+        selection:
+          type: object
+          properties:
+            requestedKind: { type: string }
+            adapter: { type: string }
+            source: { type: string }
+            fallback: { type: boolean }
+            reason: { type: string }
+        execGo:
+          type: object
+          properties:
+            adapter: { type: string }
+            kind: { type: string }
+            ok: { type: boolean }
+            message: { type: string }
+            checkedAt: { type: integer, format: int64 }
+        liveGateHints:
+          type: array
+          items: { type: string }
+        execGoE2EEnabled: { type: boolean }
+        liveSmokeHint: { type: string }
     RunDiffLine:
       type: object
       properties:
@@ -4329,6 +4465,55 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/WikiPage" }
 
+  /api/v1/skills:
+    get:
+      tags: [Skills]
+      summary: List SKILL.md skills in a repository
+      parameters:
+        - in: query
+          name: repoRoot
+          schema: { type: string, default: "." }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillsListResponse" }
+
+  /api/v1/skills/{skillId}:
+    get:
+      tags: [Skills]
+      summary: Get a skill by id (includes body)
+      parameters:
+        - in: path
+          name: skillId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: repoRoot
+          schema: { type: string, default: "." }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillItem" }
+
+  /api/v1/providers/agent:
+    get:
+      tags: [Providers]
+      summary: Probe agent provider / ExecGo readiness
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string, default: local }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentProviderStatus" }
+
   /api/v1/runs/{runId}/diff:
     get:
       tags: [Quest]
@@ -4479,6 +4664,43 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  /api/v1/runs/{runId}/tree:
+    get:
+      tags: [Runs]
+      summary: Get spawn tree for a run (rooted at rootRunId)
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunTreeResponse" }
+
+  /api/v1/runs/{runId}/sub-runs:
+    post:
+      tags: [Runs]
+      summary: Spawn a child run under a parent
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RunSpawnRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RunCreateResponse" }
 
   /api/v1/runs/{runId}/agent-tasks:
     get:
@@ -5068,6 +5290,104 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ResourceScopeView" }
+
+  /api/v1/spaces/{spaceId}/rules:
+    get:
+      tags: [Spaces]
+      summary: Get Space Rules (builtin defaults if unset)
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceRulesView" }
+    put:
+      tags: [Spaces]
+      summary: Upsert Space Rules in DB
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpaceRulesPutRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceRulesView" }
+
+  /api/v1/spaces/{spaceId}/rules/import:
+    post:
+      tags: [Spaces]
+      summary: Import Space Rules from .ash/rules.yaml
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpaceRulesSyncRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceRulesView" }
+
+  /api/v1/spaces/{spaceId}/rules/export:
+    post:
+      tags: [Spaces]
+      summary: Export Space Rules to .ash/rules.yaml
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpaceRulesSyncRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceRulesView" }
+
+  /api/v1/spaces/{spaceId}/rules/preview:
+    post:
+      tags: [Spaces]
+      summary: Preview Goal routing under Space Rules
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SpaceRulesPreviewRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceRulesPreviewResponse" }
 
   /api/v1/storage/profile:
     get:

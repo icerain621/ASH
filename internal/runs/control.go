@@ -163,6 +163,10 @@ func copyMap(in map[string]any) map[string]any {
 }
 
 type createOptions struct {
-	sourceRunID string
-	replayMode  string
+	sourceRunID   string
+	replayMode    string
+	parentRunID   string
+	rootRunID     string
+	depth         int
+	toolAllowlist []string
 }

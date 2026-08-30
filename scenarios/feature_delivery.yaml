@@ -5,6 +5,9 @@ scenario:
   scenarioVersion: "1.0.0"
   description: "Feature 从需求到交付的标准流程（M0）"
   policyProfile: "default"
+  skills:
+    - ash-test-discipline
+    - ash-diff-review
   checkpoint:
     strategy: "per_step"
     retain: 50
@@ -65,9 +68,14 @@ scenario:
 
     - id: "qa.verify"
       role: "QA"
-      kind: "tool_chain"
-      chain:
-        - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000, retry: { maxAttempts: 1 } }
+      kind: "verify"
+      verify:
+        checks:
+          - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
+        onFail: improve
+      retry:
+        maxAttempts: 2
+        backoffMs: 200
 
     - id: "review.quality"
       role: "Reviewer"

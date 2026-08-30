@@ -13,6 +13,29 @@ export type RunSummary = {
   startedAt: number;
   finishedAt?: number;
   recovered?: boolean;
+  parentRunId?: string;
+  rootRunId?: string;
+  depth?: number;
+  toolAllowlist?: string[];
+};
+
+export type RunTreeNode = {
+  summary: RunSummary;
+  children?: RunTreeNode[];
+};
+
+export type RunTreeResponse = {
+  rootRunId: string;
+  tree: RunTreeNode;
+};
+
+export type SpawnSubRunRequest = {
+  scenario: ScenarioRef;
+  inputs: Record<string, unknown>;
+  policyProfile?: string;
+  allowedTools?: string[];
+  reason?: string;
+  actorRole?: string;
 };
 
 export type CreateRunRequest = {
@@ -251,6 +274,17 @@ export function listRuns(limit = 30) {
 
 export function getRun(runId: string) {
   return api<RunSummary>(`/runs/${runId}`);
+}
+
+export function getRunTree(runId: string) {
+  return api<RunTreeResponse>(`/runs/${encodeURIComponent(runId)}/tree`);
+}
+
+export function spawnSubRun(parentRunId: string, body: SpawnSubRunRequest) {
+  return api<CreateRunResponse>(`/runs/${encodeURIComponent(parentRunId)}/sub-runs`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function createRun(body: CreateRunRequest) {

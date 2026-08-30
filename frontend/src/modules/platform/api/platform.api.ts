@@ -515,6 +515,63 @@ export function updateSpaceResourceScope(spaceId: string, scopeId: string, polic
   }).then(normalizeResourceScope);
 }
 
+export type SpaceRulesDocument = {
+  version?: number;
+  preferScenario?: string;
+  route?: Record<string, string[]>;
+  defaults?: { policyProfile?: string; inputs?: Record<string, unknown> };
+};
+
+export type SpaceRulesView = {
+  spaceId: string;
+  version: number;
+  source: string;
+  filePath?: string;
+  updatedBy?: string;
+  updatedAt: number;
+  document: SpaceRulesDocument;
+  builtin?: boolean;
+};
+
+export type SpaceRulesPreview = {
+  scenarioName: string;
+  routeReason: string;
+  policyProfile: string;
+  inputs?: Record<string, unknown>;
+};
+
+export function getSpaceRules(spaceId: string) {
+  return api<SpaceRulesView>(`/spaces/${encodeURIComponent(spaceId)}/rules`);
+}
+
+export function putSpaceRules(spaceId: string, document: SpaceRulesDocument) {
+  return api<SpaceRulesView>(`/spaces/${encodeURIComponent(spaceId)}/rules`, {
+    method: "PUT",
+    body: JSON.stringify({ document }),
+  });
+}
+
+export function importSpaceRules(spaceId: string, repoRoot: string) {
+  return api<SpaceRulesView>(`/spaces/${encodeURIComponent(spaceId)}/rules/import`, {
+    method: "POST",
+    body: JSON.stringify({ repoRoot }),
+  });
+}
+
+export function exportSpaceRules(spaceId: string, repoRoot: string) {
+  return api<SpaceRulesView>(`/spaces/${encodeURIComponent(spaceId)}/rules/export`, {
+    method: "POST",
+    body: JSON.stringify({ repoRoot }),
+  });
+}
+
+export function previewSpaceRules(spaceId: string, body: { goal: string; repoRoot?: string }) {
+  return api<SpaceRulesPreview>(`/spaces/${encodeURIComponent(spaceId)}/rules/preview`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function createSpaceMember(
   spaceId: string,
   body: { userId?: string; email?: string; displayName?: string; password?: string; roleId: string; status?: string },

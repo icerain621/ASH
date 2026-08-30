@@ -14,6 +14,7 @@ type Scenario struct {
 	ScenarioVersion string            `yaml:"scenarioVersion" json:"scenarioVersion"`
 	Description     string            `yaml:"description,omitempty" json:"description,omitempty"`
 	PolicyProfile   string            `yaml:"policyProfile,omitempty" json:"policyProfile,omitempty"`
+	Skills          []string          `yaml:"skills,omitempty" json:"skills,omitempty"`
 	Checkpoint      *CheckpointConfig `yaml:"checkpoint,omitempty" json:"checkpoint,omitempty"`
 	Roles           map[string]Role   `yaml:"roles,omitempty" json:"roles,omitempty"`
 	Inputs          *InputsSpec       `yaml:"inputs,omitempty" json:"inputs,omitempty"`
@@ -73,10 +74,17 @@ type Step struct {
 	RAG       *RAGSpec        `yaml:"rag,omitempty" json:"rag,omitempty"`
 	Agent     *AgentSpec      `yaml:"agent,omitempty" json:"agent,omitempty"`
 	Chain     []ToolChainItem `yaml:"chain,omitempty" json:"chain,omitempty"`
+	Verify    *VerifySpec     `yaml:"verify,omitempty" json:"verify,omitempty"`
 	Gates     []string        `yaml:"gates,omitempty" json:"gates,omitempty"`
 	Outputs   *StepOutputs    `yaml:"outputs,omitempty" json:"outputs,omitempty"`
 	TimeoutMs int64           `yaml:"timeoutMs,omitempty" json:"timeoutMs,omitempty"`
 	Retry     *RetrySpec      `yaml:"retry,omitempty" json:"retry,omitempty"`
+}
+
+// VerifySpec defines kind:verify checks (test/lint/status style tool calls).
+type VerifySpec struct {
+	Checks []ToolChainItem `yaml:"checks" json:"checks"`
+	OnFail string          `yaml:"onFail,omitempty" json:"onFail,omitempty"` // fail|improve
 }
 
 type RAGSpec struct {

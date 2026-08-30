@@ -12,6 +12,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/spacerules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -55,10 +56,14 @@ type Service struct {
 	scenarios *rules.Loader
 	runs      *runs.Service
 	events    *events.Service
+	rules     *spacerules.Service
 }
 
 func NewService(db *store.DB, scenarios *rules.Loader, runsSvc *runs.Service, ev *events.Service) *Service {
-	return &Service{db: db, scenarios: scenarios, runs: runsSvc, events: ev}
+	return &Service{
+		db: db, scenarios: scenarios, runs: runsSvc, events: ev,
+		rules: spacerules.NewService(db),
+	}
 }
 
 func (s *Service) WithContext(ctx context.Context) *Service {
@@ -78,7 +83,13 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 
 func (s *Service) FromGoal(req FromGoalRequest) (*PlanView, error) {
 	space := firstNonEmpty(strings.TrimSpace(req.SpaceID), "local")
-	routed, err := Route(req.Goal, s.scenarios, req.RepoRoot)
+	rulesDoc := spacerules.BuiltinDocument()
+	if s.rules != nil {
+		if view, err := s.rules.Get(space); err == nil && view != nil {
+			rulesDoc = view.Document
+		}
+	}
+	routed, err := RouteWithDoc(req.Goal, s.scenarios, req.RepoRoot, rulesDoc)
 	if err != nil {
 		return nil, err
 	}

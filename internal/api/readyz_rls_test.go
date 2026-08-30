@@ -36,8 +36,8 @@ func TestReadyzIncludesRLSCatalogWhenEnabled(t *testing.T) {
 	if !resp.PostgresRLSEnabled {
 		t.Log("postgresRLSEnabled false on sqlite (RLS inactive until dialect=postgres)")
 	}
-	if resp.PostgresRLSPolicyExpected != 41 {
-		t.Fatalf("postgresRLSPolicyExpected=%d want 41", resp.PostgresRLSPolicyExpected)
+	if resp.PostgresRLSPolicyExpected != 46 {
+		t.Fatalf("postgresRLSPolicyExpected=%d want 46", resp.PostgresRLSPolicyExpected)
 	}
 	if resp.RLSCatalogSummary == "" {
 		t.Fatal("expected rlsCatalogSummary on readyz when RLS enabled")

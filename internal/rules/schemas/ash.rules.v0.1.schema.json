@@ -29,6 +29,11 @@
           "type": "string",
           "enum": ["default", "strict", "hotfix", "security"]
         },
+        "skills": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Skill ids (SKILL.md name) to inject as skill: contextRefs"
+        },
         "checkpoint": {
           "type": "object",
           "additionalProperties": false,
@@ -138,7 +143,7 @@
         "role": { "type": "string", "minLength": 1 },
         "kind": {
           "type": "string",
-          "enum": ["llm", "agent", "tool_chain", "human"]
+          "enum": ["llm", "agent", "tool_chain", "human", "verify"]
         },
         "promptRef": { "type": "string" },
         "rag": { "$ref": "#/$defs/ragSpec" },
@@ -147,6 +152,7 @@
           "type": "array",
           "items": { "$ref": "#/$defs/toolChainItem" }
         },
+        "verify": { "$ref": "#/$defs/verifySpec" },
         "gates": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }
@@ -154,6 +160,23 @@
         "outputs": { "$ref": "#/$defs/stepOutputs" },
         "timeoutMs": { "type": "integer", "minimum": 0 },
         "retry": { "$ref": "#/$defs/retry" }
+      }
+    },
+    "verifySpec": {
+      "type": "object",
+      "required": ["checks"],
+      "additionalProperties": false,
+      "properties": {
+        "checks": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/toolChainItem" }
+        },
+        "onFail": {
+          "type": "string",
+          "enum": ["fail", "improve"],
+          "description": "fail blocks the run; improve also creates an improve proposal draft"
+        }
       }
     },
     "ragSpec": {
