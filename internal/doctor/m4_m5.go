@@ -1,12 +1,14 @@
 package doctor
 
 import (
+	"context"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
 
+	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
@@ -23,6 +25,8 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Sbx01DockerSmokeOrSkip(),
 		s.m4Sbx02DangerOffDenied(),
 		s.m4Sbx03PathJail(),
+		s.m4Acp01TaskSchema(),
+		s.m4Acp02ProbeUnconfigured(),
 	}
 }
 
@@ -156,6 +160,56 @@ func (s *Service) m4Sbx03PathJail() CaseResult {
 	res.Status = "pass"
 	res.Message = "workspace-write path jail ok"
 	res.Evidence = append(res.Evidence, Evidence{Kind: "pathJail", Ref: "PathWithinRoot"})
+	return res
+}
+
+func (s *Service) m4Acp01TaskSchema() CaseResult {
+	res := CaseResult{ID: "M4-ACP-01", Status: "fail"}
+	ok, err := agentexec.NewACPTaskV1("ash-acp", agentexec.Request{Prompt: "doctor probe", RunID: "run_doctor"})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if ok.Schema != agentexec.ACPTaskSchemaV1 {
+		res.Message = "unexpected schema " + ok.Schema
+		return res
+	}
+	bad := agentexec.ACPTaskV1{Schema: "other", AgentID: "a", Prompt: "x"}
+	if err := bad.Validate(); err == nil {
+		res.Message = "invalid schema should fail Validate"
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "ash.acp.task.v1 validate ok"
+	res.Evidence = append(res.Evidence, Evidence{Kind: "acpSchema", Ref: agentexec.ACPTaskSchemaV1})
+	return res
+}
+
+func (s *Service) m4Acp02ProbeUnconfigured() CaseResult {
+	res := CaseResult{ID: "M4-ACP-02", Status: "fail"}
+	prevEndpoint := os.Getenv("ASH_ACP_ENDPOINT")
+	prevURL := os.Getenv("ASH_ACP_URL")
+	prevBin := os.Getenv("ASH_ACP_BIN")
+	_ = os.Unsetenv("ASH_ACP_ENDPOINT")
+	_ = os.Unsetenv("ASH_ACP_URL")
+	_ = os.Unsetenv("ASH_ACP_BIN")
+	defer func() {
+		_ = os.Setenv("ASH_ACP_ENDPOINT", prevEndpoint)
+		_ = os.Setenv("ASH_ACP_URL", prevURL)
+		_ = os.Setenv("ASH_ACP_BIN", prevBin)
+	}()
+	rep := agentexec.ProbeACP(context.Background())
+	if rep.OK || rep.Kind != "acp_sdk" {
+		res.Message = fmt.Sprintf("unconfigured ProbeACP should be not-ok: %+v", rep)
+		return res
+	}
+	if !strings.Contains(rep.Message, "ASH_ACP_ENDPOINT") {
+		res.Message = "probe message should mention ASH_ACP_ENDPOINT: " + rep.Message
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "ProbeACP unconfigured → not ok"
+	res.Evidence = append(res.Evidence, Evidence{Kind: "acpProbe", Ref: "unconfigured"})
 	return res
 }
 

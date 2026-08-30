@@ -203,6 +203,7 @@ flowchart TB
 | 41+ | **DW** | **v2.1 草案** | ACP provider 骨架 | ✅ `ACPExecutor` + Probe + `/providers/agent.acp` |
 | 41+ | **DX3** | — | ACP ↔ Session | ✅ `providerKind` + `session.linked` + AgentTask `sess_*` |
 | 41+ | **DX4** | — | ACP 任务契约 | ✅ `ash.acp.task.v1` + `make acp-smoke` + turn 转发 |
+| 41+ | **DX5** | **v2.1.0** | scope 冻结 + ACP Doctor | ✅ ALL 55；`make v2.1-signoff`（tag 人工） |
 
 **总工期**：约 **40 周**（含 P0 2 周 + v2 功能 38 周）；DH/DX 可并行 DK 需前端产能。
 

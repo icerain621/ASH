@@ -10,9 +10,9 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **53/53** · M3 11/11 · M4 6/6 · M5 4/4 · TR3 10/10 |
+| Doctor | ALL **55/55** · M3 11/11 · M4 8/8 · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW + DX3 + DX4 ✅** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工） |
 
 ---
 
@@ -42,7 +42,8 @@
 | DW | ACP provider 骨架（v2.1） | `ACPExecutor` + Probe + `/providers/agent.acp` + fallback | ✅ |
 | DX3 | ACP ↔ Session 互通（v2.1） | Session `providerKind` + Run `session.linked` + AgentTask `sess_*` | ✅ |
 | DX4 | ACP 任务契约硬化（v2.1） | `ash.acp.task.v1` + `make acp-smoke` + Session turn→ACP | ✅ |
-| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · v2 功能收口；v2.1 见 [`v2.1-release-scope.md`](v2.1-release-scope.md) | — |
+| DX5 | v2.1 scope 冻结 + ACP Doctor | M4-ACP-01/02；ALL **55**；`make v2.1-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · v2.1 见 [`v2.1-release-scope.md`](v2.1-release-scope.md) | — |
 
 ---
 
@@ -136,6 +137,7 @@ make regression-short && make web-gate
 - Sprint DW：ACP provider 骨架（`ACPExecutor` / ProbeACP / `/providers/agent.acp`；无新表）
 - Sprint DX3：ACP ↔ Session 互通（`providerKind` / `EnsureForRun` / `session.linked`；无新表）
 - Sprint DX4：ACP 任务契约（`ash.acp.task.v1` / `acp-mock` / `make acp-smoke` / turn 转发；无新表）
+- Sprint DX5：v2.1 范围冻结（M4-ACP；ALL 55；`make v2.1-signoff`；tag 人工）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）
