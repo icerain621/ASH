@@ -27,6 +27,7 @@
 | T+1 指标 | `make t1-metrics-gate` | KPI overview + feedback + §9 对账 |
 | KPI 对账 | `make kpi-reconcile-gate` | overview ↔ derive replay（§9） |
 | Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
+| RAG Hybrid（DX9） | `make rag-hybrid-smoke` | RebuildSymbols + Hybrid Query + 回退 |
 | 发布范围冻结 | `make scope-freeze-gate` | `mvp-release-scope.md` 结构校验 |
 | 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
 | 本地就绪 | `make local-readiness-gate` | release-window + worker live（~4min） |
@@ -54,6 +55,7 @@
 | — | v2.1 signoff (DX5) | scope freeze + `make v2.1-signoff` | [`v2.1-signoff.md`](v2.1-signoff.md) |
 | — | Waker (DX6) | stale Run queue/sweep | [`waker-smoke.md`](waker-smoke.md) |
 | — | v2.2 signoff (DX8) | scope freeze + `make v2.2-signoff` | [`v2.2-signoff.md`](v2.2-signoff.md) |
+| — | RAG Hybrid (DX9) | RebuildSymbols + Hybrid Query RRF | [`rag-hybrid-smoke.md`](rag-hybrid-smoke.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

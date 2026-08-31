@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-08-30  
+> 更新：2026-08-31  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **55/55** · M3 11/11 · M4 8/8 · M5 4/4 · TR3 10/10 |
-| Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工） |
+| Schema | SQL rev **28**（+rag hybrid path/symbol）· RLS **48** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9 草案**（tag 待人工） |
 
 ---
 
@@ -46,7 +46,8 @@
 | DX6 | Waker 雏形（v2.2） | `/waker/queue|sweep` + `ASH_WAKER_*`；无新表 | ✅ |
 | DX7 | Waker cancel 闸门（v2.2） | `ALLOW_CANCEL` + confirm + `waker.cancel_completed` | ✅ |
 | DX8 | v2.2 scope 冻结 + 签字 | `v2.2-release-scope`；`make v2.2-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md)（已冻结） | — |
+| DX9 | RAG Hybrid 符号索引（v2.3 草案） | SQL 28 / RLS 48；`RebuildSymbols` + Hybrid Query；`make rag-hybrid-smoke` | ✅ |
+| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md)（已冻结）；v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md)（草案） | — |
 
 ---
 
@@ -108,7 +109,7 @@ make regression-short && make web-gate
 
 ## P3 — Backlog（明确不做进 v0.1）
 
-- 向量库 / 符号索引 Hybrid RAG  
+- 向量库主路径（Chroma/Qdrant）；ctags / LSP 外部符号解析  
 - 完整沙箱隔离、外部 IdP 联邦、计费  
 - 多端网关 / Skill Marketplace / 知识图谱  
 
@@ -143,6 +144,7 @@ make regression-short && make web-gate
 - Sprint DX5：v2.1 范围冻结（M4-ACP；ALL 55；`make v2.1-signoff`；tag 人工）
 - Sprint DX6：Waker 雏形（`/waker/queue|sweep`；无新表；v2.2 草案）
 - Sprint DX7：Waker cancel 安全闸门（ALLOW_CANCEL + confirm；无新表）
+- Sprint DX9：RAG Hybrid 符号索引（SQL 28 / RLS 48；`make rag-hybrid-smoke`；v2.3 草案）
 - Sprint DX8：v2.2 范围冻结（`make v2.2-signoff`；tag 人工）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）

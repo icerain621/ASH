@@ -3,15 +3,15 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **55/55** · M3 **11/11** · M4 **8/8** · M5 **4/4** · TR3 **10/10** · SQL rev **27** · RLS **46**（v2 DH–DV；**v2.1 DW–DX5** / **v2.2 DX6–DX8 冻结**；tag 待人工）  
+> **代码锚点**：Doctor ALL **55/55** · M3 **11/11** · M4 **8/8** · M5 **4/4** · TR3 **10/10** · SQL rev **28** · RLS **48**（v2 DH–DV；**v2.1 DW–DX5** / **v2.2 DX6–DX8 冻结** / **v2.3 DX9 草案**；tag 待人工）  
 > **归属**：[`plan/`](README.md)  
-> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
+> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md) · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
 ---
 
 ## 0. 一句话结论
 
-**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口；**v2.1（DW–DX5）** 与 **v2.2（DX6–DX8）已冻结**（`make v2.1-signoff` / `make v2.2-signoff`；tag 人工）。当前并行线：**生产环境验收**（云 RDS / 真实 CI·ExecGo）与 tag 签字。
+**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口；**v2.1（DW–DX5）** 与 **v2.2（DX6–DX8）已冻结**（`make v2.1-signoff` / `make v2.2-signoff`；tag 人工）。**v2.3 DX9 RAG Hybrid** 代码已落地（SQL **28** / RLS **48**；`make rag-hybrid-smoke`；范围草案）。当前并行线：**生产环境验收**（云 RDS / 真实 CI·ExecGo）与 tag 签字。
 
 ---
 
@@ -22,7 +22,7 @@
 | **M0** Feature 闭环 + 回放 + 记忆评审 + SSE + Prometheus + Doctor TR0 | ✅ 设计完成 | ✅ 已实现 | Runs/DSL/ToolBus/Artifacts/Memory/SSE/Doctor TR0 |
 | **M1** 三场景 + 引用门禁 + 记忆治理 + OTel/质量 + 自我迭代 + TR1/TR2 子集 | ✅ 设计完成 | ✅ 已实现 | hotfix/security_patch、citations、edges、improve、TR1/TR2 |
 | **M2** 组织权限/合规/多租户隔离 | ✅ 设计完成（基础） | ✅ 基础已实现 | `authz`、resource-scopes、policy.denied、合规导出 |
-| **M3** 规模化 / Postgres / RLS / Scale | ✅ 设计完成 | ✅ 本地已实现 | SQL **26**、RLS **46**；**云 RDS 切流未完成** |
+| **M3** 规模化 / Postgres / RLS / Scale | ✅ 设计完成 | ✅ 本地已实现 | SQL **28**、RLS **48**；**云 RDS 切流未完成** |
 | **PRD MVP 后四项** CI 诊断 / KPI / 反馈告警 / 发布治理 | ✅ 设计完成 | ✅ 已实现 | fixture 可验；**真实 GitHub/ExecGo 待生产验证** |
 | **P3 生态** 网关 / 技能市场 / 知识图谱 / 向量库 | ⚠️ 仅展望设计 | ❌ 未实现 | 范围冻结外 backlog |
 
@@ -102,7 +102,7 @@
 
 ### P3 — 下一世代（明确不做进 v0.1）
 
-- 向量库（Chroma/Qdrant）与符号索引 Hybrid RAG  
+- 向量库主路径（Chroma/Qdrant）；ctags / LSP 外部符号解析（Hybrid 符号索引 **DX9 已落地**）  
 - 完整容器沙箱 / 外部 IdP 联邦 / 计费  
 - OpenClaw 式多端网关、Skill Marketplace、知识图谱深度  
 
