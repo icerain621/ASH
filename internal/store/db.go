@@ -177,6 +177,8 @@ func (db *DB) migrate() error {
 		&MemoryMigration{},
 		&RAGDocument{},
 		&RAGChunk{},
+		&RAGPathEntry{},
+		&RAGSymbol{},
 		&ModelUsage{},
 		&QualityMetric{},
 		&MCPTool{},

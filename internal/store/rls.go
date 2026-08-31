@@ -98,6 +98,8 @@ func PostgresRLSTables() []PostgresRLSTable {
 		{Table: "memory_edges", SpaceColumn: "space_id"},
 		{Table: "rag_documents", SpaceColumn: "space_id"},
 		{Table: "rag_chunks", SpaceColumn: "space_id"},
+		{Table: "rag_path_entries", SpaceColumn: "space_id"},
+		{Table: "rag_symbols", SpaceColumn: "space_id"},
 		{Table: "quality_metrics", SpaceColumn: "space_id"},
 		{Table: "mcp_tools", SpaceColumn: "space_id"},
 		{Table: "feedback", SpaceColumn: "space_id"},

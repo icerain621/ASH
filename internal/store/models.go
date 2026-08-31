@@ -249,6 +249,36 @@ type RAGChunk struct {
 
 func (RAGChunk) TableName() string { return "rag_chunks" }
 
+// RAGPathEntry is a path/basename row for Hybrid retrieval (Sprint DX9).
+type RAGPathEntry struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_path_space_root_path"`
+	RepoRoot  string    `gorm:"size:512;not null;uniqueIndex:uidx_rag_path_space_root_path"`
+	Path      string    `gorm:"size:1024;not null;uniqueIndex:uidx_rag_path_space_root_path"`
+	Basename  string    `gorm:"size:512;not null;index"`
+	Digest    string    `gorm:"size:128;not null;index"`
+	UpdatedAt time.Time
+	CreatedAt time.Time
+}
+
+func (RAGPathEntry) TableName() string { return "rag_path_entries" }
+
+// RAGSymbol is a symbol definition row for Hybrid retrieval (Sprint DX9).
+type RAGSymbol struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"size:64;not null;default:local;index:idx_rag_sym_space_root_name"`
+	RepoRoot  string    `gorm:"size:512;not null;index:idx_rag_sym_space_root_name;index:idx_rag_sym_space_root_path"`
+	Path      string    `gorm:"size:1024;not null;index:idx_rag_sym_space_root_path"`
+	Name      string    `gorm:"size:256;not null;index:idx_rag_sym_space_root_name"`
+	Kind      string    `gorm:"size:32;not null;default:unknown"`
+	Line      int       `gorm:"not null;default:1"`
+	Digest    string    `gorm:"size:128;not null;index"`
+	UpdatedAt time.Time
+	CreatedAt time.Time
+}
+
+func (RAGSymbol) TableName() string { return "rag_symbols" }
+
 // ModelUsage is the M1 cost/accounting ledger for non-coding model calls.
 type ModelUsage struct {
 	ID           string `gorm:"primaryKey;size:64"`

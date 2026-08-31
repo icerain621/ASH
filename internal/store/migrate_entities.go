@@ -76,6 +76,8 @@ func migrationEntities() []migrationEntity {
 		{table: "memory_migrations", model: &MemoryMigration{}, pk: "id", incremental: true},
 		{table: "rag_documents", model: &RAGDocument{}, pk: "id", incremental: true},
 		{table: "rag_chunks", model: &RAGChunk{}, pk: "id", incremental: true},
+		{table: "rag_path_entries", model: &RAGPathEntry{}, pk: "id", incremental: true},
+		{table: "rag_symbols", model: &RAGSymbol{}, pk: "id", incremental: true},
 		{table: "model_usage", model: &ModelUsage{}, pk: "id", incremental: false},
 		{table: "quality_metrics", model: &QualityMetric{}, pk: "id", incremental: true},
 		{table: "mcp_tools", model: &MCPTool{}, pk: "id", incremental: true},
