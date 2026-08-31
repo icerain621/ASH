@@ -76,9 +76,9 @@ func (s *Service) hybridCounts(space, repoRoot string) (pathCount, symbolCount i
 	return pathCount, symbolCount
 }
 
-func (s *Service) queryTextLane(req QueryRequest, terms []string, topK int, space string) ([]Hit, string) {
+func (s *Service) queryTextLane(req QueryRequest, terms []string, topK int, space string) ([]Hit, string, error) {
 	if hits, ok := s.queryFTS(req, terms, topK, space); ok {
-		return hits, RetrievalModeFTS
+		return hits, RetrievalModeFTS, nil
 	}
 	q := s.gdb().Where("space_id = ?", space)
 	if req.RepoRoot != "" {
@@ -92,7 +92,7 @@ func (s *Service) queryTextLane(req QueryRequest, terms []string, topK int, spac
 	}
 	var rows []store.RAGChunk
 	if err := q.Limit(topK * 4).Find(&rows).Error; err != nil {
-		return nil, RetrievalModeChunk
+		return nil, RetrievalModeChunk, err
 	}
 	hits := make([]Hit, 0, len(rows))
 	for _, row := range rows {
@@ -103,7 +103,7 @@ func (s *Service) queryTextLane(req QueryRequest, terms []string, topK int, spac
 	if len(hits) > topK {
 		hits = hits[:topK]
 	}
-	return hits, RetrievalModeChunk
+	return hits, RetrievalModeChunk, nil
 }
 
 func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit int) []Hit {
@@ -121,11 +121,18 @@ func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit in
 	hits := make([]Hit, 0, len(rows))
 	for i, row := range rows {
 		score := float64(len(rows) - i)
+		for _, term := range terms {
+			if strings.EqualFold(row.Basename, term) {
+				score += 10
+				break
+			}
+		}
 		hits = append(hits, Hit{
 			Ref: makeRef(row.Path, "", 0, 0), Path: row.Path,
 			Digest: row.Digest, Score: score, Snippet: row.Path,
 		})
 	}
+	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Score > hits[j].Score })
 	return hits
 }
 

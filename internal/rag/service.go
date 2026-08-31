@@ -160,7 +160,10 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 		}
 	}
 
-	textHits, textMode := s.queryTextLane(req, terms, topK, space)
+	textHits, textMode, err := s.queryTextLane(req, terms, topK, space)
+	if err != nil {
+		return nil, err
+	}
 	pathCount, symbolCount := s.hybridCounts(space, absRepo)
 	if pathCount+symbolCount == 0 {
 		return &QueryResponse{Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable}, nil
