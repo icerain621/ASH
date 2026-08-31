@@ -190,6 +190,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/improve/proposals/:proposalId/rollback", h.rollbackImproveProposal)
 
 		v1.POST("/rag/index", h.indexRAG)
+		v1.POST("/rag/symbols/rebuild", h.rebuildRAGSymbols)
 		v1.POST("/rag/query", h.queryRAG)
 		v1.GET("/rag/profile", h.getRAGProfile)
 

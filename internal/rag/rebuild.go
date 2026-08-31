@@ -12,14 +12,14 @@ import (
 )
 
 type RebuildSymbolsRequest struct {
-	RepoRoot string
-	SpaceID  string
+	RepoRoot string `json:"repoRoot" binding:"required"`
+	SpaceID  string `json:"spaceId,omitempty"`
 }
 
 type RebuildSymbolsResponse struct {
-	Paths   int
-	Symbols int
-	Files   int
+	Paths   int `json:"paths"`
+	Symbols int `json:"symbols"`
+	Files   int `json:"files"`
 }
 
 func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResponse, error) {

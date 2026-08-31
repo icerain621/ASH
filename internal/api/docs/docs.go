@@ -3625,6 +3625,51 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/rag/symbols/rebuild": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rag"
+                ],
+                "summary": "Rebuild path/symbol Hybrid index",
+                "parameters": [
+                    {
+                        "description": "rebuild request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/releases": {
             "get": {
                 "produces": [
@@ -8872,8 +8917,17 @@ const docTemplate = `{
                 "ftsEngine": {
                     "type": "string"
                 },
+                "hybridAvailable": {
+                    "type": "boolean"
+                },
+                "pathEntryCount": {
+                    "type": "integer"
+                },
                 "spaceId": {
                     "type": "string"
+                },
+                "symbolCount": {
+                    "type": "integer"
                 }
             }
         },
@@ -8883,6 +8937,10 @@ const docTemplate = `{
                 "text"
             ],
             "properties": {
+                "prefer": {
+                    "description": "\"\"|\"path\"|\"symbol\"|\"text\"",
+                    "type": "string"
+                },
                 "repoRoot": {
                     "type": "string"
                 },
@@ -8911,6 +8969,34 @@ const docTemplate = `{
                 },
                 "retrievalMode": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsRequest": {
+            "type": "object",
+            "required": [
+                "repoRoot"
+            ],
+            "properties": {
+                "repoRoot": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsResponse": {
+            "type": "object",
+            "properties": {
+                "files": {
+                    "type": "integer"
+                },
+                "paths": {
+                    "type": "integer"
+                },
+                "symbols": {
+                    "type": "integer"
                 }
             }
         },

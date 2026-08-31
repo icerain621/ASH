@@ -69,8 +69,9 @@ var Catalog = map[string]Entry{
 	"MEMORY_TTL_SWEEP_FAILED":    {Domain: "memory", Summary: "Memory TTL sweep failed"},
 
 	// rag
-	"RAG_INDEX_FAILED": {Domain: "rag", Summary: "Repository index build failed"},
-	"RAG_QUERY_FAILED": {Domain: "rag", Summary: "Retrieval query failed"},
+	"RAG_INDEX_FAILED":             {Domain: "rag", Summary: "Repository index build failed"},
+	"RAG_SYMBOLS_REBUILD_FAILED":   {Domain: "rag", Summary: "Path/symbol index rebuild failed"},
+	"RAG_QUERY_FAILED":             {Domain: "rag", Summary: "Retrieval query failed"},
 
 	// model router
 	"MODEL_USAGE_RECORD_FAILED": {Domain: "model", Summary: "Failed to persist model usage row"},

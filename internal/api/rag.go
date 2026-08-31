@@ -40,6 +40,38 @@ func (h *Handler) indexRAG(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// RebuildRAGSymbols godoc
+// @Summary Rebuild path/symbol Hybrid index
+// @Tags rag
+// @Accept json
+// @Produce json
+// @Param body body rag.RebuildSymbolsRequest true "rebuild request"
+// @Success 200 {object} rag.RebuildSymbolsResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/rag/symbols/rebuild [post]
+func (h *Handler) rebuildRAGSymbols(c *gin.Context) {
+	var req rag.RebuildSymbolsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
+	if !h.requirePermission(c, permRAGIndex, space) {
+		return
+	}
+	req.SpaceID = space
+	resp, err := h.runsFor(c).RAG().RebuildSymbols(req)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("RAG_SYMBOLS_REBUILD_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
 // QueryRAG godoc
 // @Summary Query repository retrieval index
 // @Tags rag

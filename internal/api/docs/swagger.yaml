@@ -1511,11 +1511,20 @@ definitions:
         type: boolean
       ftsEngine:
         type: string
+      hybridAvailable:
+        type: boolean
+      pathEntryCount:
+        type: integer
       spaceId:
         type: string
+      symbolCount:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:
     properties:
+      prefer:
+        description: '""|"path"|"symbol"|"text"'
+        type: string
       repoRoot:
         type: string
       spaceId:
@@ -1537,6 +1546,24 @@ definitions:
         type: array
       retrievalMode:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsRequest:
+    properties:
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+    required:
+    - repoRoot
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsResponse:
+    properties:
+      files:
+        type: integer
+      paths:
+        type: integer
+      symbols:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate:
     properties:
@@ -6627,6 +6654,35 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Query repository retrieval index
+      tags:
+      - rag
+  /api/v1/rag/symbols/rebuild:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: rebuild request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Rebuild path/symbol Hybrid index
       tags:
       - rag
   /api/v1/releases:

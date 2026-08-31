@@ -476,15 +476,18 @@ components:
     RAGProfileResponse:
       type: object
       description: Tenant-scoped RAG retrieval profile (GET /api/v1/rag/profile).
-      required: [spaceId, ftsAvailable, defaultRetrievalMode, databaseDialect, documentCount, chunkCount, fallbackQueryCount]
+      required: [spaceId, ftsAvailable, defaultRetrievalMode, hybridAvailable, databaseDialect, documentCount, chunkCount, pathEntryCount, symbolCount, fallbackQueryCount]
       properties:
         spaceId: { type: string }
         ftsAvailable: { type: boolean }
         ftsEngine: { type: string }
-        defaultRetrievalMode: { type: string, enum: [fts, chunk, empty] }
+        defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty] }
+        hybridAvailable: { type: boolean }
         databaseDialect: { type: string }
         documentCount: { type: integer, format: int64 }
         chunkCount: { type: integer, format: int64 }
+        pathEntryCount: { type: integer, format: int64 }
+        symbolCount: { type: integer, format: int64 }
         fallbackQueryCount: { type: integer, format: int64 }
     OtelStatusResponse:
       type: object
@@ -2713,6 +2716,18 @@ components:
       properties:
         documents: { type: integer }
         chunks: { type: integer }
+    RAGSymbolsRebuildRequest:
+      type: object
+      required: [repoRoot]
+      properties:
+        repoRoot: { type: string }
+        spaceId: { type: string }
+    RAGSymbolsRebuildResponse:
+      type: object
+      properties:
+        paths: { type: integer }
+        symbols: { type: integer }
+        files: { type: integer }
     RAGQueryRequest:
       type: object
       required: [text]
@@ -2721,6 +2736,7 @@ components:
         topK: { type: integer }
         repoRoot: { type: string }
         spaceId: { type: string }
+        prefer: { type: string, description: '""|"path"|"symbol"|"text"' }
     RAGHit:
       type: object
       properties:
@@ -4604,6 +4620,32 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/RAGIndexResponse" }
+
+  /api/v1/rag/symbols/rebuild:
+    post:
+      tags: [Rag]
+      summary: Rebuild path/symbol Hybrid index
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGSymbolsRebuildRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RAGSymbolsRebuildResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "500":
+          description: internal error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
 
   /api/v1/rag/profile:
     get:

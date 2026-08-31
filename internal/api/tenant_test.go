@@ -198,6 +198,7 @@ func TestCrossSpaceAPIRegression(t *testing.T) {
 		{"createFeedback", http.MethodPost, "/api/v1/feedback", `{"spaceId":"space_other","targetType":"run","targetId":"` + run.ID + `","rating":1}`},
 		{"ragQuery", http.MethodPost, "/api/v1/rag/query", `{"spaceId":"space_other","text":"cross","topK":3}`},
 		{"ragIndex", http.MethodPost, "/api/v1/rag/index", `{"spaceId":"space_other","repoRoot":"."}`},
+		{"ragSymbolsRebuild", http.MethodPost, "/api/v1/rag/symbols/rebuild", `{"spaceId":"space_other","repoRoot":"."}`},
 		{"adoptDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/adopt", `{"reason":"x"}`},
 		{"dismissDiagnosis", http.MethodPost, "/api/v1/ci/diagnoses/" + diag.ID + "/dismiss", `{"reason":"x"}`},
 		{"auditExport", http.MethodPost, "/api/v1/audit/export", `{"spaceId":"space_other"}`},
