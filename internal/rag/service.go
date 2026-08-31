@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
-	"sort"
 	"strings"
 	"time"
 
@@ -62,6 +61,7 @@ type QueryRequest struct {
 	Text     string `json:"text" binding:"required"`
 	TopK     int    `json:"topK,omitempty"`
 	SpaceID  string `json:"spaceId,omitempty"`
+	Prefer   string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"
 }
 
 type Hit struct {
@@ -76,9 +76,10 @@ type Hit struct {
 }
 
 const (
-	RetrievalModeFTS   = "fts"
-	RetrievalModeChunk = "chunk"
-	RetrievalModeEmpty = "empty"
+	RetrievalModeFTS    = "fts"
+	RetrievalModeChunk  = "chunk"
+	RetrievalModeEmpty  = "empty"
+	RetrievalModeHybrid = "hybrid"
 )
 
 type QueryResponse struct {
@@ -132,6 +133,9 @@ func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
 }
 
 func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
+	if err := validatePrefer(req.Prefer); err != nil {
+		return nil, err
+	}
 	text := strings.TrimSpace(strings.ToLower(req.Text))
 	if text == "" {
 		return nil, fmt.Errorf("text is required")
@@ -141,39 +145,34 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 		topK = 8
 	}
 	space := firstNonEmpty(req.SpaceID, "local")
-
-	q := s.gdb().Where("space_id = ?", space)
-	if req.RepoRoot != "" {
-		if abs, err := AbsRepoRoot(req.RepoRoot); err == nil {
-			q = q.Where("repo_root = ?", abs)
-		}
-	}
-	var rows []store.RAGChunk
 	terms := queryTerms(text)
 	ftsAvailable := s.FTSAvailable()
 	if len(terms) == 0 {
 		return &QueryResponse{Items: []Hit{}, RetrievalMode: RetrievalModeEmpty, FtsAvailable: ftsAvailable}, nil
 	}
-	if hits, ok := s.queryFTS(req, terms, topK, space); ok {
-		return &QueryResponse{Items: hits, RetrievalMode: RetrievalModeFTS, FtsAvailable: ftsAvailable}, nil
+
+	var absRepo string
+	if req.RepoRoot != "" {
+		var err error
+		absRepo, err = AbsRepoRoot(req.RepoRoot)
+		if err != nil {
+			return nil, err
+		}
 	}
-	likeQ := q
-	for _, term := range terms {
-		likeQ = likeQ.Where("LOWER(text) LIKE ? OR LOWER(path) LIKE ? OR LOWER(symbol) LIKE ?", "%"+term+"%", "%"+term+"%", "%"+term+"%")
+
+	textHits, textMode := s.queryTextLane(req, terms, topK, space)
+	pathCount, symbolCount := s.hybridCounts(space, absRepo)
+	if pathCount+symbolCount == 0 {
+		return &QueryResponse{Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable}, nil
 	}
-	if err := likeQ.Limit(topK * 4).Find(&rows).Error; err != nil {
-		return nil, err
+
+	lanes := map[string][]Hit{
+		"text":   textHits,
+		"path":   s.queryPathLane(space, absRepo, terms, topK*2),
+		"symbol": s.querySymbolLane(space, absRepo, terms, topK*2),
 	}
-	hits := make([]Hit, 0, len(rows))
-	for _, row := range rows {
-		score := scoreChunk(row, terms)
-		hits = append(hits, hitFromChunk(row, score))
-	}
-	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Score > hits[j].Score })
-	if len(hits) > topK {
-		hits = hits[:topK]
-	}
-	return &QueryResponse{Items: hits, RetrievalMode: RetrievalModeChunk, FtsAvailable: ftsAvailable}, nil
+	merged := rrfMerge(lanes, req.Prefer, topK)
+	return &QueryResponse{Items: merged, RetrievalMode: RetrievalModeHybrid, FtsAvailable: ftsAvailable}, nil
 }
 
 // FTSAvailable reports whether dialect-native FTS retrieval is wired.

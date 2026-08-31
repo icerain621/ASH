@@ -10,9 +10,12 @@ type Profile struct {
 	FtsAvailable         bool   `json:"ftsAvailable"`
 	FtsEngine            string `json:"ftsEngine,omitempty"`
 	DefaultRetrievalMode string `json:"defaultRetrievalMode"`
+	HybridAvailable      bool   `json:"hybridAvailable"`
 	DatabaseDialect      string `json:"databaseDialect"`
 	DocumentCount        int64  `json:"documentCount"`
 	ChunkCount           int64  `json:"chunkCount"`
+	PathEntryCount       int64  `json:"pathEntryCount"`
+	SymbolCount          int64  `json:"symbolCount"`
 	FallbackQueryCount   int64  `json:"fallbackQueryCount"`
 }
 
@@ -31,7 +34,13 @@ func (s *Service) Profile(spaceID string) Profile {
 	if gdb := s.gdb(); gdb != nil {
 		_ = gdb.Model(&store.RAGDocument{}).Where("space_id = ?", spaceID).Count(&out.DocumentCount).Error
 		_ = gdb.Model(&store.RAGChunk{}).Where("space_id = ?", spaceID).Count(&out.ChunkCount).Error
+		_ = gdb.Model(&store.RAGPathEntry{}).Where("space_id = ?", spaceID).Count(&out.PathEntryCount).Error
+		_ = gdb.Model(&store.RAGSymbol{}).Where("space_id = ?", spaceID).Count(&out.SymbolCount).Error
 		out.FallbackQueryCount = CountChunkFallbackQueries(gdb, spaceID)
+	}
+	out.HybridAvailable = out.PathEntryCount+out.SymbolCount > 0
+	if out.HybridAvailable {
+		out.DefaultRetrievalMode = RetrievalModeHybrid
 	}
 	return out
 }
