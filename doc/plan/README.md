@@ -8,6 +8,8 @@
 | [`TODO.md`](TODO.md) | 未完成短清单 | 任务完成即删条目 |
 | [`mvp-release-scope.md`](mvp-release-scope.md) | MVP 范围冻结（`scope-freeze-gate`） | 冻结变更评审 |
 | [`v2-release-scope.md`](v2-release-scope.md) | **v2** 范围冻结（`scope-freeze-gate` / `make v2-signoff`） | v2 GA / DV |
+| [`v2.1-release-scope.md`](v2.1-release-scope.md) | **v2.1** 范围冻结（`make v2.1-signoff`） | ACP 桥接 / DX5 |
+| [`v2.2-release-scope.md`](v2.2-release-scope.md) | **v2.2** 范围冻结（`make v2.2-signoff`） | Waker / DX8 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

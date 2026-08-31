@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **55/55** · M3 11/11 · M4 8/8 · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **27**（+run sub-run lineage）· RLS **46** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工） |
 
 ---
 
@@ -45,7 +45,8 @@
 | DX5 | v2.1 scope 冻结 + ACP Doctor | M4-ACP-01/02；ALL **55**；`make v2.1-signoff`；tag 人工 | ✅ |
 | DX6 | Waker 雏形（v2.2） | `/waker/queue|sweep` + `ASH_WAKER_*`；无新表 | ✅ |
 | DX7 | Waker cancel 闸门（v2.2） | `ALLOW_CANCEL` + confirm + `waker.cancel_completed` | ✅ |
-| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md) | — |
+| DX8 | v2.2 scope 冻结 + 签字 | `v2.2-release-scope`；`make v2.2-signoff`；tag 人工 | ✅ |
+| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md)（已冻结） | — |
 
 ---
 
@@ -142,6 +143,7 @@ make regression-short && make web-gate
 - Sprint DX5：v2.1 范围冻结（M4-ACP；ALL 55；`make v2.1-signoff`；tag 人工）
 - Sprint DX6：Waker 雏形（`/waker/queue|sweep`；无新表；v2.2 草案）
 - Sprint DX7：Waker cancel 安全闸门（ALLOW_CANCEL + confirm；无新表）
+- Sprint DX8：v2.2 范围冻结（`make v2.2-signoff`；tag 人工）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）
