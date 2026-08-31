@@ -20,6 +20,7 @@ type RPCRequest struct {
 	SpaceID     string `json:"spaceId,omitempty"`
 	ActorRole   string `json:"actorRole,omitempty"`
 	CreatedBy   string `json:"createdBy,omitempty"`
+	ProviderKind string `json:"providerKind,omitempty"`
 }
 
 // RPCEvent is one LF-delimited JSON response line.
@@ -55,6 +56,7 @@ func (s *Service) ServeRPC(r io.Reader, w io.Writer) error {
 				Goal: req.Goal, RunID: req.RunID, RepoRoot: req.RepoRoot,
 				SpaceID: req.SpaceID, ActorRole: req.ActorRole,
 				CreatedBy: firstNonEmpty(req.CreatedBy, "rpc"), AutoApprove: req.AutoApprove,
+				ProviderKind: req.ProviderKind,
 			})
 			if err != nil {
 				_ = enc.Encode(RPCEvent{Type: "event", Name: "rpc.error", Error: err.Error()})

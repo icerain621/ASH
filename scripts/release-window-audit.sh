@@ -18,7 +18,7 @@ echo "== H-08 release window audit (static) =="
 if [[ "$SKIP_DOCTOR" == "1" ]]; then
   echo "== §3 Doctor suites skipped (ASH_RELEASE_AUDIT_SKIP_DOCTOR=1) =="
 else
-  echo "== §3 Doctor ALL (TestALLSuite, expect 53/53) =="
+  echo "== §3 Doctor ALL (TestALLSuite, expect 55/55) =="
   go test ./internal/doctor/... -run TestALLSuite -count=1
 
   echo "== §3 Doctor M3 (TestM3Suite) =="

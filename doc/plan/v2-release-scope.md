@@ -2,7 +2,7 @@
 
 > 状态：**已冻结**（2026-08-30，产品占位确认；真人签字见 [`../checklists/v2-signoff.md`](../checklists/v2-signoff.md)）  
 > 归属：[`plan/`](README.md)  
-> 版本锚点：Doctor ALL **53/53** · SQL rev **27** · RLS **46** · Sprint **DH–DU**  
+> 版本锚点：Doctor ALL **55/55** · SQL rev **27** · RLS **46** · Sprint **DH–DU**（v2.1 另见 `v2.1-release-scope.md`）  
 > 关联：[`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) · [`mvp-release-scope.md`](mvp-release-scope.md)
 
 ## 1. 发布目标
@@ -20,7 +20,7 @@
 | 知识 | Repo Profile / Wiki 即时投影、Skills、Space Rules（DL / DN / DM） |
 | 编排深度 | Sub-run、verify、spill/compaction（DO / DP / DR） |
 | 多入口 | CI Webhook→Run、Session API + `ash session rpc`、移动审阅（DS / DT / DU） |
-| Doctor | M4/M5 探针；ALL **53** |
+| Doctor | M4/M5 探针；ALL **55**（含 v2.1 M4-ACP） |
 
 ## 3. 不包含范围（本版本 Out）
 

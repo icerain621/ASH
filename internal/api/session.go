@@ -47,6 +47,8 @@ func (h *Handler) createAgentSession(c *gin.Context) {
 	}
 	_ = h.dbFor(c).Create(auditRow(req.SpaceID, currentActor(c), "agent.session_created", map[string]any{
 		"sessionId": view.ID, "runId": view.RunID, "planId": view.PlanID, "goal": view.Goal,
+		"providerKind": view.ProviderKind, "providerAdapter": view.ProviderAdapter,
+		"providerFallback": view.ProviderFallback,
 	})).Error
 	c.JSON(http.StatusCreated, view)
 }

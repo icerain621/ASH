@@ -137,6 +137,7 @@ type Service struct {
 	artifacts  artifactstore.Store
 	harnessSvc *harness.Service
 	knowledge  *knowledge.Service
+	sessionSvc SessionLinker
 	improve    ImproveDrafter
 	loopAd     *loop.Adapter
 	ctx        context.Context
@@ -223,6 +224,14 @@ func (s *Service) WithAgentExecutor(exec agentexec.Executor) *Service {
 	return s
 }
 
+// WithSessionService wires Session documents for ACP↔Session linking (DX3).
+func (s *Service) WithSessionService(svc SessionLinker) *Service {
+	if s != nil {
+		s.sessionSvc = svc
+	}
+	return s
+}
+
 func (s *Service) AgentAdapter() string {
 	if named, ok := s.agent.(interface{ AdapterName() string }); ok {
 		return named.AdapterName()
@@ -247,10 +256,13 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 		agent: s.agent, agentPinned: s.agentPinned,
 		rag: s.rag.WithContext(ctx), artifacts: s.artifacts, ctx: ctx,
 		harnessSvc: s.harnessSvc, knowledge: s.knowledge, improve: s.improve,
-		providerProbe: s.providerProbe,
+		sessionSvc: s.sessionSvc, providerProbe: s.providerProbe,
 	}
 	if s.harnessSvc != nil {
 		out.harnessSvc = s.harnessSvc.WithContext(ctx)
+	}
+	if s.sessionSvc != nil {
+		out.sessionSvc = s.sessionSvc.WithContext(ctx)
 	}
 	out.loopAd = loop.NewAdapter(
 		&runEventEmitter{svc: out},

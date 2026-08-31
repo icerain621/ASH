@@ -104,3 +104,8 @@ func canApprove(status string) bool {
 func canResume(status string) bool {
 	return status == StatusFailed
 }
+
+// ApplyStatusTransition applies a legal in-memory status change (e.g. waker cancel).
+func ApplyStatusTransition(rec *store.RunRecord, to string) error {
+	return applyRunStatus(rec, to)
+}

@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "ash.acp.task.v1",
+  "title": "ASH ACP Task v1",
+  "description": "Outbound ACP control-plane task and inbound result (Sprint DX4).",
+  "oneOf": [
+    { "$ref": "#/$defs/task" },
+    { "$ref": "#/$defs/result" }
+  ],
+  "$defs": {
+    "task": {
+      "type": "object",
+      "required": ["schema", "agentId"],
+      "properties": {
+        "schema": { "const": "ash.acp.task.v1" },
+        "agentId": { "type": "string", "minLength": 1 },
+        "runId": { "type": "string" },
+        "sessionId": { "type": "string" },
+        "traceId": { "type": "string" },
+        "stepId": { "type": "string" },
+        "role": { "type": "string" },
+        "repoRoot": { "type": "string" },
+        "prompt": { "type": "string" },
+        "issue": { "type": "string" },
+        "timeoutMs": { "type": "integer", "minimum": 0 }
+      },
+      "anyOf": [
+        { "required": ["prompt"], "properties": { "prompt": { "minLength": 1 } } },
+        { "required": ["issue"], "properties": { "issue": { "minLength": 1 } } }
+      ]
+    },
+    "result": {
+      "type": "object",
+      "required": ["ok"],
+      "properties": {
+        "schema": { "type": "string", "enum": ["ash.acp.task.v1"] },
+        "ok": { "type": "boolean" },
+        "taskId": { "type": "string" },
+        "status": {
+          "type": "string",
+          "enum": ["success", "failed", "running", "canceled", "cancelled"]
+        },
+        "message": { "type": "string" },
+        "output": { "type": "object", "additionalProperties": true }
+      }
+    }
+  }
+}

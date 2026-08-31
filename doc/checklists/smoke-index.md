@@ -49,6 +49,10 @@
 | — | Evolve KPI + mobile (DU) | KPI-17~19 + `/ui/m/reviews` | [`evolve-kpi-mobile.md`](evolve-kpi-mobile.md) |
 | — | v2 signoff (DV) | scope freeze + `make v2-signoff` | [`v2-signoff.md`](v2-signoff.md) |
 | — | ACP provider (DW) | ProbeACP + harness `acp_sdk` fallback | [`acp-provider.md`](acp-provider.md) |
+| — | ACP ↔ Session (DX3) | `providerKind` + `session.linked` | [`acp-session.md`](acp-session.md) |
+| — | ACP 契约烟测 (DX4) | `make acp-smoke` + turn 转发 | [`acp-smoke.md`](acp-smoke.md) |
+| — | v2.1 signoff (DX5) | scope freeze + `make v2.1-signoff` | [`v2.1-signoff.md`](v2.1-signoff.md) |
+| — | Waker (DX6) | stale Run queue/sweep | [`waker-smoke.md`](waker-smoke.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

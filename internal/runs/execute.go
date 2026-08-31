@@ -196,17 +196,23 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue, doc.Scenario.Skills)
 
 	providerSel := s.SelectProvider(rec.SpaceID)
-	_, _ = s.eventsFor().Append(runID, traceID, "provider.selected", "info", map[string]any{
+	agentSessionID := s.linkProviderSession(rec.SpaceID, runID, traceID, repoRoot, providerSel)
+	selectedPayload := map[string]any{
 		"requestedKind": providerSel.RequestedKind,
 		"adapter":       providerSel.Adapter,
 		"source":        providerSel.Source,
 		"fallback":      providerSel.Fallback,
-	})
+	}
+	if agentSessionID != "" {
+		selectedPayload["sessionId"] = agentSessionID
+	}
+	_, _ = s.eventsFor().Append(runID, traceID, "provider.selected", "info", selectedPayload)
 	if providerSel.Fallback {
 		_, _ = s.eventsFor().Append(runID, traceID, "provider.fallback", "warn", map[string]any{
 			"requestedKind": providerSel.RequestedKind,
 			"adapter":       providerSel.Adapter,
 			"reason":        providerSel.Reason,
+			"sessionId":     agentSessionID,
 		})
 	}
 
@@ -270,7 +276,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		case "agent":
 			lastToolStep.id = step.ID
 			lastToolStep.role = step.Role
-			res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs, providerSel.Executor)
+			res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs, providerSel.Executor, agentSessionID)
 			if res != nil {
 				agentTaskID = firstNonEmpty(res.ExecGoTaskID, res.TaskID, res.ActionID)
 			}
@@ -668,7 +674,7 @@ func (s *Service) finishStep(row *store.RunStep, status string, started time.Tim
 	_ = s.gdb().Save(row).Error
 }
 
-func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any, exec agentexec.Executor) (*agentexec.Result, error) {
+func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any, exec agentexec.Executor, agentSessionID string) (*agentexec.Result, error) {
 	if exec == nil {
 		exec = s.agent
 	}
@@ -684,16 +690,21 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 	if step.Agent != nil {
 		prompt = step.Agent.Prompt
 	}
+	sessionID := firstNonEmpty(agentSessionID, runID)
+	meta := map[string]any{}
+	if agentSessionID != "" {
+		meta["sessionId"] = agentSessionID
+	}
 	req := agentexec.Request{
 		RunID: runID, TraceID: traceID, StepID: step.ID, Role: step.Role,
 		RepoRoot: repoRoot, RunDir: runDir, Issue: issue, Prompt: prompt,
-		Inputs: inputs, TimeoutMs: timeout,
+		Inputs: inputs, TimeoutMs: timeout, Metadata: meta,
 	}
 	now := time.Now().UTC()
 	agentID := "ash-" + adapter
 	task := store.AgentTask{
 		ID: "agt_" + uuid.NewString(), RunID: runID, TraceID: traceID, StepID: step.ID,
-		Adapter: adapter, AgentID: agentID, SessionID: runID,
+		Adapter: adapter, AgentID: agentID, SessionID: sessionID,
 		Status: "running", PromptDigest: digestString(issue + "\n" + prompt),
 		TimeoutMs: timeout, CreatedAt: now, StartedAt: &now,
 	}

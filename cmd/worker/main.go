@@ -42,6 +42,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/waker"
 )
 
 func main() {
@@ -116,6 +117,12 @@ func main() {
 		stopTTL := memory.StartBackgroundTTLSweep(db, interval)
 		defer stopTTL()
 		log.Printf("memory ttl: background sweep every %s", interval)
+	}
+
+	if interval, ok := waker.ParseInterval(os.Getenv("ASH_WAKER_INTERVAL")); ok {
+		stopWaker := waker.StartBackground(db, interval)
+		defer stopWaker()
+		log.Printf("waker: background inspect every %s (ttl=%s)", interval, waker.EffectiveRunTTL())
 	}
 
 	log.Printf("ASH worker listening on %s (data dir: %s)", cfg.HTTPAddr, cfg.DataDir)

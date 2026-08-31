@@ -33,6 +33,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/spacerules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
+	"github.com/ash-repwiki/ash/internal/waker"
 )
 
 type Handler struct {
@@ -57,6 +58,7 @@ type Handler struct {
 	knowledge     *knowledge.Service
 	spaceRules    *spacerules.Service
 	session       *session.Service
+	waker         *waker.Service
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -76,6 +78,8 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	improveSvc := improve.NewService(db, runsSvc, ev)
 	runsSvc.SetImproveDrafter(improveSvc)
 	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
+	sessionSvc := session.NewService(db, goalSvc, ev)
+	runsSvc.WithSessionService(sessionRunLinker{svc: sessionSvc})
 	h := &Handler{
 		db:         db,
 		events:     ev,
@@ -96,7 +100,8 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		diffReview: diffreview.NewService(db, runsSvc),
 		knowledge:  knowledge.NewService(db, memSvc),
 		spaceRules: spacerules.NewService(db),
-		session:    session.NewService(db, goalSvc, ev),
+		session:    sessionSvc,
+		waker:      waker.NewService(db),
 	}
 	return h
 }
@@ -172,6 +177,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/memory/ttl-queue", h.getMemoryTTLQueue)
 		v1.POST("/memory/ttl-sweep", h.sweepMemoryTTL)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
+
+		v1.GET("/waker/queue", h.getWakerQueue)
+		v1.POST("/waker/sweep", h.postWakerSweep)
 
 		v1.POST("/improve/proposals", h.createImproveProposal)
 		v1.GET("/improve/proposals", h.listImproveProposals)
