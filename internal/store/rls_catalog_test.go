@@ -1,6 +1,7 @@
 package store
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 )
@@ -40,8 +41,9 @@ func TestPostgresRLSDeferredTables_notClassifiedAsProtected(t *testing.T) {
 
 func TestFormatRLSCatalogSummary(t *testing.T) {
 	s := FormatRLSCatalogSummary()
-	if !strings.Contains(s, "policies=45") || !strings.Contains(s, "org=4") {
-		t.Fatalf("summary=%q", s)
+	wantPolicies := fmt.Sprintf("policies=%d", PostgresRLSExpectedPolicyCount())
+	if !strings.Contains(s, wantPolicies) || !strings.Contains(s, "org=4") {
+		t.Fatalf("summary=%q want %q", s, wantPolicies)
 	}
 }
 

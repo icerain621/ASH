@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -98,6 +99,10 @@ func (h *Handler) queryRAG(c *gin.Context) {
 	req.SpaceID = space
 	resp, err := h.runsFor(c).RAG().Query(req)
 	if err != nil {
+		if errors.Is(err, rag.ErrInvalidPrefer) {
+			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, errorBody("RAG_QUERY_FAILED", err.Error()))
 		return
 	}

@@ -1,12 +1,15 @@
 package rag
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strings"
 
 	"github.com/ash-repwiki/ash/internal/store"
 )
+
+var ErrInvalidPrefer = errors.New("invalid prefer")
 
 const rrfK = 60
 
@@ -54,7 +57,7 @@ func validatePrefer(prefer string) error {
 	case "", "path", "symbol", "text":
 		return nil
 	default:
-		return fmt.Errorf("invalid prefer %q: must be empty or one of path, symbol, text", prefer)
+		return fmt.Errorf("%w %q: must be empty or one of path, symbol, text", ErrInvalidPrefer, prefer)
 	}
 }
 

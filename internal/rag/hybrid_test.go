@@ -1,6 +1,7 @@
 package rag
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -63,7 +64,7 @@ func TestQueryInvalidPreferReturnsError(t *testing.T) {
 	if err == nil {
 		t.Fatal("expected error for invalid prefer")
 	}
-	if !strings.Contains(err.Error(), "prefer") {
-		t.Fatalf("err=%v want prefer mention", err)
+	if !errors.Is(err, ErrInvalidPrefer) {
+		t.Fatalf("err=%v want ErrInvalidPrefer", err)
 	}
 }
