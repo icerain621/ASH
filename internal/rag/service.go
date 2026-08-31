@@ -490,13 +490,45 @@ func chunkSymbol(lines []string, start, end int) string {
 	return ""
 }
 
-func lineSymbol(line string) string {
-	for _, pattern := range symbolPatterns {
-		if m := pattern.FindStringSubmatch(line); len(m) > 1 {
-			return m[1]
-		}
+func matchSymbolLine(line string) (name, kind string) {
+	if m := symbolPatterns[0].FindStringSubmatch(line); len(m) > 1 {
+		return m[1], "func"
 	}
-	return ""
+	if m := symbolPatterns[1].FindStringSubmatch(line); len(m) > 1 {
+		return m[1], "func"
+	}
+	if m := symbolPatterns[2].FindStringSubmatch(line); len(m) > 1 {
+		return m[1], "var"
+	}
+	if m := symbolPatterns[3].FindStringSubmatch(line); len(m) > 1 {
+		return m[1], symbolKind(line)
+	}
+	return "", ""
+}
+
+func symbolKind(line string) string {
+	switch {
+	case symbolPatterns[3].FindStringSubmatch(line) == nil:
+		return "unknown"
+	default:
+		if classDeclPattern.MatchString(line) {
+			return "class"
+		}
+		if typeDeclPattern.MatchString(line) {
+			return "type"
+		}
+		return "unknown"
+	}
+}
+
+var (
+	classDeclPattern = regexp.MustCompile(`^\s*(?:export\s+)?class\s+`)
+	typeDeclPattern  = regexp.MustCompile(`^\s*(?:export\s+)?(?:interface|type|struct)\s+`)
+)
+
+func lineSymbol(line string) string {
+	name, _ := matchSymbolLine(line)
+	return name
 }
 
 func trimSnippet(s string) string {
