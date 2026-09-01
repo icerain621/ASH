@@ -8,6 +8,9 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX12（v2.4 草案）：Waker duties 账本 — 表 `waker_duties` / `waker_duty_runs`（SQL **29** / RLS **50**）；默认 ensure `stale_run`；ticker 读 ledger 只 report/flag；`GET /waker/status` · duties 列表/手动 run；`make waker-smoke` 扩展；范围草案 `v2.4-release-scope.md`（**未冻结**）；**不自动**打 `v2.4.0` tag。
+- Sprint DX11（v2.3）：范围冻结 + Hybrid 签字门禁（方案 B）— `v2.3-release-scope` 已冻结；`make v2.3-signoff`（含 `rag-hybrid-smoke`）；DX9 Minor（digest 索引、`prefer=path`、lane 错误传播、rebuild 200）；清单/签字模板；**不自动**打 `v2.3.0` tag。
+- Sprint DX10（v2.3）：Hybrid 接线（方案 C）— Run 准备阶段 best-effort `RebuildSymbols`（`rag.symbols_rebuilt`）；CLI `ash rag rebuild`；Knowledge/Observability/Scale 露出 Hybrid 水位与重建按钮（无新表）。
 - Sprint DX9（v2.3 草案）：RAG Hybrid 符号索引（方案 C）— 表 `rag_path_entries` / `rag_symbols`（SQL **28** / RLS **48**）；`RebuildSymbols` + Hybrid Query（path/symbol/text RRF）；`POST /rag/symbols/rebuild`；`make rag-hybrid-smoke`；范围草案 `v2.3-release-scope.md`；**不自动**打 `v2.3.0` tag。
 - Sprint DX8（v2.2）：范围冻结 + 签字门禁（方案 C）— `v2.2-release-scope` 已冻结；`make v2.2-signoff`（含 `waker-smoke`）；清单/签字模板；**不自动**打 `v2.2.0` tag。
 - Sprint DX7（v2.2）：Waker cancel 安全闸门（方案 C）— `action=cancel` 需 `ASH_WAKER_ALLOW_CANCEL=1` + `confirm=CANCEL_STALE_RUNS`；审计 `waker.cancel_completed`；后台永不 cancel；`WAKER_CANCEL_DENIED`（无新表）。

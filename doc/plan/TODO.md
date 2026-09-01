@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-08-31  
+> 更新：2026-09-01  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **55/55** · M3 11/11 · M4 8/8 · M5 4/4 · TR3 10/10 |
-| Schema | SQL rev **28**（+rag hybrid path/symbol）· RLS **48** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9 草案**（tag 待人工） |
+| Schema | SQL rev **29**（+waker duties）· RLS **50** |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9–DX11 已冻结**（tag `v2.3.0` 待人工）；**v2.4：DX12 进行中**（草案，未冻结） |
 
 ---
 
@@ -47,7 +47,12 @@
 | DX7 | Waker cancel 闸门（v2.2） | `ALLOW_CANCEL` + confirm + `waker.cancel_completed` | ✅ |
 | DX8 | v2.2 scope 冻结 + 签字 | `v2.2-release-scope`；`make v2.2-signoff`；tag 人工 | ✅ |
 | DX9 | RAG Hybrid 符号索引（v2.3 草案） | SQL 28 / RLS 48；`RebuildSymbols` + Hybrid Query；`make rag-hybrid-smoke` | ✅ |
-| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md)（已冻结）；v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md)（草案） | — |
+| DX10 | Hybrid 接线（Run/CLI/Knowledge） | prepare rebuild 事件；`ash rag rebuild`；Knowledge/Scale Hybrid 面板 | ✅ |
+| DX11 | v2.3 scope 冻结 + 签字 | `v2.3-release-scope`；`make v2.3-signoff`；DX9 Minor 收口；tag 人工 | ✅ |
+| DX12 | Waker duties 账本（v2.4 草案） | SQL 29 / RLS 50；ensure `stale_run`；status/duties API；ticker 读 ledger；`make waker-smoke` | ✅ |
+| DX13 | Multi-duty probes（v2.4） | `doctor_subset` + `kpi_drift` → queue + duty_run | ⏳ |
+| DX14 | 控制台 + v2.4 冻结 | Observability/Scale Waker 面板；`make v2.4-signoff`；tag 人工 | ⏳ |
+| 详排 | — | v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md)；v2.2 [`v2.2-release-scope.md`](v2.2-release-scope.md)；v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md)（已冻结）；v2.4 [`v2.4-release-scope.md`](v2.4-release-scope.md)（草案） | — |
 
 ---
 
@@ -144,8 +149,11 @@ make regression-short && make web-gate
 - Sprint DX5：v2.1 范围冻结（M4-ACP；ALL 55；`make v2.1-signoff`；tag 人工）
 - Sprint DX6：Waker 雏形（`/waker/queue|sweep`；无新表；v2.2 草案）
 - Sprint DX7：Waker cancel 安全闸门（ALLOW_CANCEL + confirm；无新表）
-- Sprint DX9：RAG Hybrid 符号索引（SQL 28 / RLS 48；`make rag-hybrid-smoke`；v2.3 草案）
 - Sprint DX8：v2.2 范围冻结（`make v2.2-signoff`；tag 人工）
+- Sprint DX9：RAG Hybrid 符号索引（SQL 28 / RLS 48；`make rag-hybrid-smoke`）
+- Sprint DX10：Hybrid 接线（Run/CLI/Knowledge）
+- Sprint DX11：v2.3 范围冻结（`make v2.3-signoff`；tag 人工）
+- Sprint DX12：Waker duties 账本（SQL 29 / RLS 50；`make waker-smoke`；v2.4 草案）
 - Sprint DJ：Goal→Plan→Run（from-goal / approve / `ash quest` / Runs Quest；SQL 24 / RLS 44）
 - Sprint DZ：编排评审 UI + promote 闸门 + scenario_patch + rollback（SQL 23 / RLS 43）
 - Sprint DY：演进平面（feedback 全类型 + reviews queue/decide；SQL 22）
