@@ -109,7 +109,7 @@ func (s *Service) queryTextLane(req QueryRequest, terms []string, topK int, spac
 	return hits, RetrievalModeChunk, nil
 }
 
-func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit int) []Hit {
+func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit int) ([]Hit, error) {
 	q := s.gdb().Where("space_id = ?", space)
 	if repoRoot != "" {
 		q = q.Where("repo_root = ?", repoRoot)
@@ -119,7 +119,7 @@ func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit in
 	}
 	var rows []store.RAGPathEntry
 	if err := q.Limit(limit).Find(&rows).Error; err != nil {
-		return nil
+		return nil, err
 	}
 	hits := make([]Hit, 0, len(rows))
 	for i, row := range rows {
@@ -136,10 +136,10 @@ func (s *Service) queryPathLane(space, repoRoot string, terms []string, limit in
 		})
 	}
 	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Score > hits[j].Score })
-	return hits
+	return hits, nil
 }
 
-func (s *Service) querySymbolLane(space, repoRoot string, terms []string, limit int) []Hit {
+func (s *Service) querySymbolLane(space, repoRoot string, terms []string, limit int) ([]Hit, error) {
 	q := s.gdb().Where("space_id = ?", space)
 	if repoRoot != "" {
 		q = q.Where("repo_root = ?", repoRoot)
@@ -149,7 +149,7 @@ func (s *Service) querySymbolLane(space, repoRoot string, terms []string, limit 
 	}
 	var rows []store.RAGSymbol
 	if err := q.Order("line ASC").Limit(limit).Find(&rows).Error; err != nil {
-		return nil
+		return nil, err
 	}
 	hits := make([]Hit, 0, len(rows))
 	for i, row := range rows {
@@ -165,5 +165,5 @@ func (s *Service) querySymbolLane(space, repoRoot string, terms []string, limit 
 		})
 	}
 	sort.SliceStable(hits, func(i, j int) bool { return hits[i].Score > hits[j].Score })
-	return hits
+	return hits, nil
 }

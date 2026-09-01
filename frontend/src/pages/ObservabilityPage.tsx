@@ -169,13 +169,22 @@ export function ObservabilityPage() {
       <div className="pane">
         <div className="pane-title">
           <h2>RAG 检索</h2>
-          <span className={"status-pill " + (ragQuery.data?.ftsAvailable ? "ok" : "idle")}>
+          <span className={"status-pill " + (ragQuery.data?.hybridAvailable || ragQuery.data?.ftsAvailable ? "ok" : "idle")}>
             <span className="status-dot" />
             {ragQuery.data?.defaultRetrievalMode ?? "-"}
           </span>
         </div>
         <table className="table">
           <tbody>
+            <tr>
+              <td>Hybrid</td>
+              <td>
+                {ragQuery.data?.hybridAvailable ? "可用" : "未建索引"}
+                {ragQuery.data
+                  ? ` · 路径 ${ragQuery.data.pathEntryCount ?? 0} / 符号 ${ragQuery.data.symbolCount ?? 0}`
+                  : null}
+              </td>
+            </tr>
             <tr>
               <td>FTS</td>
               <td>

@@ -12,6 +12,7 @@ CREATE TABLE IF NOT EXISTS rag_path_entries (
 );
 CREATE INDEX IF NOT EXISTS idx_rag_path_entries_basename ON rag_path_entries (basename);
 CREATE INDEX IF NOT EXISTS idx_rag_path_entries_space ON rag_path_entries (space_id);
+CREATE INDEX IF NOT EXISTS idx_rag_path_entries_digest ON rag_path_entries (digest);
 
 CREATE TABLE IF NOT EXISTS rag_symbols (
     id          TEXT PRIMARY KEY,
@@ -27,6 +28,7 @@ CREATE TABLE IF NOT EXISTS rag_symbols (
 );
 CREATE INDEX IF NOT EXISTS idx_rag_symbols_name ON rag_symbols (space_id, repo_root, name);
 CREATE INDEX IF NOT EXISTS idx_rag_symbols_path ON rag_symbols (space_id, repo_root, path);
+CREATE INDEX IF NOT EXISTS idx_rag_symbols_digest ON rag_symbols (digest);
 
 DO $rls$
 DECLARE

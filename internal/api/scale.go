@@ -60,6 +60,9 @@ type ScaleReadinessResponse struct {
 	RAGFTSAvailable                bool     `json:"ragFtsAvailable,omitempty"`
 	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
 	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
+	RAGHybridAvailable             bool     `json:"ragHybridAvailable,omitempty"`
+	RAGPathEntryCount              int64    `json:"ragPathEntryCount,omitempty"`
+	RAGSymbolCount                 int64    `json:"ragSymbolCount,omitempty"`
 	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
 	OtelEnabled                    bool     `json:"otelEnabled,omitempty"`
 	AlertsEvalInterval             string   `json:"alertsEvalInterval,omitempty"`
@@ -114,7 +117,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	memPending, _ := memory.PendingMigrationRecords(h.db, space)
 	memReviewDue, memExpiredPending, _ := memory.TTLCounts(h.db, space)
 	ragSvc := h.runsFor(c).RAG()
-	ragFts := ragSvc.FTSAvailable()
+	ragProf := ragSvc.Profile(space)
 	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
 	ops := workerOpsSnapshot()
 	var lastSyncMs, lastSyncErrMs *int64
@@ -173,9 +176,12 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		MemoryTTLReviewDueCount:       memReviewDue,
 		MemoryTTLExpiredPendingCount:  memExpiredPending,
 		MemoryTTLReviewLeadDays:       memory.EffectiveTTLReviewLeadDays(),
-		RAGFTSAvailable:               ragFts,
-		RAGFtsEngine:                  ragSvc.FtsEngine(),
-		RAGDefaultRetrievalMode:       ragSvc.DefaultRetrievalMode(),
+		RAGFTSAvailable:               ragProf.FtsAvailable,
+		RAGFtsEngine:                  ragProf.FtsEngine,
+		RAGDefaultRetrievalMode:       ragProf.DefaultRetrievalMode,
+		RAGHybridAvailable:            ragProf.HybridAvailable,
+		RAGPathEntryCount:             ragProf.PathEntryCount,
+		RAGSymbolCount:                ragProf.SymbolCount,
 		RAGFallbackQueryCount:         ragFallbacks,
 		OtelEnabled:                   ops.OtelEnabled,
 		AlertsEvalInterval:            ops.AlertsEvalInterval,

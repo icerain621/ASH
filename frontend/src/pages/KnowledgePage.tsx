@@ -1,12 +1,16 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { BookOpen, RefreshCcw } from "lucide-react";
 import { useState } from "react";
 import { getRepoProfile, getWikiPage, listWikiPages } from "@/modules/knowledge/api/knowledge.api";
+import { getRagProfile, rebuildRAGSymbols } from "@/modules/observability/api/observability.api";
+import { getCurrentSpaceId } from "@/services/http/client";
 
 export function KnowledgePage() {
   const [repoRoot, setRepoRoot] = useState(".");
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const activeSpaceId = getCurrentSpaceId();
+  const qc = useQueryClient();
 
   const profileQuery = useQuery({
     queryKey: ["repo-profile", repoRoot],
@@ -21,6 +25,16 @@ export function KnowledgePage() {
     queryFn: () => getWikiPage(selectedId!, repoRoot),
     enabled: Boolean(selectedId),
   });
+  const ragQuery = useQuery({
+    queryKey: ["rag-profile", activeSpaceId],
+    queryFn: getRagProfile,
+  });
+  const rebuildMut = useMutation({
+    mutationFn: () => rebuildRAGSymbols({ repoRoot, spaceId: activeSpaceId }),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["rag-profile", activeSpaceId] });
+    },
+  });
 
   return (
     <section className="panel active">
@@ -31,7 +45,7 @@ export function KnowledgePage() {
       <div className="page-heading">
         <div>
           <h1>知识中心</h1>
-          <p>即时 Repo Profile 与 Wiki 投影（不落库）；Run 准备阶段可注入 profile: / wiki: contextRefs。</p>
+          <p>即时 Repo Profile 与 Wiki 投影（不落库）；Run 准备阶段可注入 profile: / wiki: contextRefs，并触发 Hybrid 符号重建。</p>
         </div>
         <div className="toolbar metrics-toolbar">
           <label className="scenario-picker">
@@ -56,8 +70,9 @@ export function KnowledgePage() {
             onClick={() => {
               profileQuery.refetch();
               wikiQuery.refetch();
+              ragQuery.refetch();
             }}
-            disabled={profileQuery.isFetching || wikiQuery.isFetching}
+            disabled={profileQuery.isFetching || wikiQuery.isFetching || ragQuery.isFetching}
           >
             <RefreshCcw size={16} />
             刷新
@@ -67,7 +82,42 @@ export function KnowledgePage() {
 
       <div className="split-pane" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
         <div>
-          <h2>Repo Profile</h2>
+          <h2>RAG Hybrid</h2>
+          {ragQuery.isError && <p className="error">加载 RAG Profile 失败</p>}
+          {ragQuery.data && (
+            <div className="card-like" data-testid="knowledge-rag-hybrid">
+              <p>
+                模式：<code>{ragQuery.data.defaultRetrievalMode}</code>
+                {ragQuery.data.hybridAvailable ? " · Hybrid 可用" : " · Hybrid 未建索引"}
+              </p>
+              <p>
+                文档 {ragQuery.data.documentCount} · 分块 {ragQuery.data.chunkCount} · 路径{" "}
+                {ragQuery.data.pathEntryCount ?? 0} · 符号 {ragQuery.data.symbolCount ?? 0}
+              </p>
+              <p className="muted">
+                FTS {ragQuery.data.ftsAvailable ? "可用" : "不可用"}
+                {ragQuery.data.ftsEngine ? ` (${ragQuery.data.ftsEngine})` : ""}
+              </p>
+              <button
+                type="button"
+                className="btn"
+                data-testid="knowledge-rag-rebuild"
+                disabled={rebuildMut.isPending}
+                onClick={() => rebuildMut.mutate()}
+              >
+                {rebuildMut.isPending ? "重建中…" : "重建符号/路径索引"}
+              </button>
+              {rebuildMut.isSuccess && rebuildMut.data && (
+                <p className="muted" data-testid="knowledge-rag-rebuild-result">
+                  已写入 paths={rebuildMut.data.paths} symbols={rebuildMut.data.symbols} files=
+                  {rebuildMut.data.files}
+                </p>
+              )}
+              {rebuildMut.isError && <p className="error">重建失败</p>}
+            </div>
+          )}
+
+          <h2 style={{ marginTop: "1.25rem" }}>Repo Profile</h2>
           {profileQuery.isError && <p className="error">加载 Profile 失败</p>}
           {profileQuery.data && (
             <div className="card-like" data-testid="knowledge-profile">

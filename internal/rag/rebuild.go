@@ -46,11 +46,9 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 		if !isIndexable(path) {
 			return nil
 		}
-		resp.Files++
 
 		rel, _ := filepath.Rel(abs, path)
 		rel = filepath.ToSlash(rel)
-		seenPaths[rel] = true
 
 		info, err := os.Stat(path)
 		if err != nil || info.Size() > 512*1024 {
@@ -60,6 +58,8 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 		if err != nil || looksBinary(b) {
 			return nil
 		}
+		resp.Files++
+		seenPaths[rel] = true
 		digest := digestBytes(b)
 		basename := filepath.Base(rel)
 

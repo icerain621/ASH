@@ -488,6 +488,16 @@ func (s *Service) prepareExecutionContext(runID, traceID, spaceID, repoRoot, iss
 				"repoRoot": repoRoot, "error": err.Error(),
 			})
 		}
+		// DX10: best-effort Hybrid path/symbol rebuild (decoupled from chunk Index tables).
+		if resp, err := s.rag.RebuildSymbols(ragRebuildRequest(spaceID, repoRoot)); err == nil {
+			_, _ = s.eventsFor().Append(runID, traceID, "rag.symbols_rebuilt", "info", map[string]any{
+				"repoRoot": repoRoot, "paths": resp.Paths, "symbols": resp.Symbols, "files": resp.Files,
+			})
+		} else {
+			_, _ = s.eventsFor().Append(runID, traceID, "rag.symbols_rebuild_failed", "warn", map[string]any{
+				"repoRoot": repoRoot, "error": err.Error(),
+			})
+		}
 		if hits, err := s.rag.Query(ragQueryRequest(spaceID, repoRoot, issue)); err == nil {
 			_, ragSpan := ashotel.StartRAGQuery(context.Background(), runID, "prepare")
 			for _, hit := range hits.Items {
@@ -626,7 +636,7 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 		}
 		return nil, nil
 	}
-	resp, err := s.rag.Query(rag.QueryRequest{RepoRoot: repoRoot, Text: issue, TopK: 6, SpaceID: firstNonEmpty(spaceID, "local")})
+	resp, err := s.rag.Query(ragQueryRequest(spaceID, repoRoot, issue))
 	if err != nil {
 		if step.RAG.RequireCitations {
 			msg := fmt.Sprintf("step %s citation query failed: %v", step.ID, err)
@@ -646,6 +656,7 @@ func (s *Service) retrieveStepEvidence(runID, traceID, spaceID, repoRoot, issue 
 	}
 	_, _ = s.eventsFor().Append(runID, traceID, "citation.bound", "info", map[string]any{
 		"stepId": step.ID, "required": step.RAG.RequireCitations, "refs": refs,
+		"retrievalMode": resp.RetrievalMode,
 	})
 	return refs, nil
 }
@@ -1360,6 +1371,10 @@ func scenarioMinMode(doc *rules.Document) string {
 
 func ragIndexRequest(spaceID, repoRoot string) rag.IndexRequest {
 	return rag.IndexRequest{RepoRoot: repoRoot, SpaceID: firstNonEmpty(spaceID, "local")}
+}
+
+func ragRebuildRequest(spaceID, repoRoot string) rag.RebuildSymbolsRequest {
+	return rag.RebuildSymbolsRequest{RepoRoot: repoRoot, SpaceID: firstNonEmpty(spaceID, "local")}
 }
 
 func ragQueryRequest(spaceID, repoRoot, text string) rag.QueryRequest {

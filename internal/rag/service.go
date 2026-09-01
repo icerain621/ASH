@@ -170,10 +170,18 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	}
 
 	lanes := map[string][]Hit{
-		"text":   textHits,
-		"path":   s.queryPathLane(space, absRepo, terms, topK*2),
-		"symbol": s.querySymbolLane(space, absRepo, terms, topK*2),
+		"text": textHits,
 	}
+	pathHits, err := s.queryPathLane(space, absRepo, terms, topK*2)
+	if err != nil {
+		return nil, err
+	}
+	symbolHits, err := s.querySymbolLane(space, absRepo, terms, topK*2)
+	if err != nil {
+		return nil, err
+	}
+	lanes["path"] = pathHits
+	lanes["symbol"] = symbolHits
 	merged := rrfMerge(lanes, req.Prefer, topK)
 	return &QueryResponse{Items: merged, RetrievalMode: RetrievalModeHybrid, FtsAvailable: ftsAvailable}, nil
 }

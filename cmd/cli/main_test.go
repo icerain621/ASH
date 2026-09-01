@@ -183,7 +183,20 @@ func assertCLIRunOutputRefs(t *testing.T, svc *runs.Service, runID string) {
 	if len(evs) == 0 {
 		t.Fatal("expected run events for CLI progress output")
 	}
-	if evs[len(evs)-1].Type != "run.finished" {
-		t.Fatalf("last event=%q want run.finished", evs[len(evs)-1].Type)
+	foundFinished := false
+	foundSymbols := false
+	for _, e := range evs {
+		if e.Type == "run.finished" {
+			foundFinished = true
+		}
+		if e.Type == "rag.symbols_rebuilt" {
+			foundSymbols = true
+		}
+	}
+	if !foundFinished {
+		t.Fatalf("missing run.finished; last event=%q", evs[len(evs)-1].Type)
+	}
+	if !foundSymbols {
+		t.Fatal("missing rag.symbols_rebuilt (DX10 Hybrid wiring)")
 	}
 }

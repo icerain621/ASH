@@ -16,12 +16,28 @@ export type RagProfile = {
   ftsAvailable: boolean;
   ftsEngine?: string;
   defaultRetrievalMode: string;
+  hybridAvailable?: boolean;
   databaseDialect?: string;
   documentCount: number;
   chunkCount: number;
+  pathEntryCount?: number;
+  symbolCount?: number;
   fallbackQueryCount: number;
 };
 
 export function getRagProfile() {
   return api<RagProfile>("/rag/profile");
+}
+
+export type RebuildSymbolsResponse = {
+  paths: number;
+  symbols: number;
+  files: number;
+};
+
+export function rebuildRAGSymbols(body: { repoRoot: string; spaceId?: string }) {
+  return api<RebuildSymbolsResponse>("/rag/symbols/rebuild", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }

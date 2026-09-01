@@ -12484,6 +12484,15 @@ const docTemplate = `{
                 "ragFtsEngine": {
                     "type": "string"
                 },
+                "ragHybridAvailable": {
+                    "type": "boolean"
+                },
+                "ragPathEntryCount": {
+                    "type": "integer"
+                },
+                "ragSymbolCount": {
+                    "type": "integer"
+                },
                 "readinessWarnings": {
                     "type": "array",
                     "items": {

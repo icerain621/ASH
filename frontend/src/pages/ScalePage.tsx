@@ -228,12 +228,16 @@ export function ScalePage() {
               <td>RAG 文档 / 分块</td>
               <td>
                 {r ? `${r.ragDocumentCount} / ${r.ragChunkCount}` : "-"}
+                {r && (r.ragPathEntryCount != null || r.ragSymbolCount != null)
+                  ? ` · 路径 ${r.ragPathEntryCount ?? 0} / 符号 ${r.ragSymbolCount ?? 0}`
+                  : null}
               </td>
             </tr>
             <tr>
               <td>RAG 检索模式</td>
               <td>
                 {r?.ragDefaultRetrievalMode ?? "-"}
+                {r?.ragHybridAvailable ? " · Hybrid 可用" : null}
                 {r?.ragFtsEngine
                   ? ` · ${r.ragFtsEngine}`
                   : r?.ragFtsAvailable != null

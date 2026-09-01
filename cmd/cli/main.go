@@ -16,6 +16,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
+	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/session"
@@ -45,6 +46,8 @@ func main() {
 		runMigrate(os.Args[2:])
 	case "plugin-sign":
 		runPluginSign(os.Args[2:])
+	case "rag":
+		runRAG(os.Args[2:])
 	default:
 		usage()
 		os.Exit(2)
@@ -52,7 +55,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n  rag rebuild [--repo .] [--space local]  (Hybrid path/symbol index rebuild)\n")
 }
 
 func runPluginSign(args []string) {
@@ -424,6 +427,37 @@ func checkpointResults(runsSvc *runs.Service, runID string) []cliCheckpoint {
 		out = append(out, item)
 	}
 	return out
+}
+
+func runRAG(args []string) {
+	if len(args) < 1 || args[0] != "rebuild" {
+		log.Fatal("usage: ash rag rebuild [--repo .] [--space local]")
+	}
+	fs := flag.NewFlagSet("rag rebuild", flag.ExitOnError)
+	repo := fs.String("repo", ".", "repository root")
+	space := fs.String("space", "local", "space id")
+	_ = fs.Parse(args[1:])
+	cfg := config.Load()
+	db, err := store.Open(cfg.DataDir)
+	if err != nil {
+		log.Fatalf("open db: %v", err)
+	}
+	defer func() { _ = db.Close() }()
+	ev := events.NewService(db)
+	scenariosDir := resolveScenariosDir(cfg.ScenariosDir)
+	loader := rules.NewLoader(scenariosDir)
+	_ = loader.LoadDir()
+	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus())
+	resp, err := runsSvc.RAG().RebuildSymbols(rag.RebuildSymbolsRequest{
+		RepoRoot: *repo,
+		SpaceID:  strings.TrimSpace(*space),
+	})
+	if err != nil {
+		log.Fatalf("rag rebuild: %v", err)
+	}
+	enc := json.NewEncoder(os.Stdout)
+	enc.SetIndent("", "  ")
+	_ = enc.Encode(resp)
 }
 
 func resolveScenariosDir(dir string) string {

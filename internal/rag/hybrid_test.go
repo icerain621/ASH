@@ -32,6 +32,38 @@ func TestHybridQueryPrefersSymbolOverNoise(t *testing.T) {
 	if len(resp.Items) == 0 || resp.Items[0].Symbol != "UniqueHybridSymbol" {
 		t.Fatalf("items=%+v", resp.Items)
 	}
+	var sym store.RAGSymbol
+	if err := db.Where("space_id = ? AND name = ?", "hy", "UniqueHybridSymbol").First(&sym).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sym.Kind != "func" {
+		t.Fatalf("kind=%q want func", sym.Kind)
+	}
+}
+
+func TestHybridQueryPrefersPathBasename(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	repo := t.TempDir()
+	_ = os.MkdirAll(filepath.Join(repo, "pkg"), 0o755)
+	_ = os.WriteFile(filepath.Join(repo, "pkg", "UniquePathTarget.go"), []byte("package pkg\n\nfunc Other() {}\n"), 0o644)
+	_ = os.WriteFile(filepath.Join(repo, "noise.md"), []byte(strings.Repeat("UniquePathTarget ", 30)+"\n"), 0o644)
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "pathhy"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RebuildSymbols(RebuildSymbolsRequest{RepoRoot: repo, SpaceID: "pathhy"}); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Query(QueryRequest{RepoRoot: repo, SpaceID: "pathhy", Text: "UniquePathTarget", TopK: 3, Prefer: "path"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.RetrievalMode != RetrievalModeHybrid {
+		t.Fatalf("mode=%s", resp.RetrievalMode)
+	}
+	if len(resp.Items) == 0 || !strings.Contains(resp.Items[0].Path, "UniquePathTarget.go") {
+		t.Fatalf("items=%+v want path hit first", resp.Items)
+	}
 }
 
 func TestQueryFallsBackWhenHybridEmpty(t *testing.T) {

@@ -34,6 +34,21 @@ vi.mock("@/modules/knowledge/api/knowledge.api", () => ({
   }),
 }));
 
+vi.mock("@/modules/observability/api/observability.api", () => ({
+  getRagProfile: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    ftsAvailable: true,
+    defaultRetrievalMode: "hybrid",
+    hybridAvailable: true,
+    documentCount: 2,
+    chunkCount: 4,
+    pathEntryCount: 2,
+    symbolCount: 3,
+    fallbackQueryCount: 0,
+  }),
+  rebuildRAGSymbols: vi.fn().mockResolvedValue({ paths: 2, symbols: 3, files: 2 }),
+}));
+
 describe("KnowledgePage", () => {
   it("renders knowledge heading and profile", async () => {
     renderPage(<KnowledgePage />);
@@ -42,5 +57,7 @@ describe("KnowledgePage", () => {
       expect(screen.getByTestId("knowledge-profile")).toBeInTheDocument();
     });
     expect(screen.getByTestId("knowledge-wiki-list")).toBeInTheDocument();
+    expect(screen.getByTestId("knowledge-rag-hybrid")).toBeInTheDocument();
+    expect(screen.getByTestId("knowledge-rag-rebuild")).toBeInTheDocument();
   });
 });
