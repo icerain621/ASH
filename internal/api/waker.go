@@ -80,6 +80,128 @@ func (h *Handler) postWakerSweep(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+// GetWakerStatus godoc
+// @Summary Waker ticker config, enabled duties, and recent duty runs
+// @Tags waker
+// @Produce json
+// @Param spaceId query string false "space id"
+// @Param recent query int false "max recent duty_run rows" default(10)
+// @Success 200 {object} waker.StatusResponse
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/waker/status [get]
+func (h *Handler) getWakerStatus(c *gin.Context) {
+	spaceID := c.DefaultQuery("spaceId", currentSpace(c))
+	if !h.requireTargetSpace(c, spaceID) {
+		return
+	}
+	recent, _ := strconv.Atoi(c.DefaultQuery("recent", "10"))
+	out, err := h.wakerFor(c).Status(spaceID, recent)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_STATUS_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, out)
+}
+
+type wakerDutiesResponse struct {
+	Duties []waker.DutyStatusView `json:"duties"`
+}
+
+// GetWakerDuties godoc
+// @Summary List waker duties for a space
+// @Tags waker
+// @Produce json
+// @Param spaceId query string false "space id"
+// @Success 200 {object} wakerDutiesResponse
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/waker/duties [get]
+func (h *Handler) getWakerDuties(c *gin.Context) {
+	spaceID := c.DefaultQuery("spaceId", currentSpace(c))
+	if !h.requireTargetSpace(c, spaceID) {
+		return
+	}
+	duties, err := h.wakerFor(c).ListDuties(spaceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTIES_FAILED", err.Error()))
+		return
+	}
+	views := make([]waker.DutyStatusView, 0, len(duties))
+	for _, d := range duties {
+		views = append(views, waker.DutyStatusView{
+			ID: d.ID, SpaceID: d.SpaceID, Kind: d.Kind, Enabled: d.Enabled,
+			IntervalMs: d.IntervalMs, NextRunAt: d.NextRunAt, UpdatedAt: d.UpdatedAt,
+		})
+	}
+	c.JSON(http.StatusOK, wakerDutiesResponse{Duties: views})
+}
+
+type wakerDutyRunRequest struct {
+	DryRun *bool `json:"dryRun,omitempty"`
+}
+
+// PostWakerDutyRun godoc
+// @Summary Force one report pass for a duty (dryRun default true; never cancel)
+// @Tags waker
+// @Accept json
+// @Produce json
+// @Param id path string true "duty id"
+// @Param spaceId query string false "space id"
+// @Param body body wakerDutyRunRequest false "run; dryRun defaults to true"
+// @Success 200 {object} waker.SweepResponse
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/waker/duties/{id}/run [post]
+func (h *Handler) postWakerDutyRun(c *gin.Context) {
+	spaceID := c.DefaultQuery("spaceId", currentSpace(c))
+	if !h.requireTargetSpace(c, spaceID) {
+		return
+	}
+	if !h.requirePermission(c, permRunCreate, spaceID) {
+		return
+	}
+	var req wakerDutyRunRequest
+	if err := c.ShouldBindJSON(&req); err != nil && err.Error() != "EOF" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	dryRun := true
+	if req.DryRun != nil {
+		dryRun = *req.DryRun
+	}
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "duty id is required"))
+		return
+	}
+	duties, err := h.wakerFor(c).ListDuties(spaceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_RUN_FAILED", err.Error()))
+		return
+	}
+	found := false
+	for _, d := range duties {
+		if d.ID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_RUN_FAILED", "duty not found"))
+		return
+	}
+	resp, err := h.wakerFor(c).RunDuty(id, dryRun)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_RUN_FAILED", err.Error()))
+		return
+	}
+	actorID := currentActor(c)
+	_ = h.dbFor(c).Create(auditRow(spaceID, actorID, "waker.duty_completed", map[string]any{
+		"dutyId": id, "matched": resp.Matched, "flagged": resp.Flagged,
+		"canceled": resp.Canceled, "dryRun": resp.DryRun, "action": resp.Action,
+		"summary": resp.Summary, "runIds": resp.RunIDs,
+	})).Error
+	c.JSON(http.StatusOK, resp)
+}
+
 func (h *Handler) wakerFor(c *gin.Context) *waker.Service {
 	if h == nil || h.waker == nil {
 		return h.waker

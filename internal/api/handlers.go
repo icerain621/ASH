@@ -180,6 +180,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.GET("/waker/queue", h.getWakerQueue)
 		v1.POST("/waker/sweep", h.postWakerSweep)
+		v1.GET("/waker/status", h.getWakerStatus)
+		v1.GET("/waker/duties", h.getWakerDuties)
+		v1.POST("/waker/duties/:id/run", h.postWakerDutyRun)
 
 		v1.POST("/improve/proposals", h.createImproveProposal)
 		v1.GET("/improve/proposals", h.listImproveProposals)

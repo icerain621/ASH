@@ -303,7 +303,16 @@ components:
           description: FTS engine id (sqlite-fts5, postgres-tsvector, etc.).
         ragDefaultRetrievalMode:
           type: string
-          enum: [fts, chunk, empty]
+          enum: [fts, chunk, hybrid, empty]
+        ragHybridAvailable:
+          type: boolean
+          description: Path/symbol Hybrid index has rows for the space.
+        ragPathEntryCount:
+          type: integer
+          format: int64
+        ragSymbolCount:
+          type: integer
+          format: int64
         ragFallbackQueryCount:
           type: integer
           format: int64
@@ -2008,6 +2017,7 @@ components:
         ageMs: { type: integer, format: int64 }
         updatedAt: { type: integer, format: int64 }
         reason: { type: string }
+        kind: { type: string, description: "Probe origin (e.g. stale_run); additive DX12 field" }
     WakerQueueResponse:
       type: object
       properties:
@@ -2042,6 +2052,66 @@ components:
           items: { type: string }
         maxAge: { type: string }
         summary: { type: string }
+    WakerDutyStatus:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        kind: { type: string, enum: [stale_run, doctor_subset, kpi_drift] }
+        enabled: { type: boolean }
+        intervalMs: { type: integer, format: int64, description: Duty schedule cadence (clamped ≥ 60000). Independent of ticker intervalMs. }
+        nextRunAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    WakerDutyRun:
+      type: object
+      properties:
+        id: { type: string }
+        dutyId: { type: string }
+        spaceId: { type: string }
+        kind: { type: string }
+        status: { type: string, enum: [ok, failed, skipped] }
+        matched: { type: integer }
+        flagged: { type: integer }
+        canceled: { type: integer }
+        summary: { type: string }
+        startedAt: { type: string, format: date-time }
+        finishedAt: { type: string, format: date-time }
+    WakerStatusResponse:
+      type: object
+      properties:
+        duties:
+          type: array
+          items: { $ref: "#/components/schemas/WakerDutyStatus" }
+        recentRuns:
+          type: array
+          items: { $ref: "#/components/schemas/WakerDutyRun" }
+        allowCancel: { type: boolean, description: ASH_WAKER_ALLOW_CANCEL=1 (no secret values) }
+        interval:
+          type: string
+          description: >
+            Worker ticker from ASH_WAKER_INTERVAL. Literal "off" when the env is
+            empty, unset, or disabled (0/off/false/disable/disabled). Parsed Go
+            duration string when the ticker is enabled.
+        intervalMs:
+          type: integer
+          format: int64
+          description: >
+            Ticker interval in milliseconds. 0 and omitted from JSON (omitempty)
+            when ASH_WAKER_INTERVAL is disabled. Distinct from each duty's
+            intervalMs schedule field.
+    WakerDutiesResponse:
+      type: object
+      properties:
+        duties:
+          type: array
+          items: { $ref: "#/components/schemas/WakerDutyStatus" }
+    WakerDutyRunRequest:
+      type: object
+      properties:
+        dryRun:
+          type: boolean
+          default: true
+          description: Defaults to true. Even when false, duty run is report/flag only (never cancel).
     OrgItem:
       type: object
       properties:
@@ -4340,6 +4410,62 @@ paths:
         content:
           application/json:
             schema: { $ref: "#/components/schemas/WakerSweepRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WakerSweepResponse" }
+
+  /api/v1/waker/status:
+    get:
+      tags: [Waker]
+      summary: Waker ticker config, enabled duties, and recent duty runs
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+        - in: query
+          name: recent
+          schema: { type: integer, default: 10, description: "max recent duty_run rows (clamped 1-100)" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WakerStatusResponse" }
+
+  /api/v1/waker/duties:
+    get:
+      tags: [Waker]
+      summary: List waker duties for a space
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/WakerDutiesResponse" }
+
+  /api/v1/waker/duties/{id}/run:
+    post:
+      tags: [Waker]
+      summary: Force one report pass for a duty (dryRun default true; never cancel)
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: spaceId
+          schema: { type: string }
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WakerDutyRunRequest" }
       responses:
         "200":
           description: ok

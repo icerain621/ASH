@@ -3021,10 +3021,54 @@ definitions:
       risk:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_toolbus.Risk'
     type: object
+  github_com_ash-repwiki_ash_internal_waker.DutyRunView:
+    properties:
+      canceled:
+        type: integer
+      dutyId:
+        type: string
+      finishedAt:
+        type: string
+      flagged:
+        type: integer
+      id:
+        type: string
+      kind:
+        type: string
+      matched:
+        type: integer
+      spaceId:
+        type: string
+      startedAt:
+        type: string
+      status:
+        type: string
+      summary:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_waker.DutyStatusView:
+    properties:
+      enabled:
+        type: boolean
+      id:
+        type: string
+      intervalMs:
+        type: integer
+      kind:
+        type: string
+      nextRunAt:
+        type: string
+      spaceId:
+        type: string
+      updatedAt:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_waker.Item:
     properties:
       ageMs:
         type: integer
+      kind:
+        type: string
       reason:
         type: string
       runId:
@@ -3050,6 +3094,23 @@ definitions:
         type: string
       maxAgeMs:
         type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_waker.StatusResponse:
+    properties:
+      allowCancel:
+        type: boolean
+      duties:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView'
+        type: array
+      interval:
+        type: string
+      intervalMs:
+        type: integer
+      recentRuns:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyRunView'
+        type: array
     type: object
   github_com_ash-repwiki_ash_internal_waker.SweepRequest:
     properties:
@@ -3708,6 +3769,12 @@ definitions:
         type: boolean
       ragFtsEngine:
         type: string
+      ragHybridAvailable:
+        type: boolean
+      ragPathEntryCount:
+        type: integer
+      ragSymbolCount:
+        type: integer
       readinessWarnings:
         items:
           type: string
@@ -4294,6 +4361,18 @@ definitions:
         type: string
     required:
     - policyJson
+    type: object
+  internal_api.wakerDutiesResponse:
+    properties:
+      duties:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView'
+        type: array
+    type: object
+  internal_api.wakerDutyRunRequest:
+    properties:
+      dryRun:
+        type: boolean
     type: object
   internal_api.wikiListAPIResponse:
     properties:
@@ -8402,6 +8481,60 @@ paths:
       summary: List built-in tool risk catalog (dangerous-ops)
       tags:
       - tools
+  /api/v1/waker/duties:
+    get:
+      parameters:
+      - description: space id
+        in: query
+        name: spaceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.wakerDutiesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List waker duties for a space
+      tags:
+      - waker
+  /api/v1/waker/duties/{id}/run:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: duty id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: space id
+        in: query
+        name: spaceId
+        type: string
+      - description: run; dryRun defaults to true
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.wakerDutyRunRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Force one report pass for a duty (dryRun default true; never cancel)
+      tags:
+      - waker
   /api/v1/waker/queue:
     get:
       parameters:
@@ -8426,6 +8559,32 @@ paths:
           schema:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.QueueResponse'
       summary: List stale/stuck runs for waker inspection
+      tags:
+      - waker
+  /api/v1/waker/status:
+    get:
+      parameters:
+      - description: space id
+        in: query
+        name: spaceId
+        type: string
+      - default: 10
+        description: max recent duty_run rows
+        in: query
+        name: recent
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_waker.StatusResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Waker ticker config, enabled duties, and recent duty runs
       tags:
       - waker
   /api/v1/waker/sweep:

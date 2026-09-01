@@ -6295,6 +6295,90 @@
                 }
             }
         },
+        "/api/v1/waker/duties": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "List waker duties for a space",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.wakerDutiesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/waker/duties/{id}/run": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "Force one report pass for a duty (dryRun default true; never cancel)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "duty id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "description": "run; dryRun defaults to true",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.wakerDutyRunRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.SweepResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/waker/queue": {
             "get": {
                 "produces": [
@@ -6330,6 +6414,46 @@
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.QueueResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/waker/status": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "Waker ticker config, enabled duties, and recent duty runs",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 10,
+                        "description": "max recent duty_run rows",
+                        "name": "recent",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.StatusResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
                     }
                 }
@@ -11211,11 +11335,78 @@
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_waker.DutyRunView": {
+            "type": "object",
+            "properties": {
+                "canceled": {
+                    "type": "integer"
+                },
+                "dutyId": {
+                    "type": "string"
+                },
+                "finishedAt": {
+                    "type": "string"
+                },
+                "flagged": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "matched": {
+                    "type": "integer"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "startedAt": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "summary": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.DutyStatusView": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "intervalMs": {
+                    "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "nextRunAt": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_waker.Item": {
             "type": "object",
             "properties": {
                 "ageMs": {
                     "type": "integer"
+                },
+                "kind": {
+                    "type": "string"
                 },
                 "reason": {
                     "type": "string"
@@ -11254,6 +11445,32 @@
                 },
                 "maxAgeMs": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_waker.StatusResponse": {
+            "type": "object",
+            "properties": {
+                "allowCancel": {
+                    "type": "boolean"
+                },
+                "duties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView"
+                    }
+                },
+                "interval": {
+                    "type": "string"
+                },
+                "intervalMs": {
+                    "type": "integer"
+                },
+                "recentRuns": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyRunView"
+                    }
                 }
             }
         },
@@ -12261,6 +12478,15 @@
                 "ragFtsEngine": {
                     "type": "string"
                 },
+                "ragHybridAvailable": {
+                    "type": "boolean"
+                },
+                "ragPathEntryCount": {
+                    "type": "integer"
+                },
+                "ragSymbolCount": {
+                    "type": "integer"
+                },
                 "readinessWarnings": {
                     "type": "array",
                     "items": {
@@ -13155,6 +13381,25 @@
             "properties": {
                 "policyJson": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.wakerDutiesResponse": {
+            "type": "object",
+            "properties": {
+                "duties": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView"
+                    }
+                }
+            }
+        },
+        "internal_api.wakerDutyRunRequest": {
+            "type": "object",
+            "properties": {
+                "dryRun": {
+                    "type": "boolean"
                 }
             }
         },
