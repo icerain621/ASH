@@ -304,15 +304,6 @@ components:
         ragDefaultRetrievalMode:
           type: string
           enum: [fts, chunk, hybrid, empty]
-        ragHybridAvailable:
-          type: boolean
-          description: Path/symbol Hybrid index has rows for the space.
-        ragPathEntryCount:
-          type: integer
-          format: int64
-        ragSymbolCount:
-          type: integer
-          format: int64
         ragFallbackQueryCount:
           type: integer
           format: int64

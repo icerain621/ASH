@@ -3769,12 +3769,6 @@ definitions:
         type: boolean
       ragFtsEngine:
         type: string
-      ragHybridAvailable:
-        type: boolean
-      ragPathEntryCount:
-        type: integer
-      ragSymbolCount:
-        type: integer
       readinessWarnings:
         items:
           type: string
