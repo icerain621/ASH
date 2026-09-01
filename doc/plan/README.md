@@ -10,7 +10,7 @@
 | [`v2-release-scope.md`](v2-release-scope.md) | **v2** 范围冻结（`scope-freeze-gate` / `make v2-signoff`） | v2 GA / DV |
 | [`v2.1-release-scope.md`](v2.1-release-scope.md) | **v2.1** 范围冻结（`make v2.1-signoff`） | ACP 桥接 / DX5 |
 | [`v2.2-release-scope.md`](v2.2-release-scope.md) | **v2.2** 范围冻结（`make v2.2-signoff`） | Waker / DX8 |
-| [`v2.3-release-scope.md`](v2.3-release-scope.md) | **v2.3** 范围草案（DX9 Hybrid 已落地；冻结/签字仍可能为未提交 WIP） | RAG Hybrid / DX9 |
+| [`v2.3-release-scope.md`](v2.3-release-scope.md) | **v2.3** 范围冻结（`make v2.3-signoff`） | RAG Hybrid / DX9–DX11 |
 | [`v2.4-release-scope.md`](v2.4-release-scope.md) | **v2.4** 范围草案（**未冻结**；DX14 再冻） | Waker duties / DX12–DX14 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |

@@ -57,6 +57,7 @@
 | — | Waker (DX6/DX12) | stale Run queue/sweep + duties/status | [`waker-smoke.md`](waker-smoke.md) |
 | — | v2.2 signoff (DX8) | scope freeze + `make v2.2-signoff` | [`v2.2-signoff.md`](v2.2-signoff.md) |
 | — | RAG Hybrid (DX9) | RebuildSymbols + Hybrid Query RRF | [`rag-hybrid-smoke.md`](rag-hybrid-smoke.md) |
+| — | v2.3 signoff (DX11) | scope freeze + `make v2.3-signoff` | [`v2.3-signoff.md`](v2.3-signoff.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

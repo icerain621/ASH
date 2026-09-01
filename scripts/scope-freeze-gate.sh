@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MVP §1 + v2 + v2.1 + v2.2: validate release scope doc structure before freeze sign-off.
+# MVP §1 + v2 + v2.1 + v2.2 + v2.3: validate release scope doc structure before freeze sign-off.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -40,5 +40,6 @@ check_scope "$ROOT/doc/plan/mvp-release-scope.md" "mvp"
 check_scope "$ROOT/doc/plan/v2-release-scope.md" "v2"
 check_scope "$ROOT/doc/plan/v2.1-release-scope.md" "v2.1"
 check_scope "$ROOT/doc/plan/v2.2-release-scope.md" "v2.2"
+check_scope "$ROOT/doc/plan/v2.3-release-scope.md" "v2.3"
 
 echo "OK scope-freeze-gate"
