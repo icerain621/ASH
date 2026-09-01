@@ -34,6 +34,43 @@ func seedStaleRunningRun(t *testing.T, db *store.DB) {
 	}
 }
 
+func TestStatusIntervalOffWhenEnvEmpty(t *testing.T) {
+	t.Setenv("ASH_WAKER_INTERVAL", "")
+	db := openTestDB(t)
+	svc := NewService(db)
+	st, err := svc.Status("local", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if st.Interval != "off" || st.IntervalMs != 0 {
+		t.Fatalf("want ticker off: interval=%q intervalMs=%d", st.Interval, st.IntervalMs)
+	}
+	if len(st.Duties) < 1 || st.Duties[0].IntervalMs < 60000 {
+		t.Fatalf("duty cadence stays on duty row: %+v", st.Duties)
+	}
+}
+
+func TestEnsureStaleRunDutyPreservesNextRunAt(t *testing.T) {
+	db := openTestDB(t)
+	svc := NewService(db)
+	future := time.Now().UTC().Add(2 * time.Hour)
+	if _, err := svc.EnsureStaleRunDuty("local"); err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&store.WakerDuty{}).
+		Where("space_id = ? AND kind = ?", "local", KindStaleRun).
+		Update("next_run_at", future).Error; err != nil {
+		t.Fatal(err)
+	}
+	got, err := svc.EnsureStaleRunDuty("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !got.NextRunAt.Equal(future) {
+		t.Fatalf("NextRunAt changed: want %v got %v", future, got.NextRunAt)
+	}
+}
+
 func TestEnsureStaleRunDutyIdempotent(t *testing.T) {
 	db := openTestDB(t)
 	svc := NewService(db)
@@ -64,9 +101,17 @@ func TestRunDueDutiesWritesDutyRun(t *testing.T) {
 		Update("next_run_at", past).Error; err != nil {
 		t.Fatal(err)
 	}
-	n, err := svc.RunDueDuties(time.Now().UTC())
+	now := time.Now().UTC()
+	n, err := svc.RunDueDuties(now)
 	if err != nil || n < 1 {
 		t.Fatalf("n=%d err=%v", n, err)
+	}
+	var duty store.WakerDuty
+	if err := db.First(&duty, "space_id = ? AND kind = ?", "local", KindStaleRun).Error; err != nil {
+		t.Fatal(err)
+	}
+	if !duty.NextRunAt.After(now) {
+		t.Fatalf("next_run_at not advanced: now=%v next=%v", now, duty.NextRunAt)
 	}
 	st, err := svc.Status("local", 5)
 	if err != nil {

@@ -189,12 +189,12 @@ func (s *Service) Status(spaceID string, recent int) (StatusResponse, error) {
 	raw := strings.TrimSpace(os.Getenv("ASH_WAKER_INTERVAL"))
 	d, ok := ParseInterval(raw)
 	intervalHint := raw
-	intervalMs := defaultDutyIntervalMs
+	intervalMs := int64(0)
 	if ok {
 		intervalHint = d.String()
 		intervalMs = d.Milliseconds()
 	} else if raw == "" {
-		intervalHint = "5m"
+		intervalHint = "off"
 	}
 	return StatusResponse{
 		Duties: views, RecentRuns: runViews,
