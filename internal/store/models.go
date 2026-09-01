@@ -279,6 +279,38 @@ type RAGSymbol struct {
 
 func (RAGSymbol) TableName() string { return "rag_symbols" }
 
+// WakerDuty is a scheduled continuous-duty definition (Sprint DX12).
+type WakerDuty struct {
+	ID         string `gorm:"primaryKey;size:64"`
+	SpaceID    string `gorm:"size:64;not null;default:local;uniqueIndex:uidx_waker_duty_space_kind"`
+	Kind       string `gorm:"size:32;not null;uniqueIndex:uidx_waker_duty_space_kind"` // stale_run | doctor_subset | kpi_drift
+	Enabled    bool   `gorm:"not null;default:true"`
+	IntervalMs int64  `gorm:"not null;default:300000"` // 5m
+	ConfigJSON string `gorm:"type:text;not null;default:'{}'"`
+	NextRunAt  time.Time
+	UpdatedAt  time.Time
+	CreatedAt  time.Time
+}
+
+func (WakerDuty) TableName() string { return "waker_duties" }
+
+// WakerDutyRun is one execution summary for a duty.
+type WakerDutyRun struct {
+	ID         string `gorm:"primaryKey;size:64"`
+	SpaceID    string `gorm:"size:64;not null;default:local;index:idx_waker_duty_runs_space_started"`
+	DutyID     string `gorm:"size:64;not null;index:idx_waker_duty_runs_duty_started"`
+	Kind       string `gorm:"size:32;not null"`
+	Status     string `gorm:"size:16;not null"` // ok | failed | skipped
+	Matched    int
+	Flagged    int
+	Canceled   int
+	Summary    string    `gorm:"size:512"`
+	StartedAt  time.Time `gorm:"index:idx_waker_duty_runs_space_started;index:idx_waker_duty_runs_duty_started"`
+	FinishedAt time.Time
+}
+
+func (WakerDutyRun) TableName() string { return "waker_duty_runs" }
+
 // ModelUsage is the M1 cost/accounting ledger for non-coding model calls.
 type ModelUsage struct {
 	ID           string `gorm:"primaryKey;size:64"`

@@ -78,6 +78,8 @@ func migrationEntities() []migrationEntity {
 		{table: "rag_chunks", model: &RAGChunk{}, pk: "id", incremental: true},
 		{table: "rag_path_entries", model: &RAGPathEntry{}, pk: "id", incremental: true},
 		{table: "rag_symbols", model: &RAGSymbol{}, pk: "id", incremental: true},
+		{table: "waker_duties", model: &WakerDuty{}, pk: "id", incremental: true},
+		{table: "waker_duty_runs", model: &WakerDutyRun{}, pk: "id", incremental: false},
 		{table: "model_usage", model: &ModelUsage{}, pk: "id", incremental: false},
 		{table: "quality_metrics", model: &QualityMetric{}, pk: "id", incremental: true},
 		{table: "mcp_tools", model: &MCPTool{}, pk: "id", incremental: true},
