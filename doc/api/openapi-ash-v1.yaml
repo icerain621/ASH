@@ -2090,8 +2090,10 @@ components:
           type: string
           description: >
             Worker ticker from ASH_WAKER_INTERVAL. Literal "off" when the env is
-            empty, unset, or disabled (0/off/false/disable/disabled). Parsed Go
-            duration string when the ticker is enabled.
+            empty or unset. Disable tokens (0/off/false/disable/disabled) and
+            invalid or <1m values leave the ticker off: intervalMs is 0 (omitted
+            via omitempty) and interval echoes the trimmed raw env ("off" if empty).
+            Parsed Go duration string when the ticker is enabled.
         intervalMs:
           type: integer
           format: int64
