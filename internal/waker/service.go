@@ -36,6 +36,7 @@ type Item struct {
 	AgeMs     int64  `json:"ageMs"`
 	UpdatedAt int64  `json:"updatedAt"`
 	Reason    string `json:"reason"`
+	Kind      string `json:"kind,omitempty"`
 }
 
 // QueueResponse is GET /waker/queue.
@@ -270,13 +271,15 @@ func (s *Service) listStale(spaceID string, ttl time.Duration, limit int) ([]Ite
 		items = append(items, Item{
 			RunID: row.ID, SpaceID: row.SpaceID, Status: row.Status,
 			AgeMs: age.Milliseconds(), UpdatedAt: row.UpdatedAt.Unix(),
-			Reason: "stale_" + row.Status,
+			Reason: "stale_" + row.Status, Kind: KindStaleRun,
 		})
 	}
 	return items, nil
 }
 
-// StartBackground periodically reports stale runs (never cancels).
+// StartBackground periodically runs due duties (never cancels).
+// DX12: always ensures space "local"; also ensures distinct space_id values
+// seen on run records. HTTP Status(spaceId) ensures that space.
 func StartBackground(db *store.DB, interval time.Duration) context.CancelFunc {
 	ctx, cancel := context.WithCancel(context.Background())
 	if db == nil || interval <= 0 {
@@ -287,14 +290,24 @@ func StartBackground(db *store.DB, interval time.Duration) context.CancelFunc {
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		run := func() {
-			dry := false
-			resp, err := svc.Sweep(SweepRequest{DryRun: &dry, Action: "report", Limit: defaultMaxItems})
+			if _, err := svc.EnsureStaleRunDuty("local"); err != nil {
+				log.Printf("waker: ensure: %v", err)
+			}
+			for _, space := range svc.knownSpaces() {
+				if space == "" || space == "local" {
+					continue
+				}
+				if _, err := svc.EnsureStaleRunDuty(space); err != nil {
+					log.Printf("waker: ensure %s: %v", space, err)
+				}
+			}
+			n, err := svc.RunDueDuties(time.Now().UTC())
 			if err != nil {
-				log.Printf("waker: sweep: %v", err)
+				log.Printf("waker: due: %v", err)
 				return
 			}
-			if resp.Matched > 0 {
-				log.Printf("waker: %s", resp.Summary)
+			if n > 0 {
+				log.Printf("waker: ran %d due dut(ies)", n)
 			}
 		}
 		run()

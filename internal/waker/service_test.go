@@ -47,6 +47,9 @@ func TestQueueAndSweepStaleRuns(t *testing.T) {
 	if q.Count != 1 || q.Items[0].RunID != "run_stale" {
 		t.Fatalf("queue=%+v", q)
 	}
+	if q.Items[0].Kind != KindStaleRun {
+		t.Fatalf("kind=%q", q.Items[0].Kind)
+	}
 
 	dry := true
 	sw, err := svc.Sweep(SweepRequest{SpaceID: "local", DryRun: &dry, MaxAge: "1h"})
