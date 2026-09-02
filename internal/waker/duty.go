@@ -137,6 +137,54 @@ func (s *Service) EnsureStaleRunDuty(spaceID string) (store.WakerDuty, error) {
 	return duty, nil
 }
 
+// EnsureDoctorSubsetDuty upserts (space_id, kind=doctor_subset). Does not auto-run from Status.
+func (s *Service) EnsureDoctorSubsetDuty(spaceID string, enabled bool) (store.WakerDuty, error) {
+	return s.ensureProbeDuty(spaceID, KindDoctorSubset, `{"suite":"M4"}`, enabled)
+}
+
+// EnsureKPIDriftDuty upserts (space_id, kind=kpi_drift). Does not auto-run from Status.
+func (s *Service) EnsureKPIDriftDuty(spaceID string, enabled bool) (store.WakerDuty, error) {
+	return s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabled)
+}
+
+func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled bool) (store.WakerDuty, error) {
+	if s.q() == nil {
+		return store.WakerDuty{}, fmt.Errorf("database unavailable")
+	}
+	spaceID = normalizeSpaceID(spaceID)
+	var existing store.WakerDuty
+	err := s.q().Where("space_id = ? AND kind = ?", spaceID, kind).First(&existing).Error
+	if err == nil {
+		updates := map[string]any{"enabled": enabled, "updated_at": time.Now().UTC()}
+		if existing.IntervalMs < minDutyIntervalMs {
+			updates["interval_ms"] = minDutyIntervalMs
+			existing.IntervalMs = minDutyIntervalMs
+		}
+		if saveErr := s.q().Model(&store.WakerDuty{}).Where("id = ?", existing.ID).Updates(updates).Error; saveErr != nil {
+			return store.WakerDuty{}, saveErr
+		}
+		existing.Enabled = enabled
+		return existing, nil
+	}
+	if !errors.Is(err, gorm.ErrRecordNotFound) {
+		return store.WakerDuty{}, err
+	}
+	now := time.Now().UTC()
+	duty := store.WakerDuty{
+		ID: newDutyID(), SpaceID: spaceID, Kind: kind, Enabled: enabled,
+		IntervalMs: defaultIntervalMs(), ConfigJSON: defaultConfig,
+		NextRunAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.q().Create(&duty).Error; err != nil {
+		var raced store.WakerDuty
+		if findErr := s.q().Where("space_id = ? AND kind = ?", spaceID, kind).First(&raced).Error; findErr == nil {
+			return raced, nil
+		}
+		return store.WakerDuty{}, err
+	}
+	return duty, nil
+}
+
 // ListDuties returns duties for a space.
 func (s *Service) ListDuties(spaceID string) ([]store.WakerDuty, error) {
 	if s.q() == nil {
@@ -204,7 +252,7 @@ func (s *Service) Status(spaceID string, recent int) (StatusResponse, error) {
 	}, nil
 }
 
-// RunDuty force-runs one duty (stale_run only in DX12). Never cancels.
+// RunDuty force-runs one duty (stale_run / doctor_subset / kpi_drift). Never cancels.
 func (s *Service) RunDuty(dutyID string, dryRun bool) (SweepResponse, error) {
 	if s.q() == nil {
 		return SweepResponse{}, fmt.Errorf("database unavailable")
@@ -213,19 +261,40 @@ func (s *Service) RunDuty(dutyID string, dryRun bool) (SweepResponse, error) {
 	if err := s.q().First(&duty, "id = ?", strings.TrimSpace(dutyID)).Error; err != nil {
 		return SweepResponse{}, err
 	}
-	if duty.Kind != KindStaleRun {
-		return SweepResponse{}, ErrUnsupportedDutyKind
-	}
 	started := time.Now().UTC()
-	resp, err := s.runStaleDuty(duty, dryRun)
+	resp, err := s.executeDuty(duty, dryRun)
+	if errors.Is(err, ErrDoctorUnavailable) {
+		_ = s.persistDutyRun(duty, dutyStatusSkipped, SweepResponse{Summary: err.Error()}, started)
+		return SweepResponse{}, err
+	}
+	if errors.Is(err, ErrUnsupportedDutyKind) {
+		return SweepResponse{}, err
+	}
 	if err != nil {
 		_ = s.persistDutyRun(duty, dutyStatusFailed, SweepResponse{Summary: err.Error()}, started)
 		return SweepResponse{}, err
 	}
-	if err := s.persistDutyRun(duty, dutyStatusOK, resp, started); err != nil {
+	status := dutyStatusOK
+	if resp.Flagged > 0 {
+		status = dutyStatusFailed
+	}
+	if err := s.persistDutyRun(duty, status, resp, started); err != nil {
 		return SweepResponse{}, err
 	}
 	return resp, nil
+}
+
+func (s *Service) executeDuty(duty store.WakerDuty, dryRun bool) (SweepResponse, error) {
+	switch duty.Kind {
+	case KindStaleRun:
+		return s.runStaleDuty(duty, dryRun)
+	case KindDoctorSubset:
+		return s.runDoctorSubset(duty, dryRun)
+	case KindKPIDrift:
+		return s.runKPIDrift(duty, dryRun)
+	default:
+		return SweepResponse{}, ErrUnsupportedDutyKind
+	}
 }
 
 // RunDueDuties executes enabled duties whose next_run_at is due. Never cancels.
@@ -247,17 +316,15 @@ func (s *Service) RunDueDuties(now time.Time) (int, error) {
 		started := time.Now().UTC()
 		status := dutyStatusOK
 		var resp SweepResponse
-		switch duty.Kind {
-		case KindStaleRun:
-			var runErr error
-			resp, runErr = s.runStaleDuty(duty, false)
-			if runErr != nil {
-				status = dutyStatusFailed
-				resp.Summary = runErr.Error()
-			}
-		default:
+		resp, runErr := s.executeDuty(duty, false)
+		if errors.Is(runErr, ErrDoctorUnavailable) || errors.Is(runErr, ErrUnsupportedDutyKind) {
 			status = dutyStatusSkipped
-			resp.Summary = ErrUnsupportedDutyKind.Error()
+			resp.Summary = runErr.Error()
+		} else if runErr != nil {
+			status = dutyStatusFailed
+			resp.Summary = runErr.Error()
+		} else if resp.Flagged > 0 && (duty.Kind == KindDoctorSubset || duty.Kind == KindKPIDrift) {
+			status = dutyStatusFailed
 		}
 		if err := s.persistDutyRun(duty, status, resp, started); err != nil {
 			return ran, err

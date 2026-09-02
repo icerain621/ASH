@@ -151,7 +151,7 @@ func parseMaxAge(raw string) time.Duration {
 	return d
 }
 
-// Queue lists stale running / waiting_approval runs.
+// Queue lists stale running / waiting_approval runs plus recent probe findings.
 func (s *Service) Queue(spaceID, maxAge string, limit int) (QueueResponse, error) {
 	ttl := parseMaxAge(maxAge)
 	if limit <= 0 || limit > 200 {
@@ -161,11 +161,61 @@ func (s *Service) Queue(spaceID, maxAge string, limit int) (QueueResponse, error
 	if err != nil {
 		return QueueResponse{}, err
 	}
+	probeItems, err := s.listProbeFindings(spaceID, limit)
+	if err != nil {
+		return QueueResponse{}, err
+	}
+	items = append(items, probeItems...)
+	if len(items) > limit {
+		items = items[:limit]
+	}
 	return QueueResponse{
 		Items: items, Count: len(items),
 		MaxAge: ttl.String(), MaxAgeMs: ttl.Milliseconds(),
 		Inspected: time.Now().UTC(),
 	}, nil
+}
+
+func (s *Service) listProbeFindings(spaceID string, limit int) ([]Item, error) {
+	if s.q() == nil {
+		return nil, fmt.Errorf("database unavailable")
+	}
+	spaceID = normalizeSpaceID(spaceID)
+	if limit <= 0 {
+		limit = defaultMaxItems
+	}
+	var rows []store.WakerDutyRun
+	if err := s.q().Where("space_id = ? AND kind IN ? AND flagged > 0", spaceID, []string{KindDoctorSubset, KindKPIDrift}).
+		Order("started_at DESC").Limit(20).Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	var out []Item
+	now := time.Now().UTC()
+	for _, r := range rows {
+		for _, token := range strings.Fields(r.Summary) {
+			if !strings.HasPrefix(token, "doctor_subset:") && !strings.HasPrefix(token, "kpi_drift:") {
+				continue
+			}
+			if seen[token] {
+				continue
+			}
+			seen[token] = true
+			kind := KindDoctorSubset
+			if strings.HasPrefix(token, "kpi_drift:") {
+				kind = KindKPIDrift
+			}
+			out = append(out, Item{
+				RunID: r.ID, SpaceID: r.SpaceID, Status: "flagged",
+				AgeMs: now.Sub(r.StartedAt).Milliseconds(), UpdatedAt: r.StartedAt.Unix(),
+				Reason: token, Kind: kind,
+			})
+			if len(out) >= limit {
+				return out, nil
+			}
+		}
+	}
+	return out, nil
 }
 
 // Sweep reports, flags, or (with gates) cancels stale runs.

@@ -3,6 +3,7 @@ package waker
 import (
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -141,17 +142,108 @@ func TestEnsureStaleRunDutyClampsInterval(t *testing.T) {
 	}
 }
 
+func TestRunDutyDoctorSubset(t *testing.T) {
+	db := openTestDB(t)
+	svc := NewService(db).WithDoctorRunner(fakeDoctor{failIDs: []string{"M4-HAR-01"}})
+	duty, err := svc.EnsureDoctorSubsetDuty("local", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.RunDuty(duty.ID, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Flagged < 1 {
+		t.Fatalf("want flagged: %+v", resp)
+	}
+}
+
+func TestRunDueDutiesExecutesDoctorSubset(t *testing.T) {
+	db := openTestDB(t)
+	svc := NewService(db).WithDoctorRunner(fakeDoctor{failIDs: []string{"M4-HAR-01"}})
+	duty, err := svc.EnsureDoctorSubsetDuty("local", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	past := time.Now().UTC().Add(-time.Minute)
+	if err := db.Model(&store.WakerDuty{}).Where("id = ?", duty.ID).Update("next_run_at", past).Error; err != nil {
+		t.Fatal(err)
+	}
+	n, err := svc.RunDueDuties(time.Now().UTC())
+	if err != nil || n < 1 {
+		t.Fatalf("n=%d err=%v", n, err)
+	}
+	st, err := svc.Status("local", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, r := range st.RecentRuns {
+		if r.DutyID == duty.ID {
+			found = true
+			if r.Flagged < 1 || r.Canceled != 0 {
+				t.Fatalf("want flagged never-cancel: %+v", r)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("want doctor duty run: %+v", st)
+	}
+}
+
+func TestQueueIncludesDoctorFindings(t *testing.T) {
+	db := openTestDB(t)
+	svc := NewService(db).WithDoctorRunner(fakeDoctor{failIDs: []string{"M4-HAR-01"}})
+	duty, err := svc.EnsureDoctorSubsetDuty("local", true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RunDuty(duty.ID, false); err != nil {
+		t.Fatal(err)
+	}
+	q, err := svc.Queue("local", "", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, it := range q.Items {
+		if it.Kind == KindDoctorSubset && strings.Contains(it.Reason, "doctor_subset:") {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("want doctor queue item: %+v", q.Items)
+	}
+}
+
+func TestStatusDoesNotAutoSeedDoctorOrKPI(t *testing.T) {
+	db := openTestDB(t)
+	svc := NewService(db)
+	if _, err := svc.Status("local", 5); err != nil {
+		t.Fatal(err)
+	}
+	list, err := svc.ListDuties("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range list {
+		if d.Kind == KindDoctorSubset || d.Kind == KindKPIDrift {
+			t.Fatalf("must not auto-seed probe duty: %+v", d)
+		}
+	}
+}
+
 func TestRunDutyUnsupportedKind(t *testing.T) {
 	db := openTestDB(t)
 	now := time.Now().UTC()
 	if err := db.Create(&store.WakerDuty{
-		ID: "wd_doc", SpaceID: "local", Kind: "doctor_subset", Enabled: true,
+		ID: "wd_future", SpaceID: "local", Kind: "future_probe", Enabled: true,
 		IntervalMs: 300000, ConfigJSON: "{}", NextRunAt: now, CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatal(err)
 	}
 	svc := NewService(db)
-	_, err := svc.RunDuty("wd_doc", true)
+	_, err := svc.RunDuty("wd_future", true)
 	if !errors.Is(err, ErrUnsupportedDutyKind) {
 		t.Fatalf("want unsupported duty kind, got %v", err)
 	}
@@ -161,7 +253,7 @@ func TestRunDueDutiesSkipsUnknownKind(t *testing.T) {
 	db := openTestDB(t)
 	now := time.Now().UTC().Add(-time.Minute)
 	if err := db.Create(&store.WakerDuty{
-		ID: "wd_kpi", SpaceID: "local", Kind: "kpi_drift", Enabled: true,
+		ID: "wd_future2", SpaceID: "local", Kind: "future_probe", Enabled: true,
 		IntervalMs: 300000, ConfigJSON: "{}", NextRunAt: now, CreatedAt: now, UpdatedAt: now,
 	}).Error; err != nil {
 		t.Fatal(err)
@@ -177,7 +269,7 @@ func TestRunDueDutiesSkipsUnknownKind(t *testing.T) {
 	}
 	found := false
 	for _, r := range st.RecentRuns {
-		if r.DutyID == "wd_kpi" {
+		if r.DutyID == "wd_future2" {
 			found = true
 			if r.Status != "skipped" || r.Canceled != 0 {
 				t.Fatalf("want skipped never-cancel: %+v", r)
@@ -185,7 +277,7 @@ func TestRunDueDutiesSkipsUnknownKind(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatalf("want skipped kpi_drift run: %+v", st)
+		t.Fatalf("want skipped future_probe run: %+v", st)
 	}
 }
 
