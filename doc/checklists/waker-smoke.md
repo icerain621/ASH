@@ -50,5 +50,5 @@ curl -s -X POST "$ASH_WORKER_URL/api/v1/waker/sweep" \
 - [`../plan/sprint-dx12-waker-duties.md`](../plan/sprint-dx12-waker-duties.md)
 - [`../plan/sprint-dx13-waker-probes.md`](../plan/sprint-dx13-waker-probes.md)
 - [`../plan/v2.2-release-scope.md`](../plan/v2.2-release-scope.md)（已冻结）
-- [`../plan/v2.4-release-scope.md`](../plan/v2.4-release-scope.md)（草案 · 未冻结）
-- 签字：[`v2.2-signoff.md`](v2.2-signoff.md) / `make v2.2-signoff`（v2.4 签字属 DX14）
+- [`../plan/v2.4-release-scope.md`](../plan/v2.4-release-scope.md)（已冻结）
+- 签字：[`v2.4-signoff.md`](v2.4-signoff.md) / `make v2.4-signoff`
