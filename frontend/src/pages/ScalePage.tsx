@@ -7,6 +7,7 @@ import { runMemoryMigration, sweepMemoryTTL } from "@/modules/memory/api/memory.
 import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getReadyz } from "@/modules/health/api/health.api";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
+import { getWakerQueue, getWakerStatus } from "@/modules/waker/api/waker.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const M3_CHECKS = [
@@ -55,6 +56,14 @@ export function ScalePage() {
     queryFn: getReadyz,
     refetchInterval: 30_000,
   });
+  const wakerStatusQuery = useQuery({
+    queryKey: ["waker", "status", activeSpaceId],
+    queryFn: () => getWakerStatus(activeSpaceId),
+  });
+  const wakerQueueQuery = useQuery({
+    queryKey: ["waker", "queue", activeSpaceId],
+    queryFn: () => getWakerQueue({ spaceId: activeSpaceId, limit: 5 }),
+  });
 
   const migrateMut = useMutation({
     mutationFn: () => runMemoryMigration({ dryRun: false }),
@@ -92,6 +101,9 @@ export function ScalePage() {
 
   const r = readinessQuery.data;
   const z = readyzQuery.data;
+  const wakerEnabledCount = wakerStatusQuery.data?.duties.filter((d) => d.enabled).length ?? 0;
+  const wakerQueueCount = wakerQueueQuery.data?.count ?? 0;
+  const wakerTicker = wakerStatusQuery.data?.interval;
 
   return (
     <section className="panel active">
@@ -272,6 +284,16 @@ export function ScalePage() {
                   : pluginHealthQuery.isLoading
                     ? "加载中"
                     : "-"}
+              </td>
+            </tr>
+            <tr>
+              <td>Waker</td>
+              <td>
+                {wakerStatusQuery.isLoading || wakerQueueQuery.isLoading
+                  ? "加载中"
+                  : wakerStatusQuery.isError || wakerQueueQuery.isError
+                    ? "—"
+                    : `duties enabled: ${wakerEnabledCount} · queue: ${wakerQueueCount}${wakerTicker ? ` · ticker ${wakerTicker}` : ""}`}
               </td>
             </tr>
             <tr>

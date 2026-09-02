@@ -37,6 +37,34 @@ vi.mock("@/modules/memory/api/memory.api", () => ({
   sweepMemoryTTL: vi.fn(),
 }));
 
+vi.mock("@/modules/waker/api/waker.api", () => ({
+  getWakerStatus: vi.fn().mockResolvedValue({
+    duties: [
+      {
+        id: "wd_stale",
+        spaceId: "local",
+        kind: "stale_run",
+        enabled: true,
+        intervalMs: 300000,
+        nextRunAt: "2026-09-02T12:00:00Z",
+      },
+      {
+        id: "wd_ttl",
+        spaceId: "local",
+        kind: "memory_ttl",
+        enabled: false,
+        intervalMs: 600000,
+        nextRunAt: "2026-09-02T12:00:00Z",
+      },
+    ],
+    recentRuns: [],
+    allowCancel: false,
+    interval: "5m",
+    intervalMs: 300000,
+  }),
+  getWakerQueue: vi.fn().mockResolvedValue({ items: [], count: 3 }),
+}));
+
 describe("ScalePage", () => {
   it("renders scale readiness heading and M3 checklist", async () => {
     renderPage(<ScalePage />);
@@ -52,6 +80,13 @@ describe("ScalePage", () => {
     await waitFor(() => {
       expect(screen.getByText("运行积压（inflight）")).toBeInTheDocument();
       expect(screen.getByText(/3（running 2 · waiting 1）/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows compact waker counts from status and queue", async () => {
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByText("duties enabled: 1 · queue: 3 · ticker 5m")).toBeInTheDocument();
     });
   });
 });
