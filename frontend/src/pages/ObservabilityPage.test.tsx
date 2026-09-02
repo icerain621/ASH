@@ -1,8 +1,9 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObservabilityPage } from "./ObservabilityPage";
 import { renderPage } from "@/test/renderPage";
 import { getPrometheusText, listAlertRules } from "@/modules/closure/api/closure.api";
+import { getWakerQueue, getWakerStatus } from "@/modules/waker/api/waker.api";
 
 vi.mock("@/modules/closure/api/closure.api", () => ({
   listAlerts: vi.fn().mockResolvedValue({ items: [] }),
@@ -30,6 +31,43 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
   }),
 }));
 
+vi.mock("@/modules/waker/api/waker.api", () => ({
+  getWakerStatus: vi.fn(),
+  getWakerQueue: vi.fn(),
+  listWakerDuties: vi.fn().mockResolvedValue({ duties: [] }),
+  postWakerSweep: vi.fn().mockResolvedValue({ ok: true, dryRun: true, action: "report" }),
+  postWakerDutyRun: vi.fn().mockResolvedValue({ ok: true, dryRun: true, action: "report" }),
+}));
+
+const wakerStatus = {
+  duties: [
+    {
+      id: "wd_stale",
+      spaceId: "local",
+      kind: "stale_run",
+      enabled: true,
+      intervalMs: 300000,
+      nextRunAt: "2026-09-02T12:00:00Z",
+    },
+  ],
+  recentRuns: [
+    {
+      id: "wdr_1",
+      dutyId: "wd_stale",
+      kind: "stale_run",
+      status: "ok",
+      matched: 2,
+      flagged: 1,
+      canceled: 0,
+      summary: "report pass",
+      startedAt: "2026-09-02T11:55:00Z",
+    },
+  ],
+  allowCancel: false,
+  interval: "5m",
+  intervalMs: 300000,
+};
+
 describe("ObservabilityPage", () => {
   beforeEach(() => {
     vi.mocked(listAlertRules).mockResolvedValue({
@@ -50,6 +88,11 @@ describe("ObservabilityPage", () => {
     vi.mocked(getPrometheusText).mockResolvedValue(
       '# HELP ash_run_inflight_live\nash_run_inflight_live{space_id="local"} 3\n',
     );
+    vi.mocked(getWakerStatus).mockResolvedValue(wakerStatus);
+    vi.mocked(getWakerQueue).mockResolvedValue({
+      items: [{ runId: "run_stale", spaceId: "local", status: "running", reason: "age exceeded", kind: "stale_run" }],
+      count: 1,
+    });
   });
 
   it("renders observability heading and evaluate alerts control", async () => {
@@ -69,5 +112,31 @@ describe("ObservabilityPage", () => {
       expect(screen.getByText("1 条")).toBeInTheDocument();
     });
     expect(screen.getByText(/ash_run_inflight_live/)).toBeInTheDocument();
+  });
+
+  it("renders Waker heading and duty kind", async () => {
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "Waker" })).toBeInTheDocument();
+      expect(screen.getAllByText("stale_run").length).toBeGreaterThanOrEqual(1);
+    });
+  });
+
+  it("notes that cancel requires ASH_WAKER_ALLOW_CANCEL when gated off", async () => {
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByText(/ASH_WAKER_ALLOW_CANCEL=1/)).toBeInTheDocument();
+    });
+    expect(screen.queryByRole("button", { name: /Cancel stale/i })).not.toBeInTheDocument();
+  });
+
+  it("enables Cancel stale only after exact CANCEL_STALE_RUNS confirm", async () => {
+    vi.mocked(getWakerStatus).mockResolvedValue({ ...wakerStatus, allowCancel: true });
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /Cancel stale/i })).toBeDisabled();
+    });
+    fireEvent.change(screen.getByPlaceholderText("CANCEL_STALE_RUNS"), { target: { value: "CANCEL_STALE_RUNS" } });
+    expect(screen.getByRole("button", { name: /Cancel stale/i })).toBeEnabled();
   });
 });

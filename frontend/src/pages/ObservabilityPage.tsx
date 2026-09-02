@@ -13,6 +13,12 @@ import {
 import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getOtelStatus, getRagProfile } from "@/modules/observability/api/observability.api";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
+import {
+  getWakerQueue,
+  getWakerStatus,
+  postWakerDutyRun,
+  postWakerSweep,
+} from "@/modules/waker/api/waker.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const GOVERNANCE_METRIC_HINTS: Record<string, string> = {
@@ -32,6 +38,8 @@ export function ObservabilityPage() {
   const qc = useQueryClient();
   const activeSpaceId = getCurrentSpaceId();
   const [traceId, setTraceId] = useState("");
+  const [cancelConfirm, setCancelConfirm] = useState("");
+  const [selectedDutyId, setSelectedDutyId] = useState("");
   const alertsQuery = useQuery({ queryKey: ["observability-alerts", "active"], queryFn: () => listAlerts({ status: "active", limit: 100 }) });
   const rulesQuery = useQuery({ queryKey: ["observability-rules"], queryFn: listAlertRules });
   const metricsQuery = useQuery({
@@ -54,6 +62,14 @@ export function ObservabilityPage() {
     queryKey: ["plugin-health", activeSpaceId],
     queryFn: getPluginHealth,
   });
+  const wakerStatusQuery = useQuery({
+    queryKey: ["waker", "status", activeSpaceId],
+    queryFn: () => getWakerStatus(activeSpaceId),
+  });
+  const wakerQueueQuery = useQuery({
+    queryKey: ["waker", "queue", activeSpaceId],
+    queryFn: () => getWakerQueue({ spaceId: activeSpaceId, limit: 10 }),
+  });
   const otelExporter = pluginHealthQuery.data?.items.find((p) => p.id === "ash-otel-exporter");
   const traceQuery = useQuery({
     queryKey: ["trace", traceId],
@@ -71,6 +87,18 @@ export function ObservabilityPage() {
     mutationFn: (items: AlertRule[]) => putAlertRules(items),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["observability-rules"] }),
   });
+  const sweepMut = useMutation({
+    mutationFn: postWakerSweep,
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["waker"] }),
+  });
+  const dutyRunMut = useMutation({
+    mutationFn: ({ id, dryRun }: { id: string; dryRun?: boolean }) => postWakerDutyRun(id, { dryRun: dryRun ?? true }),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["waker"] }),
+  });
+  const wakerDuties = wakerStatusQuery.data?.duties ?? [];
+  const selectedDuty = wakerDuties.find((d) => d.id === selectedDutyId) ?? wakerDuties.find((d) => d.enabled) ?? wakerDuties[0];
+  const allowCancel = Boolean(wakerStatusQuery.data?.allowCancel);
+  const wakerBusy = sweepMut.isPending || dutyRunMut.isPending;
 
   function toggleRule(rule: AlertRule) {
     rulesMut.mutate([{ ...rule, enabled: !rule.enabled }]);
@@ -103,6 +131,8 @@ export function ObservabilityPage() {
               ragQuery.refetch();
               scaleQuery.refetch();
               pluginHealthQuery.refetch();
+              wakerStatusQuery.refetch();
+              wakerQueueQuery.refetch();
             }}
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
@@ -111,9 +141,9 @@ export function ObservabilityPage() {
         </div>
       </div>
 
-      {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error) && (
+      {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || wakerStatusQuery.error || wakerQueueQuery.error || evaluateMut.error || rulesMut.error || sweepMut.error || dutyRunMut.error || traceQuery.error) && (
         <p className="error-text">
-          {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || evaluateMut.error || rulesMut.error || traceQuery.error as Error)?.message}
+          {(alertsQuery.error || rulesQuery.error || metricsQuery.error || otelQuery.error || ragQuery.error || wakerStatusQuery.error || wakerQueueQuery.error || evaluateMut.error || rulesMut.error || sweepMut.error || dutyRunMut.error || traceQuery.error as Error)?.message}
         </p>
       )}
 
@@ -209,6 +239,162 @@ export function ObservabilityPage() {
           </tbody>
         </table>
       </div>
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>Waker</h2>
+          <span>
+            {wakerStatusQuery.data?.interval
+              ? `ticker ${wakerStatusQuery.data.interval}`
+              : wakerStatusQuery.isFetching
+                ? "loading"
+                : `${wakerDuties.filter((d) => d.enabled).length} enabled`}
+          </span>
+        </div>
+        <div className="toolbar metrics-toolbar">
+          <button
+            className="btn icon-btn"
+            onClick={() => {
+              wakerStatusQuery.refetch();
+              wakerQueueQuery.refetch();
+            }}
+          >
+            <RefreshCcw size={16} strokeWidth={1.8} />
+            刷新
+          </button>
+          <button
+            className="btn icon-btn"
+            onClick={() => sweepMut.mutate({ dryRun: true, action: "report", spaceId: activeSpaceId })}
+            disabled={wakerBusy}
+          >
+            Dry-run sweep
+          </button>
+          <button
+            className="btn icon-btn"
+            onClick={() => {
+              if (selectedDuty) dutyRunMut.mutate({ id: selectedDuty.id, dryRun: true });
+            }}
+            disabled={!selectedDuty || wakerBusy}
+          >
+            Run duty dry-run
+          </button>
+        </div>
+        {allowCancel ? (
+          <form
+            className="inline-form"
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (cancelConfirm !== "CANCEL_STALE_RUNS") return;
+              sweepMut.mutate({ action: "cancel", dryRun: false, confirm: "CANCEL_STALE_RUNS", spaceId: activeSpaceId });
+            }}
+          >
+            <input
+              placeholder="CANCEL_STALE_RUNS"
+              value={cancelConfirm}
+              onChange={(event) => setCancelConfirm(event.target.value)}
+            />
+            <button className="btn err icon-btn" type="submit" disabled={cancelConfirm !== "CANCEL_STALE_RUNS" || wakerBusy}>
+              Cancel stale
+            </button>
+          </form>
+        ) : (
+          <p>Cancel 需设置 ASH_WAKER_ALLOW_CANCEL=1</p>
+        )}
+        {(sweepMut.data || dutyRunMut.data) && (
+          <p>{(sweepMut.data ?? dutyRunMut.data)?.summary || (sweepMut.data ?? dutyRunMut.data)?.action || "ok"}</p>
+        )}
+        <table className="table">
+          <thead>
+            <tr>
+              <th>kind</th>
+              <th>enabled</th>
+              <th>nextRunAt</th>
+            </tr>
+          </thead>
+          <tbody>
+            {wakerDuties.length === 0 && (
+              <tr className="empty-row">
+                <td colSpan={3}>当前空间没有 waker duty。</td>
+              </tr>
+            )}
+            {wakerDuties.map((duty) => (
+              <tr key={duty.id} onClick={() => setSelectedDutyId(duty.id)}>
+                <td>
+                  {duty.kind}
+                  {selectedDuty?.id === duty.id ? " · selected" : ""}
+                </td>
+                <td>{duty.enabled ? "on" : "off"}</td>
+                <td>{duty.nextRunAt || "-"}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="split ops-split">
+        <div className="pane">
+          <div className="pane-title">
+            <h2>Recent duty runs</h2>
+            <span>{wakerStatusQuery.data?.recentRuns.length ?? 0} runs</span>
+          </div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>kind</th>
+                <th>status</th>
+                <th>matched / flagged</th>
+                <th>summary</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(wakerStatusQuery.data?.recentRuns ?? []).length === 0 && (
+                <tr className="empty-row">
+                  <td colSpan={4}>暂无 duty run 记录。</td>
+                </tr>
+              )}
+              {(wakerStatusQuery.data?.recentRuns ?? []).map((run) => (
+                <tr key={run.id}>
+                  <td>{run.kind}</td>
+                  <td>
+                    <StatusPill value={run.status} />
+                  </td>
+                  <td>
+                    {run.matched} / {run.flagged}
+                  </td>
+                  <td title={run.summary}>{truncateText(run.summary)}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div className="pane">
+          <div className="pane-title">
+            <h2>Queue</h2>
+            <span>{wakerQueueQuery.data?.count ?? 0} items</span>
+          </div>
+          <table className="table">
+            <thead>
+              <tr>
+                <th>reason</th>
+                <th>kind</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(wakerQueueQuery.data?.items ?? []).slice(0, 10).length === 0 && (
+                <tr className="empty-row">
+                  <td colSpan={2}>队列为空。</td>
+                </tr>
+              )}
+              {(wakerQueueQuery.data?.items ?? []).slice(0, 10).map((item) => (
+                <tr key={item.runId}>
+                  <td>{item.reason || "-"}</td>
+                  <td>{item.kind || "-"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="pane">
@@ -398,6 +584,12 @@ export function ObservabilityPage() {
       </div>
     </section>
   );
+}
+
+function truncateText(value: string, max = 80) {
+  const text = (value || "").trim();
+  if (!text) return "-";
+  return text.length > max ? `${text.slice(0, max)}…` : text;
 }
 
 function StatusPill({ value }: { value: string }) {
