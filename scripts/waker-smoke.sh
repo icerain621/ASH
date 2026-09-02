@@ -9,7 +9,7 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 echo "== waker package + API tests =="
-go test ./internal/waker/ ./internal/api/ -count=1 -run 'TestWaker|TestEnsure|TestRunDue|TestQueue'
+go test ./internal/waker/ ./internal/api/ -count=1 -run 'TestWaker|TestEnsure|TestRunDue|TestQueue|TestRunDoctor|TestRunKPI|TestParse|TestStatusDoesNot'
 
 BASE="${ASH_WORKER_URL:-}"
 if [[ -n "$BASE" ]]; then

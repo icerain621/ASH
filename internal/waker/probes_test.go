@@ -76,7 +76,7 @@ func TestRunDoctorSubsetFlagsFailures(t *testing.T) {
 
 func TestRunDoctorSubsetUnavailable(t *testing.T) {
 	db := openTestDB(t)
-	svc := NewService(db)
+	svc := NewService(db).WithDoctorRunner(nil)
 	duty := store.WakerDuty{ID: "wd_d2", SpaceID: "local", Kind: KindDoctorSubset, ConfigJSON: `{}`}
 	_, err := svc.runDoctorSubset(duty, false)
 	if !errorsIsDoctorUnavailable(err) {

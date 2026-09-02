@@ -40,6 +40,13 @@ type DoctorRunner interface {
 // KPIBacklogFunc returns KPI-17 style backlog count for a space (test hook / override).
 type KPIBacklogFunc func(spaceID string) (int64, error)
 
+var defaultDoctorRunner DoctorRunner
+
+// SetDefaultDoctorRunner sets the DoctorRunner used by NewService / StartBackground.
+func SetDefaultDoctorRunner(r DoctorRunner) {
+	defaultDoctorRunner = r
+}
+
 func errorsIsDoctorUnavailable(err error) bool {
 	return errors.Is(err, ErrDoctorUnavailable)
 }

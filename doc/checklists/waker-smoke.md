@@ -1,11 +1,11 @@
-# Waker 烟测（Sprint DX6 / DX12）
+# Waker 烟测（Sprint DX6 / DX12 / DX13）
 
 ```bash
 make waker-smoke
 # 可选：ASH_WORKER_URL=http://127.0.0.1:8080 make waker-smoke
 ```
 
-包测覆盖 queue/sweep、`EnsureStaleRunDuty`、`RunDueDuties`、`/waker/status` 与 duties。进程内断言已足够；设 `ASH_WORKER_URL` 时额外 curl queue 与 status。
+包测覆盖 queue/sweep、duties/status、`doctor_subset` / `kpi_drift` 探针（方案 A：不自动 seed）与 queue 发现项合并。设 `ASH_WORKER_URL` 时额外 curl queue 与 status。
 
 | 变量 | 说明 |
 |------|------|
@@ -25,7 +25,13 @@ curl -s -X POST "$ASH_WORKER_URL/api/v1/waker/duties/${DUTY_ID}/run" \
   -d '{"dryRun":true}'
 ```
 
-`doctor_subset` / `kpi_drift` 探针属 **DX13**；本烟测不要求执行。
+## Probes（DX13 · 方案 A）
+
+- **不**在 Status/Worker 启动时自动 seed `doctor_subset` / `kpi_drift`
+- 显式 `EnsureDoctorSubsetDuty` / `EnsureKPIDriftDuty`（或测试）后，`RunDueDuties` / `RunDuty` 可执行
+- 默认：`doctor_subset` → suite `M4`；`kpi_drift` → `KPI-17` threshold `50`
+- Worker/`NewHandler` 注入 `DoctorRunner`；无 runner 时 doctor duty → `skipped`
+- `GET /waker/queue` 合并近期 `flagged>0` 的 probe duty_run 摘要 token
 
 ## Cancel（DX7）
 
@@ -42,6 +48,7 @@ curl -s -X POST "$ASH_WORKER_URL/api/v1/waker/sweep" \
 
 - [`../plan/sprint-dx6-waker.md`](../plan/sprint-dx6-waker.md)
 - [`../plan/sprint-dx12-waker-duties.md`](../plan/sprint-dx12-waker-duties.md)
+- [`../plan/sprint-dx13-waker-probes.md`](../plan/sprint-dx13-waker-probes.md)
 - [`../plan/v2.2-release-scope.md`](../plan/v2.2-release-scope.md)（已冻结）
 - [`../plan/v2.4-release-scope.md`](../plan/v2.4-release-scope.md)（草案 · 未冻结）
 - 签字：[`v2.2-signoff.md`](v2.2-signoff.md) / `make v2.2-signoff`（v2.4 签字属 DX14）

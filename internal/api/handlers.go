@@ -103,6 +103,11 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		session:    sessionSvc,
 		waker:      waker.NewService(db),
 	}
+	if h.doctor != nil {
+		adapter := doctorWakerAdapter{svc: h.doctor}
+		h.waker = h.waker.WithDoctorRunner(adapter)
+		waker.SetDefaultDoctorRunner(adapter)
+	}
 	return h
 }
 

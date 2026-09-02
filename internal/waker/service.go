@@ -82,7 +82,7 @@ type Service struct {
 }
 
 func NewService(db *store.DB) *Service {
-	return &Service{db: db}
+	return &Service{db: db, doctor: defaultDoctorRunner}
 }
 
 func (s *Service) WithContext(ctx context.Context) *Service {
