@@ -75,8 +75,10 @@ type SweepResponse struct {
 
 // Service inspects long-lived non-terminal runs (Sprint DX6/DX7).
 type Service struct {
-	db  *store.DB
-	ctx context.Context
+	db         *store.DB
+	ctx        context.Context
+	doctor     DoctorRunner
+	kpiBacklog KPIBacklogFunc
 }
 
 func NewService(db *store.DB) *Service {
