@@ -28,6 +28,16 @@ func TestRebuildSymbolsUpsertsAndCleansStale(t *testing.T) {
 	if resp.Paths < 2 || resp.Symbols < 2 {
 		t.Fatalf("resp=%+v", resp)
 	}
+	if resp.SymbolSource != "regex" {
+		t.Fatalf("SymbolSource=%q want regex", resp.SymbolSource)
+	}
+	var sym store.RAGSymbol
+	if err := db.Where("space_id = ? AND name = ?", "s1", "Alpha").First(&sym).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sym.Source != "regex" {
+		t.Fatalf("sym.Source=%q want regex", sym.Source)
+	}
 	_ = os.Remove(filepath.Join(repo, "b.go"))
 	resp2, err := svc.RebuildSymbols(RebuildSymbolsRequest{RepoRoot: repo, SpaceID: "s1"})
 	if err != nil {

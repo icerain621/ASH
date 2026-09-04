@@ -17,9 +17,10 @@ type RebuildSymbolsRequest struct {
 }
 
 type RebuildSymbolsResponse struct {
-	Paths   int `json:"paths"`
-	Symbols int `json:"symbols"`
-	Files   int `json:"files"`
+	Paths        int    `json:"paths"`
+	Symbols      int    `json:"symbols"`
+	Files        int    `json:"files"`
+	SymbolSource string `json:"symbolSource"`
 }
 
 func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResponse, error) {
@@ -30,7 +31,9 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 	space := firstNonEmpty(req.SpaceID, "local")
 
 	seenPaths := make(map[string]bool)
-	resp := &RebuildSymbolsResponse{}
+	indexer := ResolveSymbolIndexer()
+	regexFallback := RegexIndexer{}
+	resp := &RebuildSymbolsResponse{SymbolSource: indexer.Name()}
 	now := time.Now().UTC()
 
 	err = filepath.WalkDir(abs, func(path string, d os.DirEntry, walkErr error) error {
@@ -91,14 +94,21 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 			return err
 		}
 
-		for i, line := range splitLines(string(b)) {
-			name, kind := matchSymbolLine(line)
-			if name == "" {
-				continue
+		source := indexer.Name()
+		hits, err := indexer.IndexFile(path, b)
+		if err != nil {
+			source = regexFallback.Name()
+			hits, err = regexFallback.IndexFile(path, b)
+			if err != nil {
+				return err
 			}
+			resp.SymbolSource = source
+		}
+		for _, hit := range hits {
 			sym := store.RAGSymbol{
 				ID: "ragsym_" + uuid.NewString(), SpaceID: space, RepoRoot: abs, Path: rel,
-				Name: name, Kind: kind, Line: i + 1, Digest: digest, CreatedAt: now, UpdatedAt: now,
+				Name: hit.Name, Kind: hit.Kind, Line: hit.Line, Source: source, Digest: digest,
+				CreatedAt: now, UpdatedAt: now,
 			}
 			if err := s.gdb().Create(&sym).Error; err != nil {
 				return err
