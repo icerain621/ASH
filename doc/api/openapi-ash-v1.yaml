@@ -2806,6 +2806,10 @@ components:
         paths: { type: integer }
         symbols: { type: integer }
         files: { type: integer }
+        symbolSource:
+          type: string
+          enum: [regex, ctags]
+          description: Indexer used for symbol extraction; `regex` if any file fell back from ctags.
     RAGQueryRequest:
       type: object
       required: [text]

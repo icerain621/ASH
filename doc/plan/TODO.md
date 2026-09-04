@@ -53,7 +53,7 @@
 | DX13 | Multi-duty probes（v2.4） | `doctor_subset` + `kpi_drift` → queue + duty_run | ✅ |
 | DX14 | 控制台 + v2.4 冻结 | Observability/Scale Waker 面板；`make v2.4-signoff`；tag 人工 | ✅ |
 | DX15 | Waker probe 自动 seed（v2.5 草案） | seed doctor/kpi（默认 disabled）；enable API + UI；`ASH_WAKER_ENABLE_PROBES`；无新表 | ✅ |
-| DX16 | ctags 符号索引（v2.5 草案） | `SymbolIndexer` + `rag_symbols.source`；SQL 30 | ⏸ |
+| DX16 | ctags 符号索引（v2.5 草案） | `SymbolIndexer` + `rag_symbols.source`；SQL 30 | ✅ |
 | DX17 | Vector POC（v2.5） | Qdrant + stub embedder；`rag_vector_refs`；SQL 31 / RLS 52 | ⏸ |
 | DX18 | Landlock 沙箱 POC（v2.5） | Linux executor；M4-SBX-04；`ASH_SANDBOX_LANDLOCK` | ⏸ |
 | 详排 | — | v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（草案）；设计 [`docs/superpowers/specs/2026-09-03-v25-dx15-dx18-design.md`](../superpowers/specs/2026-09-03-v25-dx15-dx18-design.md) | — |

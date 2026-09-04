@@ -9171,6 +9171,9 @@ const docTemplate = `{
                 "paths": {
                     "type": "integer"
                 },
+                "symbolSource": {
+                    "type": "string"
+                },
                 "symbols": {
                     "type": "integer"
                 }

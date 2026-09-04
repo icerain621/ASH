@@ -264,4 +264,5 @@ var Catalog = map[string]Entry{
 	"WAKER_STATUS_FAILED":    {Domain: "waker", Summary: "Failed to load waker duty status"},
 	"WAKER_DUTIES_FAILED":    {Domain: "waker", Summary: "Failed to list waker duties"},
 	"WAKER_DUTY_RUN_FAILED":  {Domain: "waker", Summary: "Failed to run a waker duty"},
+	"WAKER_DUTY_ENABLE_FAILED": {Domain: "waker", Summary: "Failed to enable or disable a waker duty"},
 }
