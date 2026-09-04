@@ -1,0 +1,1 @@
+ALTER TABLE rag_symbols DROP COLUMN IF EXISTS source;

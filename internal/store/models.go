@@ -271,6 +271,7 @@ type RAGSymbol struct {
 	Path      string    `gorm:"size:1024;not null;index:idx_rag_sym_space_root_path"`
 	Name      string    `gorm:"size:256;not null;index:idx_rag_sym_space_root_name"`
 	Kind      string    `gorm:"size:32;not null;default:unknown"`
+	Source    string    `gorm:"size:32;not null;default:regex"`
 	Line      int       `gorm:"not null;default:1"`
 	Digest    string    `gorm:"size:128;not null;index"`
 	UpdatedAt time.Time
