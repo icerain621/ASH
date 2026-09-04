@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX15（v2.5 草案）：Waker probe 自动 seed — `SeedProbeDuties` 在 Status/Background 默认创建 `doctor_subset` / `kpi_drift`（**disabled**）；`POST /waker/duties/{id}/enable`；`ASH_WAKER_ENABLE_PROBES=1` 新建即启用；Observability duty 切换；`probesAvailable` / `alertCount`；修复 GORM `enabled=false` 落库；**无新表**。
 - Sprint DX14（v2.4）：Waker 控制台 + 范围冻结 — Observability Waker 运维面板（duties/queue/recent runs、dry-run sweep、gated cancel）；Scale 页紧凑计数；`v2.4-release-scope` **已冻结**；`make v2.4-signoff`（含 `waker-smoke`）；清单/签字模板；**不自动**打 `v2.4.0` tag。
 - Sprint DX13（v2.4 草案）：Waker 多职责探针（方案 A）— 可选 `doctor_subset`（默认 M4）与 `kpi_drift`（KPI-17 / threshold 50）；`RunDueDuties`/`RunDuty` 执行；queue 合并发现项；`DoctorRunner` 注入；**不**自动 seed；无新表；UI/`v2.4-signoff` 属 DX14。
 - Sprint DX12（v2.4 草案）：Waker duties 账本 — 表 `waker_duties` / `waker_duty_runs`（SQL **29** / RLS **50**）；默认 ensure `stale_run`；ticker 读 ledger 只 report/flag；`GET /waker/status` · duties 列表/手动 run；`make waker-smoke` 扩展；范围草案 `v2.4-release-scope.md`（**未冻结**）；**不自动**打 `v2.4.0` tag。

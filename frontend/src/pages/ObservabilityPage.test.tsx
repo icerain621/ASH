@@ -37,6 +37,7 @@ vi.mock("@/modules/waker/api/waker.api", () => ({
   listWakerDuties: vi.fn().mockResolvedValue({ duties: [] }),
   postWakerSweep: vi.fn().mockResolvedValue({ ok: true, dryRun: true, action: "report" }),
   postWakerDutyRun: vi.fn().mockResolvedValue({ ok: true, dryRun: true, action: "report" }),
+  postWakerDutyEnable: vi.fn().mockResolvedValue({ id: "wd_doctor", kind: "doctor_subset", enabled: true }),
 }));
 
 const wakerStatus = {
@@ -66,6 +67,8 @@ const wakerStatus = {
   allowCancel: false,
   interval: "5m",
   intervalMs: 300000,
+  probesAvailable: true,
+  alertCount: 0,
 };
 
 describe("ObservabilityPage", () => {

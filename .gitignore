@@ -21,3 +21,4 @@ git-init-report.txt
 shell-test*.txt
 doctor-tr0.md
 *.log
+.worktrees/

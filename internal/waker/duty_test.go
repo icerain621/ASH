@@ -216,10 +216,89 @@ func TestQueueIncludesDoctorFindings(t *testing.T) {
 	}
 }
 
-func TestStatusDoesNotAutoSeedDoctorOrKPI(t *testing.T) {
+func TestStatusAutoSeedsProbesDisabled(t *testing.T) {
+	t.Setenv("ASH_WAKER_ENABLE_PROBES", "")
 	db := openTestDB(t)
 	svc := NewService(db)
+	st, err := svc.Status("local", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !st.ProbesAvailable {
+		t.Fatal("want probesAvailable after Status seed")
+	}
+	list, err := svc.ListDuties("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doctor, kpi store.WakerDuty
+	for _, d := range list {
+		switch d.Kind {
+		case KindDoctorSubset:
+			doctor = d
+		case KindKPIDrift:
+			kpi = d
+		}
+	}
+	if doctor.ID == "" || kpi.ID == "" {
+		t.Fatalf("want seeded probe duties: %+v", list)
+	}
+	if doctor.Enabled || kpi.Enabled {
+		t.Fatalf("seeded probes must be disabled by default: doctor=%v kpi=%v", doctor.Enabled, kpi.Enabled)
+	}
+	// Second Status must not flip enabled after explicit enable.
+	if _, err := svc.SetDutyEnabled(doctor.ID, true); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := svc.Status("local", 5); err != nil {
+		t.Fatal(err)
+	}
+	list2, err := svc.ListDuties("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, d := range list2 {
+		if d.Kind == KindDoctorSubset && !d.Enabled {
+			t.Fatal("Status re-seed must not disable an enabled probe duty")
+		}
+	}
+}
+
+func TestSetDutyEnabled(t *testing.T) {
+	t.Setenv("ASH_WAKER_ENABLE_PROBES", "")
+	db := openTestDB(t)
+	svc := NewService(db)
+	if err := svc.SeedProbeDuties("local"); err != nil {
+		t.Fatal(err)
+	}
+	list, err := svc.ListDuties("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	var doctorID string
+	for _, d := range list {
+		if d.Kind == KindDoctorSubset {
+			doctorID = d.ID
+		}
+	}
+	if doctorID == "" {
+		t.Fatal("missing doctor duty")
+	}
+	duty, err := svc.SetDutyEnabled(doctorID, true)
+	if err != nil || !duty.Enabled {
+		t.Fatalf("enable: %+v err=%v", duty, err)
+	}
+	duty, err = svc.SetDutyEnabled(doctorID, false)
+	if err != nil || duty.Enabled {
+		t.Fatalf("disable: %+v err=%v", duty, err)
+	}
+}
+
+func TestProbesEnabledOnBoot(t *testing.T) {
+	t.Setenv("ASH_WAKER_ENABLE_PROBES", "1")
+	db := openTestDB(t)
+	svc := NewService(db)
+	if err := svc.SeedProbeDuties("local"); err != nil {
 		t.Fatal(err)
 	}
 	list, err := svc.ListDuties("local")
@@ -227,8 +306,8 @@ func TestStatusDoesNotAutoSeedDoctorOrKPI(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, d := range list {
-		if d.Kind == KindDoctorSubset || d.Kind == KindKPIDrift {
-			t.Fatalf("must not auto-seed probe duty: %+v", d)
+		if (d.Kind == KindDoctorSubset || d.Kind == KindKPIDrift) && !d.Enabled {
+			t.Fatalf("want probes enabled on create when env set: %+v", d)
 		}
 	}
 }

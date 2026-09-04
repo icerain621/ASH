@@ -29,11 +29,13 @@ var ErrUnsupportedDutyKind = errors.New("unsupported duty kind")
 
 // StatusResponse is GET /waker/status.
 type StatusResponse struct {
-	Duties      []DutyStatusView `json:"duties"`
-	RecentRuns  []DutyRunView    `json:"recentRuns"`
-	AllowCancel bool             `json:"allowCancel"`
-	Interval    string           `json:"interval,omitempty"`
-	IntervalMs  int64            `json:"intervalMs,omitempty"`
+	Duties          []DutyStatusView `json:"duties"`
+	RecentRuns      []DutyRunView    `json:"recentRuns"`
+	AllowCancel     bool             `json:"allowCancel"`
+	Interval        string           `json:"interval,omitempty"`
+	IntervalMs      int64            `json:"intervalMs,omitempty"`
+	ProbesAvailable bool             `json:"probesAvailable"`
+	AlertCount      int              `json:"alertCount"`
 }
 
 // DutyStatusView is one enabled/scheduled duty in Status.
@@ -127,7 +129,8 @@ func (s *Service) EnsureStaleRunDuty(spaceID string) (store.WakerDuty, error) {
 		CreatedAt:  now,
 		UpdatedAt:  now,
 	}
-	if err := s.q().Create(&duty).Error; err != nil {
+	if err := s.q().Select("ID", "SpaceID", "Kind", "Enabled", "IntervalMs", "ConfigJSON", "NextRunAt", "CreatedAt", "UpdatedAt").
+		Create(&duty).Error; err != nil {
 		var raced store.WakerDuty
 		if findErr := s.q().Where("space_id = ? AND kind = ?", spaceID, KindStaleRun).First(&raced).Error; findErr == nil {
 			return raced, nil
@@ -137,17 +140,58 @@ func (s *Service) EnsureStaleRunDuty(spaceID string) (store.WakerDuty, error) {
 	return duty, nil
 }
 
-// EnsureDoctorSubsetDuty upserts (space_id, kind=doctor_subset). Does not auto-run from Status.
+// ProbesEnabledOnBoot reports ASH_WAKER_ENABLE_PROBES=1 (seed probe duties enabled on create).
+func ProbesEnabledOnBoot() bool {
+	return os.Getenv("ASH_WAKER_ENABLE_PROBES") == "1"
+}
+
+// EnsureDoctorSubsetDuty upserts (space_id, kind=doctor_subset) and sets enabled.
 func (s *Service) EnsureDoctorSubsetDuty(spaceID string, enabled bool) (store.WakerDuty, error) {
-	return s.ensureProbeDuty(spaceID, KindDoctorSubset, `{"suite":"M4"}`, enabled)
+	return s.ensureProbeDuty(spaceID, KindDoctorSubset, `{"suite":"M4"}`, enabled, true)
 }
 
-// EnsureKPIDriftDuty upserts (space_id, kind=kpi_drift). Does not auto-run from Status.
+// EnsureKPIDriftDuty upserts (space_id, kind=kpi_drift) and sets enabled.
 func (s *Service) EnsureKPIDriftDuty(spaceID string, enabled bool) (store.WakerDuty, error) {
-	return s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabled)
+	return s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabled, true)
 }
 
-func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled bool) (store.WakerDuty, error) {
+// SeedProbeDuties ensures probe duty rows exist without changing enabled on existing rows (DX15).
+func (s *Service) SeedProbeDuties(spaceID string) error {
+	enabledOnCreate := ProbesEnabledOnBoot()
+	if _, err := s.ensureProbeDuty(spaceID, KindDoctorSubset, `{"suite":"M4"}`, enabledOnCreate, false); err != nil {
+		return err
+	}
+	if _, err := s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabledOnCreate, false); err != nil {
+		return err
+	}
+	return nil
+}
+
+// SetDutyEnabled toggles enabled for one duty by id.
+func (s *Service) SetDutyEnabled(dutyID string, enabled bool) (store.WakerDuty, error) {
+	if s.q() == nil {
+		return store.WakerDuty{}, fmt.Errorf("database unavailable")
+	}
+	dutyID = strings.TrimSpace(dutyID)
+	var duty store.WakerDuty
+	if err := s.q().First(&duty, "id = ?", dutyID).Error; err != nil {
+		return store.WakerDuty{}, err
+	}
+	if duty.Enabled == enabled {
+		return duty, nil
+	}
+	now := time.Now().UTC()
+	if err := s.q().Model(&store.WakerDuty{}).Where("id = ?", dutyID).
+		Updates(map[string]any{"enabled": enabled, "updated_at": now}).Error; err != nil {
+		return store.WakerDuty{}, err
+	}
+	duty.Enabled = enabled
+	duty.UpdatedAt = now
+	return duty, nil
+}
+
+// touchEnabled: when true, update enabled on existing rows (explicit Ensure* / enable API).
+func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled, touchEnabled bool) (store.WakerDuty, error) {
 	if s.q() == nil {
 		return store.WakerDuty{}, fmt.Errorf("database unavailable")
 	}
@@ -155,15 +199,21 @@ func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled b
 	var existing store.WakerDuty
 	err := s.q().Where("space_id = ? AND kind = ?", spaceID, kind).First(&existing).Error
 	if err == nil {
-		updates := map[string]any{"enabled": enabled, "updated_at": time.Now().UTC()}
+		updates := map[string]any{}
+		if touchEnabled {
+			updates["enabled"] = enabled
+			existing.Enabled = enabled
+		}
 		if existing.IntervalMs < minDutyIntervalMs {
 			updates["interval_ms"] = minDutyIntervalMs
 			existing.IntervalMs = minDutyIntervalMs
 		}
-		if saveErr := s.q().Model(&store.WakerDuty{}).Where("id = ?", existing.ID).Updates(updates).Error; saveErr != nil {
-			return store.WakerDuty{}, saveErr
+		if len(updates) > 0 {
+			updates["updated_at"] = time.Now().UTC()
+			if saveErr := s.q().Model(&store.WakerDuty{}).Where("id = ?", existing.ID).Updates(updates).Error; saveErr != nil {
+				return store.WakerDuty{}, saveErr
+			}
 		}
-		existing.Enabled = enabled
 		return existing, nil
 	}
 	if !errors.Is(err, gorm.ErrRecordNotFound) {
@@ -175,14 +225,34 @@ func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled b
 		IntervalMs: defaultIntervalMs(), ConfigJSON: defaultConfig,
 		NextRunAt: now, CreatedAt: now, UpdatedAt: now,
 	}
-	if err := s.q().Create(&duty).Error; err != nil {
+	if err := s.q().Select("ID", "SpaceID", "Kind", "Enabled", "IntervalMs", "ConfigJSON", "NextRunAt", "CreatedAt", "UpdatedAt").
+		Create(&duty).Error; err != nil {
 		var raced store.WakerDuty
 		if findErr := s.q().Where("space_id = ? AND kind = ?", spaceID, kind).First(&raced).Error; findErr == nil {
 			return raced, nil
 		}
 		return store.WakerDuty{}, err
 	}
+	if duty.Enabled != enabled {
+		if err := s.q().Model(&store.WakerDuty{}).Where("id = ?", duty.ID).Update("enabled", enabled).Error; err != nil {
+			return store.WakerDuty{}, err
+		}
+		duty.Enabled = enabled
+	}
 	return duty, nil
+}
+
+func probesAvailable(duties []store.WakerDuty) bool {
+	hasDoctor, hasKPI := false, false
+	for _, d := range duties {
+		switch d.Kind {
+		case KindDoctorSubset:
+			hasDoctor = true
+		case KindKPIDrift:
+			hasKPI = true
+		}
+	}
+	return hasDoctor && hasKPI
 }
 
 // ListDuties returns duties for a space.
@@ -198,9 +268,12 @@ func (s *Service) ListDuties(spaceID string) ([]store.WakerDuty, error) {
 	return duties, nil
 }
 
-// Status ensures the stale_run duty and returns duties, recent runs, and ticker hints.
+// Status ensures duties for the space and returns duties, recent runs, and ticker hints.
 func (s *Service) Status(spaceID string, recent int) (StatusResponse, error) {
 	if _, err := s.EnsureStaleRunDuty(spaceID); err != nil {
+		return StatusResponse{}, err
+	}
+	if err := s.SeedProbeDuties(spaceID); err != nil {
 		return StatusResponse{}, err
 	}
 	duties, err := s.ListDuties(spaceID)
@@ -244,11 +317,21 @@ func (s *Service) Status(spaceID string, recent int) (StatusResponse, error) {
 	} else if raw == "" {
 		intervalHint = "off"
 	}
+	alertCount := 0
+	if q, qErr := s.Queue(spaceID, "", 50); qErr == nil {
+		for _, it := range q.Items {
+			if it.Kind == KindDoctorSubset || it.Kind == KindKPIDrift {
+				alertCount++
+			}
+		}
+	}
 	return StatusResponse{
 		Duties: views, RecentRuns: runViews,
 		AllowCancel: AllowCancel(),
 		Interval:    intervalHint,
 		IntervalMs:  intervalMs,
+		ProbesAvailable: probesAvailable(duties),
+		AlertCount:      alertCount,
 	}, nil
 }
 

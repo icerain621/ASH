@@ -345,12 +345,18 @@ func StartBackground(db *store.DB, interval time.Duration) context.CancelFunc {
 			if _, err := svc.EnsureStaleRunDuty("local"); err != nil {
 				log.Printf("waker: ensure: %v", err)
 			}
+			if err := svc.SeedProbeDuties("local"); err != nil {
+				log.Printf("waker: seed probes local: %v", err)
+			}
 			for _, space := range svc.knownSpaces() {
 				if space == "" || space == "local" {
 					continue
 				}
 				if _, err := svc.EnsureStaleRunDuty(space); err != nil {
 					log.Printf("waker: ensure %s: %v", space, err)
+				}
+				if err := svc.SeedProbeDuties(space); err != nil {
+					log.Printf("waker: seed probes %s: %v", space, err)
 				}
 			}
 			n, err := svc.RunDueDuties(time.Now().UTC())

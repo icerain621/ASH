@@ -6334,6 +6334,58 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/waker/duties/{id}/enable": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "waker"
+                ],
+                "summary": "Enable or disable a waker duty",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "duty id",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "description": "enabled",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.wakerDutyEnableRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/waker/duties/{id}/run": {
             "post": {
                 "consumes": [
@@ -11457,6 +11509,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_waker.StatusResponse": {
             "type": "object",
             "properties": {
+                "alertCount": {
+                    "type": "integer"
+                },
                 "allowCancel": {
                     "type": "boolean"
                 },
@@ -11471,6 +11526,9 @@ const docTemplate = `{
                 },
                 "intervalMs": {
                     "type": "integer"
+                },
+                "probesAvailable": {
+                    "type": "boolean"
                 },
                 "recentRuns": {
                     "type": "array",
@@ -13398,6 +13456,14 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_waker.DutyStatusView"
                     }
+                }
+            }
+        },
+        "internal_api.wakerDutyEnableRequest": {
+            "type": "object",
+            "properties": {
+                "enabled": {
+                    "type": "boolean"
                 }
             }
         },

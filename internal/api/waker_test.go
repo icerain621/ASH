@@ -68,6 +68,7 @@ func TestWakerQueueAndSweep(t *testing.T) {
 func TestWakerStatusAndDuties(t *testing.T) {
 	t.Setenv("ASH_WAKER_INTERVAL", "")
 	t.Setenv("ASH_WAKER_RUN_TTL", "30m")
+	t.Setenv("ASH_WAKER_ENABLE_PROBES", "")
 	gin.SetMode(gin.TestMode)
 	dir := t.TempDir()
 	db, err := store.Open(filepath.Join(dir, "ash.db"))
@@ -90,11 +91,42 @@ func TestWakerStatusAndDuties(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &st); err != nil {
 		t.Fatal(err)
 	}
-	if len(st.Duties) < 1 || st.Duties[0].Kind != waker.KindStaleRun {
-		t.Fatalf("want stale_run duty: %+v", st)
+	if len(st.Duties) < 1 {
+		t.Fatalf("want duties: %+v", st)
+	}
+	var staleRun *waker.DutyStatusView
+	for i := range st.Duties {
+		if st.Duties[i].Kind == waker.KindStaleRun {
+			staleRun = &st.Duties[i]
+			break
+		}
+	}
+	if staleRun == nil {
+		t.Fatalf("want stale_run duty: %+v", st.Duties)
 	}
 	if st.Interval != "off" || st.IntervalMs != 0 {
 		t.Fatalf("want ticker off: interval=%q intervalMs=%d", st.Interval, st.IntervalMs)
+	}
+	if !st.ProbesAvailable {
+		t.Fatalf("want probesAvailable after Status seed: %+v", st)
+	}
+	hasDoctor, hasKPI := false, false
+	for _, d := range st.Duties {
+		if d.Kind == waker.KindDoctorSubset {
+			hasDoctor = true
+			if d.Enabled {
+				t.Fatalf("doctor_subset must be disabled by default")
+			}
+		}
+		if d.Kind == waker.KindKPIDrift {
+			hasKPI = true
+			if d.Enabled {
+				t.Fatalf("kpi_drift must be disabled by default")
+			}
+		}
+	}
+	if !hasDoctor || !hasKPI {
+		t.Fatalf("want seeded probe duties: %+v", st.Duties)
 	}
 
 	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/waker/duties?spaceId=local", nil)
@@ -109,8 +141,17 @@ func TestWakerStatusAndDuties(t *testing.T) {
 	if err := json.Unmarshal(listW.Body.Bytes(), &list); err != nil {
 		t.Fatal(err)
 	}
-	if len(list.Duties) < 1 || list.Duties[0].Kind != waker.KindStaleRun {
+	if len(list.Duties) < 1 {
 		t.Fatalf("duties=%+v", list)
+	}
+	hasStale := false
+	for _, d := range list.Duties {
+		if d.Kind == waker.KindStaleRun {
+			hasStale = true
+		}
+	}
+	if !hasStale {
+		t.Fatalf("want stale_run in duties=%+v", list)
 	}
 }
 
@@ -159,5 +200,56 @@ func TestWakerDutyRun(t *testing.T) {
 	}
 	if !sweep.DryRun || sweep.Matched < 1 {
 		t.Fatalf("sweep=%+v", sweep)
+	}
+}
+
+func TestWakerDutyEnable(t *testing.T) {
+	t.Setenv("ASH_WAKER_ENABLE_PROBES", "")
+	gin.SetMode(gin.TestMode)
+	dir := t.TempDir()
+	db, err := store.Open(filepath.Join(dir, "ash.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	h := NewHandler(db, rules.NewLoader("scenarios"))
+	r := gin.New()
+	h.Register(r, "")
+
+	stReq := httptest.NewRequest(http.MethodGet, "/api/v1/waker/status?spaceId=local", nil)
+	stW := httptest.NewRecorder()
+	r.ServeHTTP(stW, stReq)
+	if stW.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", stW.Code, stW.Body.String())
+	}
+	var st waker.StatusResponse
+	if err := json.Unmarshal(stW.Body.Bytes(), &st); err != nil {
+		t.Fatal(err)
+	}
+	var doctorID string
+	for _, d := range st.Duties {
+		if d.Kind == waker.KindDoctorSubset {
+			doctorID = d.ID
+		}
+	}
+	if doctorID == "" {
+		t.Fatalf("missing doctor duty: %+v", st.Duties)
+	}
+
+	body := bytes.NewReader([]byte(`{"enabled":true}`))
+	enableReq := httptest.NewRequest(http.MethodPost, "/api/v1/waker/duties/"+doctorID+"/enable?spaceId=local", body)
+	enableReq.Header.Set("Content-Type", "application/json")
+	enableW := httptest.NewRecorder()
+	r.ServeHTTP(enableW, enableReq)
+	if enableW.Code != http.StatusOK {
+		t.Fatalf("enable status=%d body=%s", enableW.Code, enableW.Body.String())
+	}
+	var duty waker.DutyStatusView
+	if err := json.Unmarshal(enableW.Body.Bytes(), &duty); err != nil {
+		t.Fatal(err)
+	}
+	if !duty.Enabled || duty.Kind != waker.KindDoctorSubset {
+		t.Fatalf("duty=%+v", duty)
 	}
 }

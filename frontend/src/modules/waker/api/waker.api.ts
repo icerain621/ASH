@@ -30,6 +30,8 @@ export type WakerStatus = {
   allowCancel: boolean;
   interval?: string;
   intervalMs?: number;
+  probesAvailable?: boolean;
+  alertCount?: number;
 };
 
 export type WakerQueueItem = {
@@ -107,5 +109,12 @@ export function postWakerDutyRun(id: string, body?: { dryRun?: boolean }) {
   return api<WakerSweepResponse>(`/waker/duties/${encodeURIComponent(id)}/run`, {
     method: "POST",
     body: JSON.stringify(body ?? {}),
+  });
+}
+
+export function postWakerDutyEnable(id: string, enabled: boolean) {
+  return api<WakerDuty>(`/waker/duties/${encodeURIComponent(id)}/enable`, {
+    method: "POST",
+    body: JSON.stringify({ enabled }),
   });
 }

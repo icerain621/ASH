@@ -16,6 +16,7 @@ import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import {
   getWakerQueue,
   getWakerStatus,
+  postWakerDutyEnable,
   postWakerDutyRun,
   postWakerSweep,
 } from "@/modules/waker/api/waker.api";
@@ -95,10 +96,15 @@ export function ObservabilityPage() {
     mutationFn: ({ id, dryRun }: { id: string; dryRun?: boolean }) => postWakerDutyRun(id, { dryRun: dryRun ?? true }),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["waker"] }),
   });
+  const dutyEnableMut = useMutation({
+    mutationFn: ({ id, enabled }: { id: string; enabled: boolean }) => postWakerDutyEnable(id, enabled),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["waker"] }),
+  });
   const wakerDuties = wakerStatusQuery.data?.duties ?? [];
   const selectedDuty = wakerDuties.find((d) => d.id === selectedDutyId) ?? wakerDuties.find((d) => d.enabled) ?? wakerDuties[0];
   const allowCancel = Boolean(wakerStatusQuery.data?.allowCancel);
-  const wakerBusy = sweepMut.isPending || dutyRunMut.isPending;
+  const wakerBusy = sweepMut.isPending || dutyRunMut.isPending || dutyEnableMut.isPending;
+  const probeAlertCount = wakerStatusQuery.data?.alertCount ?? 0;
 
   function toggleRule(rule: AlertRule) {
     rulesMut.mutate([{ ...rule, enabled: !rule.enabled }]);
@@ -250,6 +256,8 @@ export function ObservabilityPage() {
               : wakerStatusQuery.isFetching
                 ? "loading"
                 : `${wakerDuties.filter((d) => d.enabled).length} enabled`}
+            {wakerStatusQuery.data?.probesAvailable ? " · probes seeded" : ""}
+            {probeAlertCount > 0 ? ` · ${probeAlertCount} probe alerts` : ""}
           </span>
         </div>
         <div className="toolbar metrics-toolbar">
@@ -324,7 +332,18 @@ export function ObservabilityPage() {
                   {duty.kind}
                   {selectedDuty?.id === duty.id ? " · selected" : ""}
                 </td>
-                <td>{duty.enabled ? "on" : "off"}</td>
+                <td>
+                  <button
+                    className={`btn mini ${duty.enabled ? "ok" : ""}`}
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      dutyEnableMut.mutate({ id: duty.id, enabled: !duty.enabled });
+                    }}
+                    disabled={wakerBusy}
+                  >
+                    {duty.enabled ? "on" : "off"}
+                  </button>
+                </td>
                 <td>{duty.nextRunAt || "-"}</td>
               </tr>
             ))}

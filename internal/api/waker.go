@@ -202,6 +202,70 @@ func (h *Handler) postWakerDutyRun(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type wakerDutyEnableRequest struct {
+	Enabled bool `json:"enabled"`
+}
+
+// PostWakerDutyEnable godoc
+// @Summary Enable or disable a waker duty
+// @Tags waker
+// @Accept json
+// @Produce json
+// @Param id path string true "duty id"
+// @Param spaceId query string false "space id"
+// @Param body body wakerDutyEnableRequest true "enabled"
+// @Success 200 {object} waker.DutyStatusView
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/waker/duties/{id}/enable [post]
+func (h *Handler) postWakerDutyEnable(c *gin.Context) {
+	spaceID := c.DefaultQuery("spaceId", currentSpace(c))
+	if !h.requireTargetSpace(c, spaceID) {
+		return
+	}
+	if !h.requirePermission(c, permRunCreate, spaceID) {
+		return
+	}
+	var req wakerDutyEnableRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	id := strings.TrimSpace(c.Param("id"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "duty id is required"))
+		return
+	}
+	duties, err := h.wakerFor(c).ListDuties(spaceID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_ENABLE_FAILED", err.Error()))
+		return
+	}
+	found := false
+	for _, d := range duties {
+		if d.ID == id {
+			found = true
+			break
+		}
+	}
+	if !found {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_ENABLE_FAILED", "duty not found"))
+		return
+	}
+	duty, err := h.wakerFor(c).SetDutyEnabled(id, req.Enabled)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WAKER_DUTY_ENABLE_FAILED", err.Error()))
+		return
+	}
+	actorID := currentActor(c)
+	_ = h.dbFor(c).Create(auditRow(spaceID, actorID, "waker.duty_enabled", map[string]any{
+		"dutyId": id, "kind": duty.Kind, "enabled": req.Enabled,
+	})).Error
+	c.JSON(http.StatusOK, waker.DutyStatusView{
+		ID: duty.ID, SpaceID: duty.SpaceID, Kind: duty.Kind, Enabled: duty.Enabled,
+		IntervalMs: duty.IntervalMs, NextRunAt: duty.NextRunAt, UpdatedAt: duty.UpdatedAt,
+	})
+}
+
 func (h *Handler) wakerFor(c *gin.Context) *waker.Service {
 	if h == nil || h.waker == nil {
 		return h.waker
