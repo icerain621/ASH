@@ -9,6 +9,7 @@ import (
 )
 
 func TestRebuildSymbolsUpsertsAndCleansStale(t *testing.T) {
+	t.Setenv("ASH_RAG_CTAGS", "0")
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)
 	repo := t.TempDir()
@@ -53,4 +54,35 @@ func TestRebuildSymbolsUpsertsAndCleansStale(t *testing.T) {
 		t.Fatalf("syms=%d", syms)
 	}
 	_ = resp2
+}
+
+func TestRebuildSymbolsFallsBackWhenCtagsFails(t *testing.T) {
+	t.Setenv("ASH_RAG_CTAGS", "1")
+	t.Setenv("CTAGS", filepath.Join(repoRoot(t), "scripts", "fixtures", "broken-ctags.sh"))
+
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	repo := t.TempDir()
+	src := filepath.Join(repo, "a.go")
+	if err := os.WriteFile(src, []byte("package a\n\nfunc Alpha() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := svc.RebuildSymbols(RebuildSymbolsRequest{RepoRoot: repo, SpaceID: "fb"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Symbols < 1 {
+		t.Fatalf("symbols=%d want >= 1", resp.Symbols)
+	}
+	if resp.SymbolSource != "regex" {
+		t.Fatalf("SymbolSource=%q want regex after ctags fallback", resp.SymbolSource)
+	}
+	var sym store.RAGSymbol
+	if err := db.Where("space_id = ? AND name = ?", "fb", "Alpha").First(&sym).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sym.Source != "regex" {
+		t.Fatalf("sym.Source=%q want regex", sym.Source)
+	}
 }
