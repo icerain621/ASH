@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-02  
+> 更新：2026-09-05  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -10,8 +10,8 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **55/55** · M3 11/11 · M4 8/8 · M5 4/4 · TR3 10/10 |
-| Schema | SQL rev **29**（+waker duties）· RLS **50** |
+| Doctor | ALL **56/56** · M3 11/11 · M4 **9/9** · M5 4/4 · TR3 10/10 |
+| Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9–DX11 已冻结**（tag `v2.3.0` 待人工）；**v2.4：DX12–DX14 已冻结**（tag `v2.4.0` 待人工） |
 
 ---
@@ -54,8 +54,8 @@
 | DX14 | 控制台 + v2.4 冻结 | Observability/Scale Waker 面板；`make v2.4-signoff`；tag 人工 | ✅ |
 | DX15 | Waker probe 自动 seed（v2.5 草案） | seed doctor/kpi（默认 disabled）；enable API + UI；`ASH_WAKER_ENABLE_PROBES`；无新表 | ✅ |
 | DX16 | ctags 符号索引（v2.5 草案） | `SymbolIndexer` + `rag_symbols.source`；SQL 30 | ✅ |
-| DX17 | Vector POC（v2.5） | Qdrant + stub embedder；`rag_vector_refs`；SQL 31 / RLS 52 | ⏸ |
-| DX18 | Landlock 沙箱 POC（v2.5） | Linux executor；M4-SBX-04；`ASH_SANDBOX_LANDLOCK` | ⏸ |
+| DX17 | Vector POC（v2.5 草案） | Qdrant + stub embedder；`rag_vector_refs`；SQL 31 / RLS 51；`make rag-vector-smoke` | ✅ |
+| DX18 | Landlock 沙箱 POC（v2.5 草案） | Linux executor；M4-SBX-04；`ASH_SANDBOX_LANDLOCK`；`make sandbox-smoke` | ✅ |
 | 详排 | — | v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（草案）；设计 [`docs/superpowers/specs/2026-09-03-v25-dx15-dx18-design.md`](../superpowers/specs/2026-09-03-v25-dx15-dx18-design.md) | — |
 
 ---

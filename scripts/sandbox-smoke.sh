@@ -9,8 +9,38 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 echo "== sandbox unit tests =="
-go test ./internal/sandbox/ ./internal/sandbox/process/ ./internal/sandbox/docker/ -count=1
+go test ./internal/sandbox/ ./internal/sandbox/process/ ./internal/sandbox/docker/ ./internal/sandbox/landlock/ -count=1
 go test ./internal/runs/ -run 'TestSandboxDeniesDangerWhenProfileOff|TestHarnessLoopEmitsRoutedAndCompleted' -count=1
+
+if [[ "${ASH_SANDBOX_LANDLOCK:-}" == "1" ]]; then
+  echo "== landlock availability (ASH_SANDBOX_LANDLOCK=1) =="
+  os_name="$(uname -s 2>/dev/null || echo unknown)"
+  if [[ "$os_name" != "Linux" ]]; then
+    echo "landlock: skipped on ${os_name} (non-Linux; no e2e)"
+  else
+    ll_probe="$(mktemp -d 2>/dev/null || mktemp -d -t ash-ll)"
+    cat >"$ll_probe/main.go" <<'GOEOF'
+package main
+
+import (
+	"fmt"
+
+	"github.com/ash-repwiki/ash/internal/sandbox/landlock"
+)
+
+func main() {
+	fmt.Print(landlock.Available())
+}
+GOEOF
+    avail="$(cd "$ll_probe" && go run -mod=readonly . 2>/dev/null || echo false)"
+    rm -rf "$ll_probe"
+    echo "landlock available=${avail}"
+    if [[ "$avail" != "true" ]]; then
+      echo "note: kernel may lack Landlock support (non-fatal for smoke)"
+    fi
+    go test ./internal/sandbox/landlock/ -count=1
+  fi
+fi
 
 if [[ "${ASH_SKIP_SANDBOX:-}" != "" ]]; then
   echo "== docker sandbox skipped (ASH_SKIP_SANDBOX set) =="

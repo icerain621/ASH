@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX18（v2.5 草案）：Landlock 沙箱 POC — Linux `landlock` executor + `Available()` 探测；`DefaultRouter` 可选 `landlock`（`ASH_SANDBOX_LANDLOCK=1`）；Doctor **M4-SBX-04**（非 Linux / 无内核支持 → skip pass）；`make sandbox-smoke` 含 landlock 包测与可选 `ASH_SANDBOX_LANDLOCK=1` 段；**无新表**。
+- Sprint DX17（v2.5 草案）：RAG Vector POC — Qdrant HTTP client + stub/hash embedder；表 `rag_vector_refs`（SQL **31** / RLS **51**）；Hybrid Query 第 4 RRF vector lane；`make rag-vector-smoke`（mock store，无 live Qdrant 硬依赖）。
 - Sprint DX16（v2.5 草案）：ctags 符号索引 — `SymbolIndexer` 可插拔（ctags 子进程 + regex 回退）；`rag_symbols.source`（SQL **30**）；`RebuildSymbolsResponse.symbolSource`（`regex`|`ctags`）；`ASH_RAG_CTAGS` / `CTAGS`；`make rag-hybrid-smoke` 扩展；**无 RLS bump**。
 - Sprint DX15（v2.5 草案）：Waker probe 自动 seed — `SeedProbeDuties` 在 Status/Background 默认创建 `doctor_subset` / `kpi_drift`（**disabled**）；`POST /waker/duties/{id}/enable`；`ASH_WAKER_ENABLE_PROBES=1` 新建即启用；Observability duty 切换；`probesAvailable` / `alertCount`；修复 GORM `enabled=false` 落库；**无新表**。
 - Sprint DX14（v2.4）：Waker 控制台 + 范围冻结 — Observability Waker 运维面板（duties/queue/recent runs、dry-run sweep、gated cancel）；Scale 页紧凑计数；`v2.4-release-scope` **已冻结**；`make v2.4-signoff`（含 `waker-smoke`）；清单/签字模板；**不自动**打 `v2.4.0` tag。
