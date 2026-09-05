@@ -179,6 +179,7 @@ func (db *DB) migrate() error {
 		&RAGChunk{},
 		&RAGPathEntry{},
 		&RAGSymbol{},
+		&RAGVectorRef{},
 		&WakerDuty{},
 		&WakerDutyRun{},
 		&ModelUsage{},

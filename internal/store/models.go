@@ -280,6 +280,19 @@ type RAGSymbol struct {
 
 func (RAGSymbol) TableName() string { return "rag_symbols" }
 
+// RAGVectorRef maps a chunk to its vector store point (Sprint DX17).
+type RAGVectorRef struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_vec_space_root_chunk"`
+	RepoRoot  string    `gorm:"size:512;not null;uniqueIndex:uidx_rag_vec_space_root_chunk"`
+	ChunkID   string    `gorm:"size:64;not null;uniqueIndex:uidx_rag_vec_space_root_chunk;index"`
+	PointID   string    `gorm:"size:128;not null;index"`
+	UpdatedAt time.Time
+	CreatedAt time.Time
+}
+
+func (RAGVectorRef) TableName() string { return "rag_vector_refs" }
+
 // WakerDuty is a scheduled continuous-duty definition (Sprint DX12).
 type WakerDuty struct {
 	ID         string `gorm:"primaryKey;size:64"`

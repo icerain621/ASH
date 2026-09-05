@@ -100,6 +100,7 @@ func PostgresRLSTables() []PostgresRLSTable {
 		{Table: "rag_chunks", SpaceColumn: "space_id"},
 		{Table: "rag_path_entries", SpaceColumn: "space_id"},
 		{Table: "rag_symbols", SpaceColumn: "space_id"},
+		{Table: "rag_vector_refs", SpaceColumn: "space_id"},
 		{Table: "waker_duties", SpaceColumn: "space_id"},
 		{Table: "waker_duty_runs", SpaceColumn: "space_id"},
 		{Table: "quality_metrics", SpaceColumn: "space_id"},
