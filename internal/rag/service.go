@@ -20,12 +20,38 @@ import (
 )
 
 type Service struct {
-	db  *store.DB
-	ctx context.Context
+	db       *store.DB
+	ctx      context.Context
+	embedder Embedder
+	vectors  VectorStore
 }
 
 func NewService(db *store.DB) *Service {
-	return &Service{db: db}
+	return &Service{
+		db:       db,
+		embedder: DefaultHashEmbedder(),
+		vectors:  NewQdrantClient(DefaultQdrantURL()),
+	}
+}
+
+// WithEmbedder replaces the embedder (for tests / alternate backends).
+func (s *Service) WithEmbedder(e Embedder) *Service {
+	if s == nil {
+		return s
+	}
+	out := *s
+	out.embedder = e
+	return &out
+}
+
+// WithVectorStore replaces the vector store (for tests / alternate backends).
+func (s *Service) WithVectorStore(vs VectorStore) *Service {
+	if s == nil {
+		return s
+	}
+	out := *s
+	out.vectors = vs
+	return &out
 }
 
 // WithContext returns a shallow copy bound to ctx for Postgres RLS session vars.
@@ -33,7 +59,7 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	if s == nil || ctx == nil {
 		return s
 	}
-	return &Service{db: s.db, ctx: ctx}
+	return &Service{db: s.db, ctx: ctx, embedder: s.embedder, vectors: s.vectors}
 }
 
 func (s *Service) gdb() *gorm.DB {
@@ -49,11 +75,13 @@ func (s *Service) gdb() *gorm.DB {
 type IndexRequest struct {
 	RepoRoot string `json:"repoRoot" binding:"required"`
 	SpaceID  string `json:"spaceId,omitempty"`
+	Embed    bool   `json:"embed,omitempty"`
 }
 
 type IndexResponse struct {
 	Documents int `json:"documents"`
 	Chunks    int `json:"chunks"`
+	Embedded  int `json:"embedded,omitempty"`
 }
 
 type QueryRequest struct {
@@ -76,9 +104,9 @@ type Hit struct {
 }
 
 const (
-	RetrievalModeFTS    = "fts"
-	RetrievalModeChunk  = "chunk"
-	RetrievalModeEmpty  = "empty"
+	RetrievalModeFTS   = "fts"
+	RetrievalModeChunk = "chunk"
+	RetrievalModeEmpty = "empty"
 	RetrievalModeHybrid = "hybrid"
 )
 
@@ -104,7 +132,7 @@ func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
 	}
 	space := firstNonEmpty(req.SpaceID, "local")
 
-	var docs, chunks int
+	var docs, chunks, embedded int
 	err = filepath.WalkDir(abs, func(path string, d os.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return nil
@@ -124,12 +152,15 @@ func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
 		}
 		docs++
 		chunks += docChunks
+		if req.Embed && docChunks > 0 {
+			embedded += s.embedIndexedFile(space, abs, path)
+		}
 		return nil
 	})
 	if err != nil {
 		return nil, err
 	}
-	return &IndexResponse{Documents: docs, Chunks: chunks}, nil
+	return &IndexResponse{Documents: docs, Chunks: chunks, Embedded: embedded}, nil
 }
 
 func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
@@ -165,25 +196,37 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 		return nil, err
 	}
 	pathCount, symbolCount := s.hybridCounts(space, absRepo)
-	if pathCount+symbolCount == 0 {
+	vectorHits := s.queryVectorLane(space, absRepo, strings.TrimSpace(req.Text), topK*2)
+	hasHybridTables := pathCount+symbolCount > 0
+	hasVector := len(vectorHits) > 0
+	if !hasHybridTables && !hasVector {
 		return &QueryResponse{Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable}, nil
 	}
 
 	lanes := map[string][]Hit{
 		"text": textHits,
 	}
-	pathHits, err := s.queryPathLane(space, absRepo, terms, topK*2)
-	if err != nil {
-		return nil, err
+	if hasHybridTables {
+		pathHits, err := s.queryPathLane(space, absRepo, terms, topK*2)
+		if err != nil {
+			return nil, err
+		}
+		symbolHits, err := s.querySymbolLane(space, absRepo, terms, topK*2)
+		if err != nil {
+			return nil, err
+		}
+		lanes["path"] = pathHits
+		lanes["symbol"] = symbolHits
 	}
-	symbolHits, err := s.querySymbolLane(space, absRepo, terms, topK*2)
-	if err != nil {
-		return nil, err
+	if hasVector {
+		lanes["vector"] = vectorHits
 	}
-	lanes["path"] = pathHits
-	lanes["symbol"] = symbolHits
 	merged := rrfMerge(lanes, req.Prefer, topK)
-	return &QueryResponse{Items: merged, RetrievalMode: RetrievalModeHybrid, FtsAvailable: ftsAvailable}, nil
+	mode := RetrievalModeHybrid
+	if hasVector {
+		mode = RetrievalModeHybridVector
+	}
+	return &QueryResponse{Items: merged, RetrievalMode: mode, FtsAvailable: ftsAvailable}, nil
 }
 
 // FTSAvailable reports whether dialect-native FTS retrieval is wired.
@@ -236,6 +279,13 @@ func (s *Service) indexFile(space, root, path string) (int, error) {
 
 	var doc store.RAGDocument
 	err = s.gdb().Transaction(func(tx *gorm.DB) error {
+		var oldChunkIDs []string
+		_ = tx.Model(&store.RAGChunk{}).
+			Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).
+			Pluck("id", &oldChunkIDs).Error
+		if len(oldChunkIDs) > 0 {
+			_ = tx.Where("space_id = ? AND chunk_id IN ?", space, oldChunkIDs).Delete(&store.RAGVectorRef{}).Error
+		}
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGDocument{}).Error
 		_ = tx.Where("space_id = ? AND repo_root = ? AND path = ?", space, root, rel).Delete(&store.RAGChunk{}).Error
 		if sqliteFTS {

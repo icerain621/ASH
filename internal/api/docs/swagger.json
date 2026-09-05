@@ -9044,6 +9044,9 @@
                 "repoRoot"
             ],
             "properties": {
+                "embed": {
+                    "type": "boolean"
+                },
                 "repoRoot": {
                     "type": "string"
                 },
@@ -9059,6 +9062,9 @@
                     "type": "integer"
                 },
                 "documents": {
+                    "type": "integer"
+                },
+                "embedded": {
                     "type": "integer"
                 }
             }
@@ -9097,6 +9103,12 @@
                     "type": "string"
                 },
                 "symbolCount": {
+                    "type": "integer"
+                },
+                "vectorAvailable": {
+                    "type": "boolean"
+                },
+                "vectorPointCount": {
                     "type": "integer"
                 }
             }

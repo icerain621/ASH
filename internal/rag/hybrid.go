@@ -11,7 +11,10 @@ import (
 
 var ErrInvalidPrefer = errors.New("invalid prefer")
 
-const rrfK = 60
+const (
+	rrfK                       = 60
+	RetrievalModeHybridVector  = "hybrid+vector"
+)
 
 func preferBoost(prefer, lane string) float64 {
 	if prefer == "" || prefer == lane {

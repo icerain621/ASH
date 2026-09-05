@@ -1481,6 +1481,8 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_rag.IndexRequest:
     properties:
+      embed:
+        type: boolean
       repoRoot:
         type: string
       spaceId:
@@ -1493,6 +1495,8 @@ definitions:
       chunks:
         type: integer
       documents:
+        type: integer
+      embedded:
         type: integer
     type: object
   github_com_ash-repwiki_ash_internal_rag.Profile:
@@ -1518,6 +1522,10 @@ definitions:
       spaceId:
         type: string
       symbolCount:
+        type: integer
+      vectorAvailable:
+        type: boolean
+      vectorPointCount:
         type: integer
     type: object
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:

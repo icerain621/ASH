@@ -13,11 +13,19 @@ import (
 )
 
 const (
-	defaultQdrantURL      = "http://127.0.0.1:6333"
-	qdrantProbeTimeout    = 500 * time.Millisecond
-	qdrantRequestTimeout  = 30 * time.Second
-	envQdrantURL          = "ASH_QDRANT_URL"
+	defaultQdrantURL     = "http://127.0.0.1:6333"
+	qdrantProbeTimeout   = 500 * time.Millisecond
+	qdrantRequestTimeout = 30 * time.Second
+	envQdrantURL         = "ASH_QDRANT_URL"
 )
+
+// DefaultQdrantURL returns ASH_QDRANT_URL or the local default.
+func DefaultQdrantURL() string {
+	if v := strings.TrimSpace(os.Getenv(envQdrantURL)); v != "" {
+		return strings.TrimRight(v, "/")
+	}
+	return defaultQdrantURL
+}
 
 // VectorPoint is a single upsert target for VectorStore.
 type VectorPoint struct {

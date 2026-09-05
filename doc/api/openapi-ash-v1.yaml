@@ -490,8 +490,10 @@ components:
         spaceId: { type: string }
         ftsAvailable: { type: boolean }
         ftsEngine: { type: string }
-        defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty] }
+        defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty, hybrid+vector] }
         hybridAvailable: { type: boolean }
+        vectorAvailable: { type: boolean }
+        vectorPointCount: { type: integer, format: int64 }
         databaseDialect: { type: string }
         documentCount: { type: integer, format: int64 }
         chunkCount: { type: integer, format: int64 }
@@ -2789,11 +2791,17 @@ components:
       properties:
         repoRoot: { type: string }
         spaceId: { type: string }
+        embed:
+          type: boolean
+          description: When true and vector store is available, embed chunks into Qdrant and write rag_vector_refs (best-effort).
     RAGIndexResponse:
       type: object
       properties:
         documents: { type: integer }
         chunks: { type: integer }
+        embedded:
+          type: integer
+          description: Number of chunks successfully embedded when embed=true.
     RAGSymbolsRebuildRequest:
       type: object
       required: [repoRoot]

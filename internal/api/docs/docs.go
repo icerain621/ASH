@@ -9050,6 +9050,9 @@ const docTemplate = `{
                 "repoRoot"
             ],
             "properties": {
+                "embed": {
+                    "type": "boolean"
+                },
                 "repoRoot": {
                     "type": "string"
                 },
@@ -9065,6 +9068,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "documents": {
+                    "type": "integer"
+                },
+                "embedded": {
                     "type": "integer"
                 }
             }
@@ -9103,6 +9109,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "symbolCount": {
+                    "type": "integer"
+                },
+                "vectorAvailable": {
+                    "type": "boolean"
+                },
+                "vectorPointCount": {
                     "type": "integer"
                 }
             }
