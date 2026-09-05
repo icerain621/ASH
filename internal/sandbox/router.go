@@ -32,7 +32,7 @@ type RouteRequest struct {
 // Decision records how a tool call should execute.
 type Decision struct {
 	Mode     string `json:"mode"`
-	Executor string `json:"executor"` // in-process | process | docker | none
+	Executor string `json:"executor"` // in-process | process | docker | landlock | none
 	Reason   string `json:"reason,omitempty"`
 	Denied   bool   `json:"denied,omitempty"`
 }
@@ -57,6 +57,18 @@ func (NoopRouter) Route(req RouteRequest) (Decision, error) {
 type DefaultRouter struct {
 	PreferDocker bool
 	DockerOK     func() bool
+	// LandlockOK overrides landlock availability (tests); nil uses RegisterLandlockAvailable hook.
+	LandlockOK func() bool
+}
+
+// defaultLandlockAvailable is set by internal/sandbox/landlock init (avoids import cycle).
+var defaultLandlockAvailable = func() bool { return false }
+
+// RegisterLandlockAvailable wires landlock.Available into the default router probe.
+func RegisterLandlockAvailable(fn func() bool) {
+	if fn != nil {
+		defaultLandlockAvailable = fn
+	}
 }
 
 func NewDefaultRouter() DefaultRouter {
@@ -74,6 +86,12 @@ func (r DefaultRouter) Route(req RouteRequest) (Decision, error) {
 	if mode == ModeOff {
 		return Decision{Mode: mode, Executor: "in-process", Reason: "mode-off"}, nil
 	}
+	if mode == ModeIsolated && landlockEnvEnabled() {
+		if r.landlockOK() {
+			return Decision{Mode: mode, Executor: "landlock", Reason: "landlock-available"}, nil
+		}
+		// Env set but unavailable: fall through to docker/process (no deny).
+	}
 	dockerOK := r.DockerOK
 	if dockerOK == nil {
 		dockerOK = DockerAvailable
@@ -82,6 +100,17 @@ func (r DefaultRouter) Route(req RouteRequest) (Decision, error) {
 		return Decision{Mode: mode, Executor: "docker", Reason: "docker-available"}, nil
 	}
 	return Decision{Mode: mode, Executor: "process", Reason: "process-jail"}, nil
+}
+
+func (r DefaultRouter) landlockOK() bool {
+	if r.LandlockOK != nil {
+		return r.LandlockOK()
+	}
+	return defaultLandlockAvailable()
+}
+
+func landlockEnvEnabled() bool {
+	return strings.TrimSpace(os.Getenv("ASH_SANDBOX_LANDLOCK")) == "1"
 }
 
 // DispatchRequest is a sandboxed tool invocation.

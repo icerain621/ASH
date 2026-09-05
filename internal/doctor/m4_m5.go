@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
@@ -14,6 +15,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/sandbox"
+	"github.com/ash-repwiki/ash/internal/sandbox/landlock"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -25,6 +27,7 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Sbx01DockerSmokeOrSkip(),
 		s.m4Sbx02DangerOffDenied(),
 		s.m4Sbx03PathJail(),
+		s.m4Sbx04LandlockAvailable(),
 		s.m4Acp01TaskSchema(),
 		s.m4Acp02ProbeUnconfigured(),
 	}
@@ -160,6 +163,27 @@ func (s *Service) m4Sbx03PathJail() CaseResult {
 	res.Status = "pass"
 	res.Message = "workspace-write path jail ok"
 	res.Evidence = append(res.Evidence, Evidence{Kind: "pathJail", Ref: "PathWithinRoot"})
+	return res
+}
+
+func (s *Service) m4Sbx04LandlockAvailable() CaseResult {
+	res := CaseResult{ID: "M4-SBX-04", Status: "fail"}
+	ok := landlock.Available()
+	res.Evidence = append(res.Evidence, Evidence{Kind: "landlockAvailable", Ref: fmt.Sprintf("%v", ok)})
+	if runtime.GOOS != "linux" {
+		res.Status = "pass"
+		res.Message = "skipped: landlock unavailable on this OS"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: runtime.GOOS})
+		return res
+	}
+	if !ok {
+		res.Status = "pass"
+		res.Message = "skipped: landlock not supported by this kernel"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "landlock"})
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "landlock available"
 	return res
 }
 

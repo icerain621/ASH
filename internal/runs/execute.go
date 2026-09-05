@@ -24,6 +24,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	sbxdocker "github.com/ash-repwiki/ash/internal/sandbox/docker"
+	sbxlandlock "github.com/ash-repwiki/ash/internal/sandbox/landlock"
 	sbxprocess "github.com/ash-repwiki/ash/internal/sandbox/process"
 	"github.com/ash-repwiki/ash/internal/skills"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -877,6 +878,8 @@ func (s *Service) dispatchSandboxedTool(runID, traceID, stepID string, ctx toolb
 		res, err = (sbxdocker.Executor{}).Dispatch(context.Background(), req)
 	case "process":
 		res, err = (sbxprocess.Executor{}).Dispatch(context.Background(), req)
+	case "landlock":
+		res, err = (sbxlandlock.Executor{}).Dispatch(context.Background(), req)
 	default:
 		err = fmt.Errorf("unsupported sandbox executor %q", dec.Executor)
 	}
