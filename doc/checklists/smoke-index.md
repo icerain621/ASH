@@ -59,6 +59,7 @@
 | — | RAG Hybrid (DX9) | RebuildSymbols + Hybrid Query RRF | [`rag-hybrid-smoke.md`](rag-hybrid-smoke.md) |
 | — | v2.3 signoff (DX11) | scope freeze + `make v2.3-signoff` | [`v2.3-signoff.md`](v2.3-signoff.md) |
 | — | v2.4 signoff (DX14) | scope freeze + `make v2.4-signoff` | [`v2.4-signoff.md`](v2.4-signoff.md) |
+| — | v2.5 signoff (DX19) | scope freeze + `make v2.5-signoff` | [`v2.5-signoff.md`](v2.5-signoff.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

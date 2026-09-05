@@ -8,7 +8,7 @@ BACKEND_DIR := backend
 endif
 endif
 
-.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-local-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke acp-smoke waker-smoke rag-hybrid-smoke rag-vector-smoke secret-rotate-smoke plugin-sign-smoke harness-smoke sandbox-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static ci-fixture-smoke ci-live-smoke p1-live-credibility web web-build web-dev web-lint web-test web-gate sse-browser-e2e r08-cross-space-gate verify regression-short cloud-acceptance mvp-signoff v2-signoff v2.1-signoff v2.2-signoff v2.3-signoff v2.4-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup data-backup-verify data-backup-smoke worker-local-gate worker-production-gate pre-migrate-gate t1-metrics-gate scope-freeze-gate config-env-gate release-window-prefill release-window-gate bootstrap-local-ash-db local-readiness-gate signoff-apply signoff-gate kpi-reconcile-gate evidence-sha-gate
+.PHONY: run test swagger openapi-check proto-lint proto-generate proto-check tidy doctor cli migrate-plan migrate-schema postgres-up postgres-down postgres-roles postgres-e2e postgres-sql-schema-e2e postgres-rls-e2e postgres-rds-e2e postgres-local-rds-e2e postgres-app-gate test-integration test-rls execgo-bootstrap execgo-health execgo-live-smoke acp-smoke waker-smoke rag-hybrid-smoke rag-vector-smoke secret-rotate-smoke plugin-sign-smoke harness-smoke sandbox-smoke release-sampling release-sampling-static release-sampling-smoke live-smoke smoke-static ci-fixture-smoke ci-live-smoke p1-live-credibility web web-build web-dev web-lint web-test web-gate sse-browser-e2e r08-cross-space-gate verify regression-short cloud-acceptance mvp-signoff v2-signoff v2.1-signoff v2.2-signoff v2.3-signoff v2.4-signoff v2.5-signoff production-config-gate rollback-drill queue-gate t0-alert-gate data-backup data-backup-verify data-backup-smoke worker-local-gate worker-production-gate pre-migrate-gate t1-metrics-gate scope-freeze-gate config-env-gate release-window-prefill release-window-gate bootstrap-local-ash-db local-readiness-gate signoff-apply signoff-gate kpi-reconcile-gate evidence-sha-gate
 
 run:
 	cd $(BACKEND_DIR) && go run ./cmd/worker
@@ -173,6 +173,9 @@ v2.3-signoff:
 
 v2.4-signoff:
 	bash scripts/v24-signoff-gate.sh
+
+v2.5-signoff:
+	bash scripts/v25-signoff-gate.sh
 
 production-config-gate:
 	bash scripts/production-config-gate.sh

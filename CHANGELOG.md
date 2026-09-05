@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX19（v2.5）：范围冻结 + 签字门禁 — `v2.5-release-scope` **已冻结**；`make v2.5-signoff`（Doctor ALL **56** / M4 **9** + waker + rag-hybrid + rag-vector + sandbox）；清单/签字模板；**不自动**打 `v2.5.0` tag。
 - Sprint DX18（v2.5 草案）：Landlock 沙箱 POC — Linux `landlock` executor + `Available()` 探测；`DefaultRouter` 可选 `landlock`（`ASH_SANDBOX_LANDLOCK=1`）；Doctor **M4-SBX-04**（非 Linux / 无内核支持 → skip pass）；`make sandbox-smoke` 含 landlock 包测与可选 `ASH_SANDBOX_LANDLOCK=1` 段；**无新表**。
 - Sprint DX17（v2.5 草案）：RAG Vector POC — Qdrant HTTP client + stub/hash embedder；表 `rag_vector_refs`（SQL **31** / RLS **51**）；Hybrid Query 第 4 RRF vector lane；`make rag-vector-smoke`（mock store，无 live Qdrant 硬依赖）。
 - Sprint DX16（v2.5 草案）：ctags 符号索引 — `SymbolIndexer` 可插拔（ctags 子进程 + regex 回退）；`rag_symbols.source`（SQL **30**）；`RebuildSymbolsResponse.symbolSource`（`regex`|`ctags`）；`ASH_RAG_CTAGS` / `CTAGS`；`make rag-hybrid-smoke` 扩展；**无 RLS bump**。
