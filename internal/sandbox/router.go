@@ -147,6 +147,11 @@ type DispatchResult struct {
 }
 
 // Executor runs a command under a sandbox mode.
+//
+// Extension point for future remote / microVM backends: implement Executor and
+// wire a new Decision.Executor name in DefaultRouter / runs dispatch. v2.7 does
+// not ship an E2B (or other billed cloud) client — keep adapters out-of-tree
+// or behind explicit opt-in until a later release.
 type Executor interface {
 	Dispatch(ctx context.Context, req DispatchRequest) (*DispatchResult, error)
 }

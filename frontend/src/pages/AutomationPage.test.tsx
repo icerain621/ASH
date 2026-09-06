@@ -28,6 +28,19 @@ vi.mock("@/modules/skills/api/skills.api", () => ({
   getSkill: vi.fn(),
   installSkillPack: vi.fn(),
   verifySkillPack: vi.fn(),
+  listSkillCatalog: vi.fn().mockResolvedValue({
+    ok: true,
+    source: ".ash/skill-catalog.json",
+    items: [
+      {
+        name: "ash-test-discipline",
+        version: "1.0.0",
+        publisher: "local",
+        url: "packs/ash-test-discipline.zip",
+      },
+    ],
+  }),
+  installSkillFromCatalog: vi.fn(),
 }));
 
 vi.mock("@/modules/platform/api/platform.api", () => ({
@@ -96,7 +109,10 @@ describe("AutomationPage", () => {
     renderPage(<AutomationPage />);
     await waitFor(() => {
       expect(screen.getByTestId("skills-catalog")).toBeInTheDocument();
-      expect(screen.getByText("ash-test-discipline")).toBeInTheDocument();
+      expect(screen.getAllByText("ash-test-discipline").length).toBeGreaterThan(0);
+      expect(screen.getByTestId("skills-org-catalog")).toBeInTheDocument();
+      expect(screen.getByTestId("skills-pack-verify-btn")).toBeInTheDocument();
+      expect(screen.getByText("已安装")).toBeInTheDocument();
     });
   });
 });

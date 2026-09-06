@@ -12,8 +12,9 @@ import (
 var ErrInvalidPrefer = errors.New("invalid prefer")
 
 const (
-	rrfK                       = 60
-	RetrievalModeHybridVector  = "hybrid+vector"
+	rrfK                      = 60
+	RetrievalModeHybridVector = "hybrid+vector"
+	RetrievalModeVector       = "vector"
 )
 
 func preferBoost(prefer, lane string) float64 {
@@ -57,10 +58,10 @@ func rrfMerge(lanes map[string][]Hit, prefer string, topK int) []Hit {
 
 func validatePrefer(prefer string) error {
 	switch prefer {
-	case "", "path", "symbol", "text":
+	case "", "path", "symbol", "text", "vector":
 		return nil
 	default:
-		return fmt.Errorf("%w %q: must be empty or one of path, symbol, text", ErrInvalidPrefer, prefer)
+		return fmt.Errorf("%w %q: must be empty or one of path, symbol, text, vector", ErrInvalidPrefer, prefer)
 	}
 }
 

@@ -493,10 +493,12 @@ components:
         spaceId: { type: string }
         ftsAvailable: { type: boolean }
         ftsEngine: { type: string }
-        defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty, hybrid+vector] }
+        defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty, hybrid+vector, vector] }
         hybridAvailable: { type: boolean }
         vectorAvailable: { type: boolean }
         vectorPointCount: { type: integer, format: int64 }
+        embedderKind: { type: string, description: 'hash|openai_compat|custom|none' }
+        embedderDim: { type: integer, description: Configured or learned embedding dimension. }
         databaseDialect: { type: string }
         documentCount: { type: integer, format: int64 }
         chunkCount: { type: integer, format: int64 }
@@ -854,6 +856,34 @@ components:
         publisher: { type: string }
         path: { type: string }
         repoRoot: { type: string }
+    SkillCatalogItem:
+      type: object
+      required: [name, version, publisher, url]
+      properties:
+        name: { type: string }
+        version: { type: string }
+        publisher: { type: string }
+        url: { type: string, description: Local path or http(s) URL to the signed pack zip }
+        digest: { type: string }
+        signature: { type: string }
+    SkillCatalogListResponse:
+      type: object
+      required: [ok, items]
+      properties:
+        ok: { type: boolean }
+        source: { type: string }
+        message: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SkillCatalogItem" }
+    SkillCatalogInstallRequest:
+      type: object
+      required: [name]
+      properties:
+        repoRoot: { type: string }
+        spaceId: { type: string }
+        name: { type: string }
+        version: { type: string }
     AgentProviderStatus:
       type: object
       properties:
@@ -2849,8 +2879,8 @@ components:
         files: { type: integer }
         symbolSource:
           type: string
-          enum: [regex, ctags, treesitter]
-          description: Preferred indexer for symbol extraction (`treesitter` default). Per-file fallback uses `regex`; response stays on preferred name if any file succeeded.
+          enum: [regex, ctags, treesitter, lsp]
+          description: Preferred indexer for symbol extraction (`treesitter` default; `lsp` via ASH_RAG_SYMBOL_INDEXER=lsp or ASH_RAG_LSP=1). Per-file fallback lsp→treesitter→regex; response stays on preferred name if any file succeeded.
     RAGQueryRequest:
       type: object
       required: [text]
@@ -2859,7 +2889,7 @@ components:
         topK: { type: integer }
         repoRoot: { type: string }
         spaceId: { type: string }
-        prefer: { type: string, description: '""|"path"|"symbol"|"text"' }
+        prefer: { type: string, description: '""|"path"|"symbol"|"text"|"vector"' }
     RAGHit:
       type: object
       properties:
@@ -5016,6 +5046,47 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SkillsListResponse" }
+
+  /api/v1/skills/catalog:
+    get:
+      tags: [Skills]
+      summary: List org skill catalog entries (filesystem/HTTP; no public marketplace)
+      parameters:
+        - in: query
+          name: repoRoot
+          schema: { type: string, default: "." }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillCatalogListResponse" }
+        "400":
+          description: catalog load/verify failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillCatalogListResponse" }
+
+  /api/v1/skills/catalog/install:
+    post:
+      tags: [Skills]
+      summary: Install a skill pack referenced by the org catalog
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkillCatalogInstallRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillPackInstallResult" }
+        "400":
+          description: install failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
 
   /api/v1/skills/packs/verify:
     post:

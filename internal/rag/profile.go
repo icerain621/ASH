@@ -13,6 +13,8 @@ type Profile struct {
 	HybridAvailable      bool   `json:"hybridAvailable"`
 	VectorAvailable      bool   `json:"vectorAvailable"`
 	VectorPointCount     int64  `json:"vectorPointCount"`
+	EmbedderKind         string `json:"embedderKind,omitempty"`
+	EmbedderDim          int    `json:"embedderDim,omitempty"`
 	DatabaseDialect      string `json:"databaseDialect"`
 	DocumentCount        int64  `json:"documentCount"`
 	ChunkCount           int64  `json:"chunkCount"`
@@ -33,6 +35,10 @@ func (s *Service) Profile(spaceID string) Profile {
 	if s.db != nil {
 		out.DatabaseDialect = s.db.Dialect()
 	}
+	if s.embedder != nil {
+		out.EmbedderKind = EmbedderKind(s.embedder)
+		out.EmbedderDim = s.embedder.Dim()
+	}
 	if s.vectors != nil {
 		out.VectorAvailable = s.vectors.Available()
 	}
@@ -45,8 +51,12 @@ func (s *Service) Profile(spaceID string) Profile {
 		out.FallbackQueryCount = CountChunkFallbackQueries(gdb, spaceID)
 	}
 	out.HybridAvailable = out.PathEntryCount+out.SymbolCount > 0
-	if out.HybridAvailable {
+	if out.HybridAvailable && out.VectorPointCount > 0 && out.VectorAvailable {
+		out.DefaultRetrievalMode = RetrievalModeHybridVector
+	} else if out.HybridAvailable {
 		out.DefaultRetrievalMode = RetrievalModeHybrid
+	} else if out.VectorPointCount > 0 && out.VectorAvailable {
+		out.DefaultRetrievalMode = RetrievalModeVector
 	}
 	return out
 }

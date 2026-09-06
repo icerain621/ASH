@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Sprint DX: sandbox policy + process executor smoke (Docker optional).
+# Sprint DX / DX18 / DX21 / DX27: sandbox policy + process + landlock (+ optional e2e).
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -38,6 +38,67 @@ GOEOF
     rm -rf "$ll_probe"
     echo "landlock probe: ${avail}"
     go test ./internal/sandbox/landlock/ -count=1
+  fi
+fi
+
+# DX27: optional Linux Landlock+seccomp behavioral evidence
+if [[ "${ASH_SANDBOX_E2E:-}" == "1" ]]; then
+  echo "== landlock/seccomp e2e (ASH_SANDBOX_E2E=1) =="
+  os_name="$(uname -s 2>/dev/null || echo unknown)"
+  evidence="$ROOT/doc/evidence/sandbox-landlock-e2e-latest.md"
+  stamp="$(date -u +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u)"
+  if [[ "$os_name" != "Linux" ]]; then
+    cat >"$evidence" <<EOF
+# Sandbox Landlock + seccomp e2e evidence (DX27)
+
+| Field | Value |
+|-------|--------|
+| Status | **skipped** (non-Linux host) |
+| Platform | ${os_name} |
+| Date | ${stamp} |
+| Note | Run on Linux CI/host with \`ASH_SANDBOX_E2E=1 make sandbox-smoke\` |
+
+E2B / remote microVM client: **Out** (v2.7). Extension point: \`sandbox.Executor\`.
+EOF
+    echo "e2e: skipped on ${os_name}; wrote ${evidence}"
+  else
+    e2e_log="$(mktemp 2>/dev/null || mktemp -t ash-e2e)"
+    set +e
+    go test ./internal/sandbox/landlock/ -count=1 -v -run 'TestE2E' 2>&1 | tee "$e2e_log"
+    e2e_rc=${PIPESTATUS[0]}
+    set -e
+    allow_st="$(grep -E '--- (PASS|SKIP|FAIL): TestE2ELandlockAllowsRepoRootRead' "$e2e_log" | tail -1 || true)"
+    deny_st="$(grep -E '--- (PASS|SKIP|FAIL): TestE2ELandlockDeniesOutsideRepoRoot' "$e2e_log" | tail -1 || true)"
+    sec_st="$(grep -E '--- (PASS|SKIP|FAIL): TestE2ESeccompDeniesMountSyscall' "$e2e_log" | tail -1 || true)"
+    status="pass"
+    if [[ "$e2e_rc" -ne 0 ]]; then
+      status="fail"
+    fi
+    cat >"$evidence" <<EOF
+# Sandbox Landlock + seccomp e2e evidence (DX27)
+
+| Field | Value |
+|-------|--------|
+| Status | **${status}** (exit ${e2e_rc}) |
+| Platform | ${os_name} |
+| Date | ${stamp} |
+| TestE2ELandlockAllowsRepoRootRead | ${allow_st:-"(not run)"} |
+| TestE2ELandlockDeniesOutsideRepoRoot | ${deny_st:-"(not run)"} |
+| TestE2ESeccompDeniesMountSyscall | ${sec_st:-"(not run)"} |
+
+E2B / remote microVM client: **Out** (v2.7). Extension point: \`sandbox.Executor\`.
+
+## Raw excerpt
+
+\`\`\`
+$(tail -n 80 "$e2e_log")
+\`\`\`
+EOF
+    rm -f "$e2e_log"
+    echo "e2e: wrote ${evidence}"
+    if [[ "$e2e_rc" -ne 0 ]]; then
+      exit "$e2e_rc"
+    fi
   fi
 fi
 

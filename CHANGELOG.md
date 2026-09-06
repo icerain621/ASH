@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX30（v2.7）：范围冻结 + 签字门禁 — `v2.7-release-scope` **已冻结**；`make v2.7-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + rag-vector + sandbox + skill-pack + thin LSP）；清单/签字模板；**不自动**打 `v2.7.0` tag。
+- Sprint DX29（v2.7 草案 · B8）：薄 LSP 符号 — `LSPIndexer` one-shot `documentSymbol`（gopls / typescript-language-server）；`source=lsp`；`ASH_RAG_SYMBOL_INDEXER=lsp` / `ASH_RAG_LSP=1`；回退 lsp→treesitter→regex；fake-gopls 夹具；**无常驻守护 / 无新表**。
+- Sprint DX28（v2.7 草案）：组织 Skill catalog — `ash.skill.catalog.v1`（filesystem/HTTPS）；`GET /skills/catalog` + `POST /skills/catalog/install`；可选 catalog HMAC；Automation 验签干跑 + 已安装提示；**无新表 / 无公网市场**。
+- Sprint DX27（v2.7 草案）：沙箱 e2e 证据 — Linux `TestE2E*`（repo 可读 / 外路径 deny / `SYS_MOUNT` seccomp）；`ASH_SANDBOX_E2E=1` 写入 `doc/evidence/sandbox-landlock-e2e-latest.md`；`sandbox.Executor` 扩展注释（**无 E2B**）；**无新表**。
+- Sprint DX26（v2.7 草案）：真实 Embedder — OpenAI-compat HTTP（`ASH_EMBED_BASE_URL`/`API_KEY`/`MODEL`/`DIM`/`TIMEOUT`）；未配置回退 Hash；Profile `embedderKind`/`embedderDim`；可选 `ASH_EMBED_LIVE=1`；**无新表**。
+- Sprint DX25（v2.7 草案）：Vector harden — `prefer=vector`（有命中则 `retrievalMode=vector`，否则回退 hybrid/text）；Qdrant **create-if-missing**（Upsert/Search 幂等建库）；Profile 在向量就绪时诚实报告 `hybrid+vector`/`vector`；扩展 `rag-vector-smoke`；OpenAPI prefer 含 `vector`；**无新表**。
 - Sprint DX24（v2.6）：范围冻结 + 签字门禁 — `v2.6-release-scope` **已冻结**；`make v2.6-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + sandbox + skill-pack + region）；清单/签字模板；**不自动**打 `v2.6.0` tag。
 - Sprint DX23（v2.6 草案）：单区域就绪 — `ASH_REGION`（空→`default`）；`/readyz` 与 Scale readiness `region`；ops parity；Scale UI；清单 [`single-region-ha.md`](doc/checklists/single-region-ha.md)（备份/HA；**无** Active-Active）；**无新表**。
 - Sprint DX22（v2.6 草案）：私有签名 Skill packs — zip + HMAC（`ASH_SKILL_PACK_SIGNING_KEY`）；`POST /skills/packs/verify|install`；落盘 `.ash/skills/<name>/`；publisher/space allowlist；CLI `ash skill-pack`；Automation 安装表单；`make skill-pack-smoke`；**无新表**。

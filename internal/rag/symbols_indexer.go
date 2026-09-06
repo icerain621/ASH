@@ -104,11 +104,14 @@ func parseCtagsXOutput(out []byte) ([]SymbolHit, error) {
 //
 //	ASH_RAG_CTAGS=0  → regex (DX16 compat)
 //	ASH_RAG_CTAGS=1  → ctags if on PATH, else regex
+//	ASH_RAG_LSP=1    → lsp if gopls/tsserver on PATH, else treesitter
 //	auto (default)   → treesitter (pure Go; always available)
 //
-// ASH_RAG_SYMBOL_INDEXER=treesitter|ctags|regex forces one backend.
+// ASH_RAG_SYMBOL_INDEXER=lsp|treesitter|ctags|regex forces one backend.
 func ResolveSymbolIndexer() SymbolIndexer {
 	switch forced := strings.ToLower(strings.TrimSpace(os.Getenv("ASH_RAG_SYMBOL_INDEXER"))); forced {
+	case "lsp":
+		return NewLSPIndexerFromEnv()
 	case "treesitter", "tree-sitter", "ts":
 		return NewTreeSitterIndexer()
 	case "ctags":
@@ -129,6 +132,11 @@ func ResolveSymbolIndexer() SymbolIndexer {
 		}
 		return RegexIndexer{}
 	default:
+		if parseASHRagLSPEnv(os.Getenv(envRAGLSP)) {
+			if idx := NewLSPIndexerFromEnv(); idx.Available() {
+				return idx
+			}
+		}
 		return NewTreeSitterIndexer()
 	}
 }

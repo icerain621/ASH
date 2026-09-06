@@ -156,6 +156,13 @@ func (c *QdrantClient) Upsert(space, collection string, points []VectorPoint) er
 		return nil
 	}
 	col := c.resolveCollection(space, collection)
+	dim := 0
+	if len(points) > 0 {
+		dim = len(points[0].Vector)
+	}
+	if err := c.ensureCollection(col, dim); err != nil {
+		return err
+	}
 	body := qdrantUpsertRequest{Points: make([]qdrantPoint, len(points))}
 	for i, p := range points {
 		body.Points[i] = qdrantPoint{
@@ -195,6 +202,9 @@ func (c *QdrantClient) Search(space, collection string, vec []float32, topK int)
 		topK = 10
 	}
 	col := c.resolveCollection(space, collection)
+	if err := c.ensureCollection(col, len(vec)); err != nil {
+		return nil, err
+	}
 	body := qdrantSearchRequest{
 		Vector:      vec,
 		Limit:       topK,
@@ -232,6 +242,63 @@ func (c *QdrantClient) Search(space, collection string, vec []float32, topK int)
 		}
 	}
 	return hits, nil
+}
+
+// ensureCollection creates the Qdrant collection when missing (idempotent).
+func (c *QdrantClient) ensureCollection(col string, dim int) error {
+	if c == nil || c.client == nil {
+		return fmt.Errorf("qdrant client is nil")
+	}
+	if dim <= 0 {
+		dim = DefaultHashEmbedderDim
+	}
+	getURL := fmt.Sprintf("%s/collections/%s", c.baseURL, col)
+	req, err := http.NewRequest(http.MethodGet, getURL, nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	_, _ = io.Copy(io.Discard, resp.Body)
+	_ = resp.Body.Close()
+	if resp.StatusCode >= 200 && resp.StatusCode < 300 {
+		return nil
+	}
+	if resp.StatusCode != http.StatusNotFound {
+		return fmt.Errorf("qdrant get collection: %s", resp.Status)
+	}
+	createBody := map[string]any{
+		"vectors": map[string]any{
+			"size":     dim,
+			"distance": "Cosine",
+		},
+	}
+	raw, err := json.Marshal(createBody)
+	if err != nil {
+		return err
+	}
+	putReq, err := http.NewRequest(http.MethodPut, getURL, bytes.NewReader(raw))
+	if err != nil {
+		return err
+	}
+	putReq.Header.Set("Content-Type", "application/json")
+	putResp, err := c.client.Do(putReq)
+	if err != nil {
+		return err
+	}
+	defer putResp.Body.Close()
+	if putResp.StatusCode < 200 || putResp.StatusCode >= 300 {
+		b, _ := io.ReadAll(putResp.Body)
+		// Concurrent create may race; treat "already exists" as success.
+		msg := strings.ToLower(string(b))
+		if putResp.StatusCode == http.StatusConflict || strings.Contains(msg, "already") {
+			return nil
+		}
+		return fmt.Errorf("qdrant create collection: %s: %s", putResp.Status, strings.TrimSpace(string(b)))
+	}
+	return nil
 }
 
 // Ensure QdrantClient implements VectorStore.

@@ -20,7 +20,7 @@ type RebuildSymbolsResponse struct {
 	Paths        int    `json:"paths"`
 	Symbols      int    `json:"symbols"`
 	Files        int    `json:"files"`
-	SymbolSource string `json:"symbolSource"`
+	SymbolSource string `json:"symbolSource" enums:"regex,ctags,treesitter,lsp"`
 }
 
 func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResponse, error) {
@@ -35,6 +35,7 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 	regexFallback := RegexIndexer{}
 	resp := &RebuildSymbolsResponse{SymbolSource: indexer.Name()}
 	preferredOK := false
+	treesitterFallbackOK := false
 	now := time.Now().UTC()
 
 	err = filepath.WalkDir(abs, func(path string, d os.DirEntry, walkErr error) error {
@@ -98,10 +99,21 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 		source := indexer.Name()
 		hits, err := indexer.IndexFile(path, b)
 		if err != nil {
-			source = regexFallback.Name()
-			hits, err = regexFallback.IndexFile(path, b)
+			// Preferred failed: lsp → treesitter → regex; others → regex.
+			if indexer.Name() == "lsp" {
+				ts := NewTreeSitterIndexer()
+				hits, err = ts.IndexFile(path, b)
+				if err == nil {
+					source = ts.Name()
+					treesitterFallbackOK = true
+				}
+			}
 			if err != nil {
-				return err
+				source = regexFallback.Name()
+				hits, err = regexFallback.IndexFile(path, b)
+				if err != nil {
+					return err
+				}
 			}
 		} else {
 			preferredOK = true
@@ -129,9 +141,13 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 	if err := deleteStaleRAGSymbols(s.gdb(), space, abs, seenPaths); err != nil {
 		return nil, err
 	}
-	// Keep primary indexer name when any file succeeded; only report regex if all preferred attempts failed.
+	// Keep primary indexer name when any file succeeded; else report best fallback used.
 	if indexer.Name() != "regex" && !preferredOK && resp.Symbols > 0 {
-		resp.SymbolSource = "regex"
+		if treesitterFallbackOK {
+			resp.SymbolSource = "treesitter"
+		} else {
+			resp.SymbolSource = "regex"
+		}
 	}
 	return resp, nil
 }

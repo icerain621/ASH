@@ -2,6 +2,8 @@ package rag
 
 import (
 	"fmt"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
@@ -189,6 +191,115 @@ func TestQueryVectorLaneWhenQdrantMocked(t *testing.T) {
 	if !found {
 		t.Fatalf("items=%+v want vec.go / vector snippet", resp.Items)
 	}
+
+	prefer, err := svc.Query(QueryRequest{
+		RepoRoot: repo, SpaceID: "vec", Text: "vector lane target alpha", TopK: 5, Prefer: "vector",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if prefer.RetrievalMode != RetrievalModeVector {
+		t.Fatalf("prefer=vector mode=%q want %q", prefer.RetrievalMode, RetrievalModeVector)
+	}
+	if len(prefer.Items) == 0 {
+		t.Fatal("prefer=vector expected hits")
+	}
+}
+
+func TestQueryPreferVectorDegradesWithoutHits(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true)
+	svc := NewService(db).WithEmbedder(DefaultHashEmbedder()).WithVectorStore(mock)
+
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "note.md"), []byte("only text lane content here\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "novec", Embed: false}); err != nil {
+		t.Fatal(err)
+	}
+
+	resp, err := svc.Query(QueryRequest{
+		RepoRoot: repo, SpaceID: "novec", Text: "only text lane", TopK: 3, Prefer: "vector",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.RetrievalMode == RetrievalModeVector {
+		t.Fatalf("mode=%q must degrade when no vector hits", resp.RetrievalMode)
+	}
+	if len(resp.Items) == 0 {
+		t.Fatal("expected text/hybrid hits after degrade")
+	}
+}
+
+func TestIndexEmbedUsesOpenAICompatEmbedder(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"data":[{"index":0,"embedding":[0.5,0.25,0.125]}]}`))
+	}))
+	defer srv.Close()
+
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true)
+	emb := NewOpenAICompatEmbedder(srv.URL, "k", "test-model", 3, 0)
+	svc := NewService(db).WithEmbedder(emb).WithVectorStore(mock)
+
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "a.md"), []byte("openai embed path\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "oai", Embed: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Embedded < 1 {
+		t.Fatalf("embedded=%d", resp.Embedded)
+	}
+	mock.mu.Lock()
+	defer mock.mu.Unlock()
+	found := false
+	for _, p := range mock.points {
+		if len(p.Vector) == 3 && p.Vector[0] == 0.5 {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("points=%v want openai dims", mock.points)
+	}
+	p := svc.Profile("oai")
+	if p.EmbedderKind != "openai_compat" {
+		t.Fatalf("EmbedderKind=%q", p.EmbedderKind)
+	}
+}
+
+func TestIndexEmbedOpenAIErrorIsBestEffort(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusInternalServerError)
+		_, _ = w.Write([]byte(`fail`))
+	}))
+	defer srv.Close()
+
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true)
+	emb := NewOpenAICompatEmbedder(srv.URL, "", "m", 8, 0)
+	svc := NewService(db).WithEmbedder(emb).WithVectorStore(mock)
+
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "a.md"), []byte("still index\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "fail", Embed: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.Documents < 1 {
+		t.Fatalf("documents=%d", resp.Documents)
+	}
+	if resp.Embedded != 0 {
+		t.Fatalf("embedded=%d want 0 on embed HTTP error", resp.Embedded)
+	}
 }
 
 func TestIndexEmbedWritesVectorRefs(t *testing.T) {
@@ -299,5 +410,38 @@ func TestProfileReportsVectorFields(t *testing.T) {
 	}
 	if p.VectorPointCount != 1 {
 		t.Fatalf("VectorPointCount=%d want 1", p.VectorPointCount)
+	}
+	if p.DefaultRetrievalMode != RetrievalModeVector {
+		t.Fatalf("DefaultRetrievalMode=%q want %q (vector-only honesty)", p.DefaultRetrievalMode, RetrievalModeVector)
+	}
+	if p.EmbedderKind == "" {
+		t.Fatal("EmbedderKind want non-empty")
+	}
+	if p.EmbedderDim <= 0 {
+		t.Fatalf("EmbedderDim=%d want >0", p.EmbedderDim)
+	}
+}
+
+func TestProfileReportsHybridVectorWhenBothReady(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true)
+	svc := NewService(db).WithVectorStore(mock)
+	now := time.Now().UTC()
+	if err := db.Create(&store.RAGPathEntry{
+		ID: "ragpath_p", SpaceID: "hv", RepoRoot: "/tmp", Path: "a.go",
+		Basename: "a.go", Digest: "d1",
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&store.RAGVectorRef{
+		ID: "ragvec_hv", SpaceID: "hv", RepoRoot: "/tmp",
+		ChunkID: "ragchk_hv", PointID: "pt_hv", CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	p := svc.Profile("hv")
+	if p.DefaultRetrievalMode != RetrievalModeHybridVector {
+		t.Fatalf("mode=%q want %q", p.DefaultRetrievalMode, RetrievalModeHybridVector)
 	}
 }

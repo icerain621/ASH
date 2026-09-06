@@ -37,5 +37,7 @@ make signoff-gate
 | `release-window-YYYY-MM-DD.md` | 发布窗口按日归档 |
 | `rollback-drill-latest.md` | 最近一次回滚演练摘要 |
 | `mvp-signatures-latest.md` | §11 四人签字 + 范围冻结（`make signoff-apply` 后） |
+| `sandbox-landlock-e2e-latest.md` | Landlock+seccomp e2e 摘要（`ASH_SANDBOX_E2E=1 make sandbox-smoke`） |
+| `v2.7-signatures-template.md` | v2.7 签字模板（复制为 `v2.7-signatures-latest.md`） |
 
 签字完成后执行 `make signoff-apply`，用 `make signoff-gate` 验收；云切换另见 [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)。

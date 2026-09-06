@@ -29,7 +29,7 @@ type Service struct {
 func NewService(db *store.DB) *Service {
 	return &Service{
 		db:       db,
-		embedder: DefaultHashEmbedder(),
+		embedder: ResolveEmbedder(),
 		vectors:  NewQdrantClient(DefaultQdrantURL()),
 	}
 }
@@ -89,7 +89,7 @@ type QueryRequest struct {
 	Text     string `json:"text" binding:"required"`
 	TopK     int    `json:"topK,omitempty"`
 	SpaceID  string `json:"spaceId,omitempty"`
-	Prefer   string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"
+	Prefer   string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"|"vector"
 }
 
 type Hit struct {
@@ -199,6 +199,13 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	vectorHits := s.queryVectorLane(space, absRepo, strings.TrimSpace(req.Text), topK*2)
 	hasHybridTables := pathCount+symbolCount > 0
 	hasVector := len(vectorHits) > 0
+
+	// prefer=vector: vector-only when lane has hits; otherwise degrade to hybrid/text.
+	if req.Prefer == "vector" && hasVector {
+		merged := rrfMerge(map[string][]Hit{"vector": vectorHits}, "vector", topK)
+		return &QueryResponse{Items: merged, RetrievalMode: RetrievalModeVector, FtsAvailable: ftsAvailable}, nil
+	}
+
 	if !hasHybridTables && !hasVector {
 		return &QueryResponse{Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable}, nil
 	}

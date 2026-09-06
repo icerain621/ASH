@@ -130,6 +130,8 @@ var Catalog = map[string]Entry{
 	"SKILL_PACK_BAD_REQUEST":     {Domain: "skills", Summary: "Invalid skill pack install/verify request"},
 	"SKILL_PACK_LOAD_FAILED":     {Domain: "skills", Summary: "Failed to load skill pack bytes"},
 	"SKILL_PACK_INSTALL_FAILED":  {Domain: "skills", Summary: "Skill pack verify or install failed"},
+	"SKILL_CATALOG_BAD_REQUEST":    {Domain: "skills", Summary: "Invalid skill catalog install request"},
+	"SKILL_CATALOG_INSTALL_FAILED": {Domain: "skills", Summary: "Skill catalog fetch or install failed"},
 	"SUBRUN_SPAWN_FAILED":        {Domain: "runs", Summary: "Failed to spawn sub-run"},
 	"SUBRUN_TREE_FAILED":         {Domain: "runs", Summary: "Failed to load run spawn tree"},
 	"DIFF_GET_FAILED":            {Domain: "quest", Summary: "Failed to load run diff"},

@@ -1509,6 +1509,10 @@ definitions:
         type: string
       documentCount:
         type: integer
+      embedderDim:
+        type: integer
+      embedderKind:
+        type: string
       fallbackQueryCount:
         type: integer
       ftsAvailable:
@@ -1531,7 +1535,7 @@ definitions:
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:
     properties:
       prefer:
-        description: '""|"path"|"symbol"|"text"'
+        description: '""|"path"|"symbol"|"text"|"vector"'
         type: string
       repoRoot:
         type: string
@@ -1571,6 +1575,11 @@ definitions:
       paths:
         type: integer
       symbolSource:
+        enum:
+        - regex
+        - ctags
+        - treesitter
+        - lsp
         type: string
       symbols:
         type: integer
@@ -2233,6 +2242,36 @@ definitions:
         type: array
       updatedAt:
         type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_skills.CatalogItem:
+    properties:
+      digest:
+        description: expected sha256 of SKILL.md
+        type: string
+      name:
+        type: string
+      publisher:
+        type: string
+      signature:
+        description: pack HMAC hex
+        type: string
+      url:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_skills.CatalogListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogItem'
+        type: array
+      message:
+        type: string
+      ok:
+        type: boolean
+      source:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_skills.ListResponse:
     properties:
@@ -4376,6 +4415,19 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View'
         type: array
+    type: object
+  internal_api.skillCatalogInstallRequest:
+    properties:
+      name:
+        type: string
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+      version:
+        type: string
+    required:
+    - name
     type: object
   internal_api.skillPackRequest:
     properties:
@@ -8190,6 +8242,54 @@ paths:
           schema:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill'
       summary: Get a skill by id (includes body)
+      tags:
+      - skills
+  /api/v1/skills/catalog:
+    get:
+      parameters:
+      - default: .
+        description: repository root for .ash/skill-catalog.json
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogListResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogListResponse'
+      summary: List org skill catalog entries (filesystem/HTTP; no public marketplace)
+      tags:
+      - skills
+  /api/v1/skills/catalog/install:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: catalog name (+ optional version)
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.skillCatalogInstallRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.PackInstallResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Install a skill pack referenced by the org catalog
       tags:
       - skills
   /api/v1/skills/packs/install:

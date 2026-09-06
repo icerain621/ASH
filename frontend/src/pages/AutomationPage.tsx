@@ -40,7 +40,7 @@ import {
 } from "@/modules/platform/api/platform.api";
 import { HarnessProfilesPane } from "@/components/HarnessProfilesPane";
 import { ImproveProposalsPane } from "@/components/ImproveProposalsPane";
-import { listSkills, installSkillPack } from "@/modules/skills/api/skills.api";
+import { listSkills, installSkillPack, verifySkillPack, listSkillCatalog, installSkillFromCatalog } from "@/modules/skills/api/skills.api";
 import { ApiError, getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
 
@@ -84,6 +84,36 @@ export function AutomationPage() {
     queryKey: ["skills", skillsRepoRoot],
     queryFn: () => listSkills(skillsRepoRoot),
   });
+  const skillCatalogQuery = useQuery({
+    queryKey: ["skills-catalog", skillsRepoRoot],
+    queryFn: () => listSkillCatalog(skillsRepoRoot),
+  });
+  const installedSkillIds = new Set((skillsQuery.data?.items ?? []).map((s) => s.id));
+  const verifySkillPackMutation = useMutation({
+    mutationFn: () =>
+      verifySkillPack({
+        repoRoot: skillsRepoRoot,
+        spaceId: activeSpaceId || "local",
+        packPath: skillPackPath,
+        signature: skillPackSig,
+      }),
+    onSuccess: (res) => {
+      setSkillPackMessage(
+        res.ok
+          ? `验签通过 ${res.name}@${res.version}（${res.publisher}）· ${res.message ?? "ok"}`
+          : `验签失败：${res.message ?? "unknown"}`,
+      );
+    },
+    onError: (err) => {
+      const msg =
+        err instanceof ApiError
+          ? err.message
+          : typeof err === "object" && err && "message" in err
+            ? String((err as { message?: string }).message)
+            : String(err);
+      setSkillPackMessage(`验签失败：${msg}`);
+    },
+  });
   const installSkillPackMutation = useMutation({
     mutationFn: () =>
       installSkillPack({
@@ -95,9 +125,27 @@ export function AutomationPage() {
     onSuccess: (res) => {
       setSkillPackMessage(`已安装 ${res.name}@${res.version} → ${res.path}`);
       void skillsQuery.refetch();
+      void skillCatalogQuery.refetch();
     },
     onError: (err) => {
-      setSkillPackMessage(err instanceof ApiError ? err.message : String(err));
+      setSkillPackMessage(`安装失败：${err instanceof ApiError ? err.message : String(err)}`);
+    },
+  });
+  const installFromCatalogMutation = useMutation({
+    mutationFn: (item: { name: string; version: string }) =>
+      installSkillFromCatalog({
+        repoRoot: skillsRepoRoot,
+        spaceId: activeSpaceId || "local",
+        name: item.name,
+        version: item.version,
+      }),
+    onSuccess: (res) => {
+      setSkillPackMessage(`已从 catalog 安装 ${res.name}@${res.version} → ${res.path}`);
+      void skillsQuery.refetch();
+      void skillCatalogQuery.refetch();
+    },
+    onError: (err) => {
+      setSkillPackMessage(`Catalog 安装失败：${err instanceof ApiError ? err.message : String(err)}`);
     },
   });
   const toolsQuery = useQuery({
@@ -328,7 +376,10 @@ export function AutomationPage() {
             <h2>Skills</h2>
             <span>{skillsQuery.data?.items.length ?? 0} 个</span>
           </div>
-          <p className="muted-line">扫描 <code>.ash/skills/*/SKILL.md</code>；场景/Harness 声明后注入 <code>skill:</code> contextRefs。私有签名 pack：<code>POST /skills/packs/install</code>。</p>
+          <p className="muted-line">
+            扫描 <code>.ash/skills/*/SKILL.md</code>；组织 catalog：<code>.ash/skill-catalog.json</code> 或{" "}
+            <code>ASH_SKILL_CATALOG_PATH</code>/<code>URL</code>（无公网市场）。签名 pack：verify 干跑后再 install。
+          </p>
           <label className="scenario-picker">
             repoRoot
             <input
@@ -358,13 +409,78 @@ export function AutomationPage() {
             </label>
             <button
               type="button"
+              disabled={!skillPackPath || !skillPackSig || verifySkillPackMutation.isPending}
+              onClick={() => verifySkillPackMutation.mutate()}
+              data-testid="skills-pack-verify-btn"
+            >
+              验签（干跑）
+            </button>
+            <button
+              type="button"
               disabled={!skillPackPath || !skillPackSig || installSkillPackMutation.isPending}
               onClick={() => installSkillPackMutation.mutate()}
               data-testid="skills-pack-install-btn"
             >
               安装签名 pack
             </button>
-            {skillPackMessage && <p className="muted-line">{skillPackMessage}</p>}
+            {skillPackMessage && (
+              <p className="muted-line" data-testid="skills-pack-message">
+                {skillPackMessage}
+              </p>
+            )}
+          </div>
+          <div className="pane" data-testid="skills-org-catalog" style={{ marginTop: "0.75rem" }}>
+            <div className="pane-title">
+              <h3 style={{ margin: 0, fontSize: "1rem" }}>组织 Catalog</h3>
+              <span>{skillCatalogQuery.data?.items.length ?? 0} 项</span>
+            </div>
+            {skillCatalogQuery.data?.source && (
+              <p className="muted-line">
+                source: <code>{skillCatalogQuery.data.source}</code>
+              </p>
+            )}
+            {skillCatalogQuery.isError && <p className="error">加载 catalog 失败</p>}
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Version</th>
+                  <th>Publisher</th>
+                  <th>状态</th>
+                  <th />
+                </tr>
+              </thead>
+              <tbody>
+                {(skillCatalogQuery.data?.items ?? []).map((it) => {
+                  const installed = installedSkillIds.has(it.name);
+                  return (
+                    <tr key={`${it.publisher}/${it.name}@${it.version}`}>
+                      <td>
+                        <code>{it.name}</code>
+                      </td>
+                      <td>{it.version}</td>
+                      <td>{it.publisher}</td>
+                      <td>{installed ? "已安装" : "未安装"}</td>
+                      <td>
+                        <button
+                          type="button"
+                          disabled={installFromCatalogMutation.isPending}
+                          onClick={() => installFromCatalogMutation.mutate({ name: it.name, version: it.version })}
+                          data-testid={`skills-catalog-install-${it.name}`}
+                        >
+                          {installed ? "重新安装" : "从 catalog 安装"}
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+                {(skillCatalogQuery.data?.items ?? []).length === 0 && (
+                  <tr>
+                    <td colSpan={5}>暂无 catalog 条目（可放置 <code>.ash/skill-catalog.json</code>）。</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
           </div>
           <table className="table">
             <thead>

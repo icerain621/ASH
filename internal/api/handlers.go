@@ -133,6 +133,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/wiki/pages", h.listWikiPages)
 		v1.GET("/wiki/pages/:pageId", h.getWikiPage)
 		v1.GET("/skills", h.listSkills)
+		v1.GET("/skills/catalog", h.listSkillCatalog)
+		v1.POST("/skills/catalog/install", h.installSkillFromCatalog)
 		v1.POST("/skills/packs/verify", h.verifySkillPack)
 		v1.POST("/skills/packs/install", h.installSkillPack)
 		v1.GET("/skills/:skillId", h.getSkill)

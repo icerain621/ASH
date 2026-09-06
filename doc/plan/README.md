@@ -14,6 +14,7 @@
 | [`v2.4-release-scope.md`](v2.4-release-scope.md) | **v2.4** 范围冻结（`make v2.4-signoff`） | Waker duties / DX12–DX14 |
 | [`v2.5-release-scope.md`](v2.5-release-scope.md) | **v2.5** 范围冻结（`make v2.5-signoff`） | Waker probes / ctags / vector / Landlock / DX15–DX19 |
 | [`v2.6-release-scope.md`](v2.6-release-scope.md) | **v2.6** 范围冻结（`make v2.6-signoff`） | tree-sitter / 沙箱硬化 / skill packs / DX20–DX24 |
+| [`v2.7-release-scope.md`](v2.7-release-scope.md) | **v2.7** 范围冻结（`make v2.7-signoff`） | vector embed / sandbox 证据 / skill catalog / thin LSP / DX25–DX30 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

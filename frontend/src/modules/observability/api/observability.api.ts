@@ -17,6 +17,10 @@ export type RagProfile = {
   ftsEngine?: string;
   defaultRetrievalMode: string;
   hybridAvailable?: boolean;
+  vectorAvailable?: boolean;
+  vectorPointCount?: number;
+  embedderKind?: string;
+  embedderDim?: number;
   databaseDialect?: string;
   documentCount: number;
   chunkCount: number;

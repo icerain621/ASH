@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9–DX11 已冻结**（tag `v2.3.0` 待人工）；**v2.4：DX12–DX14 已冻结**（tag `v2.4.0` 待人工）；**v2.5：DX15–DX19 已冻结**（tag `v2.5.0` 待人工）；**v2.6：DX20–DX24 已冻结**（tag `v2.6.0` 待人工） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.6：DX20–DX24 已冻结**（tag `v2.6.0` 待人工）；**v2.7：DX25–DX30 草案**（待确认后开工） |
 
 ---
 
@@ -62,7 +62,13 @@
 | DX22 | 私有签名 Skill packs（v2.6） | verify/install API；落盘 `.ash/skills`；`skill-pack-smoke` | ✅ |
 | DX23 | 单区域就绪（v2.6） | `ASH_REGION` + `/readyz`；HA/备份 runbook（非 AA） | ✅ |
 | DX24 | v2.6 冻结 + 签字 | `v2.6-release-scope` 冻结；`make v2.6-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结）；**v2.6** [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结）；DX20–DX24 sprint 文档；设计 [`docs/superpowers/specs/2026-09-06-v26-dx20-dx23-design.md`](../../docs/superpowers/specs/2026-09-06-v26-dx20-dx23-design.md) | — |
+| DX25 | Vector harden（v2.7 草案 · C） | `prefer=vector`；Qdrant create-if-missing；merge 测；Profile 诚实性 | ✅ |
+| DX26 | 真实 Embedder（v2.7） | OpenAI-compat HTTP；Hash 回退；Profile embedderKind | ✅ |
+| DX27 | 沙箱 e2e 证据（v2.7） | Linux Landlock+seccomp 证据；`ASH_SANDBOX_E2E`；E2B Out | ✅ |
+| DX28 | 组织 Skill catalog + UI（v2.7） | catalog 列表→install；验签干跑；Automation 打磨 | ✅ |
+| DX29 | 薄 LSP 符号（必做 · B8） | gopls/tsserver 一次性符号；`source=lsp`；完整 LSP Out | ✅ |
+| DX30 | v2.7 冻结 + 签字 | `v2.7-release-scope`；`make v2.7-signoff`；tag 人工 | ✅ |
+| 详排 | — | v2.6 [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结）；**v2.7** [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-06-v27-dx25-dx30-design.md`](../../docs/superpowers/specs/2026-09-06-v27-dx25-dx30-design.md) | — |
 
 ---
 

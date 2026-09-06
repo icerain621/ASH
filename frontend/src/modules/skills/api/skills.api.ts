@@ -44,6 +44,22 @@ export type SkillPackInstallResult = {
   repoRoot: string;
 };
 
+export type SkillCatalogItem = {
+  name: string;
+  version: string;
+  publisher: string;
+  url: string;
+  digest?: string;
+  signature?: string;
+};
+
+export type SkillCatalogList = {
+  ok: boolean;
+  source?: string;
+  message?: string;
+  items: SkillCatalogItem[];
+};
+
 export function verifySkillPack(body: {
   repoRoot?: string;
   spaceId?: string;
@@ -65,6 +81,23 @@ export function installSkillPack(body: {
   signature: string;
 }) {
   return api<SkillPackInstallResult>("/skills/packs/install", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function listSkillCatalog(repoRoot = ".") {
+  const q = new URLSearchParams({ repoRoot });
+  return api<SkillCatalogList>(`/skills/catalog?${q}`);
+}
+
+export function installSkillFromCatalog(body: {
+  repoRoot?: string;
+  spaceId?: string;
+  name: string;
+  version?: string;
+}) {
+  return api<SkillPackInstallResult>("/skills/catalog/install", {
     method: "POST",
     body: JSON.stringify(body),
   });

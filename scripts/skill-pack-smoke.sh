@@ -13,9 +13,9 @@ export ASH_SKILL_PACK_SIGNING_KEY="$KEY"
 export ASH_SKILL_PACK_ALLOWLIST="${ASH_SKILL_PACK_ALLOWLIST:-*}"
 export ASH_SKILL_PACK_SPACES="${ASH_SKILL_PACK_SPACES:-*}"
 
-echo "== skills pack unit tests =="
-go test ./internal/skills/ -count=1 -run 'TestBuildSignVerifyInstallPack|TestVerifyPackRejects'
-go test ./internal/api/ -count=1 -run 'TestSkillPackVerifyAndInstallAPI'
+echo "== skills pack + catalog unit tests =="
+go test ./internal/skills/ -count=1 -run 'TestBuildSignVerifyInstallPack|TestVerifyPackRejects|TestCatalog|TestInstallFromCatalog|TestListCatalog|TestLoadCatalog'
+go test ./internal/api/ -count=1 -run 'TestSkillPackVerifyAndInstallAPI|TestSkillCatalogListAndInstallAPI'
 
 TMP="$(mktemp -d 2>/dev/null || mktemp -d -t ash-skill-pack)"
 cleanup() { rm -rf "$TMP"; }

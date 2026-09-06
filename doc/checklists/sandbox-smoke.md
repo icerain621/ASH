@@ -1,8 +1,9 @@
-# Sandbox 烟测（Sprint DX / DX18 / DX21）
+# Sandbox 烟测（Sprint DX / DX18 / DX21 / DX27）
 
 ```bash
 make sandbox-smoke
 # 无 Docker / Windows：ASH_SKIP_SANDBOX=1 make sandbox-smoke
+# Linux 行为证据：ASH_SANDBOX_E2E=1 make sandbox-smoke
 ```
 
 | 覆盖 | 说明 |
@@ -11,6 +12,7 @@ make sandbox-smoke
 | `./internal/sandbox/process/` | process executor + path jail |
 | `./internal/sandbox/docker/` | Docker executor（包测） |
 | `./internal/sandbox/landlock/` | `Available()` + 最小 seccomp；非 Linux stub（**DX18/DX21**） |
+| `TestE2E*`（Linux） | FS deny + seccomp mount 探针（**DX27**；`ASH_SANDBOX_E2E=1`） |
 | `./internal/runs/` | danger+off 拒绝 + harness 路由事件 |
 
 ## Docker 段（可选）
@@ -35,11 +37,14 @@ make sandbox-smoke
 |------|------|
 | `ASH_SANDBOX_LANDLOCK=0` | 关闭 landlock 优先与 smoke 探测段 |
 | `ASH_SANDBOX_SECCOMP=0` | 子进程跳过 seccomp deny-list |
+| `ASH_SANDBOX_E2E=1` | DX27：跑 `TestE2E*` 并写 [`sandbox-landlock-e2e-latest.md`](../evidence/sandbox-landlock-e2e-latest.md) |
 
 Doctor **M4-SBX-04/05**：非 Linux → pass（skipped）；默认 `LandlockPreferred=true`。
 
 ## 相关
 
+- [`sandbox-landlock-e2e.md`](sandbox-landlock-e2e.md)（DX27）
 - [`../plan/sprint-dx-sandbox-implementation.md`](../plan/sprint-dx-sandbox-implementation.md)
 - [`../plan/sprint-dx18-landlock.md`](../plan/sprint-dx18-landlock.md)
 - [`../plan/sprint-dx21-sandbox-harden.md`](../plan/sprint-dx21-sandbox-harden.md)
+- [`../plan/sprint-dx27-sandbox-evidence.md`](../plan/sprint-dx27-sandbox-evidence.md)

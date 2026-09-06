@@ -10,6 +10,6 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 echo "== rag hybrid package tests =="
-go test ./internal/rag/ -count=1 -run 'TestRebuildSymbolsUpserts|TestRebuildSymbolsFallsBack|TestRebuildSymbolsTreesitter|TestHybridQuery|TestQueryFallsBack|TestTreeSitter|TestResolveSymbolIndexer'
+go test ./internal/rag/ -count=1 -run 'TestRebuildSymbolsUpserts|TestRebuildSymbolsFallsBack|TestRebuildSymbolsTreesitter|TestRebuildSymbolsLSP|TestHybridQuery|TestQueryFallsBack|TestTreeSitter|TestResolveSymbolIndexer|TestLSP|TestParseDocumentSymbol'
 
 echo "OK rag-hybrid-smoke"

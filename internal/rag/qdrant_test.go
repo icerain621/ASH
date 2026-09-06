@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strings"
+	"sync"
 	"testing"
 )
 
@@ -15,6 +16,11 @@ func TestQdrantClientUpsertAndSearch(t *testing.T) {
 	mux.HandleFunc("/collections", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"result":{"collections":[]}}`))
+	})
+	mux.HandleFunc("/collections/ash_test", func(w http.ResponseWriter, r *http.Request) {
+		// Collection already exists — Upsert/Search skip create.
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"result":{"status":"green"}}`))
 	})
 	mux.HandleFunc("/collections/ash_test/points", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPut {
@@ -69,6 +75,101 @@ func TestQdrantClientUpsertAndSearch(t *testing.T) {
 	}
 }
 
+func TestQdrantClientCreatesCollectionIfMissing(t *testing.T) {
+	var (
+		mu          sync.Mutex
+		getCount    int
+		createBody  string
+		createCount int
+		upsertOK    bool
+	)
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		path := r.URL.Path
+		switch {
+		case path == "/collections" && r.Method == http.MethodGet:
+			w.WriteHeader(http.StatusOK)
+			return
+		case path == "/collections/ash_new" && r.Method == http.MethodGet:
+			mu.Lock()
+			created := createCount > 0
+			getCount++
+			mu.Unlock()
+			if !created {
+				w.WriteHeader(http.StatusNotFound)
+				_, _ = w.Write([]byte(`{"status":{"error":"Not found"}}`))
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"result":{"status":"green"}}`))
+			return
+		case path == "/collections/ash_new" && r.Method == http.MethodPut:
+			b, _ := io.ReadAll(r.Body)
+			mu.Lock()
+			createBody = string(b)
+			createCount++
+			mu.Unlock()
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"result":true}`))
+			return
+		case path == "/collections/ash_new/points" && r.Method == http.MethodPut:
+			mu.Lock()
+			upsertOK = true
+			mu.Unlock()
+			w.WriteHeader(http.StatusOK)
+			_, _ = w.Write([]byte(`{"result":{"status":"completed"}}`))
+			return
+		default:
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}))
+	defer srv.Close()
+
+	c := NewQdrantClient(srv.URL)
+	if err := c.Upsert("new", "ash_new", []VectorPoint{{
+		ID:     "p1",
+		Vector: []float32{0.1, 0.2, 0.3},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	if getCount < 1 {
+		mu.Unlock()
+		t.Fatal("expected GET collection before create")
+	}
+	if createCount != 1 {
+		mu.Unlock()
+		t.Fatalf("createCount=%d want 1", createCount)
+	}
+	if !strings.Contains(createBody, `"size":3`) {
+		body := createBody
+		mu.Unlock()
+		t.Fatalf("create body missing dim: %s", body)
+	}
+	if !strings.Contains(createBody, "Cosine") {
+		body := createBody
+		mu.Unlock()
+		t.Fatalf("create body missing distance: %s", body)
+	}
+	if !upsertOK {
+		mu.Unlock()
+		t.Fatal("expected points upsert after create")
+	}
+	mu.Unlock()
+
+	// Second upsert: collection exists — no second create.
+	if err := c.Upsert("new", "ash_new", []VectorPoint{{
+		ID:     "p2",
+		Vector: []float32{0.4, 0.5, 0.6},
+	}}); err != nil {
+		t.Fatal(err)
+	}
+	mu.Lock()
+	defer mu.Unlock()
+	if createCount != 1 {
+		t.Fatalf("createCount=%d want still 1 after second upsert", createCount)
+	}
+}
+
 func TestQdrantClientAvailableFalseWhenDown(t *testing.T) {
 	c := NewQdrantClient("http://127.0.0.1:1")
 	if c.Available() {
@@ -107,11 +208,9 @@ func TestQdrantClientUpsertUsesDefaultCollection(t *testing.T) {
 func TestQdrantSearchRequestBody(t *testing.T) {
 	var body map[string]any
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/collections" {
-			w.WriteHeader(http.StatusOK)
-			return
+		if strings.HasSuffix(r.URL.Path, "/points/search") {
+			_ = json.NewDecoder(r.Body).Decode(&body)
 		}
-		_ = json.NewDecoder(r.Body).Decode(&body)
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"result":[]}`))
 	}))

@@ -5720,6 +5720,80 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/skills/catalog": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "List org skill catalog entries (filesystem/HTTP; no public marketplace)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "repository root for .ash/skill-catalog.json",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogListResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/skills/catalog/install": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "Install a skill pack referenced by the org catalog",
+                "parameters": [
+                    {
+                        "description": "catalog name (+ optional version)",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.skillCatalogInstallRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.PackInstallResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/skills/packs/install": {
             "post": {
                 "consumes": [
@@ -9169,6 +9243,12 @@ const docTemplate = `{
                 "documentCount": {
                     "type": "integer"
                 },
+                "embedderDim": {
+                    "type": "integer"
+                },
+                "embedderKind": {
+                    "type": "string"
+                },
                 "fallbackQueryCount": {
                     "type": "integer"
                 },
@@ -9205,7 +9285,7 @@ const docTemplate = `{
             ],
             "properties": {
                 "prefer": {
-                    "description": "\"\"|\"path\"|\"symbol\"|\"text\"",
+                    "description": "\"\"|\"path\"|\"symbol\"|\"text\"|\"vector\"",
                     "type": "string"
                 },
                 "repoRoot": {
@@ -9263,7 +9343,13 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "symbolSource": {
-                    "type": "string"
+                    "type": "string",
+                    "enum": [
+                        "regex",
+                        "ctags",
+                        "treesitter",
+                        "lsp"
+                    ]
                 },
                 "symbols": {
                     "type": "integer"
@@ -10274,6 +10360,51 @@ const docTemplate = `{
                 },
                 "updatedAt": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_skills.CatalogItem": {
+            "type": "object",
+            "properties": {
+                "digest": {
+                    "description": "expected sha256 of SKILL.md",
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "publisher": {
+                    "type": "string"
+                },
+                "signature": {
+                    "description": "pack HMAC hex",
+                    "type": "string"
+                },
+                "url": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_skills.CatalogListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogItem"
+                    }
+                },
+                "message": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "source": {
+                    "type": "string"
                 }
             }
         },
@@ -13539,6 +13670,26 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View"
                     }
+                }
+            }
+        },
+        "internal_api.skillCatalogInstallRequest": {
+            "type": "object",
+            "required": [
+                "name"
+            ],
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },
