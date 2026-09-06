@@ -12,8 +12,10 @@ echo "== sandbox unit tests =="
 go test ./internal/sandbox/ ./internal/sandbox/process/ ./internal/sandbox/docker/ ./internal/sandbox/landlock/ -count=1
 go test ./internal/runs/ -run 'TestSandboxDeniesDangerWhenProfileOff|TestHarnessLoopEmitsRoutedAndCompleted' -count=1
 
-if [[ "${ASH_SANDBOX_LANDLOCK:-}" == "1" ]]; then
-  echo "== landlock availability (ASH_SANDBOX_LANDLOCK=1) =="
+if [[ "${ASH_SANDBOX_LANDLOCK:-}" == "0" ]]; then
+  echo "== landlock opted out (ASH_SANDBOX_LANDLOCK=0) =="
+elif [[ "${ASH_SANDBOX_LANDLOCK:-}" == "1" ]] || [[ -z "${ASH_SANDBOX_LANDLOCK:-}" ]]; then
+  echo "== landlock preference (default-on unless ASH_SANDBOX_LANDLOCK=0) =="
   os_name="$(uname -s 2>/dev/null || echo unknown)"
   if [[ "$os_name" != "Linux" ]]; then
     echo "landlock: skipped on ${os_name} (non-Linux; no e2e)"
@@ -29,15 +31,12 @@ import (
 )
 
 func main() {
-	fmt.Print(landlock.Available())
+	fmt.Printf("available=%v seccomp=%v\n", landlock.Available(), landlock.SeccompAvailable())
 }
 GOEOF
-    avail="$(cd "$ll_probe" && go run -mod=readonly . 2>/dev/null || echo false)"
+    avail="$(cd "$ll_probe" && go run -mod=readonly . 2>/dev/null || echo "available=false seccomp=false")"
     rm -rf "$ll_probe"
-    echo "landlock available=${avail}"
-    if [[ "$avail" != "true" ]]; then
-      echo "note: kernel may lack Landlock support (non-fatal for smoke)"
-    fi
+    echo "landlock probe: ${avail}"
     go test ./internal/sandbox/landlock/ -count=1
   fi
 fi

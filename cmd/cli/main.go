@@ -20,6 +20,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/session"
+	"github.com/ash-repwiki/ash/internal/skills"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
@@ -46,6 +47,8 @@ func main() {
 		runMigrate(os.Args[2:])
 	case "plugin-sign":
 		runPluginSign(os.Args[2:])
+	case "skill-pack":
+		runSkillPack(os.Args[2:])
 	case "rag":
 		runRAG(os.Args[2:])
 	default:
@@ -55,7 +58,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n  rag rebuild [--repo .] [--space local]  (Hybrid path/symbol index rebuild)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n  skill-pack build|sign --dir path [--publisher local] [--version 1.0.0] [--out pack.zip] [--key env|literal]\n  rag rebuild [--repo .] [--space local]  (Hybrid path/symbol index rebuild)\n")
 }
 
 func runPluginSign(args []string) {
@@ -84,6 +87,50 @@ func runPluginSign(args []string) {
 		return
 	}
 	fmt.Println(sig)
+}
+
+func runSkillPack(args []string) {
+	if len(args) < 1 {
+		log.Fatal("skill-pack requires build|sign")
+	}
+	sub := args[0]
+	fs := flag.NewFlagSet("skill-pack "+sub, flag.ExitOnError)
+	dir := fs.String("dir", "", "skill directory containing SKILL.md")
+	publisher := fs.String("publisher", "local", "publisher id")
+	version := fs.String("version", "1.0.0", "pack version")
+	out := fs.String("out", "", "output zip path (build)")
+	key := fs.String("key", "", "HMAC key (default: ASH_SKILL_PACK_SIGNING_KEY or ASH_PLUGIN_SIGNING_KEY)")
+	_ = fs.Parse(args[1:])
+	if strings.TrimSpace(*dir) == "" {
+		log.Fatal("--dir is required")
+	}
+	zipBytes, man, err := skills.BuildPackZip(*dir, *publisher, *version)
+	if err != nil {
+		log.Fatal(err)
+	}
+	signKey := strings.TrimSpace(*key)
+	if signKey == "" {
+		signKey = skills.PackSigningKey()
+	}
+	if signKey == "" {
+		log.Fatal("signing key required: pass --key or set ASH_SKILL_PACK_SIGNING_KEY")
+	}
+	sig := skills.SignPackHMAC(signKey, man.Publisher, man.Name, man.Version, man.Digest)
+	switch sub {
+	case "sign":
+		fmt.Println(sig)
+	case "build":
+		path := strings.TrimSpace(*out)
+		if path == "" {
+			path = man.Name + "-" + man.Version + ".ash-skill.zip"
+		}
+		if err := os.WriteFile(path, zipBytes, 0o644); err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("wrote %s\nname=%s version=%s publisher=%s digest=%s\nsignature=%s\n", path, man.Name, man.Version, man.Publisher, man.Digest, sig)
+	default:
+		log.Fatalf("unknown skill-pack subcommand %q (want build|sign)", sub)
+	}
 }
 
 func runScenario(args []string) {

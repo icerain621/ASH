@@ -6,6 +6,7 @@ import { renderPage } from "@/test/renderPage";
 vi.mock("@/modules/scale/api/scale.api", () => ({
   getScaleReadiness: vi.fn().mockResolvedValue({
     spaceId: "local",
+    region: "default",
     memorySchemaVersion: 2,
     migrationReady: true,
     databaseDialect: "sqlite",
@@ -22,6 +23,7 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
 vi.mock("@/modules/health/api/health.api", () => ({
   getReadyz: vi.fn().mockResolvedValue({
     status: "ready",
+    region: "default",
     dialect: "sqlite",
     sqlMigrationExpected: 20,
   }),

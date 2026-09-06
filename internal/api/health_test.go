@@ -40,12 +40,39 @@ func TestHealthzAndReadyzSQLite(t *testing.T) {
 			if resp.Status != "ready" || resp.Dialect != "sqlite" {
 				t.Fatalf("readyz=%+v want ready/sqlite", resp)
 			}
+			if resp.Region != "default" {
+				t.Fatalf("readyz region=%q want default", resp.Region)
+			}
 			if resp.OtelEnabled || resp.MetricsEventReplayEnabled || resp.AlertsEvalInterval != "" {
 				t.Fatalf("readyz=%+v want default ops flags unset", resp)
 			}
 		} else if resp.Status != "ok" {
 			t.Fatalf("healthz=%+v want ok", resp)
 		}
+	}
+}
+
+func TestReadyzRegionFromEnv(t *testing.T) {
+	t.Setenv("ASH_REGION", "cn-north-1")
+	gin.SetMode(gin.TestMode)
+	db := store.OpenTest(t, t.TempDir())
+	loader := rules.NewLoader(filepath.Join("..", "..", "scenarios"))
+	_ = loader.LoadDir()
+	h := NewHandler(db, loader)
+	r := gin.New()
+	h.Register(r, "")
+
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp HealthResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.Region != "cn-north-1" {
+		t.Fatalf("region=%q want cn-north-1", resp.Region)
 	}
 }
 

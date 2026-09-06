@@ -98,7 +98,28 @@ func parseCtagsXOutput(out []byte) ([]SymbolHit, error) {
 	return hits, nil
 }
 
+// ResolveSymbolIndexer picks a SymbolIndexer.
+//
+// Priority when ASH_RAG_SYMBOL_INDEXER unset:
+//
+//	ASH_RAG_CTAGS=0  → regex (DX16 compat)
+//	ASH_RAG_CTAGS=1  → ctags if on PATH, else regex
+//	auto (default)   → treesitter (pure Go; always available)
+//
+// ASH_RAG_SYMBOL_INDEXER=treesitter|ctags|regex forces one backend.
 func ResolveSymbolIndexer() SymbolIndexer {
+	switch forced := strings.ToLower(strings.TrimSpace(os.Getenv("ASH_RAG_SYMBOL_INDEXER"))); forced {
+	case "treesitter", "tree-sitter", "ts":
+		return NewTreeSitterIndexer()
+	case "ctags":
+		if path := findCtagsExecutable(); path != "" {
+			return NewCtagsIndexer(path)
+		}
+		return RegexIndexer{}
+	case "regex":
+		return RegexIndexer{}
+	}
+
 	switch parseASHRagCtagsEnv(os.Getenv("ASH_RAG_CTAGS")) {
 	case ragCtagsOff:
 		return RegexIndexer{}
@@ -108,10 +129,7 @@ func ResolveSymbolIndexer() SymbolIndexer {
 		}
 		return RegexIndexer{}
 	default:
-		if path := findCtagsExecutable(); path != "" {
-			return NewCtagsIndexer(path)
-		}
-		return RegexIndexer{}
+		return NewTreeSitterIndexer()
 	}
 }
 

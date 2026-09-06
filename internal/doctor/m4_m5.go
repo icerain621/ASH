@@ -28,6 +28,7 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Sbx02DangerOffDenied(),
 		s.m4Sbx03PathJail(),
 		s.m4Sbx04LandlockAvailable(),
+		s.m4Sbx05LandlockDefaultSeccomp(),
 		s.m4Acp01TaskSchema(),
 		s.m4Acp02ProbeUnconfigured(),
 	}
@@ -184,6 +185,36 @@ func (s *Service) m4Sbx04LandlockAvailable() CaseResult {
 	}
 	res.Status = "pass"
 	res.Message = "landlock available"
+	return res
+}
+
+func (s *Service) m4Sbx05LandlockDefaultSeccomp() CaseResult {
+	res := CaseResult{ID: "M4-SBX-05", Status: "fail"}
+	preferred := sandbox.LandlockPreferred()
+	seccompOK := landlock.SeccompAvailable()
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "landlockPreferred", Ref: fmt.Sprintf("%v", preferred)},
+		Evidence{Kind: "seccompAvailable", Ref: fmt.Sprintf("%v", seccompOK)},
+	)
+	if runtime.GOOS != "linux" {
+		res.Status = "pass"
+		res.Message = "skipped: landlock/seccomp path is Linux-only; default preference=" + fmt.Sprintf("%v", preferred)
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: runtime.GOOS})
+		return res
+	}
+	// On Linux: preference should default true unless opted out; seccomp soft-skip is OK.
+	if !preferred {
+		v := strings.TrimSpace(os.Getenv("ASH_SANDBOX_LANDLOCK"))
+		if v == "0" || strings.EqualFold(v, "false") || strings.EqualFold(v, "off") || strings.EqualFold(v, "no") {
+			res.Status = "pass"
+			res.Message = "landlock opted out via ASH_SANDBOX_LANDLOCK; seccompAvailable=" + fmt.Sprintf("%v", seccompOK)
+			return res
+		}
+		res.Message = "LandlockPreferred unexpectedly false without opt-out env"
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "landlock preferred by default; seccompAvailable=" + fmt.Sprintf("%v", seccompOK)
 	return res
 }
 

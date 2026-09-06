@@ -133,6 +133,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/wiki/pages", h.listWikiPages)
 		v1.GET("/wiki/pages/:pageId", h.getWikiPage)
 		v1.GET("/skills", h.listSkills)
+		v1.POST("/skills/packs/verify", h.verifySkillPack)
+		v1.POST("/skills/packs/install", h.installSkillPack)
 		v1.GET("/skills/:skillId", h.getSkill)
 		v1.GET("/providers/agent", h.getAgentProviderStatus)
 		v1.POST("/agents/sessions", h.createAgentSession)
@@ -353,6 +355,7 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 	rlsEnv := store.PostgresRLSEnabled()
 	resp := HealthResponse{
 		Status:                    status,
+		Region:                    config.Region(),
 		Dialect:                   h.db.Dialect(),
 		Error:                     errMsg,
 		SchemaMode:                profile.SchemaMode,

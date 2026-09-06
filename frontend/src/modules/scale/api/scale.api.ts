@@ -2,6 +2,7 @@ import { api } from "@/services/http/client";
 
 export type ScaleReadiness = {
   spaceId: string;
+  region?: string;
   memorySchemaVersion: number;
   memoryApprovedCount: number;
   runRunningCount?: number;

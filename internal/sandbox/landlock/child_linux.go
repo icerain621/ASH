@@ -34,6 +34,9 @@ func becomeSandboxedChild(root, program string, args []string) error {
 	if err := applyLandlockFS(root); err != nil {
 		return err
 	}
+	if err := applyMinimalSeccomp(); err != nil {
+		return fmt.Errorf("seccomp: %w", err)
+	}
 	env := os.Environ()
 	argv := append([]string{program}, args...)
 	return unix.Exec(program, argv, env)

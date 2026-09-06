@@ -34,6 +34,7 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 	indexer := ResolveSymbolIndexer()
 	regexFallback := RegexIndexer{}
 	resp := &RebuildSymbolsResponse{SymbolSource: indexer.Name()}
+	preferredOK := false
 	now := time.Now().UTC()
 
 	err = filepath.WalkDir(abs, func(path string, d os.DirEntry, walkErr error) error {
@@ -102,7 +103,8 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 			if err != nil {
 				return err
 			}
-			resp.SymbolSource = source
+		} else {
+			preferredOK = true
 		}
 		for _, hit := range hits {
 			sym := store.RAGSymbol{
@@ -126,6 +128,10 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 	}
 	if err := deleteStaleRAGSymbols(s.gdb(), space, abs, seenPaths); err != nil {
 		return nil, err
+	}
+	// Keep primary indexer name when any file succeeded; only report regex if all preferred attempts failed.
+	if indexer.Name() != "regex" && !preferredOK && resp.Symbols > 0 {
+		resp.SymbolSource = "regex"
 	}
 	return resp, nil
 }

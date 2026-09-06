@@ -309,6 +309,10 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>区域 (ASH_REGION)</td>
+              <td>{r?.region ?? "-"}</td>
+            </tr>
+            <tr>
               <td>数据库方言</td>
               <td>{r?.databaseDialect ?? "-"}</td>
             </tr>
@@ -458,6 +462,10 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>区域 (ASH_REGION)</td>
+              <td>{z?.region ?? "—"}</td>
+            </tr>
+            <tr>
               <td>Schema / SQL 修订</td>
               <td>
                 {z?.schemaMode
@@ -514,6 +522,7 @@ export function ScalePage() {
               <td>
                 {r && z
                   ? [
+                      r.region === z.region ? "region ✓" : `region ✗ (${r.region} vs ${z.region})`,
                       r.databaseDialect === z.dialect ? "dialect ✓" : `dialect ✗ (${r.databaseDialect} vs ${z.dialect})`,
                       r.otelEnabled === z.otelEnabled ? "otel ✓" : "otel ✗",
                       (r.sqlMigrationExpected ?? 0) === (z.sqlMigrationExpected ?? 0) ? "sqlExpected ✓" : "sqlExpected ✗",

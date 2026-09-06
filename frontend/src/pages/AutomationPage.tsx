@@ -40,8 +40,8 @@ import {
 } from "@/modules/platform/api/platform.api";
 import { HarnessProfilesPane } from "@/components/HarnessProfilesPane";
 import { ImproveProposalsPane } from "@/components/ImproveProposalsPane";
-import { listSkills } from "@/modules/skills/api/skills.api";
-import { getCurrentSpaceId } from "@/services/http/client";
+import { listSkills, installSkillPack } from "@/modules/skills/api/skills.api";
+import { ApiError, getCurrentSpaceId } from "@/services/http/client";
 import { shortId } from "@/shared/utils/format";
 
 function auditPayloadSnippet(payload?: string) {
@@ -73,6 +73,9 @@ export function AutomationPage() {
   const [secretMessage, setSecretMessage] = useState("");
   const [rotateValues, setRotateValues] = useState<Record<string, string>>({});
   const [skillsRepoRoot, setSkillsRepoRoot] = useState(".");
+  const [skillPackPath, setSkillPackPath] = useState("");
+  const [skillPackSig, setSkillPackSig] = useState("");
+  const [skillPackMessage, setSkillPackMessage] = useState("");
   const providersQuery = useQuery({
     queryKey: ["model-providers", activeSpaceId],
     queryFn: listModelProviders,
@@ -80,6 +83,22 @@ export function AutomationPage() {
   const skillsQuery = useQuery({
     queryKey: ["skills", skillsRepoRoot],
     queryFn: () => listSkills(skillsRepoRoot),
+  });
+  const installSkillPackMutation = useMutation({
+    mutationFn: () =>
+      installSkillPack({
+        repoRoot: skillsRepoRoot,
+        spaceId: activeSpaceId || "local",
+        packPath: skillPackPath,
+        signature: skillPackSig,
+      }),
+    onSuccess: (res) => {
+      setSkillPackMessage(`已安装 ${res.name}@${res.version} → ${res.path}`);
+      void skillsQuery.refetch();
+    },
+    onError: (err) => {
+      setSkillPackMessage(err instanceof ApiError ? err.message : String(err));
+    },
   });
   const toolsQuery = useQuery({
     queryKey: ["mcp-tools", activeSpaceId],
@@ -309,7 +328,7 @@ export function AutomationPage() {
             <h2>Skills</h2>
             <span>{skillsQuery.data?.items.length ?? 0} 个</span>
           </div>
-          <p className="muted-line">扫描 <code>.ash/skills/*/SKILL.md</code>；场景/Harness 声明后注入 <code>skill:</code> contextRefs。</p>
+          <p className="muted-line">扫描 <code>.ash/skills/*/SKILL.md</code>；场景/Harness 声明后注入 <code>skill:</code> contextRefs。私有签名 pack：<code>POST /skills/packs/install</code>。</p>
           <label className="scenario-picker">
             repoRoot
             <input
@@ -318,6 +337,35 @@ export function AutomationPage() {
               data-testid="skills-repo-root"
             />
           </label>
+          <div className="scenario-picker" data-testid="skills-pack-install">
+            <label>
+              packPath
+              <input
+                value={skillPackPath}
+                onChange={(e) => setSkillPackPath(e.target.value)}
+                placeholder="/path/to/skill.ash-skill.zip"
+                data-testid="skills-pack-path"
+              />
+            </label>
+            <label>
+              signature
+              <input
+                value={skillPackSig}
+                onChange={(e) => setSkillPackSig(e.target.value)}
+                placeholder="hmac hex"
+                data-testid="skills-pack-sig"
+              />
+            </label>
+            <button
+              type="button"
+              disabled={!skillPackPath || !skillPackSig || installSkillPackMutation.isPending}
+              onClick={() => installSkillPackMutation.mutate()}
+              data-testid="skills-pack-install-btn"
+            >
+              安装签名 pack
+            </button>
+            {skillPackMessage && <p className="muted-line">{skillPackMessage}</p>}
+          </div>
           <table className="table">
             <thead>
               <tr>

@@ -26,6 +26,8 @@ vi.mock("@/modules/skills/api/skills.api", () => ({
     repoRoot: ".",
   }),
   getSkill: vi.fn(),
+  installSkillPack: vi.fn(),
+  verifySkillPack: vi.fn(),
 }));
 
 vi.mock("@/modules/platform/api/platform.api", () => ({

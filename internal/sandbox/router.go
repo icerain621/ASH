@@ -86,11 +86,11 @@ func (r DefaultRouter) Route(req RouteRequest) (Decision, error) {
 	if mode == ModeOff {
 		return Decision{Mode: mode, Executor: "in-process", Reason: "mode-off"}, nil
 	}
-	if mode == ModeIsolated && landlockEnvEnabled() {
+	if mode == ModeIsolated && landlockPreferred() {
 		if r.landlockOK() {
 			return Decision{Mode: mode, Executor: "landlock", Reason: "landlock-available"}, nil
 		}
-		// Env set but unavailable: fall through to docker/process (no deny).
+		// Preferred but unavailable: fall through to docker/process (no deny).
 	}
 	dockerOK := r.DockerOK
 	if dockerOK == nil {
@@ -109,9 +109,20 @@ func (r DefaultRouter) landlockOK() bool {
 	return defaultLandlockAvailable()
 }
 
-func landlockEnvEnabled() bool {
-	return strings.TrimSpace(os.Getenv("ASH_SANDBOX_LANDLOCK")) == "1"
+// landlockPreferred reports whether isolated mode should try Landlock first.
+// Default ON (DX21). Opt out with ASH_SANDBOX_LANDLOCK=0|false|off|no.
+func landlockPreferred() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("ASH_SANDBOX_LANDLOCK")))
+	switch v {
+	case "0", "false", "off", "no":
+		return false
+	default:
+		return true
+	}
 }
+
+// LandlockPreferred is exported for Doctor / diagnostics.
+func LandlockPreferred() bool { return landlockPreferred() }
 
 // DispatchRequest is a sandboxed tool invocation.
 type DispatchRequest struct {

@@ -3,15 +3,15 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **56/56** · M3 **11/11** · M4 **9/9** · M5 **4/4** · TR3 **10/10** · SQL rev **31** · RLS **51**（v2 DH–DV；**v2.1 DW–DX5** / **v2.2 DX6–DX8** / **v2.3 DX9–DX11** / **v2.4 DX12–DX14** / **v2.5 DX15–DX19 冻结**；tag 待人工）  
+> **代码锚点**：Doctor ALL **57/57** · M3 **11/11** · M4 **10/10** · M5 **4/4** · TR3 **10/10** · SQL rev **31** · RLS **51**（v2 DH–DV；**v2.1 DW–DX5** / **v2.2 DX6–DX8** / **v2.3 DX9–DX11** / **v2.4 DX12–DX14** / **v2.5 DX15–DX19** / **v2.6 DX20–DX24 冻结**；tag 待人工）  
 > **归属**：[`plan/`](README.md)  
-> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md) · v2.4 [`v2.4-release-scope.md`](v2.4-release-scope.md)（已冻结） · v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结） · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
+> **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md) · v2.4 [`v2.4-release-scope.md`](v2.4-release-scope.md)（已冻结） · v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结） · v2.6 [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结） · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
 ---
 
 ## 0. 一句话结论
 
-**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口；**v2.1（DW–DX5）** / **v2.2（DX6–DX8）** / **v2.3（DX9–DX11）** / **v2.4（DX12–DX14）** / **v2.5（DX15–DX19）已冻结**（`make v2.1-signoff` … `v2.5-signoff`；tag 人工）。**v2.5** 含 Waker probe seed、ctags、向量 lane POC、Landlock（SQL **31** / RLS **51** · Doctor ALL **56** · `make v2.5-signoff`）。当前并行线：**生产环境验收**（云 RDS / 真实 CI·ExecGo）与 tag 签字。
+**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口；**v2.1（DW–DX5）** / **v2.2（DX6–DX8）** / **v2.3（DX9–DX11）** / **v2.4（DX12–DX14）** / **v2.5（DX15–DX19）** / **v2.6（DX20–DX24）已冻结**（`make v2.1-signoff` … `v2.6-signoff`；tag 人工）。**v2.6** 含 tree-sitter、Landlock 默认+seccomp、私有 skill packs、单区域标签（SQL **31** / RLS **51** · Doctor ALL **57** · `make v2.6-signoff`）。当前并行线：**生产环境验收**（云 RDS / 真实 CI·ExecGo）与 tag 签字。
 
 ---
 

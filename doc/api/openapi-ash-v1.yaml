@@ -172,6 +172,9 @@ components:
         spaceId:
           type: string
           description: Active tenant space id.
+        region:
+          type: string
+          description: Deployment region from ASH_REGION (same as /readyz.region).
         memorySchemaVersion:
           type: integer
           description: Current memory record schema version.
@@ -516,6 +519,10 @@ components:
         status:
           type: string
           enum: [ok, ready, not_ready]
+        region:
+          type: string
+          description: Deployment region identity from ASH_REGION (empty → default). Single-region only; not Active-Active.
+          example: default
         dialect: { type: string, example: postgres }
         error: { type: string }
         schemaMode: { type: string, enum: [automigrate, sql] }
@@ -820,6 +827,32 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/SkillItem" }
+        repoRoot: { type: string }
+    SkillPackRequest:
+      type: object
+      properties:
+        repoRoot: { type: string }
+        spaceId: { type: string }
+        packPath: { type: string, description: Path to .ash-skill.zip on the worker host }
+        packBase64: { type: string, description: Base64-encoded zip (alternative to packPath) }
+        signature: { type: string, description: HMAC-SHA256 hex of publisher/name/version/digest }
+    SkillPackVerifyResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        name: { type: string }
+        version: { type: string }
+        publisher: { type: string }
+        digest: { type: string }
+        message: { type: string }
+    SkillPackInstallResult:
+      type: object
+      properties:
+        ok: { type: boolean }
+        name: { type: string }
+        version: { type: string }
+        publisher: { type: string }
+        path: { type: string }
         repoRoot: { type: string }
     AgentProviderStatus:
       type: object
@@ -2816,8 +2849,8 @@ components:
         files: { type: integer }
         symbolSource:
           type: string
-          enum: [regex, ctags]
-          description: Indexer used for symbol extraction; `regex` if any file fell back from ctags.
+          enum: [regex, ctags, treesitter]
+          description: Preferred indexer for symbol extraction (`treesitter` default). Per-file fallback uses `regex`; response stays on preferred name if any file succeeded.
     RAGQueryRequest:
       type: object
       required: [text]
@@ -4983,6 +5016,45 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SkillsListResponse" }
+
+  /api/v1/skills/packs/verify:
+    post:
+      tags: [Skills]
+      summary: Verify a signed private skill pack (dry-run)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkillPackRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillPackVerifyResult" }
+        "400":
+          description: verify failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillPackVerifyResult" }
+
+  /api/v1/skills/packs/install:
+    post:
+      tags: [Skills]
+      summary: Install a signed private skill pack under .ash/skills
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/SkillPackRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SkillPackInstallResult" }
+        "400":
+          description: install failed
 
   /api/v1/skills/{skillId}:
     get:

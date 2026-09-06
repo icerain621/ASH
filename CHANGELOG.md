@@ -8,6 +8,11 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX24（v2.6）：范围冻结 + 签字门禁 — `v2.6-release-scope` **已冻结**；`make v2.6-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + sandbox + skill-pack + region）；清单/签字模板；**不自动**打 `v2.6.0` tag。
+- Sprint DX23（v2.6 草案）：单区域就绪 — `ASH_REGION`（空→`default`）；`/readyz` 与 Scale readiness `region`；ops parity；Scale UI；清单 [`single-region-ha.md`](doc/checklists/single-region-ha.md)（备份/HA；**无** Active-Active）；**无新表**。
+- Sprint DX22（v2.6 草案）：私有签名 Skill packs — zip + HMAC（`ASH_SKILL_PACK_SIGNING_KEY`）；`POST /skills/packs/verify|install`；落盘 `.ash/skills/<name>/`；publisher/space allowlist；CLI `ash skill-pack`；Automation 安装表单；`make skill-pack-smoke`；**无新表**。
+- Sprint DX21（v2.6 草案）：沙箱硬化 — Landlock **默认优先**（`ASH_SANDBOX_LANDLOCK=0` 关闭）；Linux 最小 seccomp deny-list（`ASH_SANDBOX_SECCOMP=0` 可关）；Doctor **M4-SBX-05**；ALL **57** / M4 **10**；`sandbox-smoke` 默认探测段；**无新表**。
+- Sprint DX20（v2.6 草案）：tree-sitter 符号索引 — `TreeSitterIndexer`（纯 Go：`go/ast` + TS/JS/YAML；无 CGO）；默认 `ResolveSymbolIndexer`→treesitter；`ASH_RAG_SYMBOL_INDEXER`；混合仓 `symbolSource` 在任一 preferred 成功时保留；OpenAPI enum + `rag-hybrid-smoke`；**无新表 / 无 RLS bump**。
 - Sprint DX19（v2.5）：范围冻结 + 签字门禁 — `v2.5-release-scope` **已冻结**；`make v2.5-signoff`（Doctor ALL **56** / M4 **9** + waker + rag-hybrid + rag-vector + sandbox）；清单/签字模板；**不自动**打 `v2.5.0` tag。
 - Sprint DX18（v2.5 草案）：Landlock 沙箱 POC — Linux `landlock` executor + `Available()` 探测；`DefaultRouter` 可选 `landlock`（`ASH_SANDBOX_LANDLOCK=1`）；Doctor **M4-SBX-04**（非 Linux / 无内核支持 → skip pass）；`make sandbox-smoke` 含 landlock 包测与可选 `ASH_SANDBOX_LANDLOCK=1` 段；**无新表**。
 - Sprint DX17（v2.5 草案）：RAG Vector POC — Qdrant HTTP client + stub/hash embedder；表 `rag_vector_refs`（SQL **31** / RLS **51**）；Hybrid Query 第 4 RRF vector lane；`make rag-vector-smoke`（mock store，无 live Qdrant 硬依赖）。

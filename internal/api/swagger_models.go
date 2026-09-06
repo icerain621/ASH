@@ -25,6 +25,7 @@ type APIErrorResponse struct {
 // HealthResponse for liveness/readiness probes.
 type HealthResponse struct {
 	Status                    string   `json:"status" example:"ok"`
+	Region                    string   `json:"region,omitempty" example:"default"`
 	Dialect                   string   `json:"dialect,omitempty" example:"postgres"`
 	Error                     string   `json:"error,omitempty"`
 	SchemaMode                string   `json:"schemaMode,omitempty" example:"sql"`

@@ -1,15 +1,14 @@
 package sandbox_test
 
 import (
-	"os"
 	"testing"
 
 	"github.com/ash-repwiki/ash/internal/sandbox"
 )
 
-func TestDefaultRouterLandlockEnvRequiresOK(t *testing.T) {
-	t.Setenv("ASH_SANDBOX_LANDLOCK", "1")
-	t.Setenv("ASH_SKIP_SANDBOX", "1") // force PreferDocker false path clarity
+func TestDefaultRouterLandlockWhenOK(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "") // default-on
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
 
 	r := sandbox.DefaultRouter{
 		PreferDocker: false,
@@ -41,7 +40,7 @@ func TestDefaultRouterLandlockEnvRequiresOK(t *testing.T) {
 }
 
 func TestDefaultRouterLandlockOnlyIsolated(t *testing.T) {
-	t.Setenv("ASH_SANDBOX_LANDLOCK", "1")
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "")
 	r := sandbox.DefaultRouter{
 		PreferDocker: false,
 		DockerOK:     func() bool { return false },
@@ -56,8 +55,8 @@ func TestDefaultRouterLandlockOnlyIsolated(t *testing.T) {
 	}
 }
 
-func TestDefaultRouterNoLandlockWithoutEnv(t *testing.T) {
-	_ = os.Unsetenv("ASH_SANDBOX_LANDLOCK")
+func TestDefaultRouterLandlockOptOut(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "0")
 	r := sandbox.DefaultRouter{
 		PreferDocker: false,
 		DockerOK:     func() bool { return false },
@@ -68,6 +67,20 @@ func TestDefaultRouterNoLandlockWithoutEnv(t *testing.T) {
 		t.Fatal(err)
 	}
 	if dec.Executor == "landlock" {
-		t.Fatal("landlock must not be selected without ASH_SANDBOX_LANDLOCK=1")
+		t.Fatal("landlock must not be selected when ASH_SANDBOX_LANDLOCK=0")
+	}
+	if sandbox.LandlockPreferred() {
+		t.Fatal("LandlockPreferred should be false when env=0")
+	}
+}
+
+func TestLandlockPreferredDefault(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "")
+	if !sandbox.LandlockPreferred() {
+		t.Fatal("default LandlockPreferred want true")
+	}
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "1")
+	if !sandbox.LandlockPreferred() {
+		t.Fatal("ASH_SANDBOX_LANDLOCK=1 want preferred")
 	}
 }

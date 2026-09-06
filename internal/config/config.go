@@ -2,6 +2,7 @@ package config
 
 import (
 	"os"
+	"strings"
 )
 
 type Config struct {
@@ -46,6 +47,16 @@ func envOr(key, fallback string) string {
 		return v
 	}
 	return fallback
+}
+
+// Region returns ASH_REGION for single-region identity (DX23).
+// Empty / unset → "default". Not multi-region Active-Active.
+func Region() string {
+	v := strings.TrimSpace(os.Getenv("ASH_REGION"))
+	if v == "" {
+		return "default"
+	}
+	return v
 }
 
 func defaultPluginGRPCAddr() string {

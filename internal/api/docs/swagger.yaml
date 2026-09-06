@@ -2243,6 +2243,36 @@ definitions:
       repoRoot:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_skills.PackInstallResult:
+    properties:
+      name:
+        type: string
+      ok:
+        type: boolean
+      path:
+        type: string
+      publisher:
+        type: string
+      repoRoot:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_skills.PackVerifyResult:
+    properties:
+      digest:
+        type: string
+      message:
+        type: string
+      name:
+        type: string
+      ok:
+        type: boolean
+      publisher:
+        type: string
+      version:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_skills.Skill:
     properties:
       body:
@@ -3488,6 +3518,9 @@ definitions:
         items:
           type: string
         type: array
+      region:
+        example: default
+        type: string
       retentionArtifactsDays:
         example: 30
         type: integer
@@ -3793,6 +3826,8 @@ definitions:
         items:
           type: string
         type: array
+      region:
+        type: string
       retentionArtifactsDays:
         type: integer
       retentionArtifactsMaxRuns:
@@ -4341,6 +4376,19 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View'
         type: array
+    type: object
+  internal_api.skillPackRequest:
+    properties:
+      packBase64:
+        type: string
+      packPath:
+        type: string
+      repoRoot:
+        type: string
+      signature:
+        type: string
+      spaceId:
+        type: string
     type: object
   internal_api.toolRiskCatalogResponse:
     properties:
@@ -8142,6 +8190,57 @@ paths:
           schema:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.Skill'
       summary: Get a skill by id (includes body)
+      tags:
+      - skills
+  /api/v1/skills/packs/install:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: pack path or base64 + signature
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.skillPackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.PackInstallResult'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Install a signed private skill pack under .ash/skills
+      tags:
+      - skills
+  /api/v1/skills/packs/verify:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: pack path or base64 + signature
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.skillPackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.PackVerifyResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.PackVerifyResult'
+      summary: Verify a signed private skill pack (dry-run)
       tags:
       - skills
   /api/v1/spaces:

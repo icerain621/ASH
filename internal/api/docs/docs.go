@@ -5720,6 +5720,85 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/skills/packs/install": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "Install a signed private skill pack under .ash/skills",
+                "parameters": [
+                    {
+                        "description": "pack path or base64 + signature",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.skillPackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.PackInstallResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/skills/packs/verify": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "skills"
+                ],
+                "summary": "Verify a signed private skill pack (dry-run)",
+                "parameters": [
+                    {
+                        "description": "pack path or base64 + signature",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.skillPackRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.PackVerifyResult"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.PackVerifyResult"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/skills/{skillId}": {
             "get": {
                 "produces": [
@@ -10212,6 +10291,52 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_skills.PackInstallResult": {
+            "type": "object",
+            "properties": {
+                "name": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "publisher": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_skills.PackVerifyResult": {
+            "type": "object",
+            "properties": {
+                "digest": {
+                    "type": "string"
+                },
+                "message": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "publisher": {
+                    "type": "string"
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_skills.Skill": {
             "type": "object",
             "properties": {
@@ -12108,6 +12233,10 @@ const docTemplate = `{
                         "type": "string"
                     }
                 },
+                "region": {
+                    "type": "string",
+                    "example": "default"
+                },
                 "retentionArtifactsDays": {
                     "type": "integer",
                     "example": 30
@@ -12571,6 +12700,9 @@ const docTemplate = `{
                     "items": {
                         "type": "string"
                     }
+                },
+                "region": {
+                    "type": "string"
                 },
                 "retentionArtifactsDays": {
                     "type": "integer"
@@ -13407,6 +13539,26 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scenariopatch.View"
                     }
+                }
+            }
+        },
+        "internal_api.skillPackRequest": {
+            "type": "object",
+            "properties": {
+                "packBase64": {
+                    "type": "string"
+                },
+                "packPath": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "signature": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
                 }
             }
         },

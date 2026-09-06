@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-05  
+> 更新：2026-09-06  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -10,9 +10,9 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **56/56** · M3 11/11 · M4 **9/9** · M5 4/4 · TR3 10/10 |
+| Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9–DX11 已冻结**（tag `v2.3.0` 待人工）；**v2.4：DX12–DX14 已冻结**（tag `v2.4.0` 待人工）；**v2.5：DX15–DX19 已冻结**（tag `v2.5.0` 待人工） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 功能 Sprint DH–DV 已收口**（tag `v2.0.0` 待人工）；**v2.1：DW–DX5 已冻结**（tag `v2.1.0` 待人工）；**v2.2：DX6–DX8 已冻结**（tag `v2.2.0` 待人工）；**v2.3：DX9–DX11 已冻结**（tag `v2.3.0` 待人工）；**v2.4：DX12–DX14 已冻结**（tag `v2.4.0` 待人工）；**v2.5：DX15–DX19 已冻结**（tag `v2.5.0` 待人工）；**v2.6：DX20–DX24 已冻结**（tag `v2.6.0` 待人工） |
 
 ---
 
@@ -57,7 +57,12 @@
 | DX17 | Vector POC（v2.5） | Qdrant + stub embedder；`rag_vector_refs`；SQL 31 / RLS 51；`make rag-vector-smoke` | ✅ |
 | DX18 | Landlock 沙箱 POC（v2.5） | Linux executor；M4-SBX-04；`ASH_SANDBOX_LANDLOCK`；`make sandbox-smoke` | ✅ |
 | DX19 | 控制台水位 + v2.5 冻结 | `v2.5-release-scope` 冻结；`make v2.5-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-03-v25-dx15-dx18-design.md`](../../docs/superpowers/specs/2026-09-03-v25-dx15-dx18-design.md) | — |
+| DX20 | tree-sitter 符号索引（v2.6 草案） | `TreeSitterIndexer` + `source=treesitter`；扩展 `rag-hybrid-smoke` | ✅ |
+| DX21 | Landlock 默认收紧 + seccomp（v2.6） | isolated→landlock（可关）；M4-SBX-05；扩展 `sandbox-smoke` | ✅ |
+| DX22 | 私有签名 Skill packs（v2.6） | verify/install API；落盘 `.ash/skills`；`skill-pack-smoke` | ✅ |
+| DX23 | 单区域就绪（v2.6） | `ASH_REGION` + `/readyz`；HA/备份 runbook（非 AA） | ✅ |
+| DX24 | v2.6 冻结 + 签字 | `v2.6-release-scope` 冻结；`make v2.6-signoff`；tag 人工 | ✅ |
+| 详排 | — | v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结）；**v2.6** [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结）；DX20–DX24 sprint 文档；设计 [`docs/superpowers/specs/2026-09-06-v26-dx20-dx23-design.md`](../../docs/superpowers/specs/2026-09-06-v26-dx20-dx23-design.md) | — |
 
 ---
 
@@ -117,11 +122,14 @@ make regression-short && make web-gate
 
 ---
 
-## P3 — Backlog（明确不做进 v0.1）
+## P3 — Backlog（明确不做进 v0.1；部分进 v2.6 草案）
 
-- 向量库主路径（Chroma/Qdrant）；ctags / LSP 外部符号解析  
-- 完整沙箱隔离、外部 IdP 联邦、计费  
-- 多端网关 / Skill Marketplace / 知识图谱  
+- ~~向量 POC（Qdrant + stub）~~ → v2.5 DX17；主路径 Chroma/Milvus 仍 P3  
+- ~~ctags 符号~~ → v2.5 DX16；**tree-sitter** → v2.6 DX20；**完整 LSP** 仍 P3/v2.7  
+- ~~Landlock POC~~ → v2.5 DX18；**默认收紧 + seccomp** → v2.6 DX21；**E2B** 仍 P3  
+- **私有 Skill packs** → v2.6 DX22；公网 Skill Marketplace / 计费 / 知识图谱仍 P3  
+- **单区域就绪** → v2.6 DX23；Active-Active 多区域仍 P3  
+- 外部 IdP 联邦、多端网关  
 
 ---
 

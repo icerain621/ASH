@@ -15,6 +15,7 @@ import (
 
 type ScaleReadinessResponse struct {
 	SpaceID              string `json:"spaceId"`
+	Region               string `json:"region,omitempty"`
 	MemorySchemaVersion  int    `json:"memorySchemaVersion"`
 	MemoryApprovedCount  int64  `json:"memoryApprovedCount"`
 	RunRunningCount           int64  `json:"runRunningCount"`
@@ -136,6 +137,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 
 	c.JSON(http.StatusOK, ScaleReadinessResponse{
 		SpaceID:              space,
+		Region:               config.Region(),
 		MemorySchemaVersion:  memory.CurrentSchemaVersion,
 		MemoryApprovedCount:  memApproved,
 		RunRunningCount:          runRunning,

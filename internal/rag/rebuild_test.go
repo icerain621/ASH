@@ -9,6 +9,7 @@ import (
 )
 
 func TestRebuildSymbolsUpsertsAndCleansStale(t *testing.T) {
+	t.Setenv("ASH_RAG_SYMBOL_INDEXER", "regex")
 	t.Setenv("ASH_RAG_CTAGS", "0")
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)
@@ -57,6 +58,7 @@ func TestRebuildSymbolsUpsertsAndCleansStale(t *testing.T) {
 }
 
 func TestRebuildSymbolsFallsBackWhenCtagsFails(t *testing.T) {
+	t.Setenv("ASH_RAG_SYMBOL_INDEXER", "ctags")
 	t.Setenv("ASH_RAG_CTAGS", "1")
 	t.Setenv("CTAGS", filepath.Join(repoRoot(t), "scripts", "fixtures", "broken-ctags.sh"))
 
@@ -84,5 +86,32 @@ func TestRebuildSymbolsFallsBackWhenCtagsFails(t *testing.T) {
 	}
 	if sym.Source != "regex" {
 		t.Fatalf("sym.Source=%q want regex", sym.Source)
+	}
+}
+
+func TestRebuildSymbolsTreesitterSource(t *testing.T) {
+	t.Setenv("ASH_RAG_SYMBOL_INDEXER", "treesitter")
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "a.go"), []byte("package a\n\nfunc Alpha() {}\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(repo, "readme.md"), []byte("# Title\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.RebuildSymbols(RebuildSymbolsRequest{RepoRoot: repo, SpaceID: "ts"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.SymbolSource != "treesitter" {
+		t.Fatalf("SymbolSource=%q want treesitter (mixed repo keeps preferred when any file succeeds)", resp.SymbolSource)
+	}
+	var sym store.RAGSymbol
+	if err := db.Where("space_id = ? AND name = ?", "ts", "Alpha").First(&sym).Error; err != nil {
+		t.Fatal(err)
+	}
+	if sym.Source != "treesitter" {
+		t.Fatalf("sym.Source=%q want treesitter", sym.Source)
 	}
 }
