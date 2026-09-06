@@ -12,6 +12,7 @@ import {
 } from "@/modules/closure/api/closure.api";
 import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getOtelStatus, getRagProfile } from "@/modules/observability/api/observability.api";
+import { RagLspProbePanel } from "@/modules/observability/components/RagLspProbePanel";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import {
   getWakerQueue,
@@ -242,8 +243,18 @@ export function ObservabilityPage() {
               <td>方言</td>
               <td>{ragQuery.data?.databaseDialect ?? "-"}</td>
             </tr>
+            <tr>
+              <td>LSP</td>
+              <td data-testid="observability-rag-lsp-status">
+                {ragQuery.data?.lspAvailable ? "可用（gopls / tsserver）" : "不可用"}
+                {ragQuery.data?.embedderKind ? ` · embedder ${ragQuery.data.embedderKind}` : ""}
+              </td>
+            </tr>
           </tbody>
         </table>
+        <div style={{ marginTop: "0.75rem" }}>
+          <RagLspProbePanel testIdPrefix="observability-rag-lsp" />
+        </div>
       </div>
       </div>
 

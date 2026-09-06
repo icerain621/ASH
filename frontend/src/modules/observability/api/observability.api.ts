@@ -21,6 +21,7 @@ export type RagProfile = {
   vectorPointCount?: number;
   embedderKind?: string;
   embedderDim?: number;
+  lspAvailable?: boolean;
   databaseDialect?: string;
   documentCount: number;
   chunkCount: number;
@@ -41,6 +42,64 @@ export type RebuildSymbolsResponse = {
 
 export function rebuildRAGSymbols(body: { repoRoot: string; spaceId?: string }) {
   return api<RebuildSymbolsResponse>("/rag/symbols/rebuild", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export type RagLspPositionQuery = {
+  repoRoot: string;
+  path: string;
+  line: number;
+  character?: number;
+  spaceId?: string;
+  text?: string;
+};
+
+export type RagLspLocation = {
+  path: string;
+  uri?: string;
+  line: number;
+  character?: number;
+};
+
+export type RagLspHoverResponse = {
+  contents: string;
+  kind?: string;
+  server?: string;
+  path?: string;
+};
+
+export type RagLspDefinitionResponse = {
+  locations: RagLspLocation[];
+  server?: string;
+  path?: string;
+};
+
+export type RagLspReferencesResponse = {
+  locations: RagLspLocation[];
+  server?: string;
+  path?: string;
+  source: string;
+  truncated?: boolean;
+};
+
+export function postRagLspHover(body: RagLspPositionQuery) {
+  return api<RagLspHoverResponse>("/rag/lsp/hover", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function postRagLspDefinition(body: RagLspPositionQuery) {
+  return api<RagLspDefinitionResponse>("/rag/lsp/definition", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function postRagLspReferences(body: RagLspPositionQuery & { limit?: number }) {
+  return api<RagLspReferencesResponse>("/rag/lsp/references", {
     method: "POST",
     body: JSON.stringify(body),
   });

@@ -3555,6 +3555,141 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/rag/lsp/definition": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rag"
+                ],
+                "summary": "LSP definition at a file position (RAG internal)",
+                "parameters": [
+                    {
+                        "description": "definition request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPDefinitionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rag/lsp/hover": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rag"
+                ],
+                "summary": "LSP hover at a file position (RAG internal)",
+                "parameters": [
+                    {
+                        "description": "hover request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPHoverResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/rag/lsp/references": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "rag"
+                ],
+                "summary": "LSP references at a file position (RAG internal, bounded)",
+                "parameters": [
+                    {
+                        "description": "references request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPReferencesRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPReferencesResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rag/profile": {
             "get": {
                 "produces": [
@@ -9228,6 +9363,169 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_rag.LSPDefinitionResponse": {
+            "type": "object",
+            "properties": {
+                "locations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPLocationView"
+                    }
+                },
+                "path": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPHoverResponse": {
+            "type": "object",
+            "properties": {
+                "contents": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "range": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPRangeView"
+                },
+                "server": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPLocationView": {
+            "type": "object",
+            "properties": {
+                "character": {
+                    "description": "0-based",
+                    "type": "integer"
+                },
+                "line": {
+                    "description": "1-based",
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "uri": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery": {
+            "type": "object",
+            "required": [
+                "line",
+                "path",
+                "repoRoot"
+            ],
+            "properties": {
+                "character": {
+                    "description": "0-based",
+                    "type": "integer"
+                },
+                "line": {
+                    "description": "1-based",
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "text": {
+                    "description": "optional; otherwise read from disk",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPRangeView": {
+            "type": "object",
+            "properties": {
+                "endCharacter": {
+                    "type": "integer"
+                },
+                "endLine": {
+                    "type": "integer"
+                },
+                "startCharacter": {
+                    "type": "integer"
+                },
+                "startLine": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPReferencesRequest": {
+            "type": "object",
+            "required": [
+                "line",
+                "path",
+                "repoRoot"
+            ],
+            "properties": {
+                "character": {
+                    "description": "0-based",
+                    "type": "integer"
+                },
+                "limit": {
+                    "description": "default 20, max 50",
+                    "type": "integer"
+                },
+                "line": {
+                    "description": "1-based",
+                    "type": "integer"
+                },
+                "path": {
+                    "type": "string"
+                },
+                "repoRoot": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "text": {
+                    "description": "optional; otherwise read from disk",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_rag.LSPReferencesResponse": {
+            "type": "object",
+            "properties": {
+                "locations": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPLocationView"
+                    }
+                },
+                "path": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "lsp|symbol_table",
+                    "type": "string"
+                },
+                "truncated": {
+                    "type": "boolean"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_rag.Profile": {
             "type": "object",
             "properties": {
@@ -9261,6 +9559,9 @@ const docTemplate = `{
                 "hybridAvailable": {
                     "type": "boolean"
                 },
+                "lspAvailable": {
+                    "type": "boolean"
+                },
                 "pathEntryCount": {
                     "type": "integer"
                 },
@@ -9284,6 +9585,10 @@ const docTemplate = `{
                 "text"
             ],
             "properties": {
+                "expandRefs": {
+                    "description": "DX33: expand top symbol hits via LSP refs (bounded)",
+                    "type": "boolean"
+                },
                 "prefer": {
                     "description": "\"\"|\"path\"|\"symbol\"|\"text\"|\"vector\"",
                     "type": "string"
@@ -12818,6 +13123,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "ragHybridAvailable": {
+                    "type": "boolean"
+                },
+                "ragLspAvailable": {
                     "type": "boolean"
                 },
                 "ragPathEntryCount": {

@@ -13,6 +13,9 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
     runRunningCount: 2,
     runWaitingApprovalCount: 1,
     runInflightCount: 3,
+    ragDefaultRetrievalMode: "hybrid",
+    ragHybridAvailable: true,
+    ragLspAvailable: true,
   }),
 }));
 
@@ -89,6 +92,13 @@ describe("ScalePage", () => {
     renderPage(<ScalePage />);
     await waitFor(() => {
       expect(screen.getByText("duties enabled: 1 · queue: 3 · ticker 5m")).toBeInTheDocument();
+    });
+  });
+
+  it("shows LSP availability on RAG retrieval mode row", async () => {
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByText(/LSP 可用/)).toBeInTheDocument();
     });
   });
 });

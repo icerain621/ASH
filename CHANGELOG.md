@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX36（v2.8）：范围冻结 + 签字门禁 — `v2.8-release-scope` **已冻结**；`make v2.8-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + rag-vector + sandbox + skill-pack + rag-lsp）；清单/签字模板；**不自动**打 `v2.8.0` tag。
+- Sprint DX35（v2.8）：LSP harden + smoke — `ASH_RAG_LSP_TIMEOUT_SEC` / `MAX_OPEN_DOCS`；缺二进制快速 `ErrLSPUnavailable`；`make rag-lsp-smoke` → `doc/evidence/rag-lsp-smoke-latest.md`；**无新表**。
+- Sprint DX34（v2.8）：控制台 LSP 水位 — Observability/Knowledge 共享探针面板（hover/def/refs）；Scale `ragLspAvailable`；**无新表**。
+- Sprint DX33（v2.8）：LSP references + Hybrid 接线 — `POST /api/v1/rag/lsp/references`（limit≤50）；Query `expandRefs`；LSP 失败回退 `symbol_table`；Knowledge 展示 `lspAvailable`；**无新表**。
+- Sprint DX32（v2.8）：LSP hover/definition — `POST /api/v1/rag/lsp/hover|definition`（RAG 内部面）；会话池复用；Profile `lspAvailable`；OpenAPI + `RAG_LSP_FAILED`；**无公开 `/lsp/*` / 无新表**。
+- Sprint DX31（v2.8）：LSP 工作区短生命周期会话 — `lspSessionPool` 按 root+server 复用 stdio 进程；空闲回收（`ASH_RAG_LSP_IDLE_SEC`，默认 30s）；`ASH_RAG_LSP_SESSION=0` 回退 one-shot；Rebuild 注入 workspaceRoot 并 Close；fake-gopls 事件日志；**无常驻守护 / 无新表**。
 - Sprint DX30（v2.7）：范围冻结 + 签字门禁 — `v2.7-release-scope` **已冻结**；`make v2.7-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + rag-vector + sandbox + skill-pack + thin LSP）；清单/签字模板；**不自动**打 `v2.7.0` tag。
 - Sprint DX29（v2.7 草案 · B8）：薄 LSP 符号 — `LSPIndexer` one-shot `documentSymbol`（gopls / typescript-language-server）；`source=lsp`；`ASH_RAG_SYMBOL_INDEXER=lsp` / `ASH_RAG_LSP=1`；回退 lsp→treesitter→regex；fake-gopls 夹具；**无常驻守护 / 无新表**。
 - Sprint DX28（v2.7 草案）：组织 Skill catalog — `ash.skill.catalog.v1`（filesystem/HTTPS）；`GET /skills/catalog` + `POST /skills/catalog/install`；可选 catalog HMAC；Automation 验签干跑 + 已安装提示；**无新表 / 无公网市场**。

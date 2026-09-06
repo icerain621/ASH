@@ -49,6 +49,7 @@ export type ScaleReadiness = {
   ragFtsEngine?: string;
   ragDefaultRetrievalMode?: string;
   ragHybridAvailable?: boolean;
+  ragLspAvailable?: boolean;
   ragPathEntryCount?: number;
   ragSymbolCount?: number;
   ragFallbackQueryCount?: number;

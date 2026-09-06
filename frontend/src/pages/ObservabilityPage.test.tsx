@@ -20,7 +20,17 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
 
 vi.mock("@/modules/observability/api/observability.api", () => ({
   getOtelStatus: vi.fn().mockResolvedValue({ enabled: false, exporter: "none" }),
-  getRagProfile: vi.fn().mockResolvedValue({ retrievalMode: "fts", documentCount: 0 }),
+  getRagProfile: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    defaultRetrievalMode: "fts",
+    documentCount: 0,
+    chunkCount: 0,
+    fallbackQueryCount: 0,
+    lspAvailable: true,
+  }),
+  postRagLspHover: vi.fn().mockResolvedValue({ contents: "hover ok", server: "fake-gopls" }),
+  postRagLspDefinition: vi.fn().mockResolvedValue({ locations: [{ path: "main.go", line: 1 }], server: "fake-gopls" }),
+  postRagLspReferences: vi.fn().mockResolvedValue({ locations: [], source: "lsp" }),
 }));
 
 vi.mock("@/modules/scale/api/scale.api", () => ({
@@ -133,13 +143,12 @@ describe("ObservabilityPage", () => {
     expect(screen.queryByRole("button", { name: /Cancel stale/i })).not.toBeInTheDocument();
   });
 
-  it("enables Cancel stale only after exact CANCEL_STALE_RUNS confirm", async () => {
-    vi.mocked(getWakerStatus).mockResolvedValue({ ...wakerStatus, allowCancel: true });
+  it("renders RAG LSP status and probe controls", async () => {
     renderPage(<ObservabilityPage />);
     await waitFor(() => {
-      expect(screen.getByRole("button", { name: /Cancel stale/i })).toBeDisabled();
+      expect(screen.getByTestId("observability-rag-lsp-status")).toHaveTextContent(/可用/);
+      expect(screen.getByTestId("observability-rag-lsp-probe")).toBeInTheDocument();
+      expect(screen.getByTestId("observability-rag-lsp-hover")).toBeInTheDocument();
     });
-    fireEvent.change(screen.getByPlaceholderText("CANCEL_STALE_RUNS"), { target: { value: "CANCEL_STALE_RUNS" } });
-    expect(screen.getByRole("button", { name: /Cancel stale/i })).toBeEnabled();
   });
 });

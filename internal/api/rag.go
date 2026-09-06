@@ -3,6 +3,7 @@ package api
 import (
 	"errors"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 
@@ -71,6 +72,117 @@ func (h *Handler) rebuildRAGSymbols(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, resp)
+}
+
+// RAGLSPHover godoc
+// @Summary LSP hover at a file position (RAG internal)
+// @Tags rag
+// @Accept json
+// @Produce json
+// @Param body body rag.LSPPositionQuery true "hover request"
+// @Success 200 {object} rag.LSPHoverResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/rag/lsp/hover [post]
+func (h *Handler) ragLSPHover(c *gin.Context) {
+	var req rag.LSPPositionQuery
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
+	if !h.requirePermission(c, permRAGQuery, space) {
+		return
+	}
+	req.SpaceID = space
+	resp, err := h.runsFor(c).RAG().Hover(req)
+	if err != nil {
+		writeLSPQueryError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// RAGLSPDefinition godoc
+// @Summary LSP definition at a file position (RAG internal)
+// @Tags rag
+// @Accept json
+// @Produce json
+// @Param body body rag.LSPPositionQuery true "definition request"
+// @Success 200 {object} rag.LSPDefinitionResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/rag/lsp/definition [post]
+func (h *Handler) ragLSPDefinition(c *gin.Context) {
+	var req rag.LSPPositionQuery
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
+	if !h.requirePermission(c, permRAGQuery, space) {
+		return
+	}
+	req.SpaceID = space
+	resp, err := h.runsFor(c).RAG().Definition(req)
+	if err != nil {
+		writeLSPQueryError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+// RAGLSPReferences godoc
+// @Summary LSP references at a file position (RAG internal, bounded)
+// @Tags rag
+// @Accept json
+// @Produce json
+// @Param body body rag.LSPReferencesRequest true "references request"
+// @Success 200 {object} rag.LSPReferencesResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/rag/lsp/references [post]
+func (h *Handler) ragLSPReferences(c *gin.Context) {
+	var req rag.LSPReferencesRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	space := firstNonEmptyAPI(req.SpaceID, currentSpace(c))
+	if !h.requireTargetSpace(c, space) {
+		return
+	}
+	if !h.requirePermission(c, permRAGQuery, space) {
+		return
+	}
+	req.SpaceID = space
+	resp, err := h.runsFor(c).RAG().References(req)
+	if err != nil {
+		writeLSPQueryError(c, err)
+		return
+	}
+	c.JSON(http.StatusOK, resp)
+}
+
+func writeLSPQueryError(c *gin.Context, err error) {
+	switch {
+	case errors.Is(err, rag.ErrLSPUnsupported), errors.Is(err, rag.ErrLSPUnavailable):
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+	default:
+		msg := err.Error()
+		if strings.Contains(msg, "line must") || strings.Contains(msg, "character must") ||
+			strings.Contains(msg, "path escapes") || strings.Contains(msg, "path is required") {
+			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", msg))
+			return
+		}
+		c.JSON(http.StatusInternalServerError, errorBody("RAG_LSP_FAILED", msg))
+	}
 }
 
 // QueryRAG godoc

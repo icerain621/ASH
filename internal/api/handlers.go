@@ -204,6 +204,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.POST("/rag/index", h.indexRAG)
 		v1.POST("/rag/symbols/rebuild", h.rebuildRAGSymbols)
+		v1.POST("/rag/lsp/hover", h.ragLSPHover)
+		v1.POST("/rag/lsp/definition", h.ragLSPDefinition)
+		v1.POST("/rag/lsp/references", h.ragLSPReferences)
 		v1.POST("/rag/query", h.queryRAG)
 		v1.GET("/rag/profile", h.getRAGProfile)
 

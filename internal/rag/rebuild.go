@@ -32,6 +32,14 @@ func (s *Service) RebuildSymbols(req RebuildSymbolsRequest) (*RebuildSymbolsResp
 
 	seenPaths := make(map[string]bool)
 	indexer := ResolveSymbolIndexer()
+	if ws, ok := indexer.(interface{ SetWorkspaceRoot(string) }); ok {
+		ws.SetWorkspaceRoot(abs)
+	}
+	defer func() {
+		if c, ok := indexer.(interface{ Close() error }); ok {
+			_ = c.Close()
+		}
+	}()
 	regexFallback := RegexIndexer{}
 	resp := &RebuildSymbolsResponse{SymbolSource: indexer.Name()}
 	preferredOK := false

@@ -62,6 +62,7 @@ type ScaleReadinessResponse struct {
 	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
 	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
 	RAGHybridAvailable             bool     `json:"ragHybridAvailable,omitempty"`
+	RAGLspAvailable                bool     `json:"ragLspAvailable,omitempty"`
 	RAGPathEntryCount              int64    `json:"ragPathEntryCount,omitempty"`
 	RAGSymbolCount                 int64    `json:"ragSymbolCount,omitempty"`
 	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
@@ -182,6 +183,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		RAGFtsEngine:                  ragProf.FtsEngine,
 		RAGDefaultRetrievalMode:       ragProf.DefaultRetrievalMode,
 		RAGHybridAvailable:            ragProf.HybridAvailable,
+		RAGLspAvailable:               ragProf.LSPAvailable,
 		RAGPathEntryCount:             ragProf.PathEntryCount,
 		RAGSymbolCount:                ragProf.SymbolCount,
 		RAGFallbackQueryCount:         ragFallbacks,

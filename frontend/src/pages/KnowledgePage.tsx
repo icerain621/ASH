@@ -3,6 +3,7 @@ import { BookOpen, RefreshCcw } from "lucide-react";
 import { useState } from "react";
 import { getRepoProfile, getWikiPage, listWikiPages } from "@/modules/knowledge/api/knowledge.api";
 import { getRagProfile, rebuildRAGSymbols } from "@/modules/observability/api/observability.api";
+import { RagLspProbePanel } from "@/modules/observability/components/RagLspProbePanel";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 export function KnowledgePage() {
@@ -89,6 +90,7 @@ export function KnowledgePage() {
               <p>
                 模式：<code>{ragQuery.data.defaultRetrievalMode}</code>
                 {ragQuery.data.hybridAvailable ? " · Hybrid 可用" : " · Hybrid 未建索引"}
+                {ragQuery.data.lspAvailable ? " · LSP 可用" : ""}
               </p>
               <p>
                 文档 {ragQuery.data.documentCount} · 分块 {ragQuery.data.chunkCount} · 路径{" "}
@@ -116,6 +118,9 @@ export function KnowledgePage() {
               {rebuildMut.isError && <p className="error">重建失败</p>}
             </div>
           )}
+
+          <h2 style={{ marginTop: "1.25rem" }}>LSP 探针</h2>
+          <RagLspProbePanel defaultRepoRoot={repoRoot} testIdPrefix="knowledge-rag-lsp" />
 
           <h2 style={{ marginTop: "1.25rem" }}>Repo Profile</h2>
           {profileQuery.isError && <p className="error">加载 Profile 失败</p>}

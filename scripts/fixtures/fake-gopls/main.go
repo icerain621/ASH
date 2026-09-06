@@ -34,19 +34,24 @@ func main() {
 		}
 		switch envelope.Method {
 		case "initialize":
+			appendEventLog("initialize")
 			writeLSP(map[string]any{
 				"jsonrpc": "2.0",
 				"id":      rawID(envelope.ID),
 				"result": map[string]any{
 					"capabilities": map[string]any{
 						"documentSymbolProvider": true,
+						"hoverProvider":          true,
+						"definitionProvider":     true,
+						"referencesProvider":     true,
 					},
-					"serverInfo": map[string]any{"name": "fake-gopls", "version": "dx29"},
+					"serverInfo": map[string]any{"name": "fake-gopls", "version": "dx31"},
 				},
 			})
 		case "initialized", "textDocument/didOpen", "textDocument/didChange":
 			// notifications — no response
 		case "textDocument/documentSymbol":
+			appendEventLog("documentSymbol")
 			writeLSP(map[string]any{
 				"jsonrpc": "2.0",
 				"id":      rawID(envelope.ID),
@@ -63,6 +68,65 @@ func main() {
 						"end":   map[string]int{"line": 6, "character": 19},
 					},
 				}},
+			})
+		case "textDocument/hover":
+			appendEventLog("hover")
+			writeLSP(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      rawID(envelope.ID),
+				"result": map[string]any{
+					"contents": map[string]any{
+						"kind":  "markdown",
+						"value": "**FixtureLSPFunc** function",
+					},
+					"range": map[string]any{
+						"start": map[string]int{"line": 6, "character": 5},
+						"end":   map[string]int{"line": 6, "character": 19},
+					},
+				},
+			})
+		case "textDocument/definition":
+			appendEventLog("definition")
+			uri := extractURI(envelope.Params)
+			if uri == "" {
+				uri = "file:///fixture.go"
+			}
+			writeLSP(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      rawID(envelope.ID),
+				"result": map[string]any{
+					"uri": uri,
+					"range": map[string]any{
+						"start": map[string]int{"line": 6, "character": 5},
+						"end":   map[string]int{"line": 6, "character": 19},
+					},
+				},
+			})
+		case "textDocument/references":
+			appendEventLog("references")
+			uri := extractURI(envelope.Params)
+			if uri == "" {
+				uri = "file:///fixture.go"
+			}
+			writeLSP(map[string]any{
+				"jsonrpc": "2.0",
+				"id":      rawID(envelope.ID),
+				"result": []map[string]any{
+					{
+						"uri": uri,
+						"range": map[string]any{
+							"start": map[string]int{"line": 6, "character": 5},
+							"end":   map[string]int{"line": 6, "character": 19},
+						},
+					},
+					{
+						"uri": uri,
+						"range": map[string]any{
+							"start": map[string]int{"line": 10, "character": 1},
+							"end":   map[string]int{"line": 10, "character": 8},
+						},
+					},
+				},
 			})
 		case "shutdown":
 			writeLSP(map[string]any{
@@ -82,6 +146,29 @@ func main() {
 			}
 		}
 	}
+}
+
+func appendEventLog(event string) {
+	path := strings.TrimSpace(os.Getenv("ASH_FAKE_GOPLS_EVENT_LOG"))
+	if path == "" {
+		return
+	}
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+	if err != nil {
+		return
+	}
+	defer f.Close()
+	_, _ = fmt.Fprintf(f, "%s\n", event)
+}
+
+func extractURI(params json.RawMessage) string {
+	var p struct {
+		TextDocument struct {
+			URI string `json:"uri"`
+		} `json:"textDocument"`
+	}
+	_ = json.Unmarshal(params, &p)
+	return p.TextDocument.URI
 }
 
 func rawID(id json.RawMessage) any {

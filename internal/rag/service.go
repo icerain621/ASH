@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"sort"
 	"strings"
 	"time"
 
@@ -85,11 +86,12 @@ type IndexResponse struct {
 }
 
 type QueryRequest struct {
-	RepoRoot string `json:"repoRoot,omitempty"`
-	Text     string `json:"text" binding:"required"`
-	TopK     int    `json:"topK,omitempty"`
-	SpaceID  string `json:"spaceId,omitempty"`
-	Prefer   string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"|"vector"
+	RepoRoot   string `json:"repoRoot,omitempty"`
+	Text       string `json:"text" binding:"required"`
+	TopK       int    `json:"topK,omitempty"`
+	SpaceID    string `json:"spaceId,omitempty"`
+	Prefer     string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"|"vector"
+	ExpandRefs bool   `json:"expandRefs,omitempty"` // DX33: expand top symbol hits via LSP refs (bounded)
 }
 
 type Hit struct {
@@ -233,7 +235,83 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	if hasVector {
 		mode = RetrievalModeHybridVector
 	}
+	if req.ExpandRefs && absRepo != "" {
+		merged = s.expandHybridRefs(space, absRepo, merged, topK)
+	}
 	return &QueryResponse{Items: merged, RetrievalMode: mode, FtsAvailable: ftsAvailable}, nil
+}
+
+const (
+	expandRefsMaxSeeds = 3
+	expandRefsPerSeed  = 8
+)
+
+// expandHybridRefs attaches bounded LSP/symbol-table references for top symbol hits.
+func (s *Service) expandHybridRefs(space, absRepo string, hits []Hit, topK int) []Hit {
+	if len(hits) == 0 {
+		return hits
+	}
+	seen := map[string]bool{}
+	for _, h := range hits {
+		key := h.Ref
+		if key == "" {
+			key = makeRef(h.Path, h.Symbol, h.StartLine, h.EndLine)
+		}
+		seen[key] = true
+	}
+	extra := make([]Hit, 0)
+	seeds := 0
+	for _, h := range hits {
+		if seeds >= expandRefsMaxSeeds {
+			break
+		}
+		if strings.TrimSpace(h.Symbol) == "" || h.Path == "" || h.StartLine < 1 {
+			continue
+		}
+		seeds++
+		char := 0
+		if h.Symbol != "" {
+			// Best-effort: point near identifier start.
+			char = 0
+		}
+		refs, err := s.References(LSPReferencesRequest{
+			LSPPositionQuery: LSPPositionQuery{
+				RepoRoot: absRepo,
+				Path:     h.Path,
+				Line:     h.StartLine,
+				Character: char,
+				SpaceID:  space,
+			},
+			Limit: expandRefsPerSeed,
+		})
+		if err != nil || refs == nil {
+			continue
+		}
+		for _, loc := range refs.Locations {
+			if loc.Path == "" || loc.Line < 1 {
+				continue
+			}
+			key := makeRef(loc.Path, h.Symbol, loc.Line, loc.Line)
+			if seen[key] {
+				continue
+			}
+			seen[key] = true
+			extra = append(extra, Hit{
+				Ref: key, Path: loc.Path, Symbol: h.Symbol,
+				StartLine: loc.Line, EndLine: loc.Line,
+				Score: h.Score * 0.45, Snippet: "ref " + h.Symbol,
+			})
+		}
+	}
+	if len(extra) == 0 {
+		return hits
+	}
+	out := append(append([]Hit{}, hits...), extra...)
+	sort.SliceStable(out, func(i, j int) bool { return out[i].Score > out[j].Score })
+	if topK > 0 && len(out) > topK {
+		out = out[:topK]
+	}
+	return out
 }
 
 // FTSAvailable reports whether dialect-native FTS retrieval is wired.

@@ -72,6 +72,7 @@ var Catalog = map[string]Entry{
 	"RAG_INDEX_FAILED":             {Domain: "rag", Summary: "Repository index build failed"},
 	"RAG_SYMBOLS_REBUILD_FAILED":   {Domain: "rag", Summary: "Path/symbol index rebuild failed"},
 	"RAG_QUERY_FAILED":             {Domain: "rag", Summary: "Retrieval query failed"},
+	"RAG_LSP_FAILED":               {Domain: "rag", Summary: "LSP hover/definition query failed"},
 
 	// model router
 	"MODEL_USAGE_RECORD_FAILED": {Domain: "model", Summary: "Failed to persist model usage row"},

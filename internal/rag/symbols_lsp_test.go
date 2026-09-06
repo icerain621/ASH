@@ -29,6 +29,8 @@ func buildFakeGopls(t *testing.T) string {
 func TestLSPIndexerDocumentSymbolViaFakeGopls(t *testing.T) {
 	bin := buildFakeGopls(t)
 	idx := NewLSPIndexer(bin, "")
+	idx.pool = newLSPSessionPool()
+	defer idx.pool.closeAll()
 	if !idx.Available() {
 		t.Fatal("Available want true")
 	}
@@ -36,6 +38,7 @@ func TestLSPIndexerDocumentSymbolViaFakeGopls(t *testing.T) {
 		t.Fatalf("Name=%q", idx.Name())
 	}
 	dir := t.TempDir()
+	idx.SetWorkspaceRoot(dir)
 	src := filepath.Join(dir, "sample.go")
 	content := []byte("package main\n\n// pad\n\n\n\nfunc FixtureLSPFunc() {}\n")
 	if err := os.WriteFile(src, content, 0o644); err != nil {
@@ -116,6 +119,15 @@ func TestRebuildSymbolsLSPWithFakeGopls(t *testing.T) {
 	bin := buildFakeGopls(t)
 	t.Setenv("ASH_RAG_SYMBOL_INDEXER", "lsp")
 	t.Setenv(envRAGLSPGopls, bin)
+	t.Setenv(envRAGLSPSession, "1")
+
+	// Isolate from shared pool so Windows can delete the fixture binary.
+	prev := sharedLSPSessionPool
+	sharedLSPSessionPool = newLSPSessionPool()
+	defer func() {
+		sharedLSPSessionPool.closeAll()
+		sharedLSPSessionPool = prev
+	}()
 
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)

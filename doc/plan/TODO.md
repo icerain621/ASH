@@ -1,6 +1,6 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-06  
+> 更新：2026-09-07  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.6：DX20–DX24 已冻结**（tag `v2.6.0` 待人工）；**v2.7：DX25–DX30 草案**（待确认后开工） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.8：DX31–DX36 已冻结**（tag `v2.8.0` 待人工；见 [`v2.8-release-scope.md`](v2.8-release-scope.md)）；v2.7 tag `v2.7.0` 仍待人工 |
 
 ---
 
@@ -68,7 +68,13 @@
 | DX28 | 组织 Skill catalog + UI（v2.7） | catalog 列表→install；验签干跑；Automation 打磨 | ✅ |
 | DX29 | 薄 LSP 符号（必做 · B8） | gopls/tsserver 一次性符号；`source=lsp`；完整 LSP Out | ✅ |
 | DX30 | v2.7 冻结 + 签字 | `v2.7-release-scope`；`make v2.7-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.6 [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结）；**v2.7** [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-06-v27-dx25-dx30-design.md`](../../docs/superpowers/specs/2026-09-06-v27-dx25-dx30-design.md) | — |
+| DX31 | LSP session（v2.8） | 工作区短生命周期会话；超时回收；非 IDE 守护 | ✅ |
+| DX32 | Hover / Definition | `hover` + `definition`；RAG/内部查询面 | ✅ |
+| DX33 | References + 接线 | 有界 `references` + Hybrid/Knowledge；fallback | ✅ |
+| DX34 | 控制台 LSP 水位 | Observability/Knowledge 面板 | ✅ |
+| DX35 | LSP harden + smoke | 降级/超时；`rag-lsp-smoke`；证据清单 | ✅ |
+| DX36 | v2.8 冻结 + 签字 | `v2.8-release-scope`；`make v2.8-signoff`；tag 人工 | ✅ |
+| 详排 | — | v2.7 [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结）；**v2.8** [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-07-v28-lsp-slice-design.md`](../../docs/superpowers/specs/2026-09-07-v28-lsp-slice-design.md) | — |
 
 ---
 
@@ -131,10 +137,10 @@ make regression-short && make web-gate
 ## P3 — Backlog（明确不做进 v0.1；部分进 v2.6 草案）
 
 - ~~向量 POC（Qdrant + stub）~~ → v2.5 DX17；主路径 Chroma/Milvus 仍 P3  
-- ~~ctags 符号~~ → v2.5 DX16；**tree-sitter** → v2.6 DX20；**完整 LSP** 仍 P3/v2.7  
-- ~~Landlock POC~~ → v2.5 DX18；**默认收紧 + seccomp** → v2.6 DX21；**E2B** 仍 P3  
-- **私有 Skill packs** → v2.6 DX22；公网 Skill Marketplace / 计费 / 知识图谱仍 P3  
-- **单区域就绪** → v2.6 DX23；Active-Active 多区域仍 P3  
+- ~~ctags 符号~~ → v2.5 DX16；~~tree-sitter~~ → v2.6 DX20；~~薄 LSP~~ → v2.7 DX29；**完整 LSP 切片** → v2.8 草案  
+- ~~Landlock POC~~ → v2.5 DX18；**默认收紧 + seccomp** → v2.6 DX21；~~e2e 证据~~ → v2.7 DX27；**E2B** 仍 P3  
+- ~~私有 Skill packs~~ → v2.6 DX22；~~组织 catalog~~ → v2.7 DX28；公网 Skill Marketplace / 计费 / 知识图谱仍 P3  
+- ~~单区域就绪~~ → v2.6 DX23；Active-Active 多区域仍 P3  
 - 外部 IdP 联邦、多端网关  
 
 ---

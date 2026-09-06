@@ -21,6 +21,7 @@ type Profile struct {
 	PathEntryCount       int64  `json:"pathEntryCount"`
 	SymbolCount          int64  `json:"symbolCount"`
 	FallbackQueryCount   int64  `json:"fallbackQueryCount"`
+	LSPAvailable         bool   `json:"lspAvailable"`
 }
 
 // Profile returns a tenant-scoped RAG retrieval snapshot.
@@ -51,6 +52,7 @@ func (s *Service) Profile(spaceID string) Profile {
 		out.FallbackQueryCount = CountChunkFallbackQueries(gdb, spaceID)
 	}
 	out.HybridAvailable = out.PathEntryCount+out.SymbolCount > 0
+	out.LSPAvailable = NewLSPIndexerFromEnv().Available()
 	if out.HybridAvailable && out.VectorPointCount > 0 && out.VectorAvailable {
 		out.DefaultRetrievalMode = RetrievalModeHybridVector
 	} else if out.HybridAvailable {

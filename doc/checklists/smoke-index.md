@@ -28,8 +28,9 @@
 | KPI 对账 | `make kpi-reconcile-gate` | overview ↔ derive replay（§9） |
 | Worker 本地 live | `make worker-local-gate` | 临时 Worker + live-smoke |
 | RAG Hybrid（DX9） | `make rag-hybrid-smoke` | RebuildSymbols + Hybrid Query + 回退 |
+| RAG LSP（DX35） | `make rag-lsp-smoke` | session / hover / def / refs / expandRefs；假 gopls；写 evidence |
 | Waker（DX6/DX12） | `make waker-smoke` | queue/sweep + duties/status；可选 live curl |
-| 发布范围冻结 | `make scope-freeze-gate` | MVP + v2 + v2.1 + v2.2 + v2.3 + v2.4 scope 结构校验 |
+| 发布范围冻结 | `make scope-freeze-gate` | MVP + v2 + … + v2.8 scope 结构校验 |
 | 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
 | 本地就绪 | `make local-readiness-gate` | release-window + worker live（~4min） |
 | §11 签字回填 | `make signoff-apply` | `config/signoff.env` → 证据 + 清单 |
@@ -63,6 +64,8 @@
 | — | skill-pack (DX22) | 私有签名 pack verify/install | [`skill-pack-smoke.md`](skill-pack-smoke.md) |
 | — | v2.6 signoff (DX24) | scope freeze + `make v2.6-signoff` | [`v2.6-signoff.md`](v2.6-signoff.md) |
 | — | v2.7 signoff (DX30) | scope freeze + `make v2.7-signoff` | [`v2.7-signoff.md`](v2.7-signoff.md) |
+| — | RAG LSP (DX35) | session / hover / def / refs smoke + evidence | [`rag-lsp-smoke.md`](rag-lsp-smoke.md) |
+| — | v2.8 signoff (DX36) | scope freeze + `make v2.8-signoff` | [`v2.8-signoff.md`](v2.8-signoff.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

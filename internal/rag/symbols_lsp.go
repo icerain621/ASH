@@ -20,18 +20,42 @@ const (
 	envRAGLSP       = "ASH_RAG_LSP"
 	envRAGLSPGopls  = "ASH_RAG_LSP_GOPLS"
 	envRAGLSPTS     = "ASH_RAG_LSP_TSSERVER"
-	lspRequestTimeout = 20 * time.Second
+	envRAGLSPTimeout = "ASH_RAG_LSP_TIMEOUT_SEC"
+	defaultLSPTimeout = 20 * time.Second
 )
 
-// LSPIndexer extracts symbols via a one-shot language server session
-// (documentSymbol). No resident daemon — process starts and exits per file.
+func lspRequestTimeoutDuration() time.Duration {
+	v := strings.TrimSpace(os.Getenv(envRAGLSPTimeout))
+	if v == "" {
+		return defaultLSPTimeout
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n < 1 {
+		return defaultLSPTimeout
+	}
+	if n > 300 {
+		n = 300
+	}
+	return time.Duration(n) * time.Second
+}
+
+// LSPIndexer extracts symbols via language servers (documentSymbol).
+// Default (DX31): workspace-scoped short-lived sessions with idle reclaim.
+// Escape hatch ASH_RAG_LSP_SESSION=0 keeps DX29 per-file one-shot.
+// Not an IDE daemon — sessions exit on Close / idle timeout.
 type LSPIndexer struct {
-	goplsPath string
-	tsPath    string
+	goplsPath     string
+	tsPath        string
+	workspaceRoot string
+	pool          *lspSessionPool
 }
 
 func NewLSPIndexer(goplsPath, tsPath string) *LSPIndexer {
-	return &LSPIndexer{goplsPath: strings.TrimSpace(goplsPath), tsPath: strings.TrimSpace(tsPath)}
+	return &LSPIndexer{
+		goplsPath: strings.TrimSpace(goplsPath),
+		tsPath:    strings.TrimSpace(tsPath),
+		pool:      sharedLSPSessionPool,
+	}
 }
 
 func NewLSPIndexerFromEnv() *LSPIndexer {
@@ -39,6 +63,27 @@ func NewLSPIndexerFromEnv() *LSPIndexer {
 }
 
 func (l *LSPIndexer) Name() string { return "lsp" }
+
+// SetWorkspaceRoot pins the LSP rootUri for session reuse (RebuildSymbols).
+func (l *LSPIndexer) SetWorkspaceRoot(root string) {
+	if l == nil {
+		return
+	}
+	l.workspaceRoot = strings.TrimSpace(root)
+}
+
+// Close shuts down pooled sessions for this indexer's workspace root.
+func (l *LSPIndexer) Close() error {
+	if l == nil || l.pool == nil {
+		return nil
+	}
+	root := l.workspaceRoot
+	if root == "" {
+		return nil
+	}
+	l.pool.closeRoot(root)
+	return nil
+}
 
 // Available reports whether at least one supported language server binary is on PATH.
 func (l *LSPIndexer) Available() bool {
@@ -61,8 +106,19 @@ func (l *LSPIndexer) IndexFile(path string, content []byte) ([]SymbolHit, error)
 	if err != nil {
 		return nil, err
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), lspRequestTimeout)
+	root := l.workspaceRoot
+	if root == "" {
+		root = filepath.Dir(abs)
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), lspRequestTimeoutDuration())
 	defer cancel()
+	if lspSessionEnabled() {
+		pool := l.pool
+		if pool == nil {
+			pool = sharedLSPSessionPool
+		}
+		return pool.documentSymbol(ctx, root, server, abs, langID, string(content))
+	}
 	return runDocumentSymbol(ctx, server, abs, langID, string(content))
 }
 

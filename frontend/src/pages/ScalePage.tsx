@@ -250,6 +250,7 @@ export function ScalePage() {
               <td>
                 {r?.ragDefaultRetrievalMode ?? "-"}
                 {r?.ragHybridAvailable ? " · Hybrid 可用" : null}
+                {r?.ragLspAvailable ? " · LSP 可用" : null}
                 {r?.ragFtsEngine
                   ? ` · ${r.ragFtsEngine}`
                   : r?.ragFtsAvailable != null

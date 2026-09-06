@@ -40,6 +40,7 @@ vi.mock("@/modules/observability/api/observability.api", () => ({
     ftsAvailable: true,
     defaultRetrievalMode: "hybrid",
     hybridAvailable: true,
+    lspAvailable: true,
     documentCount: 2,
     chunkCount: 4,
     pathEntryCount: 2,
@@ -47,6 +48,9 @@ vi.mock("@/modules/observability/api/observability.api", () => ({
     fallbackQueryCount: 0,
   }),
   rebuildRAGSymbols: vi.fn().mockResolvedValue({ paths: 2, symbols: 3, files: 2 }),
+  postRagLspHover: vi.fn().mockResolvedValue({ contents: "ok", server: "fake" }),
+  postRagLspDefinition: vi.fn().mockResolvedValue({ locations: [], server: "fake" }),
+  postRagLspReferences: vi.fn().mockResolvedValue({ locations: [], source: "lsp" }),
 }));
 
 describe("KnowledgePage", () => {
@@ -58,6 +62,8 @@ describe("KnowledgePage", () => {
     });
     expect(screen.getByTestId("knowledge-wiki-list")).toBeInTheDocument();
     expect(screen.getByTestId("knowledge-rag-hybrid")).toBeInTheDocument();
+    expect(screen.getByText(/LSP 可用/)).toBeInTheDocument();
     expect(screen.getByTestId("knowledge-rag-rebuild")).toBeInTheDocument();
+    expect(screen.getByTestId("knowledge-rag-lsp-probe")).toBeInTheDocument();
   });
 });

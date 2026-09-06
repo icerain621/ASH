@@ -1499,6 +1499,117 @@ definitions:
       embedded:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPDefinitionResponse:
+    properties:
+      locations:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPLocationView'
+        type: array
+      path:
+        type: string
+      server:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPHoverResponse:
+    properties:
+      contents:
+        type: string
+      kind:
+        type: string
+      path:
+        type: string
+      range:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPRangeView'
+      server:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPLocationView:
+    properties:
+      character:
+        description: 0-based
+        type: integer
+      line:
+        description: 1-based
+        type: integer
+      path:
+        type: string
+      uri:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery:
+    properties:
+      character:
+        description: 0-based
+        type: integer
+      line:
+        description: 1-based
+        type: integer
+      path:
+        type: string
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+      text:
+        description: optional; otherwise read from disk
+        type: string
+    required:
+    - line
+    - path
+    - repoRoot
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPRangeView:
+    properties:
+      endCharacter:
+        type: integer
+      endLine:
+        type: integer
+      startCharacter:
+        type: integer
+      startLine:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPReferencesRequest:
+    properties:
+      character:
+        description: 0-based
+        type: integer
+      limit:
+        description: default 20, max 50
+        type: integer
+      line:
+        description: 1-based
+        type: integer
+      path:
+        type: string
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+      text:
+        description: optional; otherwise read from disk
+        type: string
+    required:
+    - line
+    - path
+    - repoRoot
+    type: object
+  github_com_ash-repwiki_ash_internal_rag.LSPReferencesResponse:
+    properties:
+      locations:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPLocationView'
+        type: array
+      path:
+        type: string
+      server:
+        type: string
+      source:
+        description: lsp|symbol_table
+        type: string
+      truncated:
+        type: boolean
+    type: object
   github_com_ash-repwiki_ash_internal_rag.Profile:
     properties:
       chunkCount:
@@ -1521,6 +1632,8 @@ definitions:
         type: string
       hybridAvailable:
         type: boolean
+      lspAvailable:
+        type: boolean
       pathEntryCount:
         type: integer
       spaceId:
@@ -1534,6 +1647,9 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:
     properties:
+      expandRefs:
+        description: 'DX33: expand top symbol hits via LSP refs (bounded)'
+        type: boolean
       prefer:
         description: '""|"path"|"symbol"|"text"|"vector"'
         type: string
@@ -3856,6 +3972,8 @@ definitions:
       ragFtsEngine:
         type: string
       ragHybridAvailable:
+        type: boolean
+      ragLspAvailable:
         type: boolean
       ragPathEntryCount:
         type: integer
@@ -6807,6 +6925,93 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Index repository for retrieval
+      tags:
+      - rag
+  /api/v1/rag/lsp/definition:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: definition request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPDefinitionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: LSP definition at a file position (RAG internal)
+      tags:
+      - rag
+  /api/v1/rag/lsp/hover:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: hover request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPPositionQuery'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPHoverResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: LSP hover at a file position (RAG internal)
+      tags:
+      - rag
+  /api/v1/rag/lsp/references:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: references request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPReferencesRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.LSPReferencesResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: LSP references at a file position (RAG internal, bounded)
       tags:
       - rag
   /api/v1/rag/profile:

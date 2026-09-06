@@ -310,6 +310,9 @@ components:
         ragHybridAvailable:
           type: boolean
           description: Hybrid path/symbol tables populated for this space.
+        ragLspAvailable:
+          type: boolean
+          description: Language server binary resolvable for RAG LSP queries (gopls / tsserver).
         ragPathEntryCount:
           type: integer
           format: int64
@@ -505,6 +508,7 @@ components:
         pathEntryCount: { type: integer, format: int64 }
         symbolCount: { type: integer, format: int64 }
         fallbackQueryCount: { type: integer, format: int64 }
+        lspAvailable: { type: boolean, description: True when gopls and/or typescript-language-server is resolvable for RAG LSP queries. }
     OtelStatusResponse:
       type: object
       description: OTel trace export runtime status.
@@ -2881,6 +2885,63 @@ components:
           type: string
           enum: [regex, ctags, treesitter, lsp]
           description: Preferred indexer for symbol extraction (`treesitter` default; `lsp` via ASH_RAG_SYMBOL_INDEXER=lsp or ASH_RAG_LSP=1). Per-file fallback lsp→treesitter→regex; response stays on preferred name if any file succeeded.
+    RAGLSPPositionQuery:
+      type: object
+      required: [repoRoot, path, line]
+      description: Position query for RAG-internal LSP hover/definition (not a public /lsp product API).
+      properties:
+        repoRoot: { type: string }
+        path: { type: string, description: Repo-relative or absolute path under repoRoot. }
+        line: { type: integer, minimum: 1, description: 1-based line. }
+        character: { type: integer, minimum: 0, description: 0-based character (default 0). }
+        spaceId: { type: string }
+        text: { type: string, description: Optional buffer override; otherwise read from disk. }
+    RAGLSPRange:
+      type: object
+      properties:
+        startLine: { type: integer }
+        startCharacter: { type: integer }
+        endLine: { type: integer }
+        endCharacter: { type: integer }
+    RAGLSPLocation:
+      type: object
+      properties:
+        path: { type: string }
+        uri: { type: string }
+        line: { type: integer, description: 1-based }
+        character: { type: integer, description: 0-based }
+    RAGLSPHoverResponse:
+      type: object
+      properties:
+        contents: { type: string }
+        kind: { type: string, description: markdown|plaintext }
+        range: { $ref: "#/components/schemas/RAGLSPRange" }
+        server: { type: string }
+        path: { type: string }
+    RAGLSPDefinitionResponse:
+      type: object
+      properties:
+        locations:
+          type: array
+          items: { $ref: "#/components/schemas/RAGLSPLocation" }
+        server: { type: string }
+        path: { type: string }
+    RAGLSPReferencesRequest:
+      allOf:
+        - $ref: "#/components/schemas/RAGLSPPositionQuery"
+        - type: object
+          properties:
+            limit: { type: integer, minimum: 1, maximum: 50, description: Max locations (default 20). }
+    RAGLSPReferencesResponse:
+      type: object
+      properties:
+        locations:
+          type: array
+          items: { $ref: "#/components/schemas/RAGLSPLocation" }
+        server: { type: string }
+        path: { type: string }
+        source: { type: string, enum: [lsp, symbol_table] }
+        truncated: { type: boolean }
     RAGQueryRequest:
       type: object
       required: [text]
@@ -2890,6 +2951,7 @@ components:
         repoRoot: { type: string }
         spaceId: { type: string }
         prefer: { type: string, description: '""|"path"|"symbol"|"text"|"vector"' }
+        expandRefs: { type: boolean, description: 'When true, expand top symbol hits via bounded LSP references (fallback symbol table).' }
     RAGHit:
       type: object
       properties:
@@ -4878,6 +4940,84 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/RAGSymbolsRebuildResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "500":
+          description: internal error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  /api/v1/rag/lsp/hover:
+    post:
+      tags: [Rag]
+      summary: LSP hover at a file position (RAG internal)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGLSPPositionQuery" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RAGLSPHoverResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "500":
+          description: internal error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  /api/v1/rag/lsp/definition:
+    post:
+      tags: [Rag]
+      summary: LSP definition at a file position (RAG internal)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGLSPPositionQuery" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RAGLSPDefinitionResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "500":
+          description: internal error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+
+  /api/v1/rag/lsp/references:
+    post:
+      tags: [Rag]
+      summary: LSP references at a file position (RAG internal, bounded)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RAGLSPReferencesRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RAGLSPReferencesResponse" }
         "400":
           description: bad request
           content:
