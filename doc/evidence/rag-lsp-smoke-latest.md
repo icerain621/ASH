@@ -4,7 +4,7 @@
 |-------|--------|
 | Status | **pass** (exit 0) |
 | Platform | MINGW64_NT-10.0-26200 |
-| Date | 2026-09-06T18:38:05Z |
+| Date | 2026-09-07T13:32:48Z |
 | Scope | session / hover / definition / references / expandRefs / harden |
 | Live LS | not required (fake-gopls) |
 
@@ -20,5 +20,5 @@
 ## Raw excerpt
 
 ```
-ok  	github.com/ash-repwiki/ash/internal/rag	15.663s
+ok  	github.com/ash-repwiki/ash/internal/rag	14.030s
 ```

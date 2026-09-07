@@ -50,6 +50,12 @@ export type ScaleReadiness = {
   ragDefaultRetrievalMode?: string;
   ragHybridAvailable?: boolean;
   ragLspAvailable?: boolean;
+  sandboxRemoteEnabled?: boolean;
+  sandboxRemoteAvailable?: boolean;
+  sandboxRemotePreferred?: boolean;
+  sandboxRemoteDenyOnFail?: boolean;
+  sandboxRemoteBackend?: string;
+  sandboxRemoteReason?: string;
   ragPathEntryCount?: number;
   ragSymbolCount?: number;
   ragFallbackQueryCount?: number;

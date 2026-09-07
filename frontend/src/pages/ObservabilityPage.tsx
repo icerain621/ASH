@@ -256,6 +256,66 @@ export function ObservabilityPage() {
           <RagLspProbePanel testIdPrefix="observability-rag-lsp" />
         </div>
       </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>远程沙箱</h2>
+          <span
+            className={
+              "status-pill " +
+              (scaleQuery.data?.sandboxRemoteAvailable
+                ? "ok"
+                : scaleQuery.data?.sandboxRemoteEnabled
+                  ? "warn"
+                  : "idle")
+            }
+          >
+            <span className="status-dot" />
+            {scaleQuery.data == null
+              ? "-"
+              : !scaleQuery.data.sandboxRemoteEnabled
+                ? "关闭"
+                : scaleQuery.data.sandboxRemoteAvailable
+                  ? "可用"
+                  : "不可用"}
+          </span>
+        </div>
+        <table className="table">
+          <tbody>
+            <tr>
+              <td>状态</td>
+              <td data-testid="observability-sandbox-remote-status">
+                {scaleQuery.data == null
+                  ? "-"
+                  : !scaleQuery.data.sandboxRemoteEnabled
+                    ? "关闭（默认本机 Landlock/process）"
+                    : scaleQuery.data.sandboxRemoteAvailable
+                      ? "后端可用"
+                      : "已启用但不可用"}
+              </td>
+            </tr>
+            <tr>
+              <td>Backend</td>
+              <td data-testid="observability-sandbox-remote-backend">
+                {scaleQuery.data?.sandboxRemoteBackend || "—"}
+              </td>
+            </tr>
+            <tr>
+              <td>Prefer / On fail</td>
+              <td data-testid="observability-sandbox-remote-policy">
+                {scaleQuery.data?.sandboxRemotePreferred ? "prefer=remote" : "不优先"}
+                {scaleQuery.data?.sandboxRemoteDenyOnFail ? " · on_fail=deny" : " · on_fail=fallback"}
+              </td>
+            </tr>
+            <tr>
+              <td>原因</td>
+              <td data-testid="observability-sandbox-remote-reason">
+                {scaleQuery.data?.sandboxRemoteReason || "—"}
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
       </div>
 
       <div className="pane">

@@ -23,8 +23,21 @@ See `doc/plan/v2.9-release-scope.md` §7.
 - `RouteRequest.PreferRemote` per-call override (`remote` / `local`)
 - Local remains default when remote env is off
 
-## Later
+## DX40 — Smoke + evidence
 
-- **DX40** smoke + evidence
-- **DX41** console status
-- **DX42** freeze + signoff
+- `make remote-sandbox-smoke` → `doc/evidence/remote-sandbox-smoke-latest.md`
+- Optional live: `ASH_SANDBOX_REMOTE_LIVE=1` + API key; no key → skip pass
+- Doctor counts unchanged (ALL 57 / M4 10)
+
+## DX41 — Console
+
+- Scale readiness: `sandboxRemoteEnabled|Available|Preferred|DenyOnFail|Backend|Reason`
+- Observability pane + Scale row for remote sandbox status
+
+## DX42 — Freeze
+
+- `v2.9-release-scope` marked **已冻结**
+- `make v2.9-signoff` (Doctor ALL/M4 + rag + sandbox + skill-pack + rag-lsp + remote-sandbox)
+- Tag `v2.9.0` remains **manual** (D7)
+
+v2.9 is **frozen**; tag `v2.9.0` remains manual after human sign-off.

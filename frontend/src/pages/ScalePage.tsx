@@ -262,6 +262,18 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>远程沙箱</td>
+              <td data-testid="scale-sandbox-remote">
+                {r == null
+                  ? "-"
+                  : !r.sandboxRemoteEnabled
+                    ? "关闭（默认本机）"
+                    : r.sandboxRemoteAvailable
+                      ? `可用${r.sandboxRemoteBackend ? ` · ${r.sandboxRemoteBackend}` : ""}${r.sandboxRemotePreferred ? " · prefer" : ""}${r.sandboxRemoteDenyOnFail ? " · on_fail=deny" : ""}`
+                      : `不可用${r.sandboxRemoteBackend ? ` · ${r.sandboxRemoteBackend}` : ""}${r.sandboxRemoteReason ? ` · ${r.sandboxRemoteReason}` : ""}`}
+              </td>
+            </tr>
+            <tr>
               <td>可观测性</td>
               <td>
                 {r

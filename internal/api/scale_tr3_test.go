@@ -51,6 +51,9 @@ func TestScaleReadiness(t *testing.T) {
 	if resp.WorkerConnectionRole != "sqlite" {
 		t.Fatalf("workerConnectionRole=%q want sqlite", resp.WorkerConnectionRole)
 	}
+	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
+		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)
+	}
 }
 
 func TestScaleReadinessSchemaSqlDualWriteWarning(t *testing.T) {

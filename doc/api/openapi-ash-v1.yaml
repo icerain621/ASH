@@ -313,6 +313,24 @@ components:
         ragLspAvailable:
           type: boolean
           description: Language server binary resolvable for RAG LSP queries (gopls / tsserver).
+        sandboxRemoteEnabled:
+          type: boolean
+          description: ASH_SANDBOX_REMOTE opt-in (DX41).
+        sandboxRemoteAvailable:
+          type: boolean
+          description: Remote sandbox backend Available() (mock/e2b).
+        sandboxRemotePreferred:
+          type: boolean
+          description: Isolated mode prefers remote when enabled (DX39).
+        sandboxRemoteDenyOnFail:
+          type: boolean
+          description: ASH_SANDBOX_REMOTE_ON_FAIL=deny.
+        sandboxRemoteBackend:
+          type: string
+          description: Active remote backend id (mock|e2b).
+        sandboxRemoteReason:
+          type: string
+          description: Probe reason when disabled or unavailable.
         ragPathEntryCount:
           type: integer
           format: int64

@@ -16,7 +16,7 @@
 | [`v2.6-release-scope.md`](v2.6-release-scope.md) | **v2.6** 范围冻结（`make v2.6-signoff`） | tree-sitter / 沙箱硬化 / skill packs / DX20–DX24 |
 | [`v2.7-release-scope.md`](v2.7-release-scope.md) | **v2.7** 范围冻结（`make v2.7-signoff`） | vector embed / sandbox 证据 / skill catalog / thin LSP / DX25–DX30 |
 | [`v2.8-release-scope.md`](v2.8-release-scope.md) | **v2.8** 范围冻结（`make v2.8-signoff`） | 完整 LSP 切片 hover/def/refs / DX31–DX36 |
-| [`v2.9-release-scope.md`](v2.9-release-scope.md) | **v2.9** 范围（决议已确认；DX42 冻结 / `make v2.9-signoff`） | 可选远程沙箱 E2B-class / DX37–DX42 |
+| [`v2.9-release-scope.md`](v2.9-release-scope.md) | **v2.9** 范围冻结（`make v2.9-signoff`） | 可选远程沙箱 E2B-class / DX37–DX42 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

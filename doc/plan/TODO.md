@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.8：DX31–DX36 已冻结**（tag `v2.8.0` 待人工）；**v2.9：DX37–DX42**（D1–D7 已确认；DX37–DX39 ✅；见 [`v2.9-release-scope.md`](v2.9-release-scope.md)） |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.9：DX37–DX42 已冻结**（tag `v2.9.0` 待人工；见 [`v2.9-release-scope.md`](v2.9-release-scope.md)）；前序 tag `v2.7.0`/`v2.8.0` 仍待人工 |
 
 ---
 
@@ -77,10 +77,10 @@
 | DX37 | Remote Executor 契约（v2.9） | 扩展点 + 探测；默认仍本机 | ✅ |
 | DX38 | E2B-class 可选适配器 | env 开启；创建/取消；非默认 | ✅ |
 | DX39 | 策略 prefer=remote | 失败回退/拒绝可配 | ✅ |
-| DX40 | remote-sandbox smoke + 证据 | 无 key → skip；清单 | 📝 |
-| DX41 | 控制台 remote 水位 | Scale/Observability | 📝 |
-| DX42 | v2.9 冻结 + 签字 | `v2.9-release-scope`；`make v2.9-signoff`；tag 人工 | 📝 |
-| 详排 | — | v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；**v2.9** [`v2.9-release-scope.md`](v2.9-release-scope.md)（决议已确认）；设计 [`docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md`](../../docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md) | — |
+| DX40 | remote-sandbox smoke + 证据 | 无 key → skip；清单 | ✅ |
+| DX41 | 控制台 remote 水位 | Scale/Observability | ✅ |
+| DX42 | v2.9 冻结 + 签字 | `v2.9-release-scope`；`make v2.9-signoff`；tag 人工 | ✅ |
+| 详排 | — | v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；**v2.9** [`v2.9-release-scope.md`](v2.9-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md`](../../docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md) | — |
 
 ---
 

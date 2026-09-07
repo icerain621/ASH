@@ -9,7 +9,7 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 echo "== sandbox unit tests =="
-go test ./internal/sandbox/ ./internal/sandbox/process/ ./internal/sandbox/docker/ ./internal/sandbox/landlock/ -count=1
+go test ./internal/sandbox/ ./internal/sandbox/process/ ./internal/sandbox/docker/ ./internal/sandbox/landlock/ ./internal/sandbox/remote/ -count=1
 go test ./internal/runs/ -run 'TestSandboxDeniesDangerWhenProfileOff|TestHarnessLoopEmitsRoutedAndCompleted' -count=1
 
 if [[ "${ASH_SANDBOX_LANDLOCK:-}" == "0" ]]; then

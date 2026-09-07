@@ -38,6 +38,12 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
     spaceId: "local",
     migrationReady: true,
     databaseDialect: "sqlite",
+    sandboxRemoteEnabled: true,
+    sandboxRemoteAvailable: true,
+    sandboxRemotePreferred: true,
+    sandboxRemoteDenyOnFail: false,
+    sandboxRemoteBackend: "mock",
+    sandboxRemoteReason: "",
   }),
 }));
 
@@ -149,6 +155,16 @@ describe("ObservabilityPage", () => {
       expect(screen.getByTestId("observability-rag-lsp-status")).toHaveTextContent(/可用/);
       expect(screen.getByTestId("observability-rag-lsp-probe")).toBeInTheDocument();
       expect(screen.getByTestId("observability-rag-lsp-hover")).toBeInTheDocument();
+    });
+  });
+
+  it("renders remote sandbox status from scale readiness", async () => {
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByRole("heading", { name: "远程沙箱" })).toBeInTheDocument();
+      expect(screen.getByTestId("observability-sandbox-remote-status")).toHaveTextContent(/后端可用/);
+      expect(screen.getByTestId("observability-sandbox-remote-backend")).toHaveTextContent("mock");
+      expect(screen.getByTestId("observability-sandbox-remote-policy")).toHaveTextContent(/prefer=remote/);
     });
   });
 });

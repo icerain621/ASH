@@ -13170,6 +13170,24 @@ const docTemplate = `{
                 "runtimeDsnHint": {
                     "type": "string"
                 },
+                "sandboxRemoteAvailable": {
+                    "type": "boolean"
+                },
+                "sandboxRemoteBackend": {
+                    "type": "string"
+                },
+                "sandboxRemoteDenyOnFail": {
+                    "type": "boolean"
+                },
+                "sandboxRemoteEnabled": {
+                    "type": "boolean"
+                },
+                "sandboxRemotePreferred": {
+                    "type": "boolean"
+                },
+                "sandboxRemoteReason": {
+                    "type": "string"
+                },
                 "schemaMode": {
                     "type": "string"
                 },

@@ -16,6 +16,9 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
     ragDefaultRetrievalMode: "hybrid",
     ragHybridAvailable: true,
     ragLspAvailable: true,
+    sandboxRemoteEnabled: false,
+    sandboxRemoteAvailable: false,
+    sandboxRemoteReason: "ASH_SANDBOX_REMOTE disabled (default local)",
   }),
 }));
 
@@ -99,6 +102,13 @@ describe("ScalePage", () => {
     renderPage(<ScalePage />);
     await waitFor(() => {
       expect(screen.getByText(/LSP 可用/)).toBeInTheDocument();
+    });
+  });
+
+  it("shows remote sandbox closed by default", async () => {
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("scale-sandbox-remote")).toHaveTextContent("关闭（默认本机）");
     });
   });
 });

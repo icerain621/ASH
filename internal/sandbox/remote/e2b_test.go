@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -96,5 +97,38 @@ func TestE2BDispatchCanceled(t *testing.T) {
 	_, err := be.Dispatch(ctx, sandbox.DispatchRequest{Program: "true"})
 	if err == nil {
 		t.Fatal("expected cancel/timeout error")
+	}
+}
+
+// TestLiveE2B hits a real E2B-compatible control plane when explicitly enabled.
+// Default CI: skipped. No API key with LIVE=1 → skip pass (DX40).
+func TestLiveE2B(t *testing.T) {
+	if strings.TrimSpace(os.Getenv("ASH_SANDBOX_REMOTE_LIVE")) != "1" {
+		t.Skip("optional live: set ASH_SANDBOX_REMOTE_LIVE=1")
+	}
+	key := strings.TrimSpace(os.Getenv(envRemoteAPIKey))
+	if key == "" {
+		t.Skip("no ASH_SANDBOX_REMOTE_API_KEY; skip pass")
+	}
+	t.Setenv(envRemoteEnabled, "1")
+	t.Setenv(envRemoteBackend, BackendE2B)
+	be := Resolve()
+	if be == nil || !be.Available() {
+		t.Fatalf("live e2b unavailable: %+v", ProbeStatus())
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	defer cancel()
+	res, err := be.Dispatch(ctx, sandbox.DispatchRequest{
+		Program: "echo",
+		Args:    []string{"ash-remote-live"},
+		Timeout: 60 * time.Second,
+		RunID:   "live_smoke",
+		StepID:  "dx40",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if res == nil || !res.OK {
+		t.Fatalf("live dispatch failed: %+v", res)
 	}
 }

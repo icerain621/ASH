@@ -39,6 +39,8 @@ make signoff-gate
 | `mvp-signatures-latest.md` | §11 四人签字 + 范围冻结（`make signoff-apply` 后） |
 | `sandbox-landlock-e2e-latest.md` | Landlock+seccomp e2e 摘要（`ASH_SANDBOX_E2E=1 make sandbox-smoke`） |
 | `rag-lsp-smoke-latest.md` | RAG LSP 烟测摘要（`make rag-lsp-smoke`） |
+| `remote-sandbox-smoke-latest.md` | 远程沙箱烟测摘要（`make remote-sandbox-smoke`） |
+| `v2.9-signatures-template.md` | v2.9 签字模板（复制为 `v2.9-signatures-latest.md`） |
 | `v2.8-signatures-template.md` | v2.8 签字模板（复制为 `v2.8-signatures-latest.md`） |
 | `v2.7-signatures-template.md` | v2.7 签字模板（复制为 `v2.7-signatures-latest.md`） |
 

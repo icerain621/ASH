@@ -8,6 +8,9 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX42（v2.9）：范围冻结 + 签字门禁 — `v2.9-release-scope` **已冻结**；`make v2.9-signoff`（Doctor ALL **57** / M4 **10** + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v2.9.0` tag。
+- Sprint DX41（v2.9）：控制台 remote 水位 — Scale `sandboxRemote*`；Observability「远程沙箱」面板；OpenAPI；**无新表**。
+- Sprint DX40（v2.9）：remote-sandbox smoke — `make remote-sandbox-smoke` → `doc/evidence/remote-sandbox-smoke-latest.md`；live 可选（无 key skip pass）；Doctor 计数不变；**无新表**。
 - Sprint DX39（v2.9）：策略 prefer=remote — isolated 在 `ASH_SANDBOX_REMOTE`+Available 时优先 remote；`ASH_SANDBOX_REMOTE_ON_FAIL=deny` 可拒绝；默认回退本机；`PreferRemote` 单次覆盖；**无新表**。
 - Sprint DX38（v2.9）：E2B-class 可选适配器 — `E2BExecutor`（create/commands/kill HTTP）；`X-API-Key`；超时/取消；httptest 契约测；**非默认 / 无新表**。
 - Sprint DX37（v2.9）：Remote Executor 契约 — `internal/sandbox/remote`（Backend/Config/ProbeStatus）；`mock` 可用、`e2b` stub；runs `executor=remote`；默认路由仍本机；**无新表**。

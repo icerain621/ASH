@@ -9,71 +9,78 @@ import (
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
+	sbxremote "github.com/ash-repwiki/ash/internal/sandbox/remote"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 )
 
 type ScaleReadinessResponse struct {
-	SpaceID              string `json:"spaceId"`
-	Region               string `json:"region,omitempty"`
-	MemorySchemaVersion  int    `json:"memorySchemaVersion"`
-	MemoryApprovedCount  int64  `json:"memoryApprovedCount"`
-	RunRunningCount           int64  `json:"runRunningCount"`
-	RunWaitingApprovalCount   int64  `json:"runWaitingApprovalCount"`
-	RunInflightCount          int64  `json:"runInflightCount"`
-	RAGDocumentCount     int64  `json:"ragDocumentCount"`
-	RAGChunkCount        int64  `json:"ragChunkCount"`
-	ModelUsageRows       int64  `json:"modelUsageRows"`
-	ModelCostMicrosTotal int64  `json:"modelCostMicrosTotal"`
-	QualityMetricRows    int64  `json:"qualityMetricRows"`
-	AuditLogRows         int64  `json:"auditLogRows"`
-	DatabaseDialect       string `json:"databaseDialect"`
-	PostgresConfigured    bool   `json:"postgresConfigured"`
-	MigrationReady        bool   `json:"migrationReady"`
-	SQLitePath            string `json:"sqlitePath,omitempty"`
-	MigrationTableCount   int    `json:"migrationTableCount"`
-	DualWriteEnabled      bool   `json:"dualWriteEnabled"`
-	DualWriteRuntime      bool   `json:"dualWriteRuntime"`
-	DualWriteSource       string `json:"dualWriteSource,omitempty"`
-	LastMigrationSyncAtMs      *int64  `json:"lastMigrationSyncAtMs,omitempty"`
-	LastMigrationSyncError     string  `json:"lastMigrationSyncError,omitempty"`
-	LastMigrationSyncErrorAtMs *int64  `json:"lastMigrationSyncErrorAtMs,omitempty"`
-	PostgresRLSEnabled    bool   `json:"postgresRLSEnabled"`
-	PostgresRLSForce      bool   `json:"postgresRLSForce"`
-	PostgresRLSPolicyCount int64 `json:"postgresRLSPolicyCount,omitempty"`
-	PostgresRLSPolicyExpected int64 `json:"postgresRLSPolicyExpected,omitempty"`
-	RLSCatalogSummary      string `json:"rlsCatalogSummary,omitempty"`
-	PostgresAppURLConfigured bool   `json:"postgresAppUrlConfigured,omitempty"`
-	WorkerConnectionRole     string `json:"workerConnectionRole,omitempty"`
-	RuntimeDSNHint           string `json:"runtimeDsnHint,omitempty"`
-	DualWriteShadowURLHint   string `json:"dualWriteShadowUrlHint,omitempty"`
-	SchemaMode               string `json:"schemaMode,omitempty"`
-	SQLMigrationsEnabled     bool   `json:"sqlMigrationsEnabled,omitempty"`
-	AutoMigrateEnabled       bool   `json:"autoMigrateEnabled,omitempty"`
-	SQLMigrationVersion      uint     `json:"sqlMigrationVersion,omitempty"`
-	SQLMigrationExpected     uint     `json:"sqlMigrationExpected,omitempty"`
-	ReadinessWarnings              []string `json:"readinessWarnings,omitempty"`
-	MemoryCatalogVersion           int      `json:"memoryCatalogVersion,omitempty"`
-	MemoryPendingMigrationRecords  int64    `json:"memoryPendingMigrationRecords,omitempty"`
-	MemoryTTLReviewDueCount        int64    `json:"memoryTTLReviewDueCount,omitempty"`
-	MemoryTTLExpiredPendingCount   int64    `json:"memoryTTLExpiredPendingCount,omitempty"`
-	MemoryTTLReviewLeadDays        int      `json:"memoryTTLReviewLeadDays,omitempty"`
-	RAGFTSAvailable                bool     `json:"ragFtsAvailable,omitempty"`
-	RAGFtsEngine                   string   `json:"ragFtsEngine,omitempty"`
-	RAGDefaultRetrievalMode        string   `json:"ragDefaultRetrievalMode,omitempty"`
-	RAGHybridAvailable             bool     `json:"ragHybridAvailable,omitempty"`
-	RAGLspAvailable                bool     `json:"ragLspAvailable,omitempty"`
-	RAGPathEntryCount              int64    `json:"ragPathEntryCount,omitempty"`
-	RAGSymbolCount                 int64    `json:"ragSymbolCount,omitempty"`
-	RAGFallbackQueryCount          int64    `json:"ragFallbackQueryCount,omitempty"`
-	OtelEnabled                    bool     `json:"otelEnabled,omitempty"`
-	AlertsEvalInterval             string   `json:"alertsEvalInterval,omitempty"`
-	MemoryTTLSweepInterval         string   `json:"memoryTTLSweepInterval,omitempty"`
-	MetricsEventReplayEnabled      bool     `json:"metricsEventReplayEnabled,omitempty"`
-	RetentionEventsDays            int      `json:"retentionEventsDays,omitempty"`
-	RetentionAuditDays             int      `json:"retentionAuditDays,omitempty"`
-	RetentionArtifactsDays         int      `json:"retentionArtifactsDays,omitempty"`
-	RetentionArtifactsMaxRuns      int      `json:"retentionArtifactsMaxRuns,omitempty"`
+	SpaceID                       string   `json:"spaceId"`
+	Region                        string   `json:"region,omitempty"`
+	MemorySchemaVersion           int      `json:"memorySchemaVersion"`
+	MemoryApprovedCount           int64    `json:"memoryApprovedCount"`
+	RunRunningCount               int64    `json:"runRunningCount"`
+	RunWaitingApprovalCount       int64    `json:"runWaitingApprovalCount"`
+	RunInflightCount              int64    `json:"runInflightCount"`
+	RAGDocumentCount              int64    `json:"ragDocumentCount"`
+	RAGChunkCount                 int64    `json:"ragChunkCount"`
+	ModelUsageRows                int64    `json:"modelUsageRows"`
+	ModelCostMicrosTotal          int64    `json:"modelCostMicrosTotal"`
+	QualityMetricRows             int64    `json:"qualityMetricRows"`
+	AuditLogRows                  int64    `json:"auditLogRows"`
+	DatabaseDialect               string   `json:"databaseDialect"`
+	PostgresConfigured            bool     `json:"postgresConfigured"`
+	MigrationReady                bool     `json:"migrationReady"`
+	SQLitePath                    string   `json:"sqlitePath,omitempty"`
+	MigrationTableCount           int      `json:"migrationTableCount"`
+	DualWriteEnabled              bool     `json:"dualWriteEnabled"`
+	DualWriteRuntime              bool     `json:"dualWriteRuntime"`
+	DualWriteSource               string   `json:"dualWriteSource,omitempty"`
+	LastMigrationSyncAtMs         *int64   `json:"lastMigrationSyncAtMs,omitempty"`
+	LastMigrationSyncError        string   `json:"lastMigrationSyncError,omitempty"`
+	LastMigrationSyncErrorAtMs    *int64   `json:"lastMigrationSyncErrorAtMs,omitempty"`
+	PostgresRLSEnabled            bool     `json:"postgresRLSEnabled"`
+	PostgresRLSForce              bool     `json:"postgresRLSForce"`
+	PostgresRLSPolicyCount        int64    `json:"postgresRLSPolicyCount,omitempty"`
+	PostgresRLSPolicyExpected     int64    `json:"postgresRLSPolicyExpected,omitempty"`
+	RLSCatalogSummary             string   `json:"rlsCatalogSummary,omitempty"`
+	PostgresAppURLConfigured      bool     `json:"postgresAppUrlConfigured,omitempty"`
+	WorkerConnectionRole          string   `json:"workerConnectionRole,omitempty"`
+	RuntimeDSNHint                string   `json:"runtimeDsnHint,omitempty"`
+	DualWriteShadowURLHint        string   `json:"dualWriteShadowUrlHint,omitempty"`
+	SchemaMode                    string   `json:"schemaMode,omitempty"`
+	SQLMigrationsEnabled          bool     `json:"sqlMigrationsEnabled,omitempty"`
+	AutoMigrateEnabled            bool     `json:"autoMigrateEnabled,omitempty"`
+	SQLMigrationVersion           uint     `json:"sqlMigrationVersion,omitempty"`
+	SQLMigrationExpected          uint     `json:"sqlMigrationExpected,omitempty"`
+	ReadinessWarnings             []string `json:"readinessWarnings,omitempty"`
+	MemoryCatalogVersion          int      `json:"memoryCatalogVersion,omitempty"`
+	MemoryPendingMigrationRecords int64    `json:"memoryPendingMigrationRecords,omitempty"`
+	MemoryTTLReviewDueCount       int64    `json:"memoryTTLReviewDueCount,omitempty"`
+	MemoryTTLExpiredPendingCount  int64    `json:"memoryTTLExpiredPendingCount,omitempty"`
+	MemoryTTLReviewLeadDays       int      `json:"memoryTTLReviewLeadDays,omitempty"`
+	RAGFTSAvailable               bool     `json:"ragFtsAvailable,omitempty"`
+	RAGFtsEngine                  string   `json:"ragFtsEngine,omitempty"`
+	RAGDefaultRetrievalMode       string   `json:"ragDefaultRetrievalMode,omitempty"`
+	RAGHybridAvailable            bool     `json:"ragHybridAvailable,omitempty"`
+	RAGLspAvailable               bool     `json:"ragLspAvailable,omitempty"`
+	SandboxRemoteEnabled          bool     `json:"sandboxRemoteEnabled"`
+	SandboxRemoteAvailable        bool     `json:"sandboxRemoteAvailable"`
+	SandboxRemotePreferred        bool     `json:"sandboxRemotePreferred,omitempty"`
+	SandboxRemoteDenyOnFail       bool     `json:"sandboxRemoteDenyOnFail,omitempty"`
+	SandboxRemoteBackend          string   `json:"sandboxRemoteBackend,omitempty"`
+	SandboxRemoteReason           string   `json:"sandboxRemoteReason,omitempty"`
+	RAGPathEntryCount             int64    `json:"ragPathEntryCount,omitempty"`
+	RAGSymbolCount                int64    `json:"ragSymbolCount,omitempty"`
+	RAGFallbackQueryCount         int64    `json:"ragFallbackQueryCount,omitempty"`
+	OtelEnabled                   bool     `json:"otelEnabled,omitempty"`
+	AlertsEvalInterval            string   `json:"alertsEvalInterval,omitempty"`
+	MemoryTTLSweepInterval        string   `json:"memoryTTLSweepInterval,omitempty"`
+	MetricsEventReplayEnabled     bool     `json:"metricsEventReplayEnabled,omitempty"`
+	RetentionEventsDays           int      `json:"retentionEventsDays,omitempty"`
+	RetentionAuditDays            int      `json:"retentionAuditDays,omitempty"`
+	RetentionArtifactsDays        int      `json:"retentionArtifactsDays,omitempty"`
+	RetentionArtifactsMaxRuns     int      `json:"retentionArtifactsMaxRuns,omitempty"`
 }
 
 // ScaleReadiness godoc
@@ -121,6 +128,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	ragSvc := h.runsFor(c).RAG()
 	ragProf := ragSvc.Profile(space)
 	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
+	remoteSt := sbxremote.ProbeStatus()
 	ops := workerOpsSnapshot()
 	var lastSyncMs, lastSyncErrMs *int64
 	if migSnap.LastSyncAt != nil {
@@ -137,42 +145,42 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusOK, ScaleReadinessResponse{
-		SpaceID:              space,
-		Region:               config.Region(),
-		MemorySchemaVersion:  memory.CurrentSchemaVersion,
-		MemoryApprovedCount:  memApproved,
-		RunRunningCount:          runRunning,
-		RunWaitingApprovalCount:  runWaiting,
-		RunInflightCount:         runRunning + runWaiting,
-		RAGDocumentCount:     ragDocs,
-		RAGChunkCount:        ragChunks,
-		ModelUsageRows:       usageRows,
-		ModelCostMicrosTotal: costTotal,
-		QualityMetricRows:    qmRows,
-		AuditLogRows:         auditRows,
-		DatabaseDialect:       dbProfile.Dialect,
-		PostgresConfigured:    dbProfile.PostgresConfigured,
-		MigrationReady:        dbProfile.MigrationReady,
-		SQLitePath:            migSnap.SQLitePath,
-		MigrationTableCount:   migSnap.MigrationTableCount,
-		DualWriteEnabled:      migSnap.DualWriteEnabled,
-		DualWriteRuntime:      migSnap.DualWriteRuntime,
-		DualWriteSource:       string(migSnap.DualWriteSource),
-		LastMigrationSyncAtMs:      lastSyncMs,
-		LastMigrationSyncError:     migSnap.LastSyncError,
-		LastMigrationSyncErrorAtMs: lastSyncErrMs,
-		PostgresRLSEnabled:     dbProfile.PostgresRLSEnabled,
-		PostgresRLSForce:       dbProfile.PostgresRLSForce,
-		PostgresRLSPolicyCount:   dbProfile.PostgresRLSPolicyCount,
-		PostgresAppURLConfigured: dbProfile.PostgresAppURL,
-		WorkerConnectionRole:       store.WorkerConnectionRole(),
-		RuntimeDSNHint:             dbProfile.DSNHint,
-		DualWriteShadowURLHint:     migSnap.DualWriteShadowURLHint,
-		SchemaMode:                 dbProfile.SchemaMode,
-		SQLMigrationsEnabled:       dbProfile.SQLMigrationsEnabled,
-		AutoMigrateEnabled:         dbProfile.AutoMigrateEnabled,
-		SQLMigrationVersion:        dbProfile.SQLMigrationVersion,
-		SQLMigrationExpected:       dbProfile.SQLMigrationExpected,
+		SpaceID:                       space,
+		Region:                        config.Region(),
+		MemorySchemaVersion:           memory.CurrentSchemaVersion,
+		MemoryApprovedCount:           memApproved,
+		RunRunningCount:               runRunning,
+		RunWaitingApprovalCount:       runWaiting,
+		RunInflightCount:              runRunning + runWaiting,
+		RAGDocumentCount:              ragDocs,
+		RAGChunkCount:                 ragChunks,
+		ModelUsageRows:                usageRows,
+		ModelCostMicrosTotal:          costTotal,
+		QualityMetricRows:             qmRows,
+		AuditLogRows:                  auditRows,
+		DatabaseDialect:               dbProfile.Dialect,
+		PostgresConfigured:            dbProfile.PostgresConfigured,
+		MigrationReady:                dbProfile.MigrationReady,
+		SQLitePath:                    migSnap.SQLitePath,
+		MigrationTableCount:           migSnap.MigrationTableCount,
+		DualWriteEnabled:              migSnap.DualWriteEnabled,
+		DualWriteRuntime:              migSnap.DualWriteRuntime,
+		DualWriteSource:               string(migSnap.DualWriteSource),
+		LastMigrationSyncAtMs:         lastSyncMs,
+		LastMigrationSyncError:        migSnap.LastSyncError,
+		LastMigrationSyncErrorAtMs:    lastSyncErrMs,
+		PostgresRLSEnabled:            dbProfile.PostgresRLSEnabled,
+		PostgresRLSForce:              dbProfile.PostgresRLSForce,
+		PostgresRLSPolicyCount:        dbProfile.PostgresRLSPolicyCount,
+		PostgresAppURLConfigured:      dbProfile.PostgresAppURL,
+		WorkerConnectionRole:          store.WorkerConnectionRole(),
+		RuntimeDSNHint:                dbProfile.DSNHint,
+		DualWriteShadowURLHint:        migSnap.DualWriteShadowURLHint,
+		SchemaMode:                    dbProfile.SchemaMode,
+		SQLMigrationsEnabled:          dbProfile.SQLMigrationsEnabled,
+		AutoMigrateEnabled:            dbProfile.AutoMigrateEnabled,
+		SQLMigrationVersion:           dbProfile.SQLMigrationVersion,
+		SQLMigrationExpected:          dbProfile.SQLMigrationExpected,
 		ReadinessWarnings:             scaleReadinessWarnings(dbProfile, migSnap),
 		MemoryCatalogVersion:          memCatalog,
 		MemoryPendingMigrationRecords: memPending,
@@ -184,6 +192,12 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		RAGDefaultRetrievalMode:       ragProf.DefaultRetrievalMode,
 		RAGHybridAvailable:            ragProf.HybridAvailable,
 		RAGLspAvailable:               ragProf.LSPAvailable,
+		SandboxRemoteEnabled:          remoteSt.Enabled,
+		SandboxRemoteAvailable:        remoteSt.Available,
+		SandboxRemotePreferred:        remoteSt.Preferred,
+		SandboxRemoteDenyOnFail:       remoteSt.DenyOnFail,
+		SandboxRemoteBackend:          remoteSt.Backend,
+		SandboxRemoteReason:           remoteSt.Reason,
 		RAGPathEntryCount:             ragProf.PathEntryCount,
 		RAGSymbolCount:                ragProf.SymbolCount,
 		RAGFallbackQueryCount:         ragFallbacks,
