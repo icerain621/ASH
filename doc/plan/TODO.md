@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.8：DX31–DX36 已冻结**（tag `v2.8.0` 待人工；见 [`v2.8-release-scope.md`](v2.8-release-scope.md)）；v2.7 tag `v2.7.0` 仍待人工 |
+| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.8：DX31–DX36 已冻结**（tag `v2.8.0` 待人工）；**v2.9：DX37–DX42**（D1–D7 已确认；DX37–DX39 ✅；见 [`v2.9-release-scope.md`](v2.9-release-scope.md)） |
 
 ---
 
@@ -74,7 +74,13 @@
 | DX34 | 控制台 LSP 水位 | Observability/Knowledge 面板 | ✅ |
 | DX35 | LSP harden + smoke | 降级/超时；`rag-lsp-smoke`；证据清单 | ✅ |
 | DX36 | v2.8 冻结 + 签字 | `v2.8-release-scope`；`make v2.8-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.7 [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结）；**v2.8** [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-07-v28-lsp-slice-design.md`](../../docs/superpowers/specs/2026-09-07-v28-lsp-slice-design.md) | — |
+| DX37 | Remote Executor 契约（v2.9） | 扩展点 + 探测；默认仍本机 | ✅ |
+| DX38 | E2B-class 可选适配器 | env 开启；创建/取消；非默认 | ✅ |
+| DX39 | 策略 prefer=remote | 失败回退/拒绝可配 | ✅ |
+| DX40 | remote-sandbox smoke + 证据 | 无 key → skip；清单 | 📝 |
+| DX41 | 控制台 remote 水位 | Scale/Observability | 📝 |
+| DX42 | v2.9 冻结 + 签字 | `v2.9-release-scope`；`make v2.9-signoff`；tag 人工 | 📝 |
+| 详排 | — | v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；**v2.9** [`v2.9-release-scope.md`](v2.9-release-scope.md)（决议已确认）；设计 [`docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md`](../../docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md) | — |
 
 ---
 
@@ -137,10 +143,10 @@ make regression-short && make web-gate
 ## P3 — Backlog（明确不做进 v0.1；部分进 v2.6 草案）
 
 - ~~向量 POC（Qdrant + stub）~~ → v2.5 DX17；主路径 Chroma/Milvus 仍 P3  
-- ~~ctags 符号~~ → v2.5 DX16；~~tree-sitter~~ → v2.6 DX20；~~薄 LSP~~ → v2.7 DX29；**完整 LSP 切片** → v2.8 草案  
-- ~~Landlock POC~~ → v2.5 DX18；**默认收紧 + seccomp** → v2.6 DX21；~~e2e 证据~~ → v2.7 DX27；**E2B** 仍 P3  
+- ~~Landlock POC~~ → v2.5 DX18；~~默认收紧 + seccomp~~ → v2.6 DX21；~~e2e 证据~~ → v2.7 DX27；**E2B-class 可选** → v2.9 草案  
 - ~~私有 Skill packs~~ → v2.6 DX22；~~组织 catalog~~ → v2.7 DX28；公网 Skill Marketplace / 计费 / 知识图谱仍 P3  
 - ~~单区域就绪~~ → v2.6 DX23；Active-Active 多区域仍 P3  
+- ~~薄 LSP~~ → v2.7 DX29；~~完整 LSP 切片~~ → v2.8 DX31–DX36；Chroma/Milvus 仍 P3/v2.9 备选  
 - 外部 IdP 联邦、多端网关  
 
 ---

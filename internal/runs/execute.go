@@ -26,6 +26,7 @@ import (
 	sbxdocker "github.com/ash-repwiki/ash/internal/sandbox/docker"
 	sbxlandlock "github.com/ash-repwiki/ash/internal/sandbox/landlock"
 	sbxprocess "github.com/ash-repwiki/ash/internal/sandbox/process"
+	sbxremote "github.com/ash-repwiki/ash/internal/sandbox/remote"
 	"github.com/ash-repwiki/ash/internal/skills"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -814,7 +815,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID, polic
 			"attempt": attempt, "maxAttempts": attempts,
 			"argsDigest": digestString(fmt.Sprintf("%v", item.Args)),
 		})
-		if (dec.Executor == "process" || dec.Executor == "docker") && item.Tool == "runtime.command" {
+		if (dec.Executor == "process" || dec.Executor == "docker" || dec.Executor == "landlock" || dec.Executor == "remote") && item.Tool == "runtime.command" {
 			last = s.dispatchSandboxedTool(runID, traceID, stepID, ctx, item, dec, timeout)
 		} else {
 			last = s.callTool(runID, traceID, stepID, ctx, item, attempt)
@@ -880,6 +881,18 @@ func (s *Service) dispatchSandboxedTool(runID, traceID, stepID string, ctx toolb
 		res, err = (sbxprocess.Executor{}).Dispatch(context.Background(), req)
 	case "landlock":
 		res, err = (sbxlandlock.Executor{}).Dispatch(context.Background(), req)
+	case "remote":
+		be := sbxremote.Resolve()
+		if be == nil || !be.Available() {
+			st := sbxremote.ProbeStatus()
+			reason := st.Reason
+			if reason == "" {
+				reason = "remote sandbox unavailable"
+			}
+			err = fmt.Errorf("%s", reason)
+		} else {
+			res, err = be.Dispatch(context.Background(), req)
+		}
 	default:
 		err = fmt.Errorf("unsupported sandbox executor %q", dec.Executor)
 	}

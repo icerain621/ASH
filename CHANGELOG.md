@@ -8,6 +8,9 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX39（v2.9）：策略 prefer=remote — isolated 在 `ASH_SANDBOX_REMOTE`+Available 时优先 remote；`ASH_SANDBOX_REMOTE_ON_FAIL=deny` 可拒绝；默认回退本机；`PreferRemote` 单次覆盖；**无新表**。
+- Sprint DX38（v2.9）：E2B-class 可选适配器 — `E2BExecutor`（create/commands/kill HTTP）；`X-API-Key`；超时/取消；httptest 契约测；**非默认 / 无新表**。
+- Sprint DX37（v2.9）：Remote Executor 契约 — `internal/sandbox/remote`（Backend/Config/ProbeStatus）；`mock` 可用、`e2b` stub；runs `executor=remote`；默认路由仍本机；**无新表**。
 - Sprint DX36（v2.8）：范围冻结 + 签字门禁 — `v2.8-release-scope` **已冻结**；`make v2.8-signoff`（Doctor ALL **57** / M4 **10** + rag-hybrid + rag-vector + sandbox + skill-pack + rag-lsp）；清单/签字模板；**不自动**打 `v2.8.0` tag。
 - Sprint DX35（v2.8）：LSP harden + smoke — `ASH_RAG_LSP_TIMEOUT_SEC` / `MAX_OPEN_DOCS`；缺二进制快速 `ErrLSPUnavailable`；`make rag-lsp-smoke` → `doc/evidence/rag-lsp-smoke-latest.md`；**无新表**。
 - Sprint DX34（v2.8）：控制台 LSP 水位 — Observability/Knowledge 共享探针面板（hover/def/refs）；Scale `ragLspAvailable`；**无新表**。

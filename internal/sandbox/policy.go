@@ -9,6 +9,9 @@ import (
 // ErrPolicyDenied is returned when tool risk is incompatible with sandbox mode.
 var ErrPolicyDenied = errors.New("sandbox policy denied")
 
+// ErrRemoteUnavailable is returned when remote is preferred and ON_FAIL=deny.
+var ErrRemoteUnavailable = errors.New("remote sandbox unavailable")
+
 // ForceIsolatedPolicy reports whether a scenario policyProfile requires ≥ isolated.
 func ForceIsolatedPolicy(policyProfile string) bool {
 	switch strings.ToLower(strings.TrimSpace(policyProfile)) {

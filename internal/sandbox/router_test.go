@@ -84,3 +84,121 @@ func TestLandlockPreferredDefault(t *testing.T) {
 		t.Fatal("ASH_SANDBOX_LANDLOCK=1 want preferred")
 	}
 }
+
+func TestDefaultRouterRemotePreferred(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "1")
+	t.Setenv("ASH_SANDBOX_REMOTE_ON_FAIL", "")
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "0")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		LandlockOK:   func() bool { return true },
+		RemoteOK:     func() bool { return true },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{Risk: "danger", ProfileDefaultMode: sandbox.ModeIsolated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.Executor != "remote" || dec.Reason != "remote-preferred" {
+		t.Fatalf("got executor=%q reason=%q want remote", dec.Executor, dec.Reason)
+	}
+}
+
+func TestDefaultRouterRemoteFallbackWhenUnavailable(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "1")
+	t.Setenv("ASH_SANDBOX_REMOTE_ON_FAIL", "fallback")
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		LandlockOK:   func() bool { return true },
+		RemoteOK:     func() bool { return false },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{Risk: "danger", ProfileDefaultMode: sandbox.ModeIsolated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.Denied || dec.Executor != "landlock" {
+		t.Fatalf("want landlock fallback, got executor=%q denied=%v", dec.Executor, dec.Denied)
+	}
+}
+
+func TestDefaultRouterRemoteDenyOnFail(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "1")
+	t.Setenv("ASH_SANDBOX_REMOTE_ON_FAIL", "deny")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		LandlockOK:   func() bool { return true },
+		RemoteOK:     func() bool { return false },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{Risk: "danger", ProfileDefaultMode: sandbox.ModeIsolated})
+	if err == nil || !dec.Denied || dec.Executor != "none" {
+		t.Fatalf("want deny, got err=%v dec=%+v", err, dec)
+	}
+}
+
+func TestDefaultRouterRemoteNotDefault(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "")
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "0")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		LandlockOK:   func() bool { return false },
+		RemoteOK:     func() bool { return true },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{Risk: "danger", ProfileDefaultMode: sandbox.ModeIsolated})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.Executor == "remote" {
+		t.Fatal("remote must not be selected when ASH_SANDBOX_REMOTE disabled")
+	}
+}
+
+func TestDefaultRouterPreferRemoteOverrideLocal(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "1")
+	t.Setenv("ASH_SANDBOX_LANDLOCK", "0")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		LandlockOK:   func() bool { return false },
+		RemoteOK:     func() bool { return true },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{
+		Risk: "danger", ProfileDefaultMode: sandbox.ModeIsolated, PreferRemote: "local",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.Executor == "remote" {
+		t.Fatal("PreferRemote=local must skip remote")
+	}
+}
+
+func TestDefaultRouterRemoteOnlyIsolated(t *testing.T) {
+	t.Setenv("ASH_SANDBOX_REMOTE", "1")
+	t.Setenv("ASH_SKIP_SANDBOX", "1")
+	r := sandbox.DefaultRouter{
+		PreferDocker: false,
+		DockerOK:     func() bool { return false },
+		RemoteOK:     func() bool { return true },
+	}
+	dec, err := r.Route(sandbox.RouteRequest{Risk: "caution", ProfileDefaultMode: sandbox.ModeWorkspaceWrite})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if dec.Executor == "remote" {
+		t.Fatal("remote must not be selected for workspace-write")
+	}
+}
