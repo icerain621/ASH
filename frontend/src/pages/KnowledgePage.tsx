@@ -92,6 +92,15 @@ export function KnowledgePage() {
                 {ragQuery.data.hybridAvailable ? " · Hybrid 可用" : " · Hybrid 未建索引"}
                 {ragQuery.data.lspAvailable ? " · LSP 可用" : ""}
               </p>
+              <p data-testid="knowledge-rag-vector">
+                向量：
+                {ragQuery.data.vectorAvailable
+                  ? `可用${ragQuery.data.vectorBackend ? ` · ${ragQuery.data.vectorBackend}` : ""}${ragQuery.data.vectorPointCount != null ? ` · refs ${ragQuery.data.vectorPointCount}` : ""}`
+                  : `不可用${ragQuery.data.vectorBackend ? ` · ${ragQuery.data.vectorBackend}` : ""}${ragQuery.data.vectorReason ? ` · ${ragQuery.data.vectorReason}` : ""}`}
+                {ragQuery.data.vectorDefaultPrefer
+                  ? ` · defaultPrefer=${ragQuery.data.vectorDefaultPrefer}`
+                  : ""}
+              </p>
               <p>
                 文档 {ragQuery.data.documentCount} · 分块 {ragQuery.data.chunkCount} · 路径{" "}
                 {ragQuery.data.pathEntryCount ?? 0} · 符号 {ragQuery.data.symbolCount ?? 0}

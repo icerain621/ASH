@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX48（v3.0）：范围冻结 + 签字门禁 — `v3.0-release-scope` **已冻结**；`make v3.0-signoff`（Doctor ALL **57** / M4 **10** + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.0.0` tag。
+- Sprint DX47（v3.0）：向量 smoke + 控制台水位 — `rag-vector-smoke` 覆盖 Chroma/Milvus/prefer（证据 `doc/evidence/rag-vector-smoke-latest.md`）；Scale `ragVector*`；Knowledge/Observability 展示后端与 defaultPrefer；**无新表**。
+- Sprint DX46（v3.0）：Hybrid / `prefer=vector` 升格 — 可选强路径；`vectorFallback`（`store_unavailable`\|`no_refs`\|`no_hits`）；`prefer=hybrid+vector`；`ASH_RAG_VECTOR_DEFAULT_PREFER`（不强制默认向量，E4）；响应 `vectorAvailable`/`preferApplied`；**无新表**。
+- Sprint DX45（v3.0）：Milvus 可选适配器 — `MilvusClient`（REST v2 collections/list·create · entities/upsert·search）；Bearer；httptest；**非默认 / 无新表**。
+- Sprint DX44（v3.0）：Chroma 可选适配器 — `ChromaClient`（api/v1 heartbeat/collections/upsert/query）；`X-Chroma-Token`；httptest；**非默认 / 无新表**。
+- Sprint DX43（v3.0）：向量多后端契约 — `VectorBackend` / `ResolveVectorStore`；`ASH_RAG_VECTOR_BACKEND`（默认 qdrant）；mock；chroma/milvus stub；Profile `vectorBackend`；**无新表**。
 - Sprint DX42（v2.9）：范围冻结 + 签字门禁 — `v2.9-release-scope` **已冻结**；`make v2.9-signoff`（Doctor ALL **57** / M4 **10** + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v2.9.0` tag。
 - Sprint DX41（v2.9）：控制台 remote 水位 — Scale `sandboxRemote*`；Observability「远程沙箱」面板；OpenAPI；**无新表**。
 - Sprint DX40（v2.9）：remote-sandbox smoke — `make remote-sandbox-smoke` → `doc/evidence/remote-sandbox-smoke-latest.md`；live 可选（无 key skip pass）；Doctor 计数不变；**无新表**。

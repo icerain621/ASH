@@ -1,6 +1,9 @@
 package rag
 
 import (
+	"os"
+	"strings"
+
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -12,7 +15,10 @@ type Profile struct {
 	DefaultRetrievalMode string `json:"defaultRetrievalMode"`
 	HybridAvailable      bool   `json:"hybridAvailable"`
 	VectorAvailable      bool   `json:"vectorAvailable"`
+	VectorBackend        string `json:"vectorBackend,omitempty"`
+	VectorReason         string `json:"vectorReason,omitempty"` // when !vectorAvailable
 	VectorPointCount     int64  `json:"vectorPointCount"`
+	VectorDefaultPrefer  string `json:"vectorDefaultPrefer,omitempty"` // ASH_RAG_VECTOR_DEFAULT_PREFER
 	EmbedderKind         string `json:"embedderKind,omitempty"`
 	EmbedderDim          int    `json:"embedderDim,omitempty"`
 	DatabaseDialect      string `json:"databaseDialect"`
@@ -42,7 +48,29 @@ func (s *Service) Profile(spaceID string) Profile {
 	}
 	if s.vectors != nil {
 		out.VectorAvailable = s.vectors.Available()
+		if named, ok := s.vectors.(interface{ Name() string }); ok {
+			out.VectorBackend = named.Name()
+		} else {
+			out.VectorBackend = ProbeVectorStatus().Backend
+		}
+		if !out.VectorAvailable {
+			st := ProbeVectorStatus()
+			out.VectorReason = st.Reason
+			if out.VectorReason == "" {
+				if u, ok := s.vectors.(interface{ UnavailableReason() string }); ok {
+					out.VectorReason = u.UnavailableReason()
+				} else {
+					out.VectorReason = "backend unavailable"
+				}
+			}
+		}
+	} else {
+		st := ProbeVectorStatus()
+		out.VectorBackend = st.Backend
+		out.VectorAvailable = st.Available
+		out.VectorReason = st.Reason
 	}
+	out.VectorDefaultPrefer = strings.ToLower(strings.TrimSpace(os.Getenv(envVectorDefaultPrefer)))
 	if gdb := s.gdb(); gdb != nil {
 		_ = gdb.Model(&store.RAGDocument{}).Where("space_id = ?", spaceID).Count(&out.DocumentCount).Error
 		_ = gdb.Model(&store.RAGChunk{}).Where("space_id = ?", spaceID).Count(&out.ChunkCount).Error

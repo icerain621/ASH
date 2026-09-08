@@ -250,6 +250,16 @@ export function ObservabilityPage() {
                 {ragQuery.data?.embedderKind ? ` · embedder ${ragQuery.data.embedderKind}` : ""}
               </td>
             </tr>
+            <tr>
+              <td>向量后端</td>
+              <td data-testid="observability-rag-vector-status">
+                {ragQuery.data == null
+                  ? "-"
+                  : ragQuery.data.vectorAvailable
+                    ? `可用${ragQuery.data.vectorBackend ? ` · ${ragQuery.data.vectorBackend}` : ""}${ragQuery.data.vectorPointCount != null ? ` · refs ${ragQuery.data.vectorPointCount}` : ""}${ragQuery.data.vectorDefaultPrefer ? ` · defaultPrefer=${ragQuery.data.vectorDefaultPrefer}` : ""}`
+                    : `不可用${ragQuery.data.vectorBackend ? ` · ${ragQuery.data.vectorBackend}` : ""}${ragQuery.data.vectorReason ? ` · ${ragQuery.data.vectorReason}` : ""}${ragQuery.data.vectorDefaultPrefer ? ` · defaultPrefer=${ragQuery.data.vectorDefaultPrefer}` : ""}`}
+              </td>
+            </tr>
           </tbody>
         </table>
         <div style={{ marginTop: "0.75rem" }}>

@@ -111,35 +111,6 @@ func (m *mockVectorStore) Search(space, collection string, vec []float32, topK i
 	return out, nil
 }
 
-func cosineSim(a, b []float32) float32 {
-	n := len(a)
-	if len(b) < n {
-		n = len(b)
-	}
-	var dot, na, nb float32
-	for i := 0; i < n; i++ {
-		dot += a[i] * b[i]
-		na += a[i] * a[i]
-		nb += b[i] * b[i]
-	}
-	if na == 0 || nb == 0 {
-		return 0
-	}
-	return dot / (sqrt32(na) * sqrt32(nb))
-}
-
-func sqrt32(x float32) float32 {
-	// Newton's method; fine for tests
-	if x <= 0 {
-		return 0
-	}
-	z := x
-	for i := 0; i < 8; i++ {
-		z = 0.5 * (z + x/z)
-	}
-	return z
-}
-
 func TestQueryVectorLaneWhenQdrantMocked(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	mock := newMockVectorStore(true)
@@ -228,8 +199,120 @@ func TestQueryPreferVectorDegradesWithoutHits(t *testing.T) {
 	if resp.RetrievalMode == RetrievalModeVector {
 		t.Fatalf("mode=%q must degrade when no vector hits", resp.RetrievalMode)
 	}
+	if resp.VectorFallback != "no_refs" {
+		t.Fatalf("vectorFallback=%q want no_refs", resp.VectorFallback)
+	}
+	if resp.PreferApplied != "vector" {
+		t.Fatalf("preferApplied=%q", resp.PreferApplied)
+	}
 	if len(resp.Items) == 0 {
 		t.Fatal("expected text/hybrid hits after degrade")
+	}
+}
+
+func TestQueryPreferVectorStoreUnavailable(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(false)
+	svc := NewService(db).WithEmbedder(DefaultHashEmbedder()).WithVectorStore(mock)
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "a.md"), []byte("fallback text body\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "down", Embed: false}); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Query(QueryRequest{
+		RepoRoot: repo, SpaceID: "down", Text: "fallback text", TopK: 3, Prefer: "vector",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.VectorFallback != "store_unavailable" {
+		t.Fatalf("vectorFallback=%q want store_unavailable", resp.VectorFallback)
+	}
+	if resp.VectorAvailable {
+		t.Fatal("vectorAvailable want false")
+	}
+	if len(resp.Items) == 0 {
+		t.Fatal("expected degrade hits")
+	}
+}
+
+func TestQueryPreferHybridVectorAccepted(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true)
+	svc := NewService(db).WithEmbedder(DefaultHashEmbedder()).WithVectorStore(mock)
+	repo := t.TempDir()
+	code := "package p\n\nfunc HybridVectorPreferSymbol() {}\n"
+	if err := os.WriteFile(filepath.Join(repo, "hv.go"), []byte(code), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "hv", Embed: true}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RebuildSymbols(RebuildSymbolsRequest{RepoRoot: repo, SpaceID: "hv"}); err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Query(QueryRequest{
+		RepoRoot: repo, SpaceID: "hv", Text: "HybridVectorPreferSymbol", TopK: 5, Prefer: RetrievalModeHybridVector,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.PreferApplied != RetrievalModeHybridVector {
+		t.Fatalf("preferApplied=%q", resp.PreferApplied)
+	}
+	if resp.RetrievalMode != RetrievalModeHybridVector && resp.RetrievalMode != RetrievalModeHybrid {
+		t.Fatalf("mode=%q", resp.RetrievalMode)
+	}
+}
+
+func TestEffectivePreferFromEnv(t *testing.T) {
+	t.Setenv(envVectorDefaultPrefer, "vector")
+	if got := effectivePrefer(""); got != "vector" {
+		t.Fatalf("got %q", got)
+	}
+	if got := effectivePrefer("path"); got != "path" {
+		t.Fatalf("request override got %q", got)
+	}
+}
+
+func TestQueryPreferVectorNoHitsFallback(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	mock := newMockVectorStore(true) // available but empty → Search misses
+	svc := NewService(db).WithEmbedder(DefaultHashEmbedder()).WithVectorStore(mock)
+	repo := t.TempDir()
+	if err := os.WriteFile(filepath.Join(repo, "note.md"), []byte("orphan ref text body\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.Index(IndexRequest{RepoRoot: repo, SpaceID: "miss", Embed: false}); err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	var chunk store.RAGChunk
+	if err := db.Where("space_id = ?", "miss").First(&chunk).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&store.RAGVectorRef{
+		ID: "ragvec_miss", SpaceID: "miss", RepoRoot: chunk.RepoRoot,
+		ChunkID: chunk.ID, PointID: "pt_miss", CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.Query(QueryRequest{
+		RepoRoot: repo, SpaceID: "miss", Text: "orphan ref text", TopK: 3, Prefer: "vector",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if resp.VectorFallback != "no_hits" {
+		t.Fatalf("vectorFallback=%q want no_hits", resp.VectorFallback)
+	}
+	if resp.RetrievalMode == RetrievalModeVector {
+		t.Fatalf("mode=%q must degrade", resp.RetrievalMode)
+	}
+	if len(resp.Items) == 0 {
+		t.Fatal("expected degrade hits")
 	}
 }
 

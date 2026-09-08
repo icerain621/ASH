@@ -3,6 +3,7 @@ package rag
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 
@@ -18,6 +19,9 @@ const (
 )
 
 func preferBoost(prefer, lane string) float64 {
+	if prefer == RetrievalModeHybridVector && lane == "vector" {
+		return 2.0
+	}
 	if prefer == "" || prefer == lane {
 		if prefer == lane {
 			return 2.0
@@ -56,13 +60,45 @@ func rrfMerge(lanes map[string][]Hit, prefer string, topK int) []Hit {
 	return out
 }
 
+const envVectorDefaultPrefer = "ASH_RAG_VECTOR_DEFAULT_PREFER"
+
+// effectivePrefer applies request prefer, else optional env default (DX46).
+// Empty keeps historical hybrid/FTS default (E4: do not force cloud vector).
+func effectivePrefer(reqPrefer string) string {
+	p := strings.ToLower(strings.TrimSpace(reqPrefer))
+	if p != "" {
+		return p
+	}
+	return strings.ToLower(strings.TrimSpace(os.Getenv(envVectorDefaultPrefer)))
+}
+
 func validatePrefer(prefer string) error {
 	switch prefer {
-	case "", "path", "symbol", "text", "vector":
+	case "", "path", "symbol", "text", "vector", RetrievalModeHybridVector:
 		return nil
 	default:
-		return fmt.Errorf("%w %q: must be empty or one of path, symbol, text, vector", ErrInvalidPrefer, prefer)
+		return fmt.Errorf("%w %q: must be empty or one of path, symbol, text, vector, hybrid+vector", ErrInvalidPrefer, prefer)
 	}
+}
+
+// vectorFallbackReason explains why prefer=vector could not stay vector-only (DX46).
+func vectorFallbackReason(s *Service, space, repoRoot string, vectorOK bool) string {
+	if s == nil || s.vectors == nil || !vectorOK {
+		return "store_unavailable"
+	}
+	gdb := s.gdb()
+	if gdb == nil {
+		return "store_unavailable"
+	}
+	q := gdb.Model(&store.RAGVectorRef{}).Where("space_id = ?", space)
+	if repoRoot != "" {
+		q = q.Where("repo_root = ?", repoRoot)
+	}
+	var refCount int64
+	if err := q.Count(&refCount).Error; err != nil || refCount == 0 {
+		return "no_refs"
+	}
+	return "no_hits"
 }
 
 func (s *Service) hybridCounts(space, repoRoot string) (pathCount, symbolCount int64) {

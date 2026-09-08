@@ -54,6 +54,9 @@ func TestScaleReadiness(t *testing.T) {
 	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
 		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)
 	}
+	if resp.RAGVectorBackend == "" {
+		t.Fatal("ragVectorBackend is empty")
+	}
 }
 
 func TestScaleReadinessSchemaSqlDualWriteWarning(t *testing.T) {

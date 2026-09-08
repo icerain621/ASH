@@ -64,6 +64,11 @@ type ScaleReadinessResponse struct {
 	RAGDefaultRetrievalMode       string   `json:"ragDefaultRetrievalMode,omitempty"`
 	RAGHybridAvailable            bool     `json:"ragHybridAvailable,omitempty"`
 	RAGLspAvailable               bool     `json:"ragLspAvailable,omitempty"`
+	RAGVectorAvailable            bool     `json:"ragVectorAvailable"`
+	RAGVectorBackend              string   `json:"ragVectorBackend,omitempty"`
+	RAGVectorReason               string   `json:"ragVectorReason,omitempty"`
+	RAGVectorPointCount           int64    `json:"ragVectorPointCount,omitempty"`
+	RAGVectorDefaultPrefer        string   `json:"ragVectorDefaultPrefer,omitempty"`
 	SandboxRemoteEnabled          bool     `json:"sandboxRemoteEnabled"`
 	SandboxRemoteAvailable        bool     `json:"sandboxRemoteAvailable"`
 	SandboxRemotePreferred        bool     `json:"sandboxRemotePreferred,omitempty"`
@@ -192,6 +197,11 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		RAGDefaultRetrievalMode:       ragProf.DefaultRetrievalMode,
 		RAGHybridAvailable:            ragProf.HybridAvailable,
 		RAGLspAvailable:               ragProf.LSPAvailable,
+		RAGVectorAvailable:            ragProf.VectorAvailable,
+		RAGVectorBackend:              ragProf.VectorBackend,
+		RAGVectorReason:               ragProf.VectorReason,
+		RAGVectorPointCount:           ragProf.VectorPointCount,
+		RAGVectorDefaultPrefer:        ragProf.VectorDefaultPrefer,
 		SandboxRemoteEnabled:          remoteSt.Enabled,
 		SandboxRemoteAvailable:        remoteSt.Available,
 		SandboxRemotePreferred:        remoteSt.Preferred,

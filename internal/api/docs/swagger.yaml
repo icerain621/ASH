@@ -1642,8 +1642,16 @@ definitions:
         type: integer
       vectorAvailable:
         type: boolean
+      vectorBackend:
+        type: string
+      vectorDefaultPrefer:
+        description: ASH_RAG_VECTOR_DEFAULT_PREFER
+        type: string
       vectorPointCount:
         type: integer
+      vectorReason:
+        description: when !vectorAvailable
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_rag.QueryRequest:
     properties:
@@ -1651,7 +1659,7 @@ definitions:
         description: 'DX33: expand top symbol hits via LSP refs (bounded)'
         type: boolean
       prefer:
-        description: '""|"path"|"symbol"|"text"|"vector"'
+        description: '""|"path"|"symbol"|"text"|"vector"|"hybrid+vector"'
         type: string
       repoRoot:
         type: string
@@ -1672,7 +1680,14 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit'
         type: array
+      preferApplied:
+        type: string
       retrievalMode:
+        type: string
+      vectorAvailable:
+        type: boolean
+      vectorFallback:
+        description: no_hits|store_unavailable|no_refs|""
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_rag.RebuildSymbolsRequest:
@@ -3979,6 +3994,16 @@ definitions:
         type: integer
       ragSymbolCount:
         type: integer
+      ragVectorAvailable:
+        type: boolean
+      ragVectorBackend:
+        type: string
+      ragVectorDefaultPrefer:
+        type: string
+      ragVectorPointCount:
+        type: integer
+      ragVectorReason:
+        type: string
       readinessWarnings:
         items:
           type: string

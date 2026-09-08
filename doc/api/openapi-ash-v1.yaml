@@ -306,13 +306,29 @@ components:
           description: FTS engine id (sqlite-fts5, postgres-tsvector, etc.).
         ragDefaultRetrievalMode:
           type: string
-          enum: [fts, chunk, hybrid, empty]
+          enum: [fts, chunk, hybrid, empty, hybrid+vector, vector]
         ragHybridAvailable:
           type: boolean
           description: Hybrid path/symbol tables populated for this space.
         ragLspAvailable:
           type: boolean
           description: Language server binary resolvable for RAG LSP queries (gopls / tsserver).
+        ragVectorAvailable:
+          type: boolean
+          description: Configured vector store Available() (DX47).
+        ragVectorBackend:
+          type: string
+          description: 'Resolved backend: qdrant|chroma|milvus|mock'
+        ragVectorReason:
+          type: string
+          description: Probe reason when vector backend is unavailable.
+        ragVectorPointCount:
+          type: integer
+          format: int64
+          description: rag_vector_refs count for this space.
+        ragVectorDefaultPrefer:
+          type: string
+          description: ASH_RAG_VECTOR_DEFAULT_PREFER when set (optional; E4 not forced).
         sandboxRemoteEnabled:
           type: boolean
           description: ASH_SANDBOX_REMOTE opt-in (DX41).
@@ -517,7 +533,10 @@ components:
         defaultRetrievalMode: { type: string, enum: [fts, chunk, hybrid, empty, hybrid+vector, vector] }
         hybridAvailable: { type: boolean }
         vectorAvailable: { type: boolean }
+        vectorBackend: { type: string, description: 'Resolved backend name: qdrant|chroma|milvus|mock' }
+        vectorReason: { type: string, description: Probe reason when vector backend is unavailable. }
         vectorPointCount: { type: integer, format: int64 }
+        vectorDefaultPrefer: { type: string, description: ASH_RAG_VECTOR_DEFAULT_PREFER when set. }
         embedderKind: { type: string, description: 'hash|openai_compat|custom|none' }
         embedderDim: { type: integer, description: Configured or learned embedding dimension. }
         databaseDialect: { type: string }
@@ -2968,7 +2987,7 @@ components:
         topK: { type: integer }
         repoRoot: { type: string }
         spaceId: { type: string }
-        prefer: { type: string, description: '""|"path"|"symbol"|"text"|"vector"' }
+        prefer: { type: string, description: '""|"path"|"symbol"|"text"|"vector"|"hybrid+vector"' }
         expandRefs: { type: boolean, description: 'When true, expand top symbol hits via bounded LSP references (fallback symbol table).' }
     RAGHit:
       type: object
@@ -2986,6 +3005,9 @@ components:
       properties:
         retrievalMode: { type: string }
         ftsAvailable: { type: boolean }
+        vectorAvailable: { type: boolean, description: Whether the configured vector store reports Available. }
+        vectorFallback: { type: string, description: 'When prefer=vector degrades: store_unavailable|no_refs|no_hits' }
+        preferApplied: { type: string, description: Effective prefer after request + ASH_RAG_VECTOR_DEFAULT_PREFER. }
         items:
           type: array
           items: { $ref: "#/components/schemas/RAGHit" }

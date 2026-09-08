@@ -50,6 +50,11 @@ export type ScaleReadiness = {
   ragDefaultRetrievalMode?: string;
   ragHybridAvailable?: boolean;
   ragLspAvailable?: boolean;
+  ragVectorAvailable?: boolean;
+  ragVectorBackend?: string;
+  ragVectorReason?: string;
+  ragVectorPointCount?: number;
+  ragVectorDefaultPrefer?: string;
   sandboxRemoteEnabled?: boolean;
   sandboxRemoteAvailable?: boolean;
   sandboxRemotePreferred?: boolean;

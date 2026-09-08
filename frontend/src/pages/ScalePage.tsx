@@ -262,6 +262,16 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>向量后端</td>
+              <td data-testid="scale-rag-vector">
+                {r == null
+                  ? "-"
+                  : r.ragVectorAvailable
+                    ? `可用${r.ragVectorBackend ? ` · ${r.ragVectorBackend}` : ""}${r.ragVectorPointCount != null ? ` · refs ${r.ragVectorPointCount}` : ""}${r.ragVectorDefaultPrefer ? ` · defaultPrefer=${r.ragVectorDefaultPrefer}` : ""}`
+                    : `不可用${r.ragVectorBackend ? ` · ${r.ragVectorBackend}` : ""}${r.ragVectorReason ? ` · ${r.ragVectorReason}` : ""}${r.ragVectorDefaultPrefer ? ` · defaultPrefer=${r.ragVectorDefaultPrefer}` : ""}`}
+              </td>
+            </tr>
+            <tr>
               <td>远程沙箱</td>
               <td data-testid="scale-sandbox-remote">
                 {r == null

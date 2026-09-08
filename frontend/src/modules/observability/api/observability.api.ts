@@ -18,7 +18,10 @@ export type RagProfile = {
   defaultRetrievalMode: string;
   hybridAvailable?: boolean;
   vectorAvailable?: boolean;
+  vectorBackend?: string;
+  vectorReason?: string;
   vectorPointCount?: number;
+  vectorDefaultPrefer?: string;
   embedderKind?: string;
   embedderDim?: number;
   lspAvailable?: boolean;

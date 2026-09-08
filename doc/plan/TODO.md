@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP 可发布水位；**v2 … v2.9：DX37–DX42 已冻结**（tag `v2.9.0` 待人工；见 [`v2.9-release-scope.md`](v2.9-release-scope.md)）；前序 tag `v2.7.0`/`v2.8.0` 仍待人工 |
+| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 已冻结**；**v3.x：E1–E7 已确认**；**DX43–DX48 ✅**；见 [`v3.0-release-scope.md`](v3.0-release-scope.md) |
 
 ---
 
@@ -80,7 +80,13 @@
 | DX40 | remote-sandbox smoke + 证据 | 无 key → skip；清单 | ✅ |
 | DX41 | 控制台 remote 水位 | Scale/Observability | ✅ |
 | DX42 | v2.9 冻结 + 签字 | `v2.9-release-scope`；`make v2.9-signoff`；tag 人工 | ✅ |
-| 详排 | — | v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结）；**v2.9** [`v2.9-release-scope.md`](v2.9-release-scope.md)（已冻结）；设计 [`docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md`](../../docs/superpowers/specs/2026-09-07-v29-remote-sandbox-design.md) | — |
+| DX43 | 向量多后端契约（v3.0） | `ASH_RAG_VECTOR_BACKEND`；mock；chroma/milvus stub；保留 Qdrant | ✅ |
+| DX44 | Chroma 适配器 | HTTP + httptest；非默认 | ✅ |
+| DX45 | Milvus 适配器 | HTTP + httptest；非默认 | ✅ |
+| DX46 | Hybrid / prefer=vector 升格 | 可选强路径；失败回退 | ✅ |
+| DX47 | smoke + 控制台水位 | rag-vector-smoke 扩展；Scale/Knowledge | ✅ |
+| DX48 | v3.0 冻结 + 签字 | `v3.0-release-scope`；`make v3.0-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v3.x-program.md`](v3.x-program.md)（E1–E7 ✅）· [`v3.0-release-scope.md`](v3.0-release-scope.md)（开发中） | — |
 
 ---
 

@@ -9574,8 +9574,19 @@ const docTemplate = `{
                 "vectorAvailable": {
                     "type": "boolean"
                 },
+                "vectorBackend": {
+                    "type": "string"
+                },
+                "vectorDefaultPrefer": {
+                    "description": "ASH_RAG_VECTOR_DEFAULT_PREFER",
+                    "type": "string"
+                },
                 "vectorPointCount": {
                     "type": "integer"
+                },
+                "vectorReason": {
+                    "description": "when !vectorAvailable",
+                    "type": "string"
                 }
             }
         },
@@ -9590,7 +9601,7 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "prefer": {
-                    "description": "\"\"|\"path\"|\"symbol\"|\"text\"|\"vector\"",
+                    "description": "\"\"|\"path\"|\"symbol\"|\"text\"|\"vector\"|\"hybrid+vector\"",
                     "type": "string"
                 },
                 "repoRoot": {
@@ -9619,7 +9630,17 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rag.Hit"
                     }
                 },
+                "preferApplied": {
+                    "type": "string"
+                },
                 "retrievalMode": {
+                    "type": "string"
+                },
+                "vectorAvailable": {
+                    "type": "boolean"
+                },
+                "vectorFallback": {
+                    "description": "no_hits|store_unavailable|no_refs|\"\"",
                     "type": "string"
                 }
             }
@@ -13133,6 +13154,21 @@ const docTemplate = `{
                 },
                 "ragSymbolCount": {
                     "type": "integer"
+                },
+                "ragVectorAvailable": {
+                    "type": "boolean"
+                },
+                "ragVectorBackend": {
+                    "type": "string"
+                },
+                "ragVectorDefaultPrefer": {
+                    "type": "string"
+                },
+                "ragVectorPointCount": {
+                    "type": "integer"
+                },
+                "ragVectorReason": {
+                    "type": "string"
                 },
                 "readinessWarnings": {
                     "type": "array",

@@ -31,7 +31,7 @@ func NewService(db *store.DB) *Service {
 	return &Service{
 		db:       db,
 		embedder: ResolveEmbedder(),
-		vectors:  NewQdrantClient(DefaultQdrantURL()),
+		vectors:  ResolveVectorStore(),
 	}
 }
 
@@ -90,7 +90,7 @@ type QueryRequest struct {
 	Text       string `json:"text" binding:"required"`
 	TopK       int    `json:"topK,omitempty"`
 	SpaceID    string `json:"spaceId,omitempty"`
-	Prefer     string `json:"prefer,omitempty"` // ""|"path"|"symbol"|"text"|"vector"
+	Prefer     string `json:"prefer,omitempty"`     // ""|"path"|"symbol"|"text"|"vector"|"hybrid+vector"
 	ExpandRefs bool   `json:"expandRefs,omitempty"` // DX33: expand top symbol hits via LSP refs (bounded)
 }
 
@@ -106,16 +106,19 @@ type Hit struct {
 }
 
 const (
-	RetrievalModeFTS   = "fts"
-	RetrievalModeChunk = "chunk"
-	RetrievalModeEmpty = "empty"
+	RetrievalModeFTS    = "fts"
+	RetrievalModeChunk  = "chunk"
+	RetrievalModeEmpty  = "empty"
 	RetrievalModeHybrid = "hybrid"
 )
 
 type QueryResponse struct {
-	Items         []Hit  `json:"items"`
-	RetrievalMode string `json:"retrievalMode"`
-	FtsAvailable  bool   `json:"ftsAvailable"`
+	Items            []Hit  `json:"items"`
+	RetrievalMode    string `json:"retrievalMode"`
+	FtsAvailable     bool   `json:"ftsAvailable"`
+	VectorAvailable  bool   `json:"vectorAvailable,omitempty"`
+	VectorFallback   string `json:"vectorFallback,omitempty"` // no_hits|store_unavailable|no_refs|"" 
+	PreferApplied    string `json:"preferApplied,omitempty"`
 }
 
 // AbsRepoRoot returns the canonical absolute path used when persisting RAG rows.
@@ -166,7 +169,8 @@ func (s *Service) Index(req IndexRequest) (*IndexResponse, error) {
 }
 
 func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
-	if err := validatePrefer(req.Prefer); err != nil {
+	prefer := effectivePrefer(req.Prefer)
+	if err := validatePrefer(prefer); err != nil {
 		return nil, err
 	}
 	text := strings.TrimSpace(strings.ToLower(req.Text))
@@ -180,8 +184,12 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	space := firstNonEmpty(req.SpaceID, "local")
 	terms := queryTerms(text)
 	ftsAvailable := s.FTSAvailable()
+	vectorOK := s.vectors != nil && s.vectors.Available()
 	if len(terms) == 0 {
-		return &QueryResponse{Items: []Hit{}, RetrievalMode: RetrievalModeEmpty, FtsAvailable: ftsAvailable}, nil
+		return &QueryResponse{
+			Items: []Hit{}, RetrievalMode: RetrievalModeEmpty, FtsAvailable: ftsAvailable,
+			VectorAvailable: vectorOK, PreferApplied: prefer,
+		}, nil
 	}
 
 	var absRepo string
@@ -198,18 +206,34 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 		return nil, err
 	}
 	pathCount, symbolCount := s.hybridCounts(space, absRepo)
-	vectorHits := s.queryVectorLane(space, absRepo, strings.TrimSpace(req.Text), topK*2)
+	queryText := strings.TrimSpace(req.Text)
+	vectorHits := s.queryVectorLane(space, absRepo, queryText, topK*2)
 	hasHybridTables := pathCount+symbolCount > 0
 	hasVector := len(vectorHits) > 0
+	fallback := ""
 
-	// prefer=vector: vector-only when lane has hits; otherwise degrade to hybrid/text.
-	if req.Prefer == "vector" && hasVector {
-		merged := rrfMerge(map[string][]Hit{"vector": vectorHits}, "vector", topK)
-		return &QueryResponse{Items: merged, RetrievalMode: RetrievalModeVector, FtsAvailable: ftsAvailable}, nil
+	// DX46: prefer=vector is a strong optional path; degrade with explicit reason.
+	if prefer == "vector" {
+		if hasVector {
+			merged := rrfMerge(map[string][]Hit{"vector": vectorHits}, "vector", topK)
+			return &QueryResponse{
+				Items: merged, RetrievalMode: RetrievalModeVector, FtsAvailable: ftsAvailable,
+				VectorAvailable: vectorOK, PreferApplied: prefer,
+			}, nil
+		}
+		fallback = vectorFallbackReason(s, space, absRepo, vectorOK)
+	}
+
+	mergePrefer := prefer
+	if prefer == RetrievalModeHybridVector {
+		mergePrefer = "vector" // boost vector lane inside hybrid merge
 	}
 
 	if !hasHybridTables && !hasVector {
-		return &QueryResponse{Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable}, nil
+		return &QueryResponse{
+			Items: textHits, RetrievalMode: textMode, FtsAvailable: ftsAvailable,
+			VectorAvailable: vectorOK, VectorFallback: fallback, PreferApplied: prefer,
+		}, nil
 	}
 
 	lanes := map[string][]Hit{
@@ -230,7 +254,7 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	if hasVector {
 		lanes["vector"] = vectorHits
 	}
-	merged := rrfMerge(lanes, req.Prefer, topK)
+	merged := rrfMerge(lanes, mergePrefer, topK)
 	mode := RetrievalModeHybrid
 	if hasVector {
 		mode = RetrievalModeHybridVector
@@ -238,7 +262,10 @@ func (s *Service) Query(req QueryRequest) (*QueryResponse, error) {
 	if req.ExpandRefs && absRepo != "" {
 		merged = s.expandHybridRefs(space, absRepo, merged, topK)
 	}
-	return &QueryResponse{Items: merged, RetrievalMode: mode, FtsAvailable: ftsAvailable}, nil
+	return &QueryResponse{
+		Items: merged, RetrievalMode: mode, FtsAvailable: ftsAvailable,
+		VectorAvailable: vectorOK, VectorFallback: fallback, PreferApplied: prefer,
+	}, nil
 }
 
 const (
@@ -276,11 +303,11 @@ func (s *Service) expandHybridRefs(space, absRepo string, hits []Hit, topK int) 
 		}
 		refs, err := s.References(LSPReferencesRequest{
 			LSPPositionQuery: LSPPositionQuery{
-				RepoRoot: absRepo,
-				Path:     h.Path,
-				Line:     h.StartLine,
+				RepoRoot:  absRepo,
+				Path:      h.Path,
+				Line:      h.StartLine,
 				Character: char,
-				SpaceID:  space,
+				SpaceID:   space,
 			},
 			Limit: expandRefsPerSeed,
 		})

@@ -17,6 +17,8 @@
 | [`v2.7-release-scope.md`](v2.7-release-scope.md) | **v2.7** 范围冻结（`make v2.7-signoff`） | vector embed / sandbox 证据 / skill catalog / thin LSP / DX25–DX30 |
 | [`v2.8-release-scope.md`](v2.8-release-scope.md) | **v2.8** 范围冻结（`make v2.8-signoff`） | 完整 LSP 切片 hover/def/refs / DX31–DX36 |
 | [`v2.9-release-scope.md`](v2.9-release-scope.md) | **v2.9** 范围冻结（`make v2.9-signoff`） | 可选远程沙箱 E2B-class / DX37–DX42 |
+| [`v3.x-program.md`](v3.x-program.md) | **v3.x** 程序（E1–E7 已确认；分冻 v3.0/3.1/3.2） | 向量 / Quest / IdP·网关 |
+| [`v3.0-release-scope.md`](v3.0-release-scope.md) | **v3.0** 范围冻结（`make v3.0-signoff`） | Chroma+Milvus + prefer=vector；保留 Qdrant / DX43–DX48 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

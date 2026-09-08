@@ -41,6 +41,9 @@ vi.mock("@/modules/observability/api/observability.api", () => ({
     defaultRetrievalMode: "hybrid",
     hybridAvailable: true,
     lspAvailable: true,
+    vectorAvailable: true,
+    vectorBackend: "mock",
+    vectorPointCount: 2,
     documentCount: 2,
     chunkCount: 4,
     pathEntryCount: 2,
@@ -62,7 +65,9 @@ describe("KnowledgePage", () => {
     });
     expect(screen.getByTestId("knowledge-wiki-list")).toBeInTheDocument();
     expect(screen.getByTestId("knowledge-rag-hybrid")).toBeInTheDocument();
+    expect(screen.getByTestId("knowledge-rag-vector")).toBeInTheDocument();
     expect(screen.getByText(/LSP 可用/)).toBeInTheDocument();
+    expect(screen.getByText(/向量：可用/)).toBeInTheDocument();
     expect(screen.getByTestId("knowledge-rag-rebuild")).toBeInTheDocument();
     expect(screen.getByTestId("knowledge-rag-lsp-probe")).toBeInTheDocument();
   });

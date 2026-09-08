@@ -27,6 +27,10 @@ vi.mock("@/modules/observability/api/observability.api", () => ({
     chunkCount: 0,
     fallbackQueryCount: 0,
     lspAvailable: true,
+    vectorAvailable: false,
+    vectorBackend: "qdrant",
+    vectorReason: "backend unavailable",
+    vectorPointCount: 0,
   }),
   postRagLspHover: vi.fn().mockResolvedValue({ contents: "hover ok", server: "fake-gopls" }),
   postRagLspDefinition: vi.fn().mockResolvedValue({ locations: [{ path: "main.go", line: 1 }], server: "fake-gopls" }),
@@ -165,6 +169,13 @@ describe("ObservabilityPage", () => {
       expect(screen.getByTestId("observability-sandbox-remote-status")).toHaveTextContent(/后端可用/);
       expect(screen.getByTestId("observability-sandbox-remote-backend")).toHaveTextContent("mock");
       expect(screen.getByTestId("observability-sandbox-remote-policy")).toHaveTextContent(/prefer=remote/);
+    });
+  });
+
+  it("renders vector backend status from rag profile", async () => {
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("observability-rag-vector-status")).toHaveTextContent(/不可用 · qdrant/);
     });
   });
 });
