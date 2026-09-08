@@ -3510,6 +3510,46 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/quest/stream": {
+            "get": {
+                "description": "Space-scoped event stream for Quest kanban. Fresh connect starts from now (live-only). Resume via Last-Event-ID.",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Quest board live SSE (plan.* / run status)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "resume after this event id",
+                        "name": "Last-Event-ID",
+                        "in": "header"
+                    },
+                    {
+                        "type": "string",
+                        "description": "resume after this event id",
+                        "name": "lastEventId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/rag/index": {
             "post": {
                 "consumes": [
@@ -4958,6 +4998,64 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/runs/{runId}/diff/reject": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "quest"
+                ],
+                "summary": "Reject a file or the full run diff (Quest review)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "reject request",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.RejectRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.RejectResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
                     }
                 }
@@ -6846,7 +6944,7 @@ const docTemplate = `{
         },
         "/api/v1/webhooks/github": {
             "post": {
-                "description": "Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, optionally creates a hotfix Run when autoRun=1.",
+                "description": "Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, creates a GoalPlan draft (Quest); autoRun=1 auto-approves into a hotfix Run.",
                 "consumes": [
                     "application/json"
                 ],
@@ -6867,14 +6965,14 @@ const docTemplate = `{
                     },
                     {
                         "type": "boolean",
-                        "description": "create hotfix run on failure",
+                        "description": "auto-approve GoalPlan into hotfix run on failure",
                         "name": "autoRun",
                         "in": "query"
                     },
                     {
                         "type": "string",
                         "default": ".",
-                        "description": "repo root for autoRun",
+                        "description": "repo root for GoalPlan / autoRun",
                         "name": "repoRoot",
                         "in": "query"
                     },
@@ -7622,7 +7720,54 @@ const docTemplate = `{
                 "raw": {
                     "type": "string"
                 },
+                "rejectedPaths": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "runId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffreview.RejectRequest": {
+            "type": "object",
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "scope": {
+                    "description": "file|all",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_diffreview.RejectResponse": {
+            "type": "object",
+            "properties": {
+                "canceled": {
+                    "type": "boolean"
+                },
+                "comment": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView"
+                },
+                "filePath": {
+                    "type": "string"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "status": {
                     "type": "string"
                 }
             }
@@ -13782,6 +13927,9 @@ const docTemplate = `{
                 },
                 "ignored": {
                     "type": "boolean"
+                },
+                "planId": {
+                    "type": "string"
                 },
                 "providerRunId": {
                     "type": "string"

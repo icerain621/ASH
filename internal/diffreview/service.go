@@ -16,10 +16,11 @@ import (
 )
 
 type DiffView struct {
-	RunID       string              `json:"runId"`
-	Raw         string              `json:"raw"`
-	Files       []diffparse.FileDiff `json:"files"`
-	ContextRefs []string            `json:"contextRefs,omitempty"`
+	RunID         string               `json:"runId"`
+	Raw           string               `json:"raw"`
+	Files         []diffparse.FileDiff `json:"files"`
+	ContextRefs   []string             `json:"contextRefs,omitempty"`
+	RejectedPaths []string             `json:"rejectedPaths,omitempty"`
 }
 
 type CommentView struct {
@@ -74,7 +75,11 @@ func (s *Service) GetDiff(runID string) (*DiffView, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			return &DiffView{RunID: runID, Raw: "", Files: nil}, nil
+			view := &DiffView{RunID: runID, Raw: "", Files: nil}
+			if paths, err := s.RejectedPaths(runID); err == nil {
+				view.RejectedPaths = paths
+			}
+			return view, nil
 		}
 		return nil, err
 	}
@@ -82,6 +87,9 @@ func (s *Service) GetDiff(runID string) (*DiffView, error) {
 	view := &DiffView{RunID: runID, Raw: raw, Files: diffparse.ParseUnified(raw)}
 	if man, err := s.runs.Artifacts(runID); err == nil && man != nil {
 		view.ContextRefs = man.ContextRefs
+	}
+	if paths, err := s.RejectedPaths(runID); err == nil {
+		view.RejectedPaths = paths
 	}
 	return view, nil
 }
@@ -126,6 +134,109 @@ func (s *Service) CreateComment(runID string, req CreateCommentRequest) (*Commen
 	}
 	v := toComment(row)
 	return &v, nil
+}
+
+const (
+	RejectScopeFile = "file"
+	RejectScopeAll  = "all"
+	RejectSide      = "reject"
+	RejectAllPath   = "*"
+	RejectLineIndex = -1
+)
+
+type RejectRequest struct {
+	Scope    string `json:"scope"` // file|all
+	FilePath string `json:"filePath,omitempty"`
+	Reason   string `json:"reason"`
+	ActorID  string `json:"actorId,omitempty"`
+}
+
+type RejectResponse struct {
+	RunID    string      `json:"runId"`
+	Scope    string      `json:"scope"`
+	FilePath string      `json:"filePath"`
+	Comment  CommentView `json:"comment"`
+	Canceled bool        `json:"canceled"`
+	Status   string      `json:"status"`
+}
+
+// Reject records a file-level or full-diff rejection (no new tables).
+// scope=all also cancels the run so delivery stops; scope=file records only.
+func (s *Service) Reject(runID string, req RejectRequest) (*RejectResponse, error) {
+	sum, err := s.runs.Get(runID)
+	if err != nil {
+		return nil, err
+	}
+	scope := strings.ToLower(strings.TrimSpace(req.Scope))
+	reason := strings.TrimSpace(req.Reason)
+	if reason == "" {
+		reason = "diff rejected"
+	}
+	path := strings.TrimSpace(req.FilePath)
+	switch scope {
+	case RejectScopeFile:
+		if path == "" || path == RejectAllPath {
+			return nil, fmt.Errorf("filePath is required for scope=file")
+		}
+	case RejectScopeAll:
+		path = RejectAllPath
+	default:
+		return nil, fmt.Errorf("scope must be file or all")
+	}
+
+	now := time.Now().UTC()
+	row := store.DiffReviewComment{
+		ID: "drc_" + uuid.NewString(), SpaceID: sum.SpaceID, RunID: runID,
+		FilePath: path, LineIndex: RejectLineIndex, Side: RejectSide, Body: reason,
+		CreatedBy: strings.TrimSpace(req.ActorID), CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.db.Create(&row).Error; err != nil {
+		return nil, err
+	}
+	comment := toComment(row)
+	out := &RejectResponse{
+		RunID: runID, Scope: scope, FilePath: path, Comment: comment, Status: sum.Status,
+	}
+	if scope == RejectScopeAll {
+		canceled, err := s.runs.Cancel(runID)
+		if err != nil {
+			return nil, err
+		}
+		out.Canceled = true
+		out.Status = canceled.Status
+	}
+	if s.runs != nil {
+		_ = s.runs.AppendEvent(runID, sum.TraceID, "quest.diff.rejected", "warn", map[string]any{
+			"scope": scope, "filePath": path, "reason": reason, "actorId": req.ActorID,
+			"canceled": out.Canceled,
+		})
+	}
+	return out, nil
+}
+
+// RejectedPaths returns file paths marked rejected (side=reject); "*" means full reject.
+func (s *Service) RejectedPaths(runID string) ([]string, error) {
+	items, err := s.ListComments(runID)
+	if err != nil {
+		return nil, err
+	}
+	seen := map[string]bool{}
+	var out []string
+	for _, c := range items {
+		if c.Side != RejectSide {
+			continue
+		}
+		p := c.FilePath
+		if p == "" {
+			p = RejectAllPath
+		}
+		if seen[p] {
+			continue
+		}
+		seen[p] = true
+		out = append(out, p)
+	}
+	return out, nil
 }
 
 func toComment(r store.DiffReviewComment) CommentView {

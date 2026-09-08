@@ -19,6 +19,7 @@
 | [`v2.9-release-scope.md`](v2.9-release-scope.md) | **v2.9** 范围冻结（`make v2.9-signoff`） | 可选远程沙箱 E2B-class / DX37–DX42 |
 | [`v3.x-program.md`](v3.x-program.md) | **v3.x** 程序（E1–E7 已确认；分冻 v3.0/3.1/3.2） | 向量 / Quest / IdP·网关 |
 | [`v3.0-release-scope.md`](v3.0-release-scope.md) | **v3.0** 范围冻结（`make v3.0-signoff`） | Chroma+Milvus + prefer=vector；保留 Qdrant / DX43–DX48 |
+| [`v3.1-release-scope.md`](v3.1-release-scope.md) | **v3.1** 范围（草案；DX54 冻结） | Quest 委派面 UX / 硬化 / DX49–DX54 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

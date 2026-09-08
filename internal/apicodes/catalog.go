@@ -136,6 +136,7 @@ var Catalog = map[string]Entry{
 	"SUBRUN_SPAWN_FAILED":        {Domain: "runs", Summary: "Failed to spawn sub-run"},
 	"SUBRUN_TREE_FAILED":         {Domain: "runs", Summary: "Failed to load run spawn tree"},
 	"DIFF_GET_FAILED":            {Domain: "quest", Summary: "Failed to load run diff"},
+	"DIFF_REJECT_FAILED":         {Domain: "quest", Summary: "Failed to reject run diff"},
 	"DIFF_COMMENT_LIST_FAILED":   {Domain: "quest", Summary: "Failed to list diff comments"},
 	"DIFF_COMMENT_CREATE_FAILED": {Domain: "quest", Summary: "Failed to create diff comment"},
 

@@ -4,7 +4,7 @@
 |-------|--------|
 | Status | **pass** (exit 0) |
 | Platform | MINGW64_NT-10.0-26200 |
-| Date | 2026-09-07T15:00:06Z |
+| Date | 2026-09-08T15:15:25Z |
 | Scope | remote unit / mock / prefer+fallback / e2b httptest |
 | Live E2B | **skipped** — set ASH_SANDBOX_REMOTE_LIVE=1 + ASH_SANDBOX_REMOTE_API_KEY for live E2B |
 | Doctor | unchanged ALL 57 / M4 10 (no new case; D5) |
@@ -22,6 +22,6 @@
 ## Raw excerpt
 
 ```
-ok  	github.com/ash-repwiki/ash/internal/sandbox	0.294s
-ok  	github.com/ash-repwiki/ash/internal/sandbox/remote	3.061s
+ok  	github.com/ash-repwiki/ash/internal/sandbox	0.395s
+ok  	github.com/ash-repwiki/ash/internal/sandbox/remote	2.814s
 ```

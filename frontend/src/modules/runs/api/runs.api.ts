@@ -317,6 +317,10 @@ export function createRunFromGoal(body: { goal: string; repoRoot?: string; autoA
   });
 }
 
+export function getGoalPlan(planId: string) {
+  return api<GoalPlan>(`/runs/plans/${planId}`);
+}
+
 export function approveGoalPlan(planId: string, body: { actorId?: string; reason?: string } = {}) {
   return api<GoalPlan>(`/runs/plans/${planId}/approve`, {
     method: "POST",

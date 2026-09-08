@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -142,4 +143,59 @@ func (s *Service) SeqFromEventID(runID, eventID string) (int64, error) {
 		return 0, err
 	}
 	return ev.Seq, nil
+}
+
+// BoardLiveEventTypes are Quest kanban-relevant events (DX53).
+var BoardLiveEventTypes = []string{
+	"plan.created", "plan.approved", "plan.started", "plan.rejected",
+	"run.started", "run.finished", "run.failed", "run.canceled",
+	"gate.waiting_approval",
+}
+
+// TSFromEventID returns the event timestamp for space-stream resume cursors.
+func (s *Service) TSFromEventID(eventID string) (int64, error) {
+	var ev store.RunEvent
+	if err := s.gdb().Where("id = ?", eventID).First(&ev).Error; err != nil {
+		return 0, err
+	}
+	return ev.TS, nil
+}
+
+// ListAfterSpace returns board-live events for plan/run ids belonging to spaceID with ts > afterTS.
+func (s *Service) ListAfterSpace(spaceID string, afterTS int64, limit int) ([]Envelope, error) {
+	if limit <= 0 {
+		limit = 100
+	}
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		spaceID = "local"
+	}
+	var planIDs []string
+	if err := s.gdb().Model(&store.GoalPlan{}).Where("space_id = ?", spaceID).Pluck("id", &planIDs).Error; err != nil {
+		return nil, err
+	}
+	var runIDs []string
+	if err := s.gdb().Model(&store.RunRecord{}).Where("space_id = ?", spaceID).Pluck("id", &runIDs).Error; err != nil {
+		return nil, err
+	}
+	ids := make([]string, 0, len(planIDs)+len(runIDs))
+	ids = append(ids, planIDs...)
+	ids = append(ids, runIDs...)
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	var rows []store.RunEvent
+	q := s.gdb().Where("run_id IN ? AND ts > ? AND type IN ?", ids, afterTS, BoardLiveEventTypes).
+		Order("ts asc, id asc").Limit(limit).Find(&rows)
+	if q.Error != nil {
+		return nil, q.Error
+	}
+	out := make([]Envelope, 0, len(rows))
+	for _, r := range rows {
+		out = append(out, Envelope{
+			ID: r.ID, RunID: r.RunID, Seq: r.Seq, TS: r.TS,
+			Type: r.Type, Severity: r.Severity, Payload: json.RawMessage(r.PayloadJSON),
+		})
+	}
+	return out, nil
 }

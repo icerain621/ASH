@@ -13,9 +13,9 @@
 | # | 动作 | 期望 |
 |---|------|------|
 | 1 | 配置 GitHub webhook → `POST /api/v1/webhooks/github?connectionId=<id>`，Content-Type JSON，Secret = HMAC 密钥 | GitHub 投递成功 |
-| 2 | 失败 workflow 投递（`X-Hub-Signature-256` + `X-GitHub-Delivery`） | `200`；`diagnosis.rootCause` 非空；`ciRunId`/`ciJobId` 有值 |
-| 3 | 同 `X-GitHub-Delivery` 重放 | `duplicate=true`，不重复诊断 |
-| 4 | `?autoRun=1&repoRoot=<path>` 失败投递 | `shouldStartRun=true`；`ashRunId` 返回（hotfix） |
+| 2 | 失败 workflow 投递（`X-Hub-Signature-256` + `X-GitHub-Delivery`） | `200`；`diagnosis.rootCause` 非空；`ciRunId`/`ciJobId` 有值；**`planId` draft（DX52）** |
+| 3 | 同 `X-GitHub-Delivery` 重放 | `duplicate=true`，不重复诊断 / 不重复 Plan |
+| 4 | `?autoRun=1&repoRoot=<path>` 失败投递 | `shouldStartRun=true`；`planId` + `ashRunId`（hotfix AutoApprove） |
 | 5 | 错误签名 | `401 WEBHOOK_SIGNATURE_INVALID` |
 
 ## curl 示例（本地）
@@ -35,4 +35,4 @@ curl -sS -X POST "http://localhost:8080/api/v1/webhooks/github?connectionId=$CON
 
 - `internal/ci/webhook.go` · `internal/api/webhook.go`
 - OpenAPI：`/api/v1/webhooks/github`
-- 计划：`doc/plan/sprint-ds-webhook.md`
+- 计划：`doc/plan/sprint-ds-webhook.md` · `doc/plan/sprint-dx52-multi-entry-plan.md`

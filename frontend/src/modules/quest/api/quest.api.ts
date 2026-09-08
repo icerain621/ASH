@@ -42,6 +42,7 @@ export type RunDiff = {
   raw: string;
   files: DiffFile[];
   contextRefs?: string[];
+  rejectedPaths?: string[];
 };
 
 export type DiffComment = {
@@ -55,12 +56,31 @@ export type DiffComment = {
   createdAt: number;
 };
 
+export type DiffRejectResponse = {
+  runId: string;
+  scope: string;
+  filePath: string;
+  comment: DiffComment;
+  canceled: boolean;
+  status: string;
+};
+
 export function getQuestBoard(limit = 80) {
   return api<QuestBoard>(`/quest/board?limit=${limit}`);
 }
 
 export function getRunDiff(runId: string) {
   return api<RunDiff>(`/runs/${runId}/diff`);
+}
+
+export function rejectRunDiff(
+  runId: string,
+  body: { scope: "file" | "all"; filePath?: string; reason?: string; actorId?: string },
+) {
+  return api<DiffRejectResponse>(`/runs/${runId}/diff/reject`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
 }
 
 export function listDiffComments(runId: string) {

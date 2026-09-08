@@ -292,6 +292,16 @@ func (s *Service) eventsFor() *events.Service {
 	return s.events
 }
 
+// AppendEvent records a run event (used by Quest review and other packages).
+func (s *Service) AppendEvent(runID, traceID, typ, severity string, payload map[string]any) error {
+	ev := s.eventsFor()
+	if ev == nil {
+		return nil
+	}
+	_, err := ev.Append(runID, traceID, typ, severity, payload)
+	return err
+}
+
 func (s *Service) Create(req CreateRequest) (*CreateResponse, error) {
 	return s.createAndExecute(req, createOptions{})
 }

@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX54（v3.1）：范围冻结 + 签字门禁 — `v3.1-release-scope` **已冻结**；`make v3.1-signoff`（Doctor ALL **57** / M4 **10** + Quest 回归 + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.1.0` tag。
+- Sprint DX53（v3.1 草案）：Quest 看板 live SSE — `GET /quest/stream`（Space 级 `plan.*`/`run.*`）；`useQuestBoardStream` 失效看板；断连轮询回退；**无新表**。
+- Sprint DX52（v3.1 草案）：多入口统一 Plan — webhook 失败一律 `FromGoal` draft；`autoRun=1` → AutoApprove；响应 `planId`；Session 已对齐；**无新表**。
+- Sprint DX51（v3.1 草案）：Quest 工作台硬化 — `waiting_approval` 门禁面板（Approve/Cancel，timeline `gate.waiting_approval`）；产物列表 + 签名链接；复用现有 Run API；**无新表**。
+- Sprint DX50（v3.1 草案）：Diff 审查闭环 — `POST /runs/{id}/diff/reject`（file|all）；全量拒绝取消 Run；文件拒绝写入 `side=reject`；Quest「批准并继续」接门禁；`rejectedPaths`；**无新表**。
+- Sprint DX49（v3.1 草案）：Quest 原生 Goal/Plan 撰写+审批 — `/ui/quest` 内联 compose/approve/reject；看板 Plan 卡预览；`getGoalPlan` 客户端；Runs quest-pane 保留；**无新表**。
 - Sprint DX48（v3.0）：范围冻结 + 签字门禁 — `v3.0-release-scope` **已冻结**；`make v3.0-signoff`（Doctor ALL **57** / M4 **10** + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.0.0` tag。
 - Sprint DX47（v3.0）：向量 smoke + 控制台水位 — `rag-vector-smoke` 覆盖 Chroma/Milvus/prefer（证据 `doc/evidence/rag-vector-smoke-latest.md`）；Scale `ragVector*`；Knowledge/Observability 展示后端与 defaultPrefer；**无新表**。
 - Sprint DX46（v3.0）：Hybrid / `prefer=vector` 升格 — 可选强路径；`vectorFallback`（`store_unavailable`\|`no_refs`\|`no_hits`）；`prefer=hybrid+vector`；`ASH_RAG_VECTOR_DEFAULT_PREFER`（不强制默认向量，E4）；响应 `vectorAvailable`/`preferApplied`；**无新表**。

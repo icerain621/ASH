@@ -70,6 +70,7 @@
 | — | v2.8 signoff (DX36) | scope freeze + `make v2.8-signoff` | [`v2.8-signoff.md`](v2.8-signoff.md) |
 | — | v2.9 signoff (DX42) | scope freeze + `make v2.9-signoff` | [`v2.9-signoff.md`](v2.9-signoff.md) |
 | — | v3.0 signoff (DX48) | scope freeze + `make v3.0-signoff` | [`v3.0-signoff.md`](v3.0-signoff.md) |
+| — | v3.1 signoff (DX54) | scope freeze + `make v3.1-signoff` | [`v3.1-signoff.md`](v3.1-signoff.md) |
 | H-07 | 密钥轮换 | `TestSecretRotateRepoConnectionH07` | [`secret-rotate-smoke.md`](secret-rotate-smoke.md) |
 | H-08 | 发布审计 | [`release-window-audit.md`](release-window-audit.md) | 设 `ASH_WORKER_URL` 触发 §7 live |
 | H-09 | 业务抽样 §7 | [`release-sampling-smoke.md`](release-sampling-smoke.md) | [`release-sampling.sh`](../scripts/release-sampling.sh) |

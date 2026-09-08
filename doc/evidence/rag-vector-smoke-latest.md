@@ -1,6 +1,6 @@
 # rag-vector-smoke
 
-- stamp: `2026-09-07T14:59:04Z`
+- stamp: `2026-09-08T15:14:26Z`
 - os: `MINGW64_NT-10.0-26200`
 - status: **pass**
 - live embed: **skipped** (set ASH_EMBED_LIVE=1 + ASH_EMBED_BASE_URL for live OpenAI-compat embed)
@@ -9,5 +9,5 @@
 ## Output
 
 ```
-ok  	github.com/ash-repwiki/ash/internal/rag	25.087s
+ok  	github.com/ash-repwiki/ash/internal/rag	23.670s
 ```

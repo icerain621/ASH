@@ -8,7 +8,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/ci"
-	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -25,6 +25,7 @@ type githubWebhookResponse struct {
 	Workflow       string                `json:"workflow,omitempty"`
 	ShouldStartRun bool                  `json:"shouldStartRun,omitempty"`
 	Diagnosis      *ci.DiagnosisResponse `json:"diagnosis,omitempty"`
+	PlanID         string                `json:"planId,omitempty"`
 	AshRunID       string                `json:"ashRunId,omitempty"`
 	AshTraceID     string                `json:"ashTraceId,omitempty"`
 	ExecutionError string                `json:"executionError,omitempty"`
@@ -32,13 +33,13 @@ type githubWebhookResponse struct {
 
 // GitHubWebhook godoc
 // @Summary Ingest GitHub Actions webhook (HMAC)
-// @Description Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, optionally creates a hotfix Run when autoRun=1.
+// @Description Public path: verifies X-Hub-Signature-256, upserts CI run/job, diagnoses failures, creates a GoalPlan draft (Quest); autoRun=1 auto-approves into a hotfix Run.
 // @Tags webhooks
 // @Accept json
 // @Produce json
 // @Param connectionId query string true "repo connection id"
-// @Param autoRun query bool false "create hotfix run on failure"
-// @Param repoRoot query string false "repo root for autoRun" default(.)
+// @Param autoRun query bool false "auto-approve GoalPlan into hotfix run on failure"
+// @Param repoRoot query string false "repo root for GoalPlan / autoRun" default(.)
 // @Param X-Hub-Signature-256 header string true "sha256 HMAC of raw body"
 // @Param X-GitHub-Delivery header string false "delivery id for idempotency"
 // @Param X-GitHub-Event header string false "event name" default(workflow_run)
@@ -106,30 +107,33 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 		Conclusion: result.Conclusion, Workflow: result.Workflow,
 		ShouldStartRun: result.ShouldStartRun, Diagnosis: result.Diagnosis,
 	}
-	if result.ShouldStartRun && result.Diagnosis != nil && !result.Duplicate {
+	// DX52: every diagnosed failure creates a GoalPlan; autoRun maps to AutoApprove.
+	if result.Diagnosis != nil && !result.Duplicate {
 		issue := ci.IssueOrSpecFromDiagnosis(result.Workflow, result.Conclusion, "", *result.Diagnosis)
-		create, createErr := h.runsFor(c).Create(runs.CreateRequest{
-			Scenario:      runs.ScenarioRef{Name: "hotfix", ScenarioVersion: "1.1.0"},
-			PolicyProfile: "hotfix",
+		plan, planErr := h.goalFor(c).FromGoal(goal.FromGoalRequest{
+			Goal:          "hotfix prod: " + issue,
+			RepoRoot:      repoRoot,
 			SpaceID:       conn.SpaceID,
 			ActorRole:     "maintainer",
-			Inputs: map[string]any{
-				"issueOrSpec": issue,
-				"repoRoot":    repoRoot,
-			},
+			CreatedBy:     "webhook:github",
+			AutoApprove:   autoRun,
+			PolicyProfile: "hotfix",
 		})
-		if create != nil {
-			resp.AshRunID = create.RunID
-			resp.AshTraceID = create.TraceID
-			c.Header("X-Run-Id", create.RunID)
-			c.Header("X-Trace-Id", create.TraceID)
+		if plan != nil {
+			resp.PlanID = plan.ID
+			resp.AshRunID = plan.RunID
+			resp.AshTraceID = plan.TraceID
+			if plan.RunID != "" {
+				c.Header("X-Run-Id", plan.RunID)
+				c.Header("X-Trace-Id", plan.TraceID)
+			}
 		}
-		if createErr != nil {
-			resp.ExecutionError = createErr.Error()
+		if planErr != nil {
+			resp.ExecutionError = planErr.Error()
 		}
 		_ = h.dbFor(c).Create(auditRow(conn.SpaceID, "webhook:github", "ci.webhook_autorun", map[string]any{
 			"connectionId": conn.ID, "ciRunId": result.CIRunID, "diagnosisId": result.Diagnosis.ID,
-			"ashRunId": resp.AshRunID, "executionError": resp.ExecutionError,
+			"planId": resp.PlanID, "ashRunId": resp.AshRunID, "autoRun": autoRun, "executionError": resp.ExecutionError,
 		})).Error
 	}
 	c.JSON(http.StatusOK, resp)

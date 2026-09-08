@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 已冻结**；**v3.x：E1–E7 已确认**；**DX43–DX48 ✅**；见 [`v3.0-release-scope.md`](v3.0-release-scope.md) |
+| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 / v3.1 已冻结**（tag 人工）；见 [`v3.1-release-scope.md`](v3.1-release-scope.md) |
 
 ---
 
@@ -86,7 +86,13 @@
 | DX46 | Hybrid / prefer=vector 升格 | 可选强路径；失败回退 | ✅ |
 | DX47 | smoke + 控制台水位 | rag-vector-smoke 扩展；Scale/Knowledge | ✅ |
 | DX48 | v3.0 冻结 + 签字 | `v3.0-release-scope`；`make v3.0-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v3.x-program.md`](v3.x-program.md)（E1–E7 ✅）· [`v3.0-release-scope.md`](v3.0-release-scope.md)（开发中） | — |
+| DX49 | Quest Goal/Plan UX（v3.1） | Quest 页内联 compose+approve；无新表 | ✅ |
+| DX50 | Diff 审查闭环 | 文件/全量拒绝 → 继续 | ✅ |
+| DX51 | Quest 工作台硬化 | waiting_approval + 产物面板 | ✅ |
+| DX52 | 多入口统一 Plan | webhook/session 等 | ✅ |
+| DX53 | 看板 live / plan.* SSE | 可见性 | ✅ |
+| DX54 | v3.1 冻结 + 签字 | `v3.1-release-scope`；`make v3.1-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v3.x-program.md`](v3.x-program.md) · [`v3.1-release-scope.md`](v3.1-release-scope.md)（已冻结） · [`sprint-dx54-v31-signoff.md`](sprint-dx54-v31-signoff.md) | — |
 
 ---
 

@@ -996,6 +996,27 @@ components:
         contextRefs:
           type: array
           items: { type: string }
+        rejectedPaths:
+          type: array
+          items: { type: string }
+          description: Paths marked side=reject; "*" means full-diff reject.
+    DiffRejectRequest:
+      type: object
+      required: [scope]
+      properties:
+        scope: { type: string, enum: [file, all] }
+        filePath: { type: string, description: Required when scope=file. }
+        reason: { type: string }
+        actorId: { type: string }
+    DiffRejectResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        scope: { type: string }
+        filePath: { type: string }
+        comment: { $ref: "#/components/schemas/DiffCommentView" }
+        canceled: { type: boolean }
+        status: { type: string }
     DiffCommentView:
       type: object
       properties:
@@ -1422,6 +1443,7 @@ components:
         workflow: { type: string }
         shouldStartRun: { type: boolean }
         diagnosis: { $ref: "#/components/schemas/DiagnosisResponse" }
+        planId: { type: string, description: "GoalPlan id created for Quest board (DX52)" }
         ashRunId: { type: string }
         ashTraceId: { type: string }
         executionError: { type: string }
@@ -3301,7 +3323,8 @@ paths:
       description: |
         Public path (no JWT). Verifies `X-Hub-Signature-256` using `ASH_GITHUB_WEBHOOK_SECRET`
         or the connection secret. On workflow_run failure: upserts CI run/job, diagnoses,
-        and optionally creates a hotfix Run when `autoRun=1`. Idempotent via `X-GitHub-Delivery`.
+        and creates a GoalPlan draft (Quest board). `autoRun=1` auto-approves the plan into a
+        hotfix Run. Idempotent via `X-GitHub-Delivery`.
       parameters:
         - in: query
           name: connectionId
@@ -5157,6 +5180,32 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/QuestBoardResponse" }
 
+  /api/v1/quest/stream:
+    get:
+      tags: [Quest]
+      summary: Quest board live SSE (plan.* / run status)
+      description: |
+        Space-scoped `text/event-stream` for Quest kanban live refresh.
+        Fresh connect starts from now (live-only). Resume via `Last-Event-ID`.
+        Emits `plan.*`, key `run.*`, and `gate.waiting_approval` from `run_events`.
+      parameters:
+        - in: header
+          name: Last-Event-ID
+          required: false
+          schema: { type: string }
+        - in: query
+          name: lastEventId
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        "500":
+          description: streaming unsupported or poll failed
+
   /api/v1/repos/profile:
     get:
       tags: [Knowledge]
@@ -5356,6 +5405,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/RunDiffView" }
+  /api/v1/runs/{runId}/diff/reject:
+    post:
+      tags: [Quest]
+      summary: Reject a file or the full run diff
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DiffRejectRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/DiffRejectResponse" }
 
   /api/v1/runs/{runId}/diff/comments:
     get:

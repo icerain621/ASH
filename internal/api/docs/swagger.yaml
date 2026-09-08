@@ -359,7 +359,38 @@ definitions:
         type: array
       raw:
         type: string
+      rejectedPaths:
+        items:
+          type: string
+        type: array
       runId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffreview.RejectRequest:
+    properties:
+      actorId:
+        type: string
+      filePath:
+        type: string
+      reason:
+        type: string
+      scope:
+        description: file|all
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_diffreview.RejectResponse:
+    properties:
+      canceled:
+        type: boolean
+      comment:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView'
+      filePath:
+        type: string
+      runId:
+        type: string
+      scope:
+        type: string
+      status:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_doctor.CaseResult:
@@ -4407,6 +4438,8 @@ definitions:
         type: string
       ignored:
         type: boolean
+      planId:
+        type: string
       providerRunId:
         type: string
       reason:
@@ -6935,6 +6968,33 @@ paths:
       summary: Quest workbench kanban board
       tags:
       - quest
+  /api/v1/quest/stream:
+    get:
+      description: Space-scoped event stream for Quest kanban. Fresh connect starts
+        from now (live-only). Resume via Last-Event-ID.
+      parameters:
+      - description: resume after this event id
+        in: header
+        name: Last-Event-ID
+        type: string
+      - description: resume after this event id
+        in: query
+        name: lastEventId
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Quest board live SSE (plan.* / run status)
+      tags:
+      - quest
   /api/v1/rag/index:
     post:
       consumes:
@@ -7774,6 +7834,44 @@ paths:
           schema:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.CommentView'
       summary: Create a line-level diff review comment
+      tags:
+      - quest
+  /api/v1/runs/{runId}/diff/reject:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      - description: reject request
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.RejectRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_diffreview.RejectResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Reject a file or the full run diff (Quest review)
       tags:
       - quest
   /api/v1/runs/{runId}/provenance:
@@ -9111,19 +9209,20 @@ paths:
       consumes:
       - application/json
       description: 'Public path: verifies X-Hub-Signature-256, upserts CI run/job,
-        diagnoses failures, optionally creates a hotfix Run when autoRun=1.'
+        diagnoses failures, creates a GoalPlan draft (Quest); autoRun=1 auto-approves
+        into a hotfix Run.'
       parameters:
       - description: repo connection id
         in: query
         name: connectionId
         required: true
         type: string
-      - description: create hotfix run on failure
+      - description: auto-approve GoalPlan into hotfix run on failure
         in: query
         name: autoRun
         type: boolean
       - default: .
-        description: repo root for autoRun
+        description: repo root for GoalPlan / autoRun
         in: query
         name: repoRoot
         type: string

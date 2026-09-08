@@ -76,6 +76,9 @@ func TestGitHubWebhookHMACAndDiagnose(t *testing.T) {
 	if resp.Diagnosis == nil || resp.Diagnosis.RootCause != "test_failure" {
 		t.Fatalf("resp=%+v", resp)
 	}
+	if resp.PlanID == "" {
+		t.Fatalf("autoRun off must still create draft plan: %+v", resp)
+	}
 	if resp.AshRunID != "" {
 		t.Fatalf("autoRun off must not create run: %+v", resp)
 	}
@@ -149,8 +152,8 @@ func TestGitHubWebhookAutoRun(t *testing.T) {
 	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
 		t.Fatal(err)
 	}
-	if !resp.ShouldStartRun || resp.AshRunID == "" {
-		t.Fatalf("resp=%+v want ashRunId", resp)
+	if !resp.ShouldStartRun || resp.AshRunID == "" || resp.PlanID == "" {
+		t.Fatalf("resp=%+v want planId and ashRunId", resp)
 	}
 }
 
