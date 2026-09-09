@@ -21,6 +21,8 @@
 | [`v3.0-release-scope.md`](v3.0-release-scope.md) | **v3.0** 范围冻结（`make v3.0-signoff`） | Chroma+Milvus + prefer=vector；保留 Qdrant / DX43–DX48 |
 | [`v3.1-release-scope.md`](v3.1-release-scope.md) | **v3.1** 范围（已冻结；DX49–DX54） | Quest 委派面 UX / 硬化 |
 | [`v3.2-release-scope.md`](v3.2-release-scope.md) | **v3.2** 范围（已冻结；DX55–DX60） | IdP OIDC / Session 网关 |
+| [`v4.x-program.md`](v4.x-program.md) | **v4.x** 程序（F1–F7；分冻 v4.0–v4.3） | Auth / 企业 Agentic / Stage-1 / 生态 |
+| [`v4.0-release-scope.md`](v4.0-release-scope.md) | **v4.0** 范围（**已冻结**；DX61–DX66） | Auth 硬化（RS256 / refresh / 吊销 / 门闸） |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |

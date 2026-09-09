@@ -76,3 +76,40 @@ func TestReadyzLiveGateHints(t *testing.T) {
 		t.Fatalf("liveGateHints=%v want migrate and rls gates", resp.LiveGateHints)
 	}
 }
+
+func TestReadyzConsoleAuthRequired(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	db := store.OpenTest(t, t.TempDir())
+	loader := rules.NewLoader(filepath.Join("..", "..", "scenarios"))
+	_ = loader.LoadDir()
+	h := NewHandler(db, loader)
+	r := gin.New()
+	h.Register(r, "")
+
+	off := httptest.NewRecorder()
+	r.ServeHTTP(off, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if off.Code != http.StatusOK {
+		t.Fatalf("readyz status=%d", off.Code)
+	}
+	var offResp HealthResponse
+	if err := json.Unmarshal(off.Body.Bytes(), &offResp); err != nil {
+		t.Fatal(err)
+	}
+	if offResp.ConsoleAuthRequired {
+		t.Fatal("consoleAuthRequired should default false")
+	}
+
+	t.Setenv("ASH_CONSOLE_AUTH_REQUIRED", "1")
+	on := httptest.NewRecorder()
+	r.ServeHTTP(on, httptest.NewRequest(http.MethodGet, "/readyz", nil))
+	if on.Code != http.StatusOK {
+		t.Fatalf("readyz status=%d", on.Code)
+	}
+	var onResp HealthResponse
+	if err := json.Unmarshal(on.Body.Bytes(), &onResp); err != nil {
+		t.Fatal(err)
+	}
+	if !onResp.ConsoleAuthRequired {
+		t.Fatal("expected consoleAuthRequired=true when ASH_CONSOLE_AUTH_REQUIRED=1")
+	}
+}

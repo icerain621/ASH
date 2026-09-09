@@ -20,6 +20,7 @@ export type ReadyzResponse = {
   retentionAuditDays?: number;
   retentionArtifactsDays?: number;
   retentionArtifactsMaxRuns?: number;
+  consoleAuthRequired?: boolean;
 };
 
 export async function getReadyz(): Promise<ReadyzResponse> {

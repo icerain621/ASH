@@ -391,6 +391,7 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 		RetentionAuditDays:        config.EffectiveRetentionAuditDays(),
 		RetentionArtifactsDays:    config.EffectiveRetentionArtifactsDays(),
 		RetentionArtifactsMaxRuns: config.EffectiveRetentionArtifactsMaxRuns(),
+		ConsoleAuthRequired:       config.ConsoleAuthRequired(),
 	}
 	if rlsEnv && resp.PostgresRLSPolicyExpected == 0 {
 		resp.PostgresRLSPolicyExpected = int64(store.PostgresRLSExpectedPolicyCount())

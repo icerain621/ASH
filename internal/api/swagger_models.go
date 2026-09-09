@@ -45,13 +45,15 @@ type HealthResponse struct {
 	RetentionAuditDays        int      `json:"retentionAuditDays,omitempty" example:"365"`
 	RetentionArtifactsDays    int      `json:"retentionArtifactsDays,omitempty" example:"30"`
 	RetentionArtifactsMaxRuns int      `json:"retentionArtifactsMaxRuns,omitempty" example:"200"`
+	ConsoleAuthRequired       bool     `json:"consoleAuthRequired,omitempty"`
 }
 
 type AuthSessionResponse struct {
-	Token   string             `json:"token"`
-	User    AuthUser           `json:"user"`
-	Space   AuthSpace          `json:"space"`
-	Session *AuthGatewaySession `json:"session,omitempty"`
+	Token        string              `json:"token"`
+	RefreshToken string              `json:"refreshToken,omitempty"`
+	User         AuthUser            `json:"user"`
+	Space        AuthSpace           `json:"space"`
+	Session      *AuthGatewaySession `json:"session,omitempty"`
 }
 
 type AuthUser struct {

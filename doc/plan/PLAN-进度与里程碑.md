@@ -3,7 +3,7 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **57/57** · M3 **11/11** · M4 **10/10** · M5 **4/4** · TR3 **10/10** · SQL rev **31** · RLS **51**（v2 DH–DV；**v2.1 DW–DX5** / **v2.2 DX6–DX8** / **v2.3 DX9–DX11** / **v2.4 DX12–DX14** / **v2.5 DX15–DX19** / **v2.6 DX20–DX24** / **v2.7 DX25–DX30** / **v2.8 DX31–DX36** / **v2.9 DX37–DX42** / **v3.0 DX43–DX48** / **v3.1 DX49–DX54 冻结**；tag 待人工）  
+> **代码锚点**：Doctor ALL **57/57** · M3 **11/11** · M4 **10/10** · M5 **4/4** · TR3 **10/10** · SQL rev **32** · RLS **51**（… / **v3.0–v3.2 已冻结**；下一程序 **v4.x** 见 [`v4.x-program.md`](v4.x-program.md)；tag 待人工）  
 > **归属**：[`plan/`](README.md)  
 > **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md) · v2.4 [`v2.4-release-scope.md`](v2.4-release-scope.md)（已冻结） · v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结） · v2.6 [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结） · v2.7 [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结） · v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结） · v2.9 [`v2.9-release-scope.md`](v2.9-release-scope.md)（已冻结） · v3.0 [`v3.0-release-scope.md`](v3.0-release-scope.md)（已冻结） · v3.1 [`v3.1-release-scope.md`](v3.1-release-scope.md)（已冻结） · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 
@@ -11,7 +11,7 @@
 
 ## 0. 一句话结论
 
-**MVP 功能与自动化门禁已完成**；v2 DH–DV 已收口；**v2.1（DW–DX5）** / **v2.2（DX6–DX8）** / **v2.3（DX9–DX11）** / **v2.4（DX12–DX14）** / **v2.5（DX15–DX19）** / **v2.6（DX20–DX24）** / **v2.7（DX25–DX30）** / **v2.8（DX31–DX36）** / **v2.9（DX37–DX42）** / **v3.0（DX43–DX48）** / **v3.1（DX49–DX54）已冻结**（`make v2.1-signoff` … `v3.1-signoff`；tag 人工）。**v3.1** 含 Quest compose/approve、Diff reject、门禁+产物、webhook→Plan、看板 live SSE（**无新表** · Doctor ALL **57** · `make v3.1-signoff`）。下一程序轨：**v3.2 IdP·Session（T3）**；并行线：生产环境验收与既有 tag 签字。
+**MVP 功能与自动化门禁已完成**；v2–v3.2 各代已冻结（tag 人工）。**下一程序轨：v4.x**（A Auth → B 企业 Agentic → C Stage-1 → D 生态；四代分冻；见 [`v4.x-program.md`](v4.x-program.md) · [`v4.0-release-scope.md`](v4.0-release-scope.md)）。并行线：生产环境验收与既有 tag 签字。
 
 ---
 

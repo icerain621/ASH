@@ -590,6 +590,9 @@ components:
         retentionAuditDays: { type: integer, example: 365 }
         retentionArtifactsDays: { type: integer, example: 30 }
         retentionArtifactsMaxRuns: { type: integer, example: 200 }
+        consoleAuthRequired:
+          type: boolean
+          description: SPA requires login when ASH_CONSOLE_AUTH_REQUIRED is set (DX64; default false).
     DataPolicySnapshot:
       type: object
       properties:
@@ -2832,7 +2835,8 @@ components:
     AuthSessionResponse:
       type: object
       properties:
-        token: { type: string }
+        token: { type: string, description: "access JWT (primary|device)" }
+        refreshToken: { type: string, description: "refresh JWT (typ=refresh); rotate via /auth/sessions/refresh" }
         user: { $ref: "#/components/schemas/AuthUser" }
         space: { $ref: "#/components/schemas/AuthSpace" }
         session: { $ref: "#/components/schemas/AuthGatewaySession" }
@@ -2858,7 +2862,8 @@ components:
     RefreshAuthSessionRequest:
       type: object
       properties:
-        ttlSeconds: { type: integer, description: "clamped 300–86400; default by typ" }
+        refreshToken: { type: string, description: "preferred; else Bearer refresh|legacy access" }
+        ttlSeconds: { type: integer, description: "access TTL clamped 300–86400; default by typ" }
     AuthSessionListResponse:
       type: object
       properties:
@@ -4017,7 +4022,7 @@ paths:
       tags: [Auth]
       summary: OIDC authorization-code callback
       description: |
-        Exchanges `code` for an HS256 `id_token`, maps or JIT-creates `users` by email,
+        Exchanges `code` for an `id_token` (HS256 or RS256 via JWKS), maps or JIT-creates `users` by email,
         returns ASH JWT session JSON — or 302 to `/ui/login#…` when login started with `ui=1`.
       parameters:
         - in: query
@@ -4084,10 +4089,13 @@ paths:
   /api/v1/auth/sessions/refresh:
     post:
       tags: [Auth]
-      summary: Rotate access JWT for an active session (same sid)
+      summary: Rotate access+refresh JWTs for an active session (same sid)
       description: |
-        Bearer primary|device required. Token must not be expired (`AUTH_SESSION_EXPIRED`).
-        Reuses `sid`/`did`/`typ`/`scope`; updates `audit_log` `exp`/`rotatedAt`/`rotateCount`.
+        Prefer Bearer `typ=refresh` or body `refreshToken`. Legacy unexpired primary|device still allowed.
+        Expired access without refresh → `AUTH_REFRESH_REQUIRED`. Refresh on other routes → `AUTH_REFRESH_TOKEN_MISUSE`.
+        Rotates both tokens; updates `audit_log` `exp`/`refreshExp`/`accessJti`/`refreshJti`/`prev*`/`rotatedAt`/`rotateCount`.
+        After rotate, previous jtis rejected outside `ASH_AUTH_TOKEN_GRACE_SEC` (default 60; 0–300) → `AUTH_TOKEN_REPLAY`.
+        Sid revoke → `AUTH_SESSION_REVOKED` for all tokens of that session.
       requestBody:
         required: false
         content:

@@ -23,16 +23,30 @@ import {
   listSpaceResourceScopes,
   listSpaces,
   provisionOrgTemplate,
+  createDeviceAuthSession,
   refreshAuthSession,
   revokeAuthSession,
   updateSpaceResourceScope,
 } from "@/modules/platform/api/platform.api";
-import { getAuthToken, getCurrentSpaceId, setAuthSession } from "@/services/http/client";
+import { getReadyz } from "@/modules/health/api/health.api";
+import { isConsoleAuthRequiredFlag } from "@/modules/platform/auth/consoleGate";
+import { getAuthToken, getCurrentSpaceId, getRefreshToken, setAuthSession } from "@/services/http/client";
+import type { AuthSessionResponse } from "@/modules/platform/api/platform.api";
 
 export function SpacePage() {
   const qc = useQueryClient();
   const [activeSpaceId, setActiveSpaceId] = useState(getCurrentSpaceId());
   const [templateId, setTemplateId] = useState("small_team");
+  const [deviceId, setDeviceId] = useState("");
+  const [deviceScope, setDeviceScope] = useState("");
+  const [deviceTtl, setDeviceTtl] = useState("");
+  const [mintResult, setMintResult] = useState<AuthSessionResponse | null>(null);
+  const gateQuery = useQuery({
+    queryKey: ["console-auth-gate"],
+    queryFn: getReadyz,
+    staleTime: 60_000,
+  });
+  const consoleAuthRequired = isConsoleAuthRequiredFlag(gateQuery.data ?? {});
   const orgsQuery = useQuery({
     queryKey: ["orgs"],
     queryFn: listOrgs,
@@ -79,10 +93,28 @@ export function SpacePage() {
   const refreshSessionMut = useMutation({
     mutationFn: () => refreshAuthSession(),
     onSuccess: async (data) => {
-      setAuthSession(data.token, data.space.id);
+      setAuthSession(data.token, data.space.id, data.refreshToken);
       setActiveSpaceId(data.space.id);
       await qc.invalidateQueries({ queryKey: ["auth-sessions"] });
       await qc.invalidateQueries({ queryKey: ["auth-me"] });
+    },
+  });
+  const mintDeviceMut = useMutation({
+    mutationFn: () => {
+      const scope = deviceScope
+        .split(",")
+        .map((s) => s.trim())
+        .filter(Boolean);
+      const ttl = Number(deviceTtl);
+      return createDeviceAuthSession({
+        deviceId: deviceId.trim() || undefined,
+        scope: scope.length ? scope : undefined,
+        ttlSeconds: Number.isFinite(ttl) && ttl > 0 ? ttl : undefined,
+      });
+    },
+    onSuccess: async (data) => {
+      setMintResult(data);
+      await qc.invalidateQueries({ queryKey: ["auth-sessions"] });
     },
   });
   const matrixQuery = useQuery({
@@ -134,6 +166,15 @@ export function SpacePage() {
       await qc.invalidateQueries();
     },
   });
+  function activateSpace(spaceId: string) {
+    if (consoleAuthRequired && getAuthToken()) {
+      setAuthSession(getAuthToken(), spaceId, getRefreshToken() || undefined);
+      setActiveSpaceId(spaceId);
+      void qc.invalidateQueries();
+      return;
+    }
+    loginMut.mutate(spaceId);
+  }
   const createOrgMut = useMutation({
     mutationFn: createOrg,
     onSuccess: async () => {
@@ -149,7 +190,7 @@ export function SpacePage() {
       await qc.invalidateQueries({ queryKey: ["roles"] });
       const firstSpace = result.spaces[0]?.id;
       if (firstSpace) {
-        loginMut.mutate(firstSpace);
+        activateSpace(firstSpace);
       }
     },
   });
@@ -157,7 +198,7 @@ export function SpacePage() {
     mutationFn: createSpace,
     onSuccess: async (space) => {
       await qc.invalidateQueries({ queryKey: ["spaces"] });
-      loginMut.mutate(space.id);
+      activateSpace(space.id);
     },
   });
   const updateScopeMut = useMutation({
@@ -281,10 +322,17 @@ export function SpacePage() {
           <Link to="/login" className="btn icon-btn">
             登录页
           </Link>
-          <button className="btn icon-btn" onClick={() => loginMut.mutate(activeSpaceId)} disabled={loginMut.isPending}>
-            <KeyRound size={16} strokeWidth={1.8} />
-            Dev Token
-          </button>
+          {!consoleAuthRequired && (
+            <button
+              className="btn icon-btn"
+              data-testid="dev-token-btn"
+              onClick={() => loginMut.mutate(activeSpaceId)}
+              disabled={loginMut.isPending}
+            >
+              <KeyRound size={16} strokeWidth={1.8} />
+              Dev Token
+            </button>
+          )}
         </div>
       </div>
       {err && <p className="error-text">{err}</p>}
@@ -313,6 +361,87 @@ export function SpacePage() {
             {refreshSessionMut.isPending ? "刷新中…" : "Refresh 当前 token"}
           </button>
         </div>
+        <form
+          className="stack-form"
+          data-testid="device-mint-form"
+          style={{ marginBottom: "0.75rem" }}
+          onSubmit={(e) => {
+            e.preventDefault();
+            mintDeviceMut.mutate();
+          }}
+        >
+          <p className="muted-line">Mint device token（展示一次；不切换控制台会话）</p>
+          <label>
+            Device ID
+            <input
+              data-testid="device-mint-id"
+              value={deviceId}
+              onChange={(e) => setDeviceId(e.target.value)}
+              placeholder="laptop-1（可空）"
+            />
+          </label>
+          <label>
+            Scope（逗号分隔，可空）
+            <input
+              data-testid="device-mint-scope"
+              value={deviceScope}
+              onChange={(e) => setDeviceScope(e.target.value)}
+              placeholder="run:create,artifact:read"
+            />
+          </label>
+          <label>
+            TTL 秒（可空）
+            <input
+              data-testid="device-mint-ttl"
+              value={deviceTtl}
+              onChange={(e) => setDeviceTtl(e.target.value)}
+              placeholder="3600"
+              inputMode="numeric"
+            />
+          </label>
+          <button
+            className="btn primary"
+            type="submit"
+            data-testid="device-mint-submit"
+            disabled={!getAuthToken() || mintDeviceMut.isPending}
+          >
+            {mintDeviceMut.isPending ? "Minting…" : "Mint device"}
+          </button>
+        </form>
+        {mintDeviceMut.error && (
+          <p className="error-text" data-testid="device-mint-error">
+            {(mintDeviceMut.error as Error).message}
+          </p>
+        )}
+        {mintResult && (
+          <div className="pane" data-testid="device-mint-result" style={{ marginBottom: "0.75rem" }}>
+            <p className="muted-line">
+              已签发 device（请立即复制；控制台仍使用原 primary）
+              {mintResult.session?.sid ? (
+                <>
+                  {" "}
+                  · sid <code>{mintResult.session.sid}</code>
+                </>
+              ) : null}
+              {mintResult.session?.did ? (
+                <>
+                  {" "}
+                  · did <code>{mintResult.session.did}</code>
+                </>
+              ) : null}
+            </p>
+            <label>
+              access token
+              <textarea data-testid="device-mint-token" readOnly rows={2} value={mintResult.token} />
+            </label>
+            {mintResult.refreshToken ? (
+              <label>
+                refresh token
+                <textarea data-testid="device-mint-refresh" readOnly rows={2} value={mintResult.refreshToken} />
+              </label>
+            ) : null}
+          </div>
+        )}
         {(refreshSessionMut.error || revokeSessionMut.error || sessionsQuery.error) && (
           <p className="error-text">
             {(refreshSessionMut.error as Error | undefined)?.message ||
@@ -357,7 +486,7 @@ export function SpacePage() {
               {!sessionsQuery.data?.items?.length && (
                 <tr>
                   <td colSpan={6} className="muted-line">
-                    {getAuthToken() ? "暂无会话登记（或未登录 JWT）" : "请先登录或 Dev Token"}
+                    {getAuthToken() ? "暂无会话登记（或未登录 JWT）" : consoleAuthRequired ? "请先登录" : "请先登录或 Dev Token"}
                   </td>
                 </tr>
               )}
@@ -526,7 +655,7 @@ export function SpacePage() {
                         当前
                       </span>
                     ) : (
-                      <button className="btn icon-btn" type="button" onClick={() => loginMut.mutate(space.id)} disabled={loginMut.isPending}>
+                      <button className="btn icon-btn" type="button" onClick={() => activateSpace(space.id)} disabled={loginMut.isPending}>
                         <KeyRound size={14} strokeWidth={1.8} />
                         激活
                       </button>
@@ -714,7 +843,7 @@ export function SpacePage() {
       <div className="pane">
         <div className="pane-title">
           <h2>权限矩阵 (M2)</h2>
-          <span>{matrixQuery.data?.builtinRoles.length ?? 0} 内置角色</span>
+           <span>{matrixQuery.data?.builtinRoles?.length ?? 0} 内置角色</span>
         </div>
         <p className="muted-line">
           内置 RBAC 与场景 × 角色工具策略。运行创建时会记录 <code>actorRole</code>，工具链执行前按场景矩阵校验。
@@ -760,7 +889,7 @@ export function SpacePage() {
                 <pre className="code-block compact">{JSON.stringify(row.toolMatrix, null, 2)}</pre>
               </details>
             ))}
-            {!matrixQuery.data?.scenarioTools.length && (
+            {!matrixQuery.data?.scenarioTools?.length && (
               <p className="muted-line">暂无场景策略（创建空间后会自动种子三场景）。</p>
             )}
           </div>

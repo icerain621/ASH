@@ -24,9 +24,8 @@ const (
 	ctxRole         = "role"
 	ctxSessionID    = "authSessionId"
 	ctxDeviceID     = "authDeviceId"
-	ctxTokenTyp     = "authTokenTyp"
-	ctxTokenScope   = "authTokenScope"
-	ctxTokenExpired = "authTokenExpired"
+	ctxTokenTyp   = "authTokenTyp"
+	ctxTokenScope = "authTokenScope"
 )
 
 const (
@@ -72,6 +71,8 @@ type tokenClaims struct {
 	SpaceID string   `json:"spaceId"`
 	Role    string   `json:"role"`
 	Exp     int64    `json:"exp"`
+	Iat     int64    `json:"iat,omitempty"`
+	Jti     string   `json:"jti,omitempty"`
 	Sid     string   `json:"sid,omitempty"`
 	Did     string   `json:"did,omitempty"`
 	Typ     string   `json:"typ,omitempty"`
@@ -136,7 +137,7 @@ func (h *Handler) login(c *gin.Context) {
 			return
 		}
 	}
-	token, sess, userView, spaceView, err := h.issueAuthSession(c, issueAuthSessionOpts{
+	issued, err := h.issueAuthSession(c, issueAuthSessionOpts{
 		UserID: user.ID, SpaceID: spaceID, Role: "viewer", Typ: authSessionTypPrimary,
 		DID: "did_login", TTL: authSessionPrimaryTTL,
 		Email: user.Email, Name: user.DisplayName,
@@ -146,14 +147,9 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 	_ = h.dbBypass(c).Create(auditRow(spaceID, user.ID, "auth.login", map[string]any{
-		"userId": user.ID, "email": user.Email, "spaceId": spaceID, "sid": sess.SID,
+		"userId": user.ID, "email": user.Email, "spaceId": spaceID, "sid": issued.Session.SID,
 	})).Error
-	c.JSON(http.StatusOK, AuthSessionResponse{
-		Token: token,
-		User:  userView,
-		Space: spaceView,
-		Session: sess,
-	})
+	c.JSON(http.StatusOK, authSessionResponseFrom(issued))
 }
 
 // ChangePassword godoc
@@ -278,6 +274,11 @@ func (h *Handler) authMiddleware(cfg config.Config) gin.HandlerFunc {
 			return
 		}
 		token := bearerToken(c.GetHeader("Authorization"))
+		if token == "" && pathIsAuthSessionRefresh(c.Request.URL.Path) {
+			// Body may carry refreshToken; handler validates.
+			c.Next()
+			return
+		}
 		if token == "" && cfg.AuthMode == "dev" {
 			setIdentity(c, "dev-user", devSpaceOverride(c), "admin")
 			c.Next()
@@ -290,13 +291,9 @@ func (h *Handler) authMiddleware(cfg config.Config) gin.HandlerFunc {
 		claims, err := verifyToken(token, cfg.JWTSecret)
 		if err != nil {
 			if pathIsAuthSessionRefresh(c.Request.URL.Path) {
-				if expiredClaims, err2 := verifyTokenIgnoreExp(token, cfg.JWTSecret); err2 == nil {
-					setIdentity(c, expiredClaims.Sub, firstNonEmptyAPI(expiredClaims.SpaceID, "local"), firstNonEmptyAPI(expiredClaims.Role, "viewer"))
-					setAuthSessionContext(c, expiredClaims)
-					c.Set(ctxTokenExpired, true)
-					c.Next()
-					return
-				}
+				// Expired access/refresh: let handler decide (AUTH_REFRESH_REQUIRED vs UNAUTHORIZED).
+				c.Next()
+				return
 			}
 			if cfg.AuthMode == "dev" && token == "dev-token" {
 				setIdentity(c, "dev-user", devSpaceOverride(c), "admin")
@@ -306,12 +303,22 @@ func (h *Handler) authMiddleware(cfg config.Config) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("UNAUTHORIZED", err.Error()))
 			return
 		}
+		if claims.Typ == authSessionTypRefresh && !pathIsAuthSessionRefresh(c.Request.URL.Path) {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("AUTH_REFRESH_TOKEN_MISUSE", "refresh token cannot be used on this endpoint"))
+			return
+		}
 		if claims.Sid != "" {
-			if rev, err := h.authSessionRevoked(c, claims.Sid); err != nil {
+			code, err := h.gateAuthSessionClaims(c, claims)
+			if err != nil {
 				c.AbortWithStatusJSON(http.StatusInternalServerError, errorBody("AUTH_SESSION_LOOKUP_FAILED", err.Error()))
 				return
-			} else if rev {
+			}
+			switch code {
+			case "AUTH_SESSION_REVOKED":
 				c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("AUTH_SESSION_REVOKED", "auth session has been revoked"))
+				return
+			case "AUTH_TOKEN_REPLAY":
+				c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("AUTH_TOKEN_REPLAY", "token jti is no longer current"))
 				return
 			}
 		}

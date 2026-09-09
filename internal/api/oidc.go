@@ -44,7 +44,7 @@ func (h *Handler) oidcLogin(c *gin.Context) {
 
 // OIDCCallback godoc
 // @Summary OIDC authorization-code callback
-// @Description Exchanges code for id_token claims, links/JIT user by oidc sub then email, returns ASH JWT session.
+// @Description Exchanges code for id_token claims (HS256 or RS256/JWKS), links/JIT user, returns ASH JWT session.
 // @Tags auth
 // @Produce json
 // @Param code query string true "authorization code"
@@ -116,7 +116,7 @@ func (h *Handler) oidcCallback(c *gin.Context) {
 			return
 		}
 	}
-	token, sess, userView, spaceView, err := h.issueAuthSession(c, issueAuthSessionOpts{
+	issued, err := h.issueAuthSession(c, issueAuthSessionOpts{
 		UserID: user.ID, SpaceID: spaceID, Role: "viewer", Typ: authSessionTypPrimary,
 		DID: "did_oidc", TTL: authSessionPrimaryTTL,
 		Email: user.Email, Name: user.DisplayName,
@@ -127,18 +127,17 @@ func (h *Handler) oidcCallback(c *gin.Context) {
 	}
 	_ = h.dbBypass(c).Create(auditRow(spaceID, user.ID, "auth.oidc_login", map[string]any{
 		"userId": user.ID, "email": user.Email, "spaceId": spaceID,
-		"idpSub": claims.Subject, "idpIssuer": claims.Issuer, "sid": sess.SID,
+		"idpSub": claims.Subject, "idpIssuer": claims.Issuer, "sid": issued.Session.SID,
 	})).Error
 	if uiRedirect {
 		frag := url.Values{}
-		frag.Set("token", token)
-		frag.Set("spaceId", spaceView.ID)
+		frag.Set("token", issued.AccessToken)
+		frag.Set("refreshToken", issued.RefreshToken)
+		frag.Set("spaceId", issued.Space.ID)
 		c.Redirect(http.StatusFound, "/ui/login#"+frag.Encode())
 		return
 	}
-	c.JSON(http.StatusOK, AuthSessionResponse{
-		Token: token, User: userView, Space: spaceView, Session: sess,
-	})
+	c.JSON(http.StatusOK, authSessionResponseFrom(issued))
 }
 
 func (h *Handler) oidcClient() *idp.Client {

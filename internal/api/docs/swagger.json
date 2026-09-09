@@ -751,7 +751,7 @@
         },
         "/api/v1/auth/oidc/callback": {
             "get": {
-                "description": "Exchanges code for id_token claims, links/JIT user by oidc sub then email, returns ASH JWT session.",
+                "description": "Exchanges code for id_token claims (HS256 or RS256/JWKS), links/JIT user, returns ASH JWT session.",
                 "produces": [
                     "application/json"
                 ],
@@ -1004,10 +1004,10 @@
                 "tags": [
                     "auth"
                 ],
-                "summary": "Rotate access JWT for an active auth session (same sid)",
+                "summary": "Rotate access+refresh JWTs for an active auth session (same sid)",
                 "parameters": [
                     {
-                        "description": "optional ttl",
+                        "description": "refreshToken and optional access ttl",
                         "name": "body",
                         "in": "body",
                         "schema": {
@@ -12877,6 +12877,9 @@
         "internal_api.AuthSessionResponse": {
             "type": "object",
             "properties": {
+                "refreshToken": {
+                    "type": "string"
+                },
                 "session": {
                     "$ref": "#/definitions/internal_api.AuthGatewaySession"
                 },
@@ -13109,6 +13112,9 @@
                 "alertsEvalInterval": {
                     "type": "string",
                     "example": "5m0s"
+                },
+                "consoleAuthRequired": {
+                    "type": "boolean"
                 },
                 "dialect": {
                     "type": "string",
@@ -14407,6 +14413,9 @@
         "internal_api.refreshAuthSessionRequest": {
             "type": "object",
             "properties": {
+                "refreshToken": {
+                    "type": "string"
+                },
                 "ttlSeconds": {
                     "type": "integer"
                 }

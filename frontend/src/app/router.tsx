@@ -1,4 +1,4 @@
-import { createRootRoute, createRoute, createRouter, Navigate } from "@tanstack/react-router";
+import { createRootRoute, createRoute, createRouter, Navigate, redirect } from "@tanstack/react-router";
 import { AppLayout } from "./layout/AppLayout";
 import { AutomationPage } from "../pages/AutomationPage";
 import { CIPage } from "../pages/CIPage";
@@ -17,9 +17,15 @@ import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
 import { LoginPage } from "../pages/LoginPage";
 import { SpacePage } from "../pages/SpacePage";
+import { shouldRedirectToLoginNow } from "../modules/platform/auth/consoleGate";
 
 const rootRoute = createRootRoute({
   component: AppLayout,
+  beforeLoad: async ({ location }) => {
+    if (await shouldRedirectToLoginNow(location.pathname)) {
+      throw redirect({ to: "/login" });
+    }
+  },
 });
 
 const indexRoute = createRoute({

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from "vitest";
-import { ApiError, getCurrentSpaceId, setAuthSession } from "./client";
+import { ApiError, clearAuthSession, getCurrentSpaceId, setAuthSession } from "./client";
 
 describe("ApiError", () => {
   it("exposes code and message", () => {
@@ -22,5 +22,13 @@ describe("auth session", () => {
     setAuthSession("tok-abc", "team-a");
     expect(localStorage.getItem("ash.auth.token")).toBe("tok-abc");
     expect(getCurrentSpaceId()).toBe("team-a");
+  });
+
+  it("clears auth session", () => {
+    setAuthSession("tok-abc", "team-a", "rt");
+    clearAuthSession();
+    expect(localStorage.getItem("ash.auth.token")).toBeNull();
+    expect(localStorage.getItem("ash.auth.refresh")).toBeNull();
+    expect(getCurrentSpaceId()).toBe("local");
   });
 });

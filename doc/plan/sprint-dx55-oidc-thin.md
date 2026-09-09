@@ -24,4 +24,4 @@ go test ./internal/idp/ ./internal/api/ -run 'OIDC|Oidc|ClientExchange' -count=1
 
 - `ASH_OIDC_ENABLED` + issuer/client/secret/redirect
 - `GET /api/v1/auth/oidc/login` → IdP；`/callback` → ASH JWT
-- DX55 支持 **HS256** id_token（mock / 兼容 IdP）；RS256 → 后续 Sprint
+- DX55 支持 HS256；**DX61** 增加 RS256/JWKS；SAML → 后续

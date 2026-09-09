@@ -8,6 +8,13 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX66（v4.0）：范围冻结 + 签字门禁 — `v4.0-release-scope` **已冻结**；`make v4.0-signoff`（Doctor ALL **57** / M4 **10** + Auth 硬化 smoke + rag-* / sandbox / skill-pack / rag-lsp / remote-sandbox）；清单/签字模板；**不自动**打 `v4.0.0` tag。
+- Sprint DX65（v4.0 草案）：Device **mint UI** — Space Auth Sessions 表单 mint；一次展示 access/refresh（不切换控制台会话）；`make device-session-smoke`；**无新表**。
+- Sprint DX64（v4.0 草案）：控制台可选 **强制登录** — `ASH_CONSOLE_AUTH_REQUIRED` → `/readyz.consoleAuthRequired`；SPA 无 token 跳 `/ui/login`；门闸开时隐藏 Dev Token；auth `401` 清会话并跳登录；默认 **off**。
+- Sprint DX63（v4.0 草案）：**jti 吊销硬化** — `auth.session` 存当前/上一对 `accessJti`/`refreshJti`；轮换后旧票在宽限外 `AUTH_TOKEN_REPLAY`；`ASH_AUTH_TOKEN_GRACE_SEC` 默认 60（0–300）；无 jti 旧票仅 sid 吊销；**无新表**。
+- Sprint DX62（v4.0 草案）：独立 **Refresh Token**（Option B）— 登录/OIDC/device 签发 `token`+`refreshToken`（`typ=refresh`，默认 30d / `ASH_AUTH_REFRESH_TTL_SEC`）；`POST /auth/sessions/refresh` 轮换双 token（同 `sid`）；过期 access → `AUTH_REFRESH_REQUIRED`；refresh 误用 → `AUTH_REFRESH_TOKEN_MISUSE`；legacy 未过期 access 仍可 refresh；**无新表**。
+- Sprint DX61（v4.0 草案）：OIDC **RS256** — discovery `jwks_uri` + JWKS 缓存；`kid` 匹配；保留 HS256；stdlib `crypto/rsa`；**无新表**。
+- v4.x 程序草案：A Auth / B 企业 Agentic / C Stage-1 / D 生态薄切片；**四代分冻** v4.0–v4.3（DX61–DX84 拟）；决议 F1–F7；详见 `doc/plan/v4.x-program.md` · `v4.0-release-scope.md`。
 - Sprint DX60（v3.2）：范围冻结 + 签字门禁 — `v3.2-release-scope` **已冻结**；`make v3.2-signoff`（Doctor ALL **57** / M4 **10** + OIDC/Session + oidc-console-smoke + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.2.0` tag。
 - Sprint DX59（v3.2 草案）：控制台登录入口 — `/ui/login` 密码 + OIDC；`?ui=1` callback 302 → `#token&spaceId`；Space Auth Sessions（list/revoke/refresh）；`make oidc-console-smoke`；**无新表**。
 - Sprint DX58（v3.2 草案）：Session 网关硬化 — `POST /auth/sessions/refresh`（同 `sid` 轮换）；`audit_log` `rotatedAt`/`rotateCount`；JWT `scope` 在 `requirePermission` 强制（`AUTH_SCOPE_DENIED`）；device mint scope ⊆ 调用方权限（`AUTH_SCOPE_INVALID`）；**无新表**。

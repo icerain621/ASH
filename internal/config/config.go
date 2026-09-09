@@ -59,6 +59,18 @@ func Region() string {
 	return v
 }
 
+// ConsoleAuthRequired reports whether the SPA should require a login token (DX64).
+// ASH_CONSOLE_AUTH_REQUIRED=1|true|yes (case-insensitive). Default false.
+func ConsoleAuthRequired() bool {
+	v := strings.ToLower(strings.TrimSpace(os.Getenv("ASH_CONSOLE_AUTH_REQUIRED")))
+	switch v {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
+}
+
 func defaultPluginGRPCAddr() string {
 	if envOr("ASH_AUTH_MODE", "dev") != "dev" {
 		return ""

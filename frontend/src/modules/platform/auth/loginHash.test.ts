@@ -4,6 +4,11 @@ import { oidcLoginHref, parseLoginHash } from "@/modules/platform/auth/loginHash
 describe("parseLoginHash", () => {
   it("reads token and spaceId from hash", () => {
     expect(parseLoginHash("#token=abc&spaceId=space_1")).toEqual({ token: "abc", spaceId: "space_1" });
+    expect(parseLoginHash("#token=abc&refreshToken=rt&spaceId=space_1")).toEqual({
+      token: "abc",
+      spaceId: "space_1",
+      refreshToken: "rt",
+    });
   });
 
   it("defaults spaceId to local", () => {

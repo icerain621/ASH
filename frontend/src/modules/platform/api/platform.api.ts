@@ -228,6 +228,7 @@ export type AuthMe = {
 
 export type AuthSessionResponse = {
   token: string;
+  refreshToken?: string;
   user: { id: string; email?: string; displayName?: string };
   space: Space;
   session?: AuthGatewaySession;
@@ -436,7 +437,19 @@ export function revokeAuthSession(sid: string) {
   });
 }
 
-export function refreshAuthSession(body?: { ttlSeconds?: number }) {
+export function createDeviceAuthSession(body?: {
+  deviceId?: string;
+  deviceLabel?: string;
+  scope?: string[];
+  ttlSeconds?: number;
+}) {
+  return api<AuthSessionResponse>("/auth/sessions/device", {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
+}
+
+export function refreshAuthSession(body?: { refreshToken?: string; ttlSeconds?: number }) {
   return api<AuthSessionResponse>("/auth/sessions/refresh", {
     method: "POST",
     body: JSON.stringify(body ?? {}),

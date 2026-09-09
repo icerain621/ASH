@@ -3565,6 +3565,8 @@ definitions:
     type: object
   internal_api.AuthSessionResponse:
     properties:
+      refreshToken:
+        type: string
       session:
         $ref: '#/definitions/internal_api.AuthGatewaySession'
       space:
@@ -3716,6 +3718,8 @@ definitions:
       alertsEvalInterval:
         example: 5m0s
         type: string
+      consoleAuthRequired:
+        type: boolean
       dialect:
         example: postgres
         type: string
@@ -4568,6 +4572,8 @@ definitions:
     type: object
   internal_api.refreshAuthSessionRequest:
     properties:
+      refreshToken:
+        type: string
       ttlSeconds:
         type: integer
     type: object
@@ -5230,8 +5236,8 @@ paths:
       - auth
   /api/v1/auth/oidc/callback:
     get:
-      description: Exchanges code for id_token claims, links/JIT user by oidc sub
-        then email, returns ASH JWT session.
+      description: Exchanges code for id_token claims (HS256 or RS256/JWKS), links/JIT
+        user, returns ASH JWT session.
       parameters:
       - description: authorization code
         in: query
@@ -5425,7 +5431,7 @@ paths:
       consumes:
       - application/json
       parameters:
-      - description: optional ttl
+      - description: refreshToken and optional access ttl
         in: body
         name: body
         schema:
@@ -5449,7 +5455,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Rotate access JWT for an active auth session (same sid)
+      summary: Rotate access+refresh JWTs for an active auth session (same sid)
       tags:
       - auth
   /api/v1/ci/diagnoses:

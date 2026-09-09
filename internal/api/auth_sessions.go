@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 
@@ -16,28 +18,37 @@ import (
 )
 
 const (
-	authSessionEventType   = "auth.session"
-	authSessionTypPrimary  = "primary"
-	authSessionTypDevice   = "device"
+	authSessionEventType     = "auth.session"
+	authSessionTypPrimary    = "primary"
+	authSessionTypDevice     = "device"
+	authSessionTypRefresh    = "refresh"
 	authSessionStatusActive  = "active"
 	authSessionStatusRevoked = "revoked"
-	authSessionPrimaryTTL  = 24 * time.Hour
-	authSessionDeviceTTL   = 4 * time.Hour
+	authSessionPrimaryTTL    = 24 * time.Hour
+	authSessionDeviceTTL     = 4 * time.Hour
+	authSessionRefreshTTLMin = 24 * time.Hour
+	authSessionRefreshTTLMax = 90 * 24 * time.Hour
+	authSessionRefreshTTLDef = 30 * 24 * time.Hour
 )
 
 type authSessionPayload struct {
-	SID         string   `json:"sid"`
-	UserID      string   `json:"userId"`
-	SpaceID     string   `json:"spaceId"`
-	DID         string   `json:"did"`
-	Typ         string   `json:"typ"`
-	Scope       []string `json:"scope,omitempty"`
-	Status      string   `json:"status"`
-	Exp         int64    `json:"exp"`
-	ParentSID   string   `json:"parentSid,omitempty"`
-	UserAgent   string   `json:"userAgent,omitempty"`
-	RotatedAt   int64    `json:"rotatedAt,omitempty"`
-	RotateCount int      `json:"rotateCount,omitempty"`
+	SID            string   `json:"sid"`
+	UserID         string   `json:"userId"`
+	SpaceID        string   `json:"spaceId"`
+	DID            string   `json:"did"`
+	Typ            string   `json:"typ"`
+	Scope          []string `json:"scope,omitempty"`
+	Status         string   `json:"status"`
+	Exp            int64    `json:"exp"`
+	RefreshExp     int64    `json:"refreshExp,omitempty"`
+	AccessJti      string   `json:"accessJti,omitempty"`
+	RefreshJti     string   `json:"refreshJti,omitempty"`
+	PrevAccessJti  string   `json:"prevAccessJti,omitempty"`
+	PrevRefreshJti string   `json:"prevRefreshJti,omitempty"`
+	ParentSID      string   `json:"parentSid,omitempty"`
+	UserAgent      string   `json:"userAgent,omitempty"`
+	RotatedAt      int64    `json:"rotatedAt,omitempty"`
+	RotateCount    int      `json:"rotateCount,omitempty"`
 }
 
 type createDeviceSessionRequest struct {
@@ -48,11 +59,20 @@ type createDeviceSessionRequest struct {
 }
 
 type refreshAuthSessionRequest struct {
-	TTLSeconds int `json:"ttlSeconds"`
+	RefreshToken string `json:"refreshToken"`
+	TTLSeconds   int    `json:"ttlSeconds"`
 }
 
 type authSessionListResponse struct {
 	Items []AuthGatewaySession `json:"items"`
+}
+
+type issuedAuthTokens struct {
+	AccessToken  string
+	RefreshToken string
+	Session      *AuthGatewaySession
+	User         AuthUser
+	Space        AuthSpace
 }
 
 // CreateDeviceAuthSession godoc
@@ -107,7 +127,7 @@ func (h *Handler) createDeviceAuthSession(c *gin.Context) {
 	if err := h.dbBypass(c).First(&u, "id = ?", actorID).Error; err == nil {
 		email, name = u.Email, u.DisplayName
 	}
-	token, sess, user, space, err := h.issueAuthSession(c, issueAuthSessionOpts{
+	issued, err := h.issueAuthSession(c, issueAuthSessionOpts{
 		UserID:    actorID,
 		SpaceID:   currentSpace(c),
 		Role:      firstNonEmptyAPI(currentRole(c), "viewer"),
@@ -123,7 +143,7 @@ func (h *Handler) createDeviceAuthSession(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("AUTH_SESSION_CREATE_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, AuthSessionResponse{Token: token, User: user, Space: space, Session: sess})
+	c.JSON(http.StatusOK, authSessionResponseFrom(issued))
 }
 
 // ListAuthSessions godoc
@@ -195,34 +215,52 @@ func (h *Handler) revokeAuthSession(c *gin.Context) {
 }
 
 // RefreshAuthSession godoc
-// @Summary Rotate access JWT for an active auth session (same sid)
+// @Summary Rotate access+refresh JWTs for an active auth session (same sid)
 // @Tags auth
 // @Accept json
 // @Produce json
-// @Param body body refreshAuthSessionRequest false "optional ttl"
+// @Param body body refreshAuthSessionRequest false "refreshToken and optional access ttl"
 // @Success 200 {object} AuthSessionResponse
 // @Failure 401 {object} APIErrorResponse
 // @Failure 403 {object} APIErrorResponse
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/auth/sessions/refresh [post]
 func (h *Handler) refreshAuthSession(c *gin.Context) {
-	if expired, _ := c.Get(ctxTokenExpired); expired == true {
-		c.JSON(http.StatusUnauthorized, errorBody("AUTH_SESSION_EXPIRED", "auth session token has expired"))
+	var req refreshAuthSessionRequest
+	_ = c.ShouldBindJSON(&req)
+	raw := strings.TrimSpace(req.RefreshToken)
+	if raw == "" {
+		raw = bearerToken(c.GetHeader("Authorization"))
+	}
+	if raw == "" {
+		c.JSON(http.StatusUnauthorized, errorBody("UNAUTHORIZED", "missing refresh token"))
 		return
 	}
-	actorID := currentActor(c)
-	if actorID == "" {
-		c.JSON(http.StatusUnauthorized, errorBody("UNAUTHORIZED", "missing authenticated actor"))
+	cfg := config.Load()
+	claims, err := verifyToken(raw, cfg.JWTSecret)
+	if err != nil {
+		if _, err2 := verifyTokenIgnoreExp(raw, cfg.JWTSecret); err2 == nil {
+			c.JSON(http.StatusUnauthorized, errorBody("AUTH_REFRESH_REQUIRED", "use a refresh token to renew the session"))
+			return
+		}
+		c.JSON(http.StatusUnauthorized, errorBody("UNAUTHORIZED", err.Error()))
 		return
 	}
-	sidVal, _ := c.Get(ctxSessionID)
-	sid, _ := sidVal.(string)
-	if strings.TrimSpace(sid) == "" {
+	typ := firstNonEmptyAPI(claims.Typ, authSessionTypPrimary)
+	switch typ {
+	case authSessionTypRefresh:
+		// preferred path
+	case authSessionTypPrimary, authSessionTypDevice:
+		// legacy: unexpired access may still refresh
+	default:
+		c.JSON(http.StatusUnauthorized, errorBody("AUTH_REFRESH_REQUIRED", "use a refresh token to renew the session"))
+		return
+	}
+	sid := strings.TrimSpace(claims.Sid)
+	if sid == "" {
 		c.JSON(http.StatusBadRequest, errorBody("AUTH_SESSION_NOT_FOUND", "token has no sid"))
 		return
 	}
-	var req refreshAuthSessionRequest
-	_ = c.ShouldBindJSON(&req)
 	row, payload, err := h.loadAuthSession(c, sid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
@@ -236,39 +274,47 @@ func (h *Handler) refreshAuthSession(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, errorBody("AUTH_SESSION_REVOKED", "auth session has been revoked"))
 		return
 	}
-	if payload.UserID != actorID && currentRole(c) != "admin" {
+	if !authSessionAllowsJti(payload, claims, time.Now().UTC(), authTokenGrace()) {
+		c.JSON(http.StatusUnauthorized, errorBody("AUTH_TOKEN_REPLAY", "token jti is no longer current"))
+		return
+	}
+	if payload.UserID != claims.Sub && claims.Role != "admin" {
 		c.JSON(http.StatusForbidden, errorBody("AUTH_SESSION_FORBIDDEN", "cannot refresh another user's session"))
 		return
+	}
+	accessTyp := firstNonEmptyAPI(payload.Typ, authSessionTypPrimary)
+	if accessTyp == authSessionTypRefresh {
+		accessTyp = authSessionTypPrimary
 	}
 	ttl := time.Duration(0)
 	if req.TTLSeconds > 0 {
 		ttl = clampAuthSessionTTL(req.TTLSeconds)
-	} else if payload.Typ == authSessionTypDevice {
+	} else if accessTyp == authSessionTypDevice {
 		ttl = authSessionDeviceTTL
 	} else {
 		ttl = authSessionPrimaryTTL
 	}
 	email, name := "", ""
 	var u store.User
-	if err := h.dbBypass(c).First(&u, "id = ?", actorID).Error; err == nil {
+	if err := h.dbBypass(c).First(&u, "id = ?", claims.Sub).Error; err == nil {
 		email, name = u.Email, u.DisplayName
 	}
-	token, sess, user, space, err := h.rotateAuthSession(c, row, payload, issueAuthSessionOpts{
-		UserID: actorID,
-		SpaceID: firstNonEmptyAPI(payload.SpaceID, currentSpace(c)),
-		Role:   firstNonEmptyAPI(currentRole(c), "viewer"),
-		Typ:    firstNonEmptyAPI(payload.Typ, authSessionTypPrimary),
-		DID:    payload.DID,
-		Scope:  append([]string(nil), payload.Scope...),
-		TTL:    ttl,
-		Email:  email,
-		Name:   name,
+	issued, err := h.rotateAuthSession(c, row, payload, issueAuthSessionOpts{
+		UserID:  claims.Sub,
+		SpaceID: firstNonEmptyAPI(payload.SpaceID, claims.SpaceID, "local"),
+		Role:    firstNonEmptyAPI(claims.Role, "viewer"),
+		Typ:     accessTyp,
+		DID:     firstNonEmptyAPI(payload.DID, claims.Did),
+		Scope:   append([]string(nil), payload.Scope...),
+		TTL:     ttl,
+		Email:   email,
+		Name:    name,
 	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("AUTH_SESSION_CREATE_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, AuthSessionResponse{Token: token, User: user, Space: space, Session: sess})
+	c.JSON(http.StatusOK, authSessionResponseFrom(issued))
 }
 
 func clampAuthSessionTTL(sec int) time.Duration {
@@ -279,6 +325,85 @@ func clampAuthSessionTTL(sec int) time.Duration {
 		sec = 86400
 	}
 	return time.Duration(sec) * time.Second
+}
+
+func authRefreshTTL() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("ASH_AUTH_REFRESH_TTL_SEC"))
+	if raw == "" {
+		return authSessionRefreshTTLDef
+	}
+	sec, err := strconv.Atoi(raw)
+	if err != nil || sec <= 0 {
+		return authSessionRefreshTTLDef
+	}
+	d := time.Duration(sec) * time.Second
+	if d < authSessionRefreshTTLMin {
+		return authSessionRefreshTTLMin
+	}
+	if d > authSessionRefreshTTLMax {
+		return authSessionRefreshTTLMax
+	}
+	return d
+}
+
+const (
+	authTokenGraceDefault = 60 * time.Second
+	authTokenGraceMax     = 300 * time.Second
+)
+
+func authTokenGrace() time.Duration {
+	raw := strings.TrimSpace(os.Getenv("ASH_AUTH_TOKEN_GRACE_SEC"))
+	if raw == "" {
+		return authTokenGraceDefault
+	}
+	sec, err := strconv.Atoi(raw)
+	if err != nil {
+		return authTokenGraceDefault
+	}
+	if sec <= 0 {
+		return 0
+	}
+	d := time.Duration(sec) * time.Second
+	if d > authTokenGraceMax {
+		return authTokenGraceMax
+	}
+	return d
+}
+
+func authSessionAllowsJti(payload authSessionPayload, claims *tokenClaims, now time.Time, grace time.Duration) bool {
+	if claims == nil || strings.TrimSpace(claims.Jti) == "" {
+		return true
+	}
+	// Pre-DX63 registry rows: unbound until issue/rotate stores jtis.
+	if payload.AccessJti == "" && payload.RefreshJti == "" {
+		return true
+	}
+	cur, prev := payload.AccessJti, payload.PrevAccessJti
+	if claims.Typ == authSessionTypRefresh {
+		cur, prev = payload.RefreshJti, payload.PrevRefreshJti
+	}
+	jti := strings.TrimSpace(claims.Jti)
+	if jti == cur {
+		return true
+	}
+	if prev != "" && jti == prev && payload.RotatedAt > 0 {
+		if grace <= 0 {
+			return false
+		}
+		deadline := payload.RotatedAt + int64(grace/time.Second)
+		return now.Unix() <= deadline
+	}
+	return false
+}
+
+func authSessionResponseFrom(issued issuedAuthTokens) AuthSessionResponse {
+	return AuthSessionResponse{
+		Token:        issued.AccessToken,
+		RefreshToken: issued.RefreshToken,
+		User:         issued.User,
+		Space:        issued.Space,
+		Session:      issued.Session,
+	}
 }
 
 func (h *Handler) callerGrantsCoverScope(c *gin.Context, spaceID string, scope []string) (bool, error) {
@@ -312,9 +437,13 @@ type issueAuthSessionOpts struct {
 	UserAgent string
 }
 
-func (h *Handler) issueAuthSession(c *gin.Context, opt issueAuthSessionOpts) (string, *AuthGatewaySession, AuthUser, AuthSpace, error) {
+func (h *Handler) issueAuthSession(c *gin.Context, opt issueAuthSessionOpts) (issuedAuthTokens, error) {
+	var empty issuedAuthTokens
 	if opt.Typ == "" {
 		opt.Typ = authSessionTypPrimary
+	}
+	if opt.Typ == authSessionTypRefresh {
+		return empty, errors.New("cannot issue standalone refresh session registry")
 	}
 	if opt.TTL <= 0 {
 		if opt.Typ == authSessionTypDevice {
@@ -327,15 +456,25 @@ func (h *Handler) issueAuthSession(c *gin.Context, opt issueAuthSessionOpts) (st
 		opt.DID = "did_primary"
 	}
 	sid := "asess_" + uuid.NewString()
-	exp := time.Now().UTC().Add(opt.TTL).Unix()
-	claims := tokenClaims{
-		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: exp,
-		Sid: sid, Did: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
-	}
+	now := time.Now().UTC()
+	exp := now.Add(opt.TTL).Unix()
+	refreshExp := now.Add(authRefreshTTL()).Unix()
 	cfg := config.Load()
-	token, err := signToken(claims, cfg.JWTSecret)
+	accessJti := uuid.NewString()
+	refreshJti := uuid.NewString()
+	access, err := signToken(tokenClaims{
+		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: exp, Iat: now.Unix(),
+		Jti: accessJti, Sid: sid, Did: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
+	}, cfg.JWTSecret)
 	if err != nil {
-		return "", nil, AuthUser{}, AuthSpace{}, err
+		return empty, err
+	}
+	refresh, err := signToken(tokenClaims{
+		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: refreshExp, Iat: now.Unix(),
+		Jti: refreshJti, Sid: sid, Did: opt.DID, Typ: authSessionTypRefresh, Scope: opt.Scope,
+	}, cfg.JWTSecret)
+	if err != nil {
+		return empty, err
 	}
 	ua := opt.UserAgent
 	if ua == "" && c != nil {
@@ -343,20 +482,35 @@ func (h *Handler) issueAuthSession(c *gin.Context, opt issueAuthSessionOpts) (st
 	}
 	payload := authSessionPayload{
 		SID: sid, UserID: opt.UserID, SpaceID: opt.SpaceID, DID: opt.DID, Typ: opt.Typ,
-		Scope: opt.Scope, Status: authSessionStatusActive, Exp: exp, ParentSID: opt.ParentSID, UserAgent: ua,
+		Scope: opt.Scope, Status: authSessionStatusActive, Exp: exp, RefreshExp: refreshExp,
+		AccessJti: accessJti, RefreshJti: refreshJti,
+		ParentSID: opt.ParentSID, UserAgent: ua,
 	}
 	b, _ := json.Marshal(payload)
 	row := &store.AuditLog{
 		ID: sid, SpaceID: firstNonEmptyAPI(opt.SpaceID, "local"), ActorID: opt.UserID,
-		EventType: authSessionEventType, PayloadJSON: string(b), CreatedAt: time.Now().UTC(),
+		EventType: authSessionEventType, PayloadJSON: string(b), CreatedAt: now,
 	}
 	if err := h.dbBypass(c).Create(row).Error; err != nil {
-		return "", nil, AuthUser{}, AuthSpace{}, err
+		return empty, err
 	}
-	return token, sessionViewFrom(opt, sid, exp), authUserFrom(opt), authSpaceFrom(c, h, opt.SpaceID), nil
+	return issuedAuthTokens{
+		AccessToken:  access,
+		RefreshToken: refresh,
+		Session:      sessionViewFrom(opt, sid, exp),
+		User:         authUserFrom(opt),
+		Space:        authSpaceFrom(c, h, opt.SpaceID),
+	}, nil
 }
 
-func (h *Handler) rotateAuthSession(c *gin.Context, row store.AuditLog, payload authSessionPayload, opt issueAuthSessionOpts) (string, *AuthGatewaySession, AuthUser, AuthSpace, error) {
+func (h *Handler) rotateAuthSession(c *gin.Context, row store.AuditLog, payload authSessionPayload, opt issueAuthSessionOpts) (issuedAuthTokens, error) {
+	var empty issuedAuthTokens
+	if opt.Typ == "" || opt.Typ == authSessionTypRefresh {
+		opt.Typ = firstNonEmptyAPI(payload.Typ, authSessionTypPrimary)
+		if opt.Typ == authSessionTypRefresh {
+			opt.Typ = authSessionTypPrimary
+		}
+	}
 	if opt.TTL <= 0 {
 		if opt.Typ == authSessionTypDevice {
 			opt.TTL = authSessionDeviceTTL
@@ -366,31 +520,51 @@ func (h *Handler) rotateAuthSession(c *gin.Context, row store.AuditLog, payload 
 	}
 	now := time.Now().UTC()
 	exp := now.Add(opt.TTL).Unix()
-	claims := tokenClaims{
-		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: exp,
-		Sid: payload.SID, Did: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
-	}
+	refreshExp := now.Add(authRefreshTTL()).Unix()
 	cfg := config.Load()
-	token, err := signToken(claims, cfg.JWTSecret)
+	accessJti := uuid.NewString()
+	refreshJti := uuid.NewString()
+	access, err := signToken(tokenClaims{
+		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: exp, Iat: now.Unix(),
+		Jti: accessJti, Sid: payload.SID, Did: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
+	}, cfg.JWTSecret)
 	if err != nil {
-		return "", nil, AuthUser{}, AuthSpace{}, err
+		return empty, err
 	}
+	refresh, err := signToken(tokenClaims{
+		Sub: opt.UserID, SpaceID: opt.SpaceID, Role: opt.Role, Exp: refreshExp, Iat: now.Unix(),
+		Jti: refreshJti, Sid: payload.SID, Did: opt.DID, Typ: authSessionTypRefresh, Scope: opt.Scope,
+	}, cfg.JWTSecret)
+	if err != nil {
+		return empty, err
+	}
+	payload.PrevAccessJti = payload.AccessJti
+	payload.PrevRefreshJti = payload.RefreshJti
+	payload.AccessJti = accessJti
+	payload.RefreshJti = refreshJti
 	payload.Exp = exp
+	payload.RefreshExp = refreshExp
 	payload.RotatedAt = now.Unix()
 	payload.RotateCount++
 	payload.Scope = opt.Scope
 	payload.DID = opt.DID
 	payload.Typ = opt.Typ
 	payload.SpaceID = opt.SpaceID
+	payload.Status = authSessionStatusActive
 	b, _ := json.Marshal(payload)
 	if err := h.dbBypass(c).Model(&store.AuditLog{}).Where("id = ?", row.ID).Update("payload_json", string(b)).Error; err != nil {
-		return "", nil, AuthUser{}, AuthSpace{}, err
+		return empty, err
 	}
-	sess := &AuthGatewaySession{
-		SID: payload.SID, DID: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
-		Status: authSessionStatusActive, Exp: exp, SpaceID: opt.SpaceID,
-	}
-	return token, sess, authUserFrom(opt), authSpaceFrom(c, h, opt.SpaceID), nil
+	return issuedAuthTokens{
+		AccessToken:  access,
+		RefreshToken: refresh,
+		Session: &AuthGatewaySession{
+			SID: payload.SID, DID: opt.DID, Typ: opt.Typ, Scope: opt.Scope,
+			Status: authSessionStatusActive, Exp: exp, SpaceID: opt.SpaceID,
+		},
+		User:  authUserFrom(opt),
+		Space: authSpaceFrom(c, h, opt.SpaceID),
+	}, nil
 }
 
 func sessionViewFrom(opt issueAuthSessionOpts, sid string, exp int64) *AuthGatewaySession {
@@ -428,16 +602,25 @@ func (h *Handler) loadAuthSession(c *gin.Context, sid string) (store.AuditLog, a
 	return row, payload, nil
 }
 
-func (h *Handler) authSessionRevoked(c *gin.Context, sid string) (bool, error) {
-	_, payload, err := h.loadAuthSession(c, sid)
+// gateAuthSessionClaims enforces sid revoke + jti bind. Returns error code or "".
+func (h *Handler) gateAuthSessionClaims(c *gin.Context, claims *tokenClaims) (code string, err error) {
+	if claims == nil || strings.TrimSpace(claims.Sid) == "" {
+		return "", nil
+	}
+	_, payload, err := h.loadAuthSession(c, claims.Sid)
 	if err != nil {
 		if errors.Is(err, gorm.ErrRecordNotFound) {
-			// Session claim without registry row: treat as non-revoked for backward compat.
-			return false, nil
+			return "", nil
 		}
-		return false, err
+		return "AUTH_SESSION_LOOKUP_FAILED", err
 	}
-	return payload.Status == authSessionStatusRevoked, nil
+	if payload.Status == authSessionStatusRevoked {
+		return "AUTH_SESSION_REVOKED", nil
+	}
+	if !authSessionAllowsJti(payload, claims, time.Now().UTC(), authTokenGrace()) {
+		return "AUTH_TOKEN_REPLAY", nil
+	}
+	return "", nil
 }
 
 func decodeAuthSessionPayload(row store.AuditLog) (*AuthGatewaySession, error) {

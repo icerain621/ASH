@@ -12,7 +12,7 @@
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 / v3.1 / v3.2 已冻结**（v3.2 本地 DX55–DX60；tag 仍待人工）；见 [`v3.2-release-scope.md`](v3.2-release-scope.md) |
+| 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 
 ---
 
@@ -98,7 +98,13 @@
 | DX58 | Session 网关硬化（v3.2） | refresh 同 sid；scope 强制；无新表 | ✅ |
 | DX59 | 控制台登录 + Sessions（v3.2） | `/ui/login`；OIDC ui=1；Space Sessions；smoke | ✅ |
 | DX60 | v3.2 冻结 + 签字 | `v3.2-release-scope`；`make v3.2-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v3.x-program.md`](v3.x-program.md) · [`v3.2-release-scope.md`](v3.2-release-scope.md)（已冻结） · [`sprint-dx60-v32-signoff.md`](sprint-dx60-v32-signoff.md) | — |
+| DX61 | OIDC RS256（v4.0 草案） | JWKS 校验；保留 HS256 | ✅ |
+| DX62 | Refresh Token（v4.0 草案） | 独立 `typ=refresh`；双 token 轮换；无新表 | ✅ |
+| DX63 | jti 吊销硬化（v4.0 草案） | 当前/prev jti + grace；`AUTH_TOKEN_REPLAY`；无新表 | ✅ |
+| DX64 | 控制台强制登录（v4.0 草案） | `ASH_CONSOLE_AUTH_REQUIRED`；SPA 门闸；藏 Dev Token | ✅ |
+| DX65 | Device mint UI（v4.0 草案） | Sessions 面板 mint；一次展示；`device-session-smoke` | ✅ |
+| DX66 | v4.0 冻结 + 签字 | `v4.0-release-scope`；`make v4.0-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.0-release-scope.md`](v4.0-release-scope.md)（已冻结） · [`sprint-dx66-v40-signoff.md`](sprint-dx66-v40-signoff.md) | — |
 
 ---
 

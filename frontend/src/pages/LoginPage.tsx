@@ -1,8 +1,10 @@
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
 import { KeyRound, LogIn } from "lucide-react";
 import { useEffect, useState, type FormEvent } from "react";
+import { getReadyz } from "@/modules/health/api/health.api";
 import { passwordLogin } from "@/modules/platform/api/platform.api";
+import { isConsoleAuthRequiredFlag } from "@/modules/platform/auth/consoleGate";
 import { oidcLoginHref, parseLoginHash } from "@/modules/platform/auth/loginHash";
 import { setAuthSession } from "@/services/http/client";
 
@@ -12,11 +14,17 @@ export function LoginPage() {
   const [password, setPassword] = useState("");
   const [spaceId, setSpaceId] = useState("");
   const [hashNote, setHashNote] = useState("");
+  const gateQuery = useQuery({
+    queryKey: ["console-auth-gate"],
+    queryFn: getReadyz,
+    staleTime: 60_000,
+  });
+  const consoleAuthRequired = isConsoleAuthRequiredFlag(gateQuery.data ?? {});
 
   useEffect(() => {
     const parsed = parseLoginHash(window.location.hash);
     if (!parsed) return;
-    setAuthSession(parsed.token, parsed.spaceId);
+    setAuthSession(parsed.token, parsed.spaceId, parsed.refreshToken);
     setHashNote("已从 OIDC 回调写入会话");
     window.history.replaceState(null, "", window.location.pathname + window.location.search);
     void navigate({ to: "/space" });
@@ -30,7 +38,7 @@ export function LoginPage() {
         spaceId: spaceId.trim() || undefined,
       }),
     onSuccess: (data) => {
-      setAuthSession(data.token, data.space.id);
+      setAuthSession(data.token, data.space.id, data.refreshToken);
       void navigate({ to: "/space" });
     },
   });
@@ -50,11 +58,17 @@ export function LoginPage() {
         <div>
           <h1>登录</h1>
           <p>
-            密码登录或 OIDC（需 <code>ASH_OIDC_ENABLED=1</code>）。也可在{" "}
-            <Link to="/space" className="inline-link">
-              空间
-            </Link>{" "}
-            使用 Dev Token。
+            密码登录或 OIDC（需 <code>ASH_OIDC_ENABLED=1</code>）。
+            {!consoleAuthRequired && (
+              <>
+                {" "}
+                也可在{" "}
+                <Link to="/space" className="inline-link">
+                  空间
+                </Link>{" "}
+                使用 Dev Token。
+              </>
+            )}
           </p>
         </div>
       </div>

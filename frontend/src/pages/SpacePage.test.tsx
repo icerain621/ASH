@@ -1,5 +1,6 @@
-import { screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { getReadyz } from "@/modules/health/api/health.api";
 import { SpacePage } from "./SpacePage";
 import { renderPage } from "@/test/renderPage";
 
@@ -11,13 +12,22 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+vi.mock("@/modules/health/api/health.api", () => ({
+  getReadyz: vi.fn().mockResolvedValue({ status: "ready", consoleAuthRequired: false }),
+}));
+
 vi.mock("@/modules/platform/api/platform.api", () => ({
   listOrgs: vi.fn().mockResolvedValue({ items: [] }),
   listSpaces: vi.fn().mockResolvedValue({ items: [] }),
   listRoles: vi.fn().mockResolvedValue({ items: [] }),
   listSpaceMembers: vi.fn().mockResolvedValue({ items: [] }),
   listSpaceResourceScopes: vi.fn().mockResolvedValue({ items: [] }),
-  getPermissionMatrix: vi.fn().mockResolvedValue({ roles: [], actions: [] }),
+  getPermissionMatrix: vi.fn().mockResolvedValue({
+    roles: [],
+    actions: [],
+    builtinRoles: [],
+    scenarioTools: [],
+  }),
   getAuthMe: vi.fn().mockResolvedValue({
     user: { id: "u1" },
     space: { id: "local", name: "Local" },
@@ -29,6 +39,13 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   }),
   revokeAuthSession: vi.fn(),
   refreshAuthSession: vi.fn(),
+  createDeviceAuthSession: vi.fn().mockResolvedValue({
+    token: "device-access",
+    refreshToken: "device-refresh",
+    user: { id: "u1" },
+    space: { id: "local", name: "Local" },
+    session: { sid: "asess_device", typ: "device", did: "laptop-1", status: "active", exp: 0 },
+  }),
   listOrgTemplates: vi.fn().mockResolvedValue({
     items: [
       {
@@ -63,11 +80,41 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
 }));
 
 describe("SpacePage", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    vi.mocked(getReadyz).mockResolvedValue({ status: "ready", consoleAuthRequired: false });
+  });
+
   it("renders space heading and Dev Token control", async () => {
     renderPage(<SpacePage />);
     expect(screen.getByRole("heading", { name: "空间" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Dev Token" })).toBeInTheDocument();
+    });
+  });
+
+  it("hides Dev Token when console auth gate is on", async () => {
+    vi.mocked(getReadyz).mockResolvedValue({ status: "ready", consoleAuthRequired: true });
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.queryByRole("button", { name: "Dev Token" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("renders device mint form and shows one-shot result", async () => {
+    const platform = await import("@/modules/platform/api/platform.api");
+    localStorage.setItem("ash.auth.token", "primary-tok");
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("device-mint-form")).toBeInTheDocument();
+      expect(screen.getByTestId("device-mint-submit")).not.toBeDisabled();
+    });
+    fireEvent.change(screen.getByTestId("device-mint-id"), { target: { value: "laptop-1" } });
+    fireEvent.click(screen.getByTestId("device-mint-submit"));
+    await waitFor(() => {
+      expect(platform.createDeviceAuthSession).toHaveBeenCalled();
+      expect(screen.getByTestId("device-mint-result")).toBeInTheDocument();
+      expect(screen.getByTestId("device-mint-token")).toHaveValue("device-access");
     });
   });
 
