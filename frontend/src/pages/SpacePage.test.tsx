@@ -18,7 +18,17 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   listSpaceMembers: vi.fn().mockResolvedValue({ items: [] }),
   listSpaceResourceScopes: vi.fn().mockResolvedValue({ items: [] }),
   getPermissionMatrix: vi.fn().mockResolvedValue({ roles: [], actions: [] }),
-  getAuthMe: vi.fn().mockResolvedValue({ userId: "u1", spaceId: "local" }),
+  getAuthMe: vi.fn().mockResolvedValue({
+    user: { id: "u1" },
+    space: { id: "local", name: "Local" },
+    role: "viewer",
+    permissions: [],
+  }),
+  listAuthSessions: vi.fn().mockResolvedValue({
+    items: [{ sid: "asess_test", typ: "primary", did: "did_login", status: "active", exp: 0 }],
+  }),
+  revokeAuthSession: vi.fn(),
+  refreshAuthSession: vi.fn(),
   listOrgTemplates: vi.fn().mockResolvedValue({
     items: [
       {
@@ -58,6 +68,15 @@ describe("SpacePage", () => {
     expect(screen.getByRole("heading", { name: "空间" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "Dev Token" })).toBeInTheDocument();
+    });
+  });
+
+  it("renders auth sessions panel", async () => {
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("auth-sessions-panel")).toBeInTheDocument();
+      expect(screen.getByTestId("auth-sessions-table")).toBeInTheDocument();
+      expect(screen.getByTestId("auth-session-refresh")).toBeInTheDocument();
     });
   });
 

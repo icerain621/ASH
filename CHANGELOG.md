@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX60（v3.2）：范围冻结 + 签字门禁 — `v3.2-release-scope` **已冻结**；`make v3.2-signoff`（Doctor ALL **57** / M4 **10** + OIDC/Session + oidc-console-smoke + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.2.0` tag。
+- Sprint DX59（v3.2 草案）：控制台登录入口 — `/ui/login` 密码 + OIDC；`?ui=1` callback 302 → `#token&spaceId`；Space Auth Sessions（list/revoke/refresh）；`make oidc-console-smoke`；**无新表**。
+- Sprint DX58（v3.2 草案）：Session 网关硬化 — `POST /auth/sessions/refresh`（同 `sid` 轮换）；`audit_log` `rotatedAt`/`rotateCount`；JWT `scope` 在 `requirePermission` 强制（`AUTH_SCOPE_DENIED`）；device mint scope ⊆ 调用方权限（`AUTH_SCOPE_INVALID`）；**无新表**。
+- Sprint DX57（v3.2 草案）：多端 Session 网关 POC — JWT `sid/did/typ`；`audit_log`（`auth.session`）登记/撤销；`POST /auth/sessions/device` · `GET /auth/sessions` · `DELETE /auth/sessions/{sid}`；primary 24h / device 默认 4h；scope 存但不强制（→ DX58）；**无新表**。
+- Sprint DX56（v3.2 草案）：联邦用户绑定 — `users.oidc_issuer/subject`（SQL **32**）；查找 sub→email→JIT；冲突 `OIDC_LINK_CONFLICT`；`ASH_OIDC_DEFAULT_SPACE_ID`；**无新表**。
+- Sprint DX55（v3.2 草案）：OIDC 薄切片 — `ASH_OIDC_*`；`GET /auth/oidc/login|callback` → ASH JWT；email 匹配 / JIT `users`；HS256 id_token；**无新表**。
 - Sprint DX54（v3.1）：范围冻结 + 签字门禁 — `v3.1-release-scope` **已冻结**；`make v3.1-signoff`（Doctor ALL **57** / M4 **10** + Quest 回归 + rag-* + sandbox + skill-pack + rag-lsp + remote-sandbox）；清单/签字模板；**不自动**打 `v3.1.0` tag。
 - Sprint DX53（v3.1 草案）：Quest 看板 live SSE — `GET /quest/stream`（Space 级 `plan.*`/`run.*`）；`useQuestBoardStream` 失效看板；断连轮询回退；**无新表**。
 - Sprint DX52（v3.1 草案）：多入口统一 Plan — webhook 失败一律 `FromGoal` draft；`autoRun=1` → AutoApprove；响应 `planId`；Session 已对齐；**无新表**。

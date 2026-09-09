@@ -11,8 +11,8 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
-| Schema | SQL rev **31**（+rag vector refs）· RLS **51** |
-| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 / v3.1 已冻结**（tag 人工）；见 [`v3.1-release-scope.md`](v3.1-release-scope.md) |
+| Schema | SQL rev **32**（+users oidc link）· RLS **51** |
+| 结论 | v1 自动化门禁达 MVP；**v2.9 / v3.0 / v3.1 / v3.2 已冻结**（v3.2 本地 DX55–DX60；tag 仍待人工）；见 [`v3.2-release-scope.md`](v3.2-release-scope.md) |
 
 ---
 
@@ -92,7 +92,13 @@
 | DX52 | 多入口统一 Plan | webhook/session 等 | ✅ |
 | DX53 | 看板 live / plan.* SSE | 可见性 | ✅ |
 | DX54 | v3.1 冻结 + 签字 | `v3.1-release-scope`；`make v3.1-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v3.x-program.md`](v3.x-program.md) · [`v3.1-release-scope.md`](v3.1-release-scope.md)（已冻结） · [`sprint-dx54-v31-signoff.md`](sprint-dx54-v31-signoff.md) | — |
+| DX55 | OIDC 薄切片（v3.2） | login/callback → ASH JWT；JIT user；无新表 | ✅ |
+| DX56 | 联邦用户绑定（v3.2） | users.oidc_issuer/subject；sub→email→JIT；SQL 32 | ✅ |
+| DX57 | Session 网关 POC（v3.2） | JWT sid/did/typ；device mint/list/revoke；audit_log；无新表 | ✅ |
+| DX58 | Session 网关硬化（v3.2） | refresh 同 sid；scope 强制；无新表 | ✅ |
+| DX59 | 控制台登录 + Sessions（v3.2） | `/ui/login`；OIDC ui=1；Space Sessions；smoke | ✅ |
+| DX60 | v3.2 冻结 + 签字 | `v3.2-release-scope`；`make v3.2-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v3.x-program.md`](v3.x-program.md) · [`v3.2-release-scope.md`](v3.2-release-scope.md)（已冻结） · [`sprint-dx60-v32-signoff.md`](sprint-dx60-v32-signoff.md) | — |
 
 ---
 

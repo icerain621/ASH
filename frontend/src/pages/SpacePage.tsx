@@ -14,6 +14,7 @@ import {
   importSpaceRules,
   exportSpaceRules,
   previewSpaceRules,
+  listAuthSessions,
   listOrgTemplates,
   listOrgs,
   listRoles,
@@ -22,6 +23,8 @@ import {
   listSpaceResourceScopes,
   listSpaces,
   provisionOrgTemplate,
+  refreshAuthSession,
+  revokeAuthSession,
   updateSpaceResourceScope,
 } from "@/modules/platform/api/platform.api";
 import { getAuthToken, getCurrentSpaceId, setAuthSession } from "@/services/http/client";
@@ -60,6 +63,27 @@ export function SpacePage() {
     queryKey: ["auth-me", activeSpaceId],
     queryFn: getAuthMe,
     enabled: Boolean(getAuthToken()),
+  });
+  const sessionsQuery = useQuery({
+    queryKey: ["auth-sessions"],
+    queryFn: listAuthSessions,
+    enabled: Boolean(getAuthToken()),
+  });
+  const revokeSessionMut = useMutation({
+    mutationFn: (sid: string) => revokeAuthSession(sid),
+    onSuccess: async () => {
+      await qc.invalidateQueries({ queryKey: ["auth-sessions"] });
+      await qc.invalidateQueries({ queryKey: ["auth-me"] });
+    },
+  });
+  const refreshSessionMut = useMutation({
+    mutationFn: () => refreshAuthSession(),
+    onSuccess: async (data) => {
+      setAuthSession(data.token, data.space.id);
+      setActiveSpaceId(data.space.id);
+      await qc.invalidateQueries({ queryKey: ["auth-sessions"] });
+      await qc.invalidateQueries({ queryKey: ["auth-me"] });
+    },
   });
   const matrixQuery = useQuery({
     queryKey: ["permissions-matrix", activeSpaceId],
@@ -254,6 +278,9 @@ export function SpacePage() {
           </p>
         </div>
         <div className="toolbar">
+          <Link to="/login" className="btn icon-btn">
+            登录页
+          </Link>
           <button className="btn icon-btn" onClick={() => loginMut.mutate(activeSpaceId)} disabled={loginMut.isPending}>
             <KeyRound size={16} strokeWidth={1.8} />
             Dev Token
@@ -261,6 +288,83 @@ export function SpacePage() {
         </div>
       </div>
       {err && <p className="error-text">{err}</p>}
+      <div className="pane" style={{ marginBottom: "1rem" }} data-testid="auth-sessions-panel">
+        <div className="pane-title">
+          <h2>Auth Sessions</h2>
+          <span>{sessionsQuery.data?.items.length ?? 0}</span>
+        </div>
+        <p className="muted-line">
+          多端会话（DX57–58）：当前{" "}
+          {meQuery.data?.session?.sid ? (
+            <code>{meQuery.data.session.sid}</code>
+          ) : (
+            "—"
+          )}
+          {meQuery.data?.session?.typ ? ` · ${meQuery.data.session.typ}` : ""}
+        </p>
+        <div className="toolbar" style={{ marginBottom: "0.5rem", gap: "0.5rem" }}>
+          <button
+            className="btn"
+            type="button"
+            data-testid="auth-session-refresh"
+            onClick={() => refreshSessionMut.mutate()}
+            disabled={!getAuthToken() || refreshSessionMut.isPending}
+          >
+            {refreshSessionMut.isPending ? "刷新中…" : "Refresh 当前 token"}
+          </button>
+        </div>
+        {(refreshSessionMut.error || revokeSessionMut.error || sessionsQuery.error) && (
+          <p className="error-text">
+            {(refreshSessionMut.error as Error | undefined)?.message ||
+              (revokeSessionMut.error as Error | undefined)?.message ||
+              (sessionsQuery.error as Error | undefined)?.message}
+          </p>
+        )}
+        <div className="table-wrap">
+          <table data-testid="auth-sessions-table">
+            <thead>
+              <tr>
+                <th>sid</th>
+                <th>typ</th>
+                <th>did</th>
+                <th>status</th>
+                <th>exp</th>
+                <th />
+              </tr>
+            </thead>
+            <tbody>
+              {(sessionsQuery.data?.items ?? []).map((row) => (
+                <tr key={row.sid}>
+                  <td>
+                    <code>{row.sid}</code>
+                  </td>
+                  <td>{row.typ}</td>
+                  <td>{row.did || "—"}</td>
+                  <td>{row.status || "—"}</td>
+                  <td>{row.exp ? new Date(row.exp * 1000).toISOString() : "—"}</td>
+                  <td>
+                    <button
+                      className="btn icon-btn"
+                      type="button"
+                      disabled={row.status === "revoked" || revokeSessionMut.isPending}
+                      onClick={() => revokeSessionMut.mutate(row.sid)}
+                    >
+                      Revoke
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {!sessionsQuery.data?.items?.length && (
+                <tr>
+                  <td colSpan={6} className="muted-line">
+                    {getAuthToken() ? "暂无会话登记（或未登录 JWT）" : "请先登录或 Dev Token"}
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
       <div className="pane" style={{ marginBottom: "1rem" }} data-testid="org-templates-panel">
         <div className="pane-title">
           <h2>组织样板（PRD §3）</h2>

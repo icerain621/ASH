@@ -18,6 +18,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/idp"
 	"github.com/ash-repwiki/ash/internal/improve"
 	"github.com/ash-repwiki/ash/internal/knowledge"
 	"github.com/ash-repwiki/ash/internal/memory"
@@ -59,6 +60,7 @@ type Handler struct {
 	spaceRules    *spacerules.Service
 	session       *session.Service
 	waker         *waker.Service
+	oidc          *idp.Client
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -102,6 +104,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		spaceRules: spacerules.NewService(db),
 		session:    sessionSvc,
 		waker:      waker.NewService(db),
+		oidc:       idp.NewClient(idp.LoadConfig()),
 	}
 	if h.doctor != nil {
 		adapter := doctorWakerAdapter{svc: h.doctor}
@@ -120,7 +123,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 	registerSwagger(r)
 
 	v1 := r.Group("/api/v1")
-	v1.Use(authMiddleware(cfg))
+	v1.Use(h.authMiddleware(cfg))
 	v1.Use(h.rlsMiddleware())
 	{
 		v1.POST("/runs", h.createRun)
@@ -269,8 +272,14 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.POST("/auth/login", h.login)
 		v1.POST("/auth/dev-login", h.devLogin)
+		v1.GET("/auth/oidc/login", h.oidcLogin)
+		v1.GET("/auth/oidc/callback", h.oidcCallback)
 		v1.GET("/auth/me", h.authMe)
 		v1.POST("/auth/password", h.changePassword)
+		v1.POST("/auth/sessions/device", h.createDeviceAuthSession)
+		v1.POST("/auth/sessions/refresh", h.refreshAuthSession)
+		v1.GET("/auth/sessions", h.listAuthSessions)
+		v1.DELETE("/auth/sessions/:sid", h.revokeAuthSession)
 		v1.GET("/orgs", h.listOrgs)
 		v1.POST("/orgs", h.createOrg)
 		v1.GET("/org-templates", h.listOrgTemplates)

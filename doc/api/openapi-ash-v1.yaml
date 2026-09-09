@@ -2816,12 +2816,26 @@ components:
         email: { type: string }
         password: { type: string }
         spaceId: { type: string }
+    AuthGatewaySession:
+      type: object
+      description: Multi-end auth session metadata (DX57)
+      properties:
+        sid: { type: string }
+        did: { type: string }
+        typ: { type: string, description: "primary|device" }
+        scope:
+          type: array
+          items: { type: string }
+        status: { type: string, description: "active|revoked" }
+        exp: { type: integer, format: int64 }
+        spaceId: { type: string }
     AuthSessionResponse:
       type: object
       properties:
         token: { type: string }
         user: { $ref: "#/components/schemas/AuthUser" }
         space: { $ref: "#/components/schemas/AuthSpace" }
+        session: { $ref: "#/components/schemas/AuthGatewaySession" }
     AuthMeResponse:
       type: object
       properties:
@@ -2831,6 +2845,26 @@ components:
         permissions:
           type: array
           items: { type: string }
+        session: { $ref: "#/components/schemas/AuthGatewaySession" }
+    CreateDeviceSessionRequest:
+      type: object
+      properties:
+        deviceId: { type: string }
+        deviceLabel: { type: string }
+        scope:
+          type: array
+          items: { type: string }
+        ttlSeconds: { type: integer, description: "clamped 300–86400; default 4h" }
+    RefreshAuthSessionRequest:
+      type: object
+      properties:
+        ttlSeconds: { type: integer, description: "clamped 300–86400; default by typ" }
+    AuthSessionListResponse:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AuthGatewaySession" }
     ChangePasswordRequest:
       type: object
       required: [currentPassword, newPassword]
@@ -3959,6 +3993,58 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AuthSessionResponse" }
 
+  /api/v1/auth/oidc/login:
+    get:
+      tags: [Auth]
+      summary: Start OIDC authorization-code login
+      description: |
+        Redirects to the configured IdP when `ASH_OIDC_ENABLED=1`.
+        Requires `ASH_OIDC_ISSUER`, `ASH_OIDC_CLIENT_ID`, `ASH_OIDC_CLIENT_SECRET`, `ASH_OIDC_REDIRECT_URL`.
+        Pass `ui=1` so the callback redirects to `/ui/login#token=…&spaceId=…` instead of JSON.
+      parameters:
+        - in: query
+          name: ui
+          required: false
+          schema: { type: string, description: "set to 1 for console hash redirect" }
+      responses:
+        "302":
+          description: redirect to IdP authorize endpoint
+        "404":
+          description: OIDC disabled
+
+  /api/v1/auth/oidc/callback:
+    get:
+      tags: [Auth]
+      summary: OIDC authorization-code callback
+      description: |
+        Exchanges `code` for an HS256 `id_token`, maps or JIT-creates `users` by email,
+        returns ASH JWT session JSON — or 302 to `/ui/login#…` when login started with `ui=1`.
+      parameters:
+        - in: query
+          name: code
+          required: true
+          schema: { type: string }
+        - in: query
+          name: state
+          required: true
+          schema: { type: string }
+        - in: query
+          name: spaceId
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok (API / non-ui)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+        "302":
+          description: console UI redirect when login used ui=1
+        "400":
+          description: invalid state/code
+        "404":
+          description: OIDC disabled
+
   /api/v1/auth/me:
     get:
       tags: [Auth]
@@ -3969,6 +4055,96 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuthMeResponse" }
+
+  /api/v1/auth/sessions/device:
+    post:
+      tags: [Auth]
+      summary: Mint a device-scoped auth token from a primary session
+      description: |
+        Requires Bearer token with `typ=primary` (or legacy tokens without typ).
+        Registers `audit_log` row `event_type=auth.session`. Non-empty `scope` must be a subset of caller permissions (`AUTH_SCOPE_INVALID` otherwise). Scope is enforced on subsequent requests (DX58).
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateDeviceSessionRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+        "400":
+          description: invalid scope
+        "401":
+          description: unauthorized
+        "403":
+          description: primary session required
+
+  /api/v1/auth/sessions/refresh:
+    post:
+      tags: [Auth]
+      summary: Rotate access JWT for an active session (same sid)
+      description: |
+        Bearer primary|device required. Token must not be expired (`AUTH_SESSION_EXPIRED`).
+        Reuses `sid`/`did`/`typ`/`scope`; updates `audit_log` `exp`/`rotatedAt`/`rotateCount`.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/RefreshAuthSessionRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+        "401":
+          description: unauthorized / expired / revoked
+        "403":
+          description: forbidden
+        "404":
+          description: session not found
+
+  /api/v1/auth/sessions:
+    get:
+      tags: [Auth]
+      summary: List auth sessions for the current user
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionListResponse" }
+        "401":
+          description: unauthorized
+
+  /api/v1/auth/sessions/{sid}:
+    delete:
+      tags: [Auth]
+      summary: Revoke an auth session by sid
+      parameters:
+        - in: path
+          name: sid
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+                  sid: { type: string }
+                  status: { type: string }
+        "401":
+          description: unauthorized
+        "403":
+          description: forbidden
+        "404":
+          description: not found
 
   /api/v1/auth/password:
     post:

@@ -15,6 +15,7 @@ import { MobileReviewsPage } from "../pages/MobileReviewsPage";
 import { RunsPage } from "../pages/RunsPage";
 import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
+import { LoginPage } from "../pages/LoginPage";
 import { SpacePage } from "../pages/SpacePage";
 
 const rootRoute = createRootRoute({
@@ -105,6 +106,12 @@ const spaceRoute = createRoute({
   component: SpacePage,
 });
 
+const loginRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/login",
+  component: LoginPage,
+});
+
 const doctorRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/doctor",
@@ -138,6 +145,7 @@ const routeTree = rootRoute.addChildren([
 	observabilityRoute,
 	releasesRoute,
 	spaceRoute,
+  loginRoute,
   complianceRoute,
   scaleRoute,
   doctorRoute,

@@ -80,6 +80,9 @@ export function AppLayout() {
         <div className="status">
           <RadioTower size={15} strokeWidth={1.8} />
           /api/v1 · {activeSpaceId}
+          <Link to="/login" className="inline-link" style={{ marginLeft: "0.75rem" }} data-testid="nav-login">
+            登录
+          </Link>
         </div>
       </header>
       <main>

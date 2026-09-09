@@ -19,9 +19,14 @@ import (
 )
 
 const (
-	ctxActorID = "actorId"
-	ctxSpaceID = "spaceId"
-	ctxRole    = "role"
+	ctxActorID      = "actorId"
+	ctxSpaceID      = "spaceId"
+	ctxRole         = "role"
+	ctxSessionID    = "authSessionId"
+	ctxDeviceID     = "authDeviceId"
+	ctxTokenTyp     = "authTokenTyp"
+	ctxTokenScope   = "authTokenScope"
+	ctxTokenExpired = "authTokenExpired"
 )
 
 const (
@@ -63,10 +68,14 @@ const (
 )
 
 type tokenClaims struct {
-	Sub     string `json:"sub"`
-	SpaceID string `json:"spaceId"`
-	Role    string `json:"role"`
-	Exp     int64  `json:"exp"`
+	Sub     string   `json:"sub"`
+	SpaceID string   `json:"spaceId"`
+	Role    string   `json:"role"`
+	Exp     int64    `json:"exp"`
+	Sid     string   `json:"sid,omitempty"`
+	Did     string   `json:"did,omitempty"`
+	Typ     string   `json:"typ,omitempty"`
+	Scope   []string `json:"scope,omitempty"`
 }
 
 type loginRequest struct {
@@ -127,29 +136,23 @@ func (h *Handler) login(c *gin.Context) {
 			return
 		}
 	}
-	cfg := config.Load()
-	token, err := signToken(tokenClaims{
-		Sub: user.ID, SpaceID: spaceID, Role: "viewer",
-		Exp: time.Now().Add(24 * time.Hour).Unix(),
-	}, cfg.JWTSecret)
+	token, sess, userView, spaceView, err := h.issueAuthSession(c, issueAuthSessionOpts{
+		UserID: user.ID, SpaceID: spaceID, Role: "viewer", Typ: authSessionTypPrimary,
+		DID: "did_login", TTL: authSessionPrimaryTTL,
+		Email: user.Email, Name: user.DisplayName,
+	})
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("TOKEN_SIGN_FAILED", err.Error()))
 		return
 	}
-	spaceName := "Local"
-	if spaceID != "local" {
-		var space store.Space
-		if err := h.dbBypass(c).First(&space, "id = ?", spaceID).Error; err == nil {
-			spaceName = space.Name
-		}
-	}
 	_ = h.dbBypass(c).Create(auditRow(spaceID, user.ID, "auth.login", map[string]any{
-		"userId": user.ID, "email": user.Email, "spaceId": spaceID,
+		"userId": user.ID, "email": user.Email, "spaceId": spaceID, "sid": sess.SID,
 	})).Error
 	c.JSON(http.StatusOK, AuthSessionResponse{
 		Token: token,
-		User:  AuthUser{ID: user.ID, Email: user.Email, DisplayName: user.DisplayName},
-		Space: AuthSpace{ID: spaceID, Name: spaceName},
+		User:  userView,
+		Space: spaceView,
+		Session: sess,
 	})
 }
 
@@ -264,10 +267,11 @@ func (h *Handler) authMe(c *gin.Context) {
 		Space:       space,
 		Role:        role,
 		Permissions: normalizePermissions(perms),
+		Session:     currentAuthSession(c),
 	})
 }
 
-func authMiddleware(cfg config.Config) gin.HandlerFunc {
+func (h *Handler) authMiddleware(cfg config.Config) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		if cfg.AuthMode == "disabled" || isPublicAuthPath(c.Request.URL.Path) {
 			c.Next()
@@ -285,6 +289,15 @@ func authMiddleware(cfg config.Config) gin.HandlerFunc {
 		}
 		claims, err := verifyToken(token, cfg.JWTSecret)
 		if err != nil {
+			if pathIsAuthSessionRefresh(c.Request.URL.Path) {
+				if expiredClaims, err2 := verifyTokenIgnoreExp(token, cfg.JWTSecret); err2 == nil {
+					setIdentity(c, expiredClaims.Sub, firstNonEmptyAPI(expiredClaims.SpaceID, "local"), firstNonEmptyAPI(expiredClaims.Role, "viewer"))
+					setAuthSessionContext(c, expiredClaims)
+					c.Set(ctxTokenExpired, true)
+					c.Next()
+					return
+				}
+			}
 			if cfg.AuthMode == "dev" && token == "dev-token" {
 				setIdentity(c, "dev-user", devSpaceOverride(c), "admin")
 				c.Next()
@@ -293,14 +306,26 @@ func authMiddleware(cfg config.Config) gin.HandlerFunc {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("UNAUTHORIZED", err.Error()))
 			return
 		}
+		if claims.Sid != "" {
+			if rev, err := h.authSessionRevoked(c, claims.Sid); err != nil {
+				c.AbortWithStatusJSON(http.StatusInternalServerError, errorBody("AUTH_SESSION_LOOKUP_FAILED", err.Error()))
+				return
+			} else if rev {
+				c.AbortWithStatusJSON(http.StatusUnauthorized, errorBody("AUTH_SESSION_REVOKED", "auth session has been revoked"))
+				return
+			}
+		}
 		setIdentity(c, claims.Sub, firstNonEmptyAPI(claims.SpaceID, "local"), firstNonEmptyAPI(claims.Role, "viewer"))
+		setAuthSessionContext(c, claims)
 		c.Next()
 	}
 }
 
 func isPublicAuthPath(path string) bool {
 	switch path {
-	case "/api/v1/auth/login", "/api/v1/auth/dev-login", "/api/v1/webhooks/github":
+	case "/api/v1/auth/login", "/api/v1/auth/dev-login",
+		"/api/v1/auth/oidc/login", "/api/v1/auth/oidc/callback",
+		"/api/v1/webhooks/github":
 		return true
 	default:
 		return false
@@ -368,6 +393,66 @@ func setIdentity(c *gin.Context, actorID, spaceID, role string) {
 	c.Set(ctxRole, role)
 }
 
+func setAuthSessionContext(c *gin.Context, claims *tokenClaims) {
+	if claims == nil {
+		return
+	}
+	if claims.Sid != "" {
+		c.Set(ctxSessionID, claims.Sid)
+	}
+	if claims.Did != "" {
+		c.Set(ctxDeviceID, claims.Did)
+	}
+	if claims.Typ != "" {
+		c.Set(ctxTokenTyp, claims.Typ)
+	}
+	if len(claims.Scope) > 0 {
+		c.Set(ctxTokenScope, append([]string(nil), claims.Scope...))
+	}
+}
+
+func currentTokenScope(c *gin.Context) []string {
+	if v, ok := c.Get(ctxTokenScope); ok {
+		if scope, ok := v.([]string); ok {
+			return scope
+		}
+	}
+	return nil
+}
+
+func tokenScopeAllows(c *gin.Context, permission string) bool {
+	scope := currentTokenScope(c)
+	if len(scope) == 0 {
+		return true
+	}
+	for _, grant := range scope {
+		if permissionMatches(grant, permission) {
+			return true
+		}
+	}
+	return false
+}
+
+func pathIsAuthSessionRefresh(path string) bool {
+	return path == "/api/v1/auth/sessions/refresh"
+}
+
+func currentAuthSession(c *gin.Context) *AuthGatewaySession {
+	sid, _ := c.Get(ctxSessionID)
+	sidStr, _ := sid.(string)
+	if sidStr == "" {
+		return nil
+	}
+	did, _ := c.Get(ctxDeviceID)
+	typ, _ := c.Get(ctxTokenTyp)
+	didStr, _ := did.(string)
+	typStr, _ := typ.(string)
+	if typStr == "" {
+		typStr = authSessionTypPrimary
+	}
+	return &AuthGatewaySession{SID: sidStr, DID: didStr, Typ: typStr, Scope: currentTokenScope(c)}
+}
+
 func devSpaceOverride(c *gin.Context) string {
 	if spaceID := strings.TrimSpace(c.GetHeader("X-ASH-Space-ID")); spaceID != "" {
 		return spaceID
@@ -417,11 +502,15 @@ func (h *Handler) requirePermission(c *gin.Context, permission string, spaceIDs 
 		c.AbortWithStatusJSON(http.StatusInternalServerError, errorBody("PERMISSION_CHECK_FAILED", err.Error()))
 		return false
 	}
-	if ok {
-		return true
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody("FORBIDDEN", "missing permission "+permission))
+		return false
 	}
-	c.AbortWithStatusJSON(http.StatusForbidden, errorBody("FORBIDDEN", "missing permission "+permission))
-	return false
+	if !tokenScopeAllows(c, permission) {
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody("AUTH_SCOPE_DENIED", "token scope does not allow "+permission))
+		return false
+	}
+	return true
 }
 
 func (h *Handler) requireRunPermission(c *gin.Context, runID, permission string) bool {
@@ -442,11 +531,15 @@ func (h *Handler) requireOrgPermission(c *gin.Context, orgID, permission string)
 		c.AbortWithStatusJSON(http.StatusInternalServerError, errorBody("PERMISSION_CHECK_FAILED", err.Error()))
 		return false
 	}
-	if ok {
-		return true
+	if !ok {
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody("FORBIDDEN", "missing permission "+permission))
+		return false
 	}
-	c.AbortWithStatusJSON(http.StatusForbidden, errorBody("FORBIDDEN", "missing permission "+permission))
-	return false
+	if !tokenScopeAllows(c, permission) {
+		c.AbortWithStatusJSON(http.StatusForbidden, errorBody("AUTH_SCOPE_DENIED", "token scope does not allow "+permission))
+		return false
+	}
+	return true
 }
 
 func (h *Handler) hasPermission(c *gin.Context, spaceID, permission string) (bool, error) {
@@ -646,6 +739,21 @@ func signToken(claims tokenClaims, secret string) (string, error) {
 }
 
 func verifyToken(token, secret string) (*tokenClaims, error) {
+	claims, err := parseTokenClaims(token, secret)
+	if err != nil {
+		return nil, err
+	}
+	if claims.Exp > 0 && time.Now().Unix() > claims.Exp {
+		return nil, fmt.Errorf("token expired")
+	}
+	return claims, nil
+}
+
+func verifyTokenIgnoreExp(token, secret string) (*tokenClaims, error) {
+	return parseTokenClaims(token, secret)
+}
+
+func parseTokenClaims(token, secret string) (*tokenClaims, error) {
 	parts := strings.Split(token, ".")
 	if len(parts) != 3 {
 		return nil, fmt.Errorf("invalid token shape")
@@ -661,9 +769,6 @@ func verifyToken(token, secret string) (*tokenClaims, error) {
 	var claims tokenClaims
 	if err := json.Unmarshal(body, &claims); err != nil {
 		return nil, fmt.Errorf("invalid token claims")
-	}
-	if claims.Exp > 0 && time.Now().Unix() > claims.Exp {
-		return nil, fmt.Errorf("token expired")
 	}
 	if claims.Sub == "" {
 		return nil, fmt.Errorf("token subject is required")

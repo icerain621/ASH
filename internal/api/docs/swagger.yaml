@@ -3529,6 +3529,25 @@ definitions:
       spaceId:
         type: string
     type: object
+  internal_api.AuthGatewaySession:
+    properties:
+      did:
+        type: string
+      exp:
+        type: integer
+      scope:
+        items:
+          type: string
+        type: array
+      sid:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      typ:
+        type: string
+    type: object
   internal_api.AuthMeResponse:
     properties:
       permissions:
@@ -3537,6 +3556,8 @@ definitions:
         type: array
       role:
         type: string
+      session:
+        $ref: '#/definitions/internal_api.AuthGatewaySession'
       space:
         $ref: '#/definitions/internal_api.AuthSpace'
       user:
@@ -3544,6 +3565,8 @@ definitions:
     type: object
   internal_api.AuthSessionResponse:
     properties:
+      session:
+        $ref: '#/definitions/internal_api.AuthGatewaySession'
       space:
         $ref: '#/definitions/internal_api.AuthSpace'
       token:
@@ -4219,6 +4242,13 @@ definitions:
       artifacts: {}
       manifest: {}
     type: object
+  internal_api.authSessionListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/internal_api.AuthGatewaySession'
+        type: array
+    type: object
   internal_api.changePasswordRequest:
     properties:
       currentPassword:
@@ -4228,6 +4258,19 @@ definitions:
     required:
     - currentPassword
     - newPassword
+    type: object
+  internal_api.createDeviceSessionRequest:
+    properties:
+      deviceId:
+        type: string
+      deviceLabel:
+        type: string
+      scope:
+        items:
+          type: string
+        type: array
+      ttlSeconds:
+        type: integer
     type: object
   internal_api.createFeedbackRequest:
     properties:
@@ -4522,6 +4565,11 @@ definitions:
         type: integer
     required:
     - rating
+    type: object
+  internal_api.refreshAuthSessionRequest:
+    properties:
+      ttlSeconds:
+        type: integer
     type: object
   internal_api.registerMCPToolRequest:
     properties:
@@ -5180,6 +5228,82 @@ paths:
       summary: Get current authenticated identity
       tags:
       - auth
+  /api/v1/auth/oidc/callback:
+    get:
+      description: Exchanges code for id_token claims, links/JIT user by oidc sub
+        then email, returns ASH JWT session.
+      parameters:
+      - description: authorization code
+        in: query
+        name: code
+        required: true
+        type: string
+      - description: csrf state
+        in: query
+        name: state
+        required: true
+        type: string
+      - description: preferred space id
+        in: query
+        name: spaceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AuthSessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: OIDC authorization-code callback
+      tags:
+      - auth
+  /api/v1/auth/oidc/login:
+    get:
+      description: Redirects to the configured IdP when ASH_OIDC_ENABLED=1. Pass ui=1
+        for console hash redirect on callback.
+      parameters:
+      - description: set to 1 for /ui/login hash redirect after callback
+        in: query
+        name: ui
+        type: string
+      produces:
+      - application/json
+      responses:
+        "302":
+          description: redirect to IdP
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Start OIDC authorization-code login
+      tags:
+      - auth
   /api/v1/auth/password:
     post:
       consumes:
@@ -5215,6 +5339,117 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Change current user's password
+      tags:
+      - auth
+  /api/v1/auth/sessions:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.authSessionListResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List auth sessions for the current user
+      tags:
+      - auth
+  /api/v1/auth/sessions/{sid}:
+    delete:
+      parameters:
+      - description: auth session id
+        in: path
+        name: sid
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Revoke an auth session by sid
+      tags:
+      - auth
+  /api/v1/auth/sessions/device:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: device session
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.createDeviceSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AuthSessionResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Mint a device-scoped auth token from a primary session
+      tags:
+      - auth
+  /api/v1/auth/sessions/refresh:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: optional ttl
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.refreshAuthSessionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AuthSessionResponse'
+        "401":
+          description: Unauthorized
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Rotate access JWT for an active auth session (same sid)
       tags:
       - auth
   /api/v1/ci/diagnoses:

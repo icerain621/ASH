@@ -48,9 +48,10 @@ type HealthResponse struct {
 }
 
 type AuthSessionResponse struct {
-	Token string    `json:"token"`
-	User  AuthUser  `json:"user"`
-	Space AuthSpace `json:"space"`
+	Token   string             `json:"token"`
+	User    AuthUser           `json:"user"`
+	Space   AuthSpace          `json:"space"`
+	Session *AuthGatewaySession `json:"session,omitempty"`
 }
 
 type AuthUser struct {
@@ -69,10 +70,22 @@ type PasswordChangeResponse struct {
 }
 
 type AuthMeResponse struct {
-	User        AuthUser  `json:"user"`
-	Space       AuthSpace `json:"space"`
-	Role        string    `json:"role"`
-	Permissions []string  `json:"permissions"`
+	User        AuthUser            `json:"user"`
+	Space       AuthSpace           `json:"space"`
+	Role        string              `json:"role"`
+	Permissions []string            `json:"permissions"`
+	Session     *AuthGatewaySession `json:"session,omitempty"`
+}
+
+// AuthGatewaySession is the multi-end auth session metadata (DX57).
+type AuthGatewaySession struct {
+	SID     string   `json:"sid"`
+	DID     string   `json:"did,omitempty"`
+	Typ     string   `json:"typ"`
+	Scope   []string `json:"scope,omitempty"`
+	Status  string   `json:"status,omitempty"`
+	Exp     int64    `json:"exp,omitempty"`
+	SpaceID string   `json:"spaceId,omitempty"`
 }
 
 // RunListResponse lists runs.

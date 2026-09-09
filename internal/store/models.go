@@ -642,6 +642,8 @@ type User struct {
 	DisplayName  string `gorm:"size:256"`
 	PasswordHash string `gorm:"size:256"`
 	Status       string `gorm:"size:32;not null;default:active;index"`
+	OidcIssuer   string `gorm:"size:512;index:idx_users_oidc,priority:1"`
+	OidcSubject  string `gorm:"size:256;index:idx_users_oidc,priority:2"`
 	CreatedAt    time.Time
 	UpdatedAt    time.Time
 }

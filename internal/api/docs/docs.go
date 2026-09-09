@@ -755,6 +755,118 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/oidc/callback": {
+            "get": {
+                "description": "Exchanges code for id_token claims, links/JIT user by oidc sub then email, returns ASH JWT session.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "OIDC authorization-code callback",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "authorization code",
+                        "name": "code",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "csrf state",
+                        "name": "state",
+                        "in": "query",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "preferred space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuthSessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/oidc/login": {
+            "get": {
+                "description": "Redirects to the configured IdP when ASH_OIDC_ENABLED=1. Pass ui=1 for console hash redirect on callback.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Start OIDC authorization-code login",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "set to 1 for /ui/login hash redirect after callback",
+                        "name": "ui",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "302": {
+                        "description": "redirect to IdP",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/password": {
             "post": {
                 "consumes": [
@@ -805,6 +917,178 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "List auth sessions for the current user",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.authSessionListResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions/device": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Mint a device-scoped auth token from a primary session",
+                "parameters": [
+                    {
+                        "description": "device session",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.createDeviceSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuthSessionResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions/refresh": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Rotate access JWT for an active auth session (same sid)",
+                "parameters": [
+                    {
+                        "description": "optional ttl",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.refreshAuthSessionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuthSessionResponse"
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/sessions/{sid}": {
+            "delete": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Revoke an auth session by sid",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "auth session id",
+                        "name": "sid",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -12544,6 +12828,35 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.AuthGatewaySession": {
+            "type": "object",
+            "properties": {
+                "did": {
+                    "type": "string"
+                },
+                "exp": {
+                    "type": "integer"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sid": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "typ": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.AuthMeResponse": {
             "type": "object",
             "properties": {
@@ -12556,6 +12869,9 @@ const docTemplate = `{
                 "role": {
                     "type": "string"
                 },
+                "session": {
+                    "$ref": "#/definitions/internal_api.AuthGatewaySession"
+                },
                 "space": {
                     "$ref": "#/definitions/internal_api.AuthSpace"
                 },
@@ -12567,6 +12883,9 @@ const docTemplate = `{
         "internal_api.AuthSessionResponse": {
             "type": "object",
             "properties": {
+                "session": {
+                    "$ref": "#/definitions/internal_api.AuthGatewaySession"
+                },
                 "space": {
                     "$ref": "#/definitions/internal_api.AuthSpace"
                 },
@@ -13595,6 +13914,17 @@ const docTemplate = `{
                 "manifest": {}
             }
         },
+        "internal_api.authSessionListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_api.AuthGatewaySession"
+                    }
+                }
+            }
+        },
         "internal_api.changePasswordRequest": {
             "type": "object",
             "required": [
@@ -13607,6 +13937,26 @@ const docTemplate = `{
                 },
                 "newPassword": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.createDeviceSessionRequest": {
+            "type": "object",
+            "properties": {
+                "deviceId": {
+                    "type": "string"
+                },
+                "deviceLabel": {
+                    "type": "string"
+                },
+                "scope": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ttlSeconds": {
+                    "type": "integer"
                 }
             }
         },
@@ -14056,6 +14406,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "rating": {
+                    "type": "integer"
+                }
+            }
+        },
+        "internal_api.refreshAuthSessionRequest": {
+            "type": "object",
+            "properties": {
+                "ttlSeconds": {
                     "type": "integer"
                 }
             }

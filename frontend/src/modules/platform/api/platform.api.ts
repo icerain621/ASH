@@ -204,6 +204,16 @@ export type AuditRetentionApplyResponse = {
   dryRun: boolean;
 };
 
+export type AuthGatewaySession = {
+  sid: string;
+  did?: string;
+  typ: string;
+  scope?: string[];
+  status?: string;
+  exp?: number;
+  spaceId?: string;
+};
+
 export type AuthMe = {
   user: {
     id: string;
@@ -213,6 +223,14 @@ export type AuthMe = {
   space: Space;
   role: string;
   permissions: string[];
+  session?: AuthGatewaySession;
+};
+
+export type AuthSessionResponse = {
+  token: string;
+  user: { id: string; email?: string; displayName?: string };
+  space: Space;
+  session?: AuthGatewaySession;
 };
 
 type RawRecord = Record<string, unknown>;
@@ -395,8 +413,34 @@ export function devLogin(spaceId?: string) {
   });
 }
 
+export function passwordLogin(body: { email: string; password: string; spaceId?: string }) {
+  return api<AuthSessionResponse>("/auth/login", {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function getAuthMe() {
   return api<AuthMe>("/auth/me");
+}
+
+export function listAuthSessions() {
+  return api<{ items?: AuthGatewaySession[]; Items?: AuthGatewaySession[] }>("/auth/sessions").then((res) => ({
+    items: itemsFrom(res),
+  }));
+}
+
+export function revokeAuthSession(sid: string) {
+  return api<{ ok: boolean; sid: string; status: string }>(`/auth/sessions/${encodeURIComponent(sid)}`, {
+    method: "DELETE",
+  });
+}
+
+export function refreshAuthSession(body?: { ttlSeconds?: number }) {
+  return api<AuthSessionResponse>("/auth/sessions/refresh", {
+    method: "POST",
+    body: JSON.stringify(body ?? {}),
+  });
 }
 
 export function listSpaces() {
