@@ -8964,6 +8964,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_evolve.Item": {
             "type": "object",
             "properties": {
+                "ageHours": {
+                    "type": "number"
+                },
                 "assigneeId": {
                     "type": "string"
                 },
@@ -8978,6 +8981,9 @@ const docTemplate = `{
                 },
                 "queue": {
                     "type": "string"
+                },
+                "slaBreach": {
+                    "type": "boolean"
                 },
                 "spaceId": {
                     "type": "string"

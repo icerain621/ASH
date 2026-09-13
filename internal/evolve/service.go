@@ -17,17 +17,19 @@ import (
 )
 
 type Item struct {
-	ID         string `json:"id"`
-	Queue      string `json:"queue"`
-	TargetType string `json:"targetType"`
-	TargetID   string `json:"targetId"`
-	Title      string `json:"title"`
-	Summary    string `json:"summary,omitempty"`
-	Diff       string `json:"diff,omitempty"`
-	Status     string `json:"status"`
-	SpaceID    string `json:"spaceId"`
-	CreatedAt  int64  `json:"createdAt"`
-	AssigneeID string `json:"assigneeId,omitempty"`
+	ID         string  `json:"id"`
+	Queue      string  `json:"queue"`
+	TargetType string  `json:"targetType"`
+	TargetID   string  `json:"targetId"`
+	Title      string  `json:"title"`
+	Summary    string  `json:"summary,omitempty"`
+	Diff       string  `json:"diff,omitempty"`
+	Status     string  `json:"status"`
+	SpaceID    string  `json:"spaceId"`
+	CreatedAt  int64   `json:"createdAt"`
+	AssigneeID string  `json:"assigneeId,omitempty"`
+	SlaBreach  bool    `json:"slaBreach,omitempty"`
+	AgeHours   float64 `json:"ageHours,omitempty"`
 }
 
 type ListResponse struct {
@@ -184,6 +186,8 @@ func (s *Service) listMemory(spaceID string, limit int) ([]Item, error) {
 	if err != nil {
 		return nil, err
 	}
+	hours := s.reviewSLAHours(spaceID)
+	now := time.Now().UTC()
 	out := make([]Item, 0, len(resp.Items))
 	for _, it := range resp.Items {
 		status := StatusPending
@@ -204,12 +208,15 @@ func (s *Service) listMemory(spaceID string, limit int) ([]Item, error) {
 		if aid, ok := s.loadAssignee("memory", it.ID); ok {
 			item.AssigneeID = aid
 		}
+		applySLABreach(&item, hours, now)
 		out = append(out, item)
 	}
 	return out, nil
 }
 
 func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
+	hours := s.reviewSLAHours(spaceID)
+	now := time.Now().UTC()
 	out := make([]Item, 0, limit)
 	if s.harness != nil {
 		for _, st := range []string{harness.StatusInReview, harness.StatusPendingSecond} {
@@ -239,6 +246,7 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 				if aid, ok := s.loadAssignee("harness_profile", v.ID); ok {
 					item.AssigneeID = aid
 				}
+				applySLABreach(&item, hours, now)
 				out = append(out, item)
 			}
 		}
@@ -267,10 +275,36 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 			if aid, ok := s.loadAssignee("scenario_patch", p.ID); ok {
 				item.AssigneeID = aid
 			}
+			applySLABreach(&item, hours, now)
 			out = append(out, item)
 		}
 	}
 	return out, nil
+}
+
+// reviewSLAHours mirrors waker/review_sla.go: EffectivePolicy ReviewSLAHours, else 72h.
+func (s *Service) reviewSLAHours(spaceID string) int {
+	hours := 72
+	if s.policy != nil {
+		if eff, err := s.policy.EffectivePolicy(spaceID); err == nil && eff != nil && eff.ReviewSLAHours > 0 {
+			hours = eff.ReviewSLAHours
+		}
+	}
+	return hours
+}
+
+// applySLABreach sets AgeHours and SlaBreach from the item age anchor (CreatedAt unix ms).
+// Memory uses CreatedAt; harness/patch list paths already store UpdatedAt in CreatedAt (waker semantics).
+func applySLABreach(item *Item, hours int, now time.Time) {
+	if item == nil || item.CreatedAt <= 0 || hours <= 0 {
+		return
+	}
+	anchor := time.UnixMilli(item.CreatedAt).UTC()
+	item.AgeHours = now.Sub(anchor).Hours()
+	cutoff := now.Add(-time.Duration(hours) * time.Hour)
+	if anchor.Before(cutoff) {
+		item.SlaBreach = true
+	}
 }
 
 // Assign sets the review queue assignee for a pending item (persisted via audit_log).

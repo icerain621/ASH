@@ -11,6 +11,7 @@ import {
   type ReviewItem,
 } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
+import { getAuthMe } from "@/modules/platform/api/platform.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadComparePanel } from "@/modules/interactions/components/ThreadComparePanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
@@ -40,6 +41,7 @@ export function ReviewsPage() {
   const [inspectRunId, setInspectRunId] = useState("");
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [assigneeInput, setAssigneeInput] = useState("");
+  const [overdueOnly, setOverdueOnly] = useState(false);
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -52,6 +54,10 @@ export function ReviewsPage() {
   const policyQuery = useQuery({
     queryKey: ["space-policy", spaceId],
     queryFn: () => getSpacePolicy(spaceId),
+  });
+  const meQuery = useQuery({
+    queryKey: ["auth-me", spaceId],
+    queryFn: getAuthMe,
   });
 
   const decideMut = useMutation({
@@ -104,9 +110,11 @@ export function ReviewsPage() {
     });
   }
 
-  const items = queueQuery.data?.items ?? [];
+  const allItems = queueQuery.data?.items ?? [];
+  const items = overdueOnly ? allItems.filter((it) => it.slaBreach) : allItems;
   const reviewSlaHours = policyQuery.data?.effective?.reviewSlaHours;
   const secondSign = isPendingSecond(selected?.status);
+  const canAssign = (meQuery.data?.permissions ?? []).includes("reviews:assign");
 
   return (
     <section className="panel active" data-testid="reviews-page">
@@ -139,6 +147,15 @@ export function ReviewsPage() {
               <option value="all">全部</option>
             </select>
           </label>
+          <button
+            type="button"
+            className={`btn mini ${overdueOnly ? "ok" : ""}`}
+            data-testid="reviews-filter-overdue"
+            aria-pressed={overdueOnly}
+            onClick={() => setOverdueOnly((v) => !v)}
+          >
+            仅逾期
+          </button>
           <button type="button" className="btn icon-btn" onClick={() => queueQuery.refetch()} disabled={queueQuery.isFetching}>
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
@@ -175,6 +192,11 @@ export function ReviewsPage() {
                     {isPendingSecond(item.status) ? (
                       <span className="scope-badge" data-testid="review-pending-second-badge" style={{ marginLeft: 6 }}>
                         待第二签
+                      </span>
+                    ) : null}
+                    {item.slaBreach ? (
+                      <span className="scope-badge" data-testid="review-sla-breach-badge" style={{ marginLeft: 6 }}>
+                        SLA 逾期
                       </span>
                     ) : null}
                     {item.assigneeId ? (
@@ -314,28 +336,36 @@ export function ReviewsPage() {
             原因
             <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
           </label>
-          <label className="scenario-picker">
-            分配给
-            <input
-              value={assigneeInput}
-              onChange={(e) => setAssigneeInput(e.target.value)}
-              placeholder="assigneeId"
-              data-testid="reviews-assignee-input"
-            />
-          </label>
-          <div className="row-actions" style={{ marginBottom: 8 }}>
-            <button
-              type="button"
-              className="btn mini"
-              disabled={assignMut.isPending || !selected || !assigneeInput.trim()}
-              onClick={() =>
-                selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
-              }
-              data-testid="review-assign"
-            >
-              分配
-            </button>
-          </div>
+          {canAssign ? (
+            <>
+              <label className="scenario-picker">
+                分配给
+                <input
+                  value={assigneeInput}
+                  onChange={(e) => setAssigneeInput(e.target.value)}
+                  placeholder="assigneeId"
+                  data-testid="reviews-assignee-input"
+                />
+              </label>
+              <div className="row-actions" style={{ marginBottom: 8 }}>
+                <button
+                  type="button"
+                  className="btn mini"
+                  disabled={assignMut.isPending || !selected || !assigneeInput.trim()}
+                  onClick={() =>
+                    selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
+                  }
+                  data-testid="review-assign"
+                >
+                  分配
+                </button>
+              </div>
+            </>
+          ) : (
+            <p className="muted-line" data-testid="reviews-assign-denied">
+              需要 reviews:assign 权限才能分配责任人
+            </p>
+          )}
           {(
             [
               ["correctness", "正确性"],

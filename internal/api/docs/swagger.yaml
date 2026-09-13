@@ -498,6 +498,8 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_evolve.Item:
     properties:
+      ageHours:
+        type: number
       assigneeId:
         type: string
       createdAt:
@@ -508,6 +510,8 @@ definitions:
         type: string
       queue:
         type: string
+      slaBreach:
+        type: boolean
       spaceId:
         type: string
       status:

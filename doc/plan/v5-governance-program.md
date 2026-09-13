@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**P2 GV07–10 + Task 11 硬化已落地**（Space.Kind · Registry · PolicyPack · Rubric/score_events · Reviews Workbench · multi_sign/pending_second · TR3-12 · `make v5-signoff`）；下一优先级可观测深化或 SLA/assign  
+> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 SLA UI + `reviews:assign` 分配闸门已落地**（queue `slaBreach` · 仅逾期筛选 · Observability `review_sla`）；下一优先级 **Mobile Reviews** 或 **Policy Doctor**  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  

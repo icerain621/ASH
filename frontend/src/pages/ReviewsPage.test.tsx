@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReviewsPage } from "./ReviewsPage";
 import { decideReview, listReviewsQueue, assignReview } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
+import { getAuthMe } from "@/modules/platform/api/platform.api";
 
 vi.mock("@/modules/reviews/api/reviews.api", () => ({
   listReviewsQueue: vi.fn(async () => ({
@@ -18,6 +19,8 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
         spaceId: "local",
         createdAt: 1,
         assigneeId: "rev_bob",
+        slaBreach: true,
+        ageHours: 96,
       },
       {
         id: "harness_profile:hprof_2",
@@ -52,6 +55,15 @@ vi.mock("@/modules/registry/api/registry.api", () => ({
   }),
 }));
 
+vi.mock("@/modules/platform/api/platform.api", () => ({
+  getAuthMe: vi.fn().mockResolvedValue({
+    user: { id: "u1", displayName: "Reviewer" },
+    space: { id: "local", name: "local" },
+    role: "reviewer",
+    permissions: ["reviews:assign", "memory:review"],
+  }),
+}));
+
 vi.mock("@/modules/interactions/api/interactions.api", () => ({
   getInteractionByRun: vi.fn(async () => ({
     runId: "run_x",
@@ -76,18 +88,28 @@ vi.mock("@/services/http/client", () => ({
   getCurrentSpaceId: () => "local",
 }));
 
+function renderReviews() {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <ReviewsPage />
+    </QueryClientProvider>,
+  );
+}
+
 describe("ReviewsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(getAuthMe).mockResolvedValue({
+      user: { id: "u1", displayName: "Reviewer" },
+      space: { id: "local", name: "local" },
+      role: "reviewer",
+      permissions: ["reviews:assign", "memory:review"],
+    });
   });
 
   it("renders workbench columns and submits rubric", async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={qc}>
-        <ReviewsPage />
-      </QueryClientProvider>,
-    );
+    renderReviews();
     expect(await screen.findByTestId("reviews-page")).toBeTruthy();
     expect(await screen.findByText("default@v1")).toBeTruthy();
     expect(screen.getByTestId("reviews-workbench")).toBeTruthy();
@@ -115,12 +137,7 @@ describe("ReviewsPage", () => {
   });
 
   it("shows pending_second badge and second-sign decide labels", async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={qc}>
-        <ReviewsPage />
-      </QueryClientProvider>,
-    );
+    renderReviews();
     expect(await screen.findByText("team@v2")).toBeTruthy();
     expect(screen.getByTestId("review-pending-second-badge")).toHaveTextContent("待第二签");
 
@@ -140,13 +157,8 @@ describe("ReviewsPage", () => {
     expect(listReviewsQueue).toHaveBeenCalled();
   });
 
-  it("shows assignee and submits assign", async () => {
-    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-    render(
-      <QueryClientProvider client={qc}>
-        <ReviewsPage />
-      </QueryClientProvider>,
-    );
+  it("shows assignee and submits assign when permitted", async () => {
+    renderReviews();
     expect(await screen.findByTestId("review-assignee-badge")).toHaveTextContent("负责人: rev_bob");
     fireEvent.click(screen.getByText("default@v1"));
     expect(screen.getByTestId("review-detail-assignee")).toHaveTextContent("负责人: rev_bob");
@@ -158,5 +170,29 @@ describe("ReviewsPage", () => {
         expect.objectContaining({ assigneeId: "op_x" }),
       );
     });
+  });
+
+  it("shows SLA breach badge and filters overdue only", async () => {
+    renderReviews();
+    expect(await screen.findByTestId("review-sla-breach-badge")).toHaveTextContent("SLA 逾期");
+    expect(screen.getByText("default@v1")).toBeTruthy();
+    expect(screen.getByText("team@v2")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("reviews-filter-overdue"));
+    expect(screen.getByText("default@v1")).toBeTruthy();
+    expect(screen.queryByText("team@v2")).toBeNull();
+  });
+
+  it("hides assign controls without reviews:assign", async () => {
+    vi.mocked(getAuthMe).mockResolvedValue({
+      user: { id: "u2", displayName: "Viewer" },
+      space: { id: "local", name: "local" },
+      role: "viewer",
+      permissions: ["artifact:read"],
+    });
+    renderReviews();
+    expect(await screen.findByTestId("reviews-assign-denied")).toHaveTextContent("reviews:assign");
+    expect(screen.queryByTestId("review-assign")).toBeNull();
+    expect(screen.queryByTestId("reviews-assignee-input")).toBeNull();
   });
 });

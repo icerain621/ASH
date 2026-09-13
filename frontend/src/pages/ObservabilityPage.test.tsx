@@ -161,6 +161,43 @@ describe("ObservabilityPage", () => {
     });
   });
 
+  it("surfaces review_sla duty badge and alert callout", async () => {
+    vi.mocked(getWakerStatus).mockResolvedValue({
+      ...wakerStatus,
+      alertCount: 2,
+      duties: [
+        ...wakerStatus.duties,
+        {
+          id: "wd_review_sla",
+          spaceId: "local",
+          kind: "review_sla",
+          enabled: true,
+          intervalMs: 300000,
+          nextRunAt: "2026-09-02T12:00:00Z",
+        },
+      ],
+      recentRuns: [
+        ...wakerStatus.recentRuns,
+        {
+          id: "wdr_sla",
+          dutyId: "wd_review_sla",
+          kind: "review_sla",
+          status: "ok",
+          matched: 3,
+          flagged: 3,
+          canceled: 0,
+          summary: "review_sla breaches=3 hours=72 sla_breach:memory:m1",
+          startedAt: "2026-09-02T11:58:00Z",
+        },
+      ],
+    });
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getAllByTestId("obs-review-sla-badge").length).toBeGreaterThanOrEqual(1);
+      expect(screen.getByTestId("obs-review-sla-alert")).toHaveTextContent("评审 SLA");
+    });
+  });
+
   it("notes that cancel requires ASH_WAKER_ALLOW_CANCEL when gated off", async () => {
     renderPage(<ObservabilityPage />);
     await waitFor(() => {

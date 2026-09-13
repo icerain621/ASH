@@ -151,6 +151,61 @@ func TestMultiSignPendingSecond(t *testing.T) {
 	}
 }
 
+func TestQueueSlaBreachFlag(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	mem := memory.NewService(db, ev)
+	har := harness.NewService(db)
+	svc := evolve.NewService(db, mem, har, nil)
+
+	oldProf, err := har.Create(harness.CreateRequest{Name: "old-sla", Spec: harness.DefaultSpec()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := har.SubmitReview(oldProf.ID); err != nil {
+		t.Fatal(err)
+	}
+	stale := time.Now().UTC().Add(-100 * time.Hour)
+	if err := db.Model(&store.HarnessProfileVersion{}).Where("id = ?", oldProf.ID).
+		Update("updated_at", stale).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	freshProf, err := har.Create(harness.CreateRequest{Name: "fresh-sla", Spec: harness.DefaultSpec()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := har.SubmitReview(freshProf.ID); err != nil {
+		t.Fatal(err)
+	}
+
+	q, err := svc.ListQueue("local", evolve.QueueOrchestration, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var sawOld, sawFresh bool
+	for _, it := range q.Items {
+		switch it.TargetID {
+		case oldProf.ID:
+			sawOld = true
+			if !it.SlaBreach {
+				t.Fatalf("old item expected slaBreach=true ageHours=%.1f", it.AgeHours)
+			}
+			if it.AgeHours < 72 {
+				t.Fatalf("old ageHours=%.1f want >=72", it.AgeHours)
+			}
+		case freshProf.ID:
+			sawFresh = true
+			if it.SlaBreach {
+				t.Fatalf("fresh item expected slaBreach=false ageHours=%.1f", it.AgeHours)
+			}
+		}
+	}
+	if !sawOld || !sawFresh {
+		t.Fatalf("sawOld=%v sawFresh=%v items=%d", sawOld, sawFresh, len(q.Items))
+	}
+}
+
 func TestLowScoreCreatesImproveDraft(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)

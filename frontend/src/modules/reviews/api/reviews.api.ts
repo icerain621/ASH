@@ -12,6 +12,8 @@ export type ReviewItem = {
   spaceId: string;
   createdAt: number;
   assigneeId?: string;
+  slaBreach?: boolean;
+  ageHours?: number;
 };
 
 export type AssignPayload = {

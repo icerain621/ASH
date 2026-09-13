@@ -107,6 +107,31 @@ export function ObservabilityPage() {
   const allowCancel = Boolean(wakerStatusQuery.data?.allowCancel);
   const wakerBusy = sweepMut.isPending || dutyRunMut.isPending || dutyEnableMut.isPending;
   const probeAlertCount = wakerStatusQuery.data?.alertCount ?? 0;
+  const recentRuns = wakerStatusQuery.data?.recentRuns ?? [];
+  const queueItems = wakerQueueQuery.data?.items ?? [];
+  const hasReviewSlaDuty = wakerDuties.some((d) => d.kind === "review_sla");
+  const hasReviewSlaSignal =
+    hasReviewSlaDuty ||
+    recentRuns.some(
+      (run) =>
+        run.kind === "review_sla" ||
+        String(run.summary || "").includes("sla_breach") ||
+        String(run.summary || "").includes("review_sla"),
+    ) ||
+    queueItems.some(
+      (item) =>
+        item.kind === "review_sla" ||
+        String(item.reason || "").includes("sla_breach") ||
+        String(item.kind || "").includes("sla"),
+    );
+  const showReviewSlaAlert =
+    probeAlertCount > 0 &&
+    recentRuns.some(
+      (run) =>
+        run.kind === "review_sla" ||
+        String(run.summary || "").includes("sla_breach") ||
+        (run.flagged > 0 && String(run.summary || "").includes("review_sla")),
+    );
 
   function toggleRule(rule: AlertRule) {
     rulesMut.mutate([{ ...rule, enabled: !rule.enabled }]);
@@ -340,8 +365,14 @@ export function ObservabilityPage() {
                 : `${wakerDuties.filter((d) => d.enabled).length} enabled`}
             {wakerStatusQuery.data?.probesAvailable ? " · probes seeded" : ""}
             {probeAlertCount > 0 ? ` · ${probeAlertCount} probe alerts` : ""}
+            {hasReviewSlaSignal ? " · review_sla" : ""}
           </span>
         </div>
+        {showReviewSlaAlert ? (
+          <p className="muted-line" data-testid="obs-review-sla-alert">
+            评审 SLA 告警：近期 duty 已标记逾期项（alertCount={probeAlertCount}）
+          </p>
+        ) : null}
         <div className="toolbar metrics-toolbar">
           <button
             className="btn icon-btn"
@@ -412,6 +443,11 @@ export function ObservabilityPage() {
               <tr key={duty.id} onClick={() => setSelectedDutyId(duty.id)}>
                 <td>
                   {duty.kind}
+                  {duty.kind === "review_sla" || String(duty.kind || "").includes("sla") ? (
+                    <span className="scope-badge" data-testid="obs-review-sla-badge" style={{ marginLeft: 6 }}>
+                      评审 SLA
+                    </span>
+                  ) : null}
                   {selectedDuty?.id === duty.id ? " · selected" : ""}
                 </td>
                 <td>
@@ -456,7 +492,14 @@ export function ObservabilityPage() {
               )}
               {(wakerStatusQuery.data?.recentRuns ?? []).map((run) => (
                 <tr key={run.id}>
-                  <td>{run.kind}</td>
+                  <td>
+                    {run.kind}
+                    {run.kind === "review_sla" || String(run.summary || "").includes("sla_breach") ? (
+                      <span className="scope-badge" data-testid="obs-review-sla-badge" style={{ marginLeft: 6 }}>
+                        评审 SLA
+                      </span>
+                    ) : null}
+                  </td>
                   <td>
                     <StatusPill value={run.status} />
                   </td>
@@ -490,7 +533,14 @@ export function ObservabilityPage() {
               {(wakerQueueQuery.data?.items ?? []).slice(0, 10).map((item) => (
                 <tr key={item.runId}>
                   <td>{item.reason || "-"}</td>
-                  <td>{item.kind || "-"}</td>
+                  <td>
+                    {item.kind || "-"}
+                    {item.kind === "review_sla" || String(item.reason || "").includes("sla_breach") ? (
+                      <span className="scope-badge" data-testid="obs-review-sla-badge" style={{ marginLeft: 6 }}>
+                        评审 SLA
+                      </span>
+                    ) : null}
+                  </td>
                 </tr>
               ))}
             </tbody>

@@ -1801,6 +1801,8 @@ components:
         spaceId: { type: string }
         createdAt: { type: integer, format: int64 }
         assigneeId: { type: string }
+        slaBreach: { type: boolean }
+        ageHours: { type: number, format: double }
     ReviewsQueueResponse:
       type: object
       required: [items]
