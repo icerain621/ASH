@@ -13,6 +13,7 @@ import {
 import { getPluginHealth } from "@/modules/platform/api/platform.api";
 import { getOtelStatus, getRagProfile } from "@/modules/observability/api/observability.api";
 import { RagLspProbePanel } from "@/modules/observability/components/RagLspProbePanel";
+import { InteractionMetricsSummary } from "@/modules/interactions/components/InteractionMetricsSummary";
 import { getScaleReadiness } from "@/modules/scale/api/scale.api";
 import {
   getWakerQueue,
@@ -640,13 +641,15 @@ export function ObservabilityPage() {
           </pre>
         </div>
 
-        <div className="pane">
-          <div className="pane-title">
-            <h2>Prometheus</h2>
-            <span>{metricsQuery.isFetching ? "loading" : "snapshot"}</span>
-          </div>
-          <pre className="code-block tall">{metricsQuery.data || "暂无指标文本。"}</pre>
+        <InteractionMetricsSummary prometheusText={metricsQuery.data ?? ""} />
+      </div>
+
+      <div className="pane">
+        <div className="pane-title">
+          <h2>Prometheus</h2>
+          <span>{metricsQuery.isFetching ? "loading" : "snapshot"}</span>
         </div>
+        <pre className="code-block tall">{metricsQuery.data || "暂无指标文本。"}</pre>
       </div>
 
       <div className="pane">

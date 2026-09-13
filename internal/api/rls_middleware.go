@@ -10,9 +10,11 @@ import (
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/improve"
+	"github.com/ash-repwiki/ash/internal/interaction"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/scoring"
 	"github.com/ash-repwiki/ash/internal/session"
 	"github.com/ash-repwiki/ash/internal/store"
 	"gorm.io/gorm"
@@ -137,11 +139,26 @@ func (h *Handler) sessionFor(c *gin.Context) *session.Service {
 	return h.session.WithContext(c.Request.Context())
 }
 
+func (h *Handler) interactionFor(c *gin.Context) *interaction.Service {
+	_ = c
+	if h == nil {
+		return nil
+	}
+	return h.interaction
+}
+
 func (h *Handler) metricsFor(c *gin.Context) *metricssvc.Service {
 	if h == nil || h.metrics == nil {
 		return h.metrics
 	}
 	return h.metrics.WithContext(c.Request.Context())
+}
+
+func (h *Handler) scoringFor(c *gin.Context) *scoring.Service {
+	if h == nil || h.scoring == nil {
+		return h.scoring
+	}
+	return h.scoring.WithContext(c.Request.Context())
 }
 
 func (h *Handler) lookupSpaceOrgID(c *gin.Context, spaceID string) (string, error) {

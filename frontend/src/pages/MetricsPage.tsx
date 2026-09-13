@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { BarChart3, CalendarDays, RefreshCcw } from "lucide-react";
 import { useMemo, useState } from "react";
-import { getMetricsOverview, type MetricCard, type MetricTrend } from "@/modules/metrics/api/metrics.api";
+import { getMetricsOverview, getSpaceEvaluation, type MetricCard, type MetricTrend } from "@/modules/metrics/api/metrics.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 const KPI_ORDER = [
@@ -38,7 +38,12 @@ export function MetricsPage() {
     queryKey: ["metrics", "overview", activeSpaceId, period, projectId, days],
     queryFn: () => getMetricsOverview({ spaceId: activeSpaceId, period, projectId, ...range }),
   });
+  const evaluationQuery = useQuery({
+    queryKey: ["metrics", "evaluation", activeSpaceId, days],
+    queryFn: () => getSpaceEvaluation(activeSpaceId, { from: range.from, to: range.to }),
+  });
   const overview = overviewQuery.data;
+  const evaluation = evaluationQuery.data;
   const cards = KPI_ORDER.map((id) => overview?.summary.find((item) => item.id === id)).filter(Boolean) as MetricCard[];
   const deliveryCards = cards.filter((c) => !EVOLVE_KPI.has(c.id));
   const evolveCards = cards.filter((c) => EVOLVE_KPI.has(c.id));
@@ -52,7 +57,9 @@ export function MetricsPage() {
       <div className="page-heading">
         <div>
           <h1>指标看板</h1>
-          <p>按 ASH KPI 口径查看交付、CI、反馈、记忆与场景可重复性（R-02）聚合结果；演进区含 KPI-17~19。</p>
+          <p>
+            按 ASH KPI 口径查看交付、CI、反馈、记忆与场景可重复性（R-02）聚合结果；演进区含 KPI-17~19；空间测评为四维双核评分（GV06）。
+          </p>
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar metrics-toolbar">
@@ -77,14 +84,116 @@ export function MetricsPage() {
             placeholder="repo connection id"
             onChange={(e) => setProjectId(e.target.value)}
           />
-          <button className="btn icon-btn" onClick={() => overviewQuery.refetch()} disabled={overviewQuery.isFetching}>
+          <button
+            className="btn icon-btn"
+            onClick={() => {
+              overviewQuery.refetch();
+              evaluationQuery.refetch();
+            }}
+            disabled={overviewQuery.isFetching || evaluationQuery.isFetching}
+          >
             <RefreshCcw size={16} strokeWidth={1.8} />
-            {overviewQuery.isFetching ? "刷新中" : "刷新"}
+            {overviewQuery.isFetching || evaluationQuery.isFetching ? "刷新中" : "刷新"}
           </button>
         </div>
       </div>
 
       {overviewQuery.isError && <p className="error-text">{(overviewQuery.error as Error).message}</p>}
+      {evaluationQuery.isError && <p className="error-text">{(evaluationQuery.error as Error).message}</p>}
+
+      <div className="metrics-evaluation" data-testid="metrics-evaluation-section">
+        <div className="pane-title">
+          <h2>空间测评（四维）</h2>
+          <span>{evaluation?.dimensions?.length ?? 0} 维</span>
+        </div>
+        <div className="metrics-grid">
+          {(evaluation?.dimensions ?? []).map((dim) => (
+            <div className="pane metric-card" key={dim.id} data-testid={`eval-dim-${dim.id}`}>
+              <div className="pane-title">
+                <h2>{dim.label}</h2>
+                <span className={`status-pill ${dim.status === "ok" ? "ok" : "idle"}`}>
+                  <span className="status-dot" />
+                  {dim.status}
+                </span>
+              </div>
+              <div className="metric-value">{`${Math.round(dim.score * 1000) / 10}%`}</div>
+              <p className="muted-line">
+                {(dim.signals ?? [])
+                  .slice(0, 2)
+                  .map((s) => s.label)
+                  .join(" · ") || "暂无信号"}
+              </p>
+            </div>
+          ))}
+          {!evaluationQuery.isLoading && !(evaluation?.dimensions?.length) ? (
+            <p className="muted-line">暂无测评样本。</p>
+          ) : null}
+        </div>
+        <div className="split metrics-split" style={{ marginTop: "0.75rem" }}>
+          <div className="pane" data-testid="metrics-evaluation-health">
+            <div className="pane-title">
+              <h2>关联健康度</h2>
+              <span>seal / replay / citation</span>
+            </div>
+            <table className="table compact">
+              <tbody>
+                <tr>
+                  <td>Thread 封印率</td>
+                  <td>
+                    {evaluation
+                      ? `${Math.round((evaluation.health.threadSealRate.value || 0) * 1000) / 10}% (${evaluation.health.threadSealRate.numerator ?? 0}/${evaluation.health.threadSealRate.denominator ?? 0})`
+                      : "—"}
+                  </td>
+                </tr>
+                <tr>
+                  <td>Replay mismatch</td>
+                  <td>
+                    {evaluation
+                      ? `${Math.round((evaluation.health.replayMismatchRate.value || 0) * 1000) / 10}%`
+                      : "—"}
+                  </td>
+                </tr>
+                <tr>
+                  <td>缺引用事件</td>
+                  <td>{evaluation?.health.citationMissingTotal ?? "—"}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="pane" data-testid="metrics-evaluation-scenarios">
+            <div className="pane-title">
+              <h2>场景排行</h2>
+              <span>{evaluation?.scenarios?.length ?? 0} 组</span>
+            </div>
+            <table className="table compact">
+              <thead>
+                <tr>
+                  <th>场景</th>
+                  <th>样本</th>
+                  <th>综合分</th>
+                </tr>
+              </thead>
+              <tbody>
+                {(evaluation?.scenarios ?? []).map((s) => (
+                  <tr key={`${s.scenario}@${s.version ?? ""}`}>
+                    <td>
+                      {s.scenario}
+                      {s.version ? `@${s.version}` : ""}
+                    </td>
+                    <td>{s.runCount}</td>
+                    <td>{`${Math.round(s.rankScore * 1000) / 10}%`}</td>
+                  </tr>
+                ))}
+                {!(evaluation?.scenarios?.length) ? (
+                  <tr className="empty-row">
+                    <td colSpan={3}>暂无场景样本。</td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
 
       <div className="metrics-grid">
         {deliveryCards.map((card) => (

@@ -63,6 +63,9 @@ const (
 	permSecretRead         = "secret:read"
 	permSecretWrite        = "secret:write"
 	permSpaceWrite         = "space:write"
+	permSpacesPolicy       = "spaces:policy"
+	permAgentsManage       = "agents:manage"
+	permMemoryManage       = "memory:manage"
 	permStorageRead        = "storage:read"
 )
 

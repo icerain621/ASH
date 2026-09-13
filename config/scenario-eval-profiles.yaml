@@ -1,0 +1,35 @@
+# ScenarioEvalProfile weights for space evaluation (GV06–07).
+profiles:
+  - id: feature_delivery
+    scenario: feature_delivery
+    label: 特性交付
+    weights:
+      quality: 0.35
+      safety: 0.15
+      efficiency: 0.30
+      governance: 0.20
+    gateHints:
+      - artifact completeness
+      - citation coverage
+  - id: hotfix
+    scenario: hotfix
+    label: 热修
+    weights:
+      quality: 0.25
+      safety: 0.35
+      efficiency: 0.25
+      governance: 0.15
+    gateHints:
+      - human approval wait
+      - fast verify
+  - id: security_patch
+    scenario: security_patch
+    label: 安全补丁
+    weights:
+      quality: 0.20
+      safety: 0.45
+      efficiency: 0.10
+      governance: 0.25
+    gateHints:
+      - notice completeness
+      - rollback readiness

@@ -149,8 +149,8 @@ func TestTR3Suite(t *testing.T) {
 		}
 		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 10 {
-		t.Fatalf("TR3 pass=%d want 10", rep.Summary.Pass)
+	if rep.Summary.Pass != 12 {
+		t.Fatalf("TR3 pass=%d want 12", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
 	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
@@ -162,6 +162,8 @@ func TestTR3Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "TR3-08", "skipped")
 	assertCaseEvidence(t, rep, "TR3-09", "openapiContract")
 	assertCaseEvidence(t, rep, "TR3-10", "readyzHealth")
+	assertCaseEvidence(t, rep, "TR3-11", "interactionSeal")
+	assertCaseEvidence(t, rep, "TR3-12", "spaceKind")
 }
 
 func TestTR3PrometheusReplaySegmentWhenEnabled(t *testing.T) {
@@ -303,7 +305,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 57
+	want := 59
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

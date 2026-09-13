@@ -470,14 +470,24 @@ definitions:
         type: string
       reason:
         type: string
+      rubric:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.ReviewRubric'
+      runId:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_evolve.DecideResponse:
     properties:
+      composite:
+        type: number
       decision:
         type: string
       id:
         type: string
+      improveDraftId:
+        type: string
       queue:
+        type: string
+      scoreEventId:
         type: string
       status:
         type: string
@@ -773,6 +783,174 @@ definitions:
       ok:
         type: boolean
       status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.ByRunView:
+    properties:
+      runId:
+        type: string
+      thread:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread'
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.CompareResult:
+    properties:
+      leftDigest:
+        type: string
+      leftThreadId:
+        type: string
+      linksAdded:
+        items:
+          type: string
+        type: array
+      linksRemoved:
+        items:
+          type: string
+        type: array
+      nodesAdded:
+        items:
+          type: string
+        type: array
+      nodesChanged:
+        items:
+          type: string
+        type: array
+      nodesRemoved:
+        items:
+          type: string
+        type: array
+      rightDigest:
+        type: string
+      rightThreadId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.EnsureRequest:
+    properties:
+      runId:
+        type: string
+      sessionId:
+        type: string
+      spaceId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.FoldResult:
+    properties:
+      digest:
+        type: string
+      headSeq:
+        type: integer
+      links:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.MemoryLink'
+        type: array
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.TimelineNode'
+        type: array
+      runId:
+        type: string
+      sessionId:
+        type: string
+      spaceId:
+        type: string
+      threadId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.MemoryLink:
+    properties:
+      digest:
+        type: string
+      eventId:
+        type: string
+      eventSeq:
+        type: integer
+      id:
+        type: string
+      layer:
+        type: string
+      linkType:
+        type: string
+      memoryId:
+        type: string
+      runId:
+        type: string
+      sessionId:
+        type: string
+      spaceId:
+        type: string
+      stepId:
+        type: string
+      threadId:
+        type: string
+      ts:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.ReplayResult:
+    properties:
+      digest:
+        type: string
+      headSeq:
+        type: integer
+      links:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.MemoryLink'
+        type: array
+      mismatchSeq:
+        type: integer
+      nodes:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.TimelineNode'
+        type: array
+      ok:
+        type: boolean
+      sealedDigest:
+        type: string
+      status:
+        type: string
+      threadId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.Thread:
+    properties:
+      createdAt:
+        type: integer
+      digest:
+        type: string
+      headSeq:
+        type: integer
+      id:
+        type: string
+      kind:
+        type: string
+      runId:
+        type: string
+      sessionId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_interaction.TimelineNode:
+    properties:
+      id:
+        type: string
+      payload:
+        items:
+          type: integer
+        type: array
+      seq:
+        type: integer
+      severity:
+        type: string
+      stepId:
+        type: string
+      ts:
+        type: integer
+      type:
+        type: string
+      visibility:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_knowledge.RepoProfile:
@@ -1417,6 +1595,9 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec:
     properties:
+      kind:
+        description: user|team; default team
+        type: string
       name:
         type: string
       slug:
@@ -1747,6 +1928,93 @@ definitions:
         type: string
       symbols:
         type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.AgentAssetListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.AgentAssetView'
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.AgentAssetView:
+    properties:
+      createdAt:
+        type: integer
+      id:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      refId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.CreateAgentAssetRequest:
+    properties:
+      kind:
+        type: string
+      name:
+        type: string
+      refId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+    required:
+    - kind
+    - name
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.CreateMemoryAssetRequest:
+    properties:
+      kind:
+        type: string
+      name:
+        type: string
+      refId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+    required:
+    - kind
+    - name
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.MemoryAssetListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.MemoryAssetView'
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.MemoryAssetView:
+    properties:
+      createdAt:
+        type: integer
+      id:
+        type: string
+      kind:
+        type: string
+      name:
+        type: string
+      refId:
+        type: string
+      spaceId:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_registry.PatchStatusRequest:
+    properties:
+      status:
+        type: string
+    required:
+    - status
     type: object
   github_com_ash-repwiki_ash_internal_releases.ChecklistUpdate:
     properties:
@@ -2308,6 +2576,137 @@ definitions:
       updatedAt:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_scoring.DataQualityNote:
+    properties:
+      message:
+        type: string
+      metricId:
+        type: string
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.DimensionScore:
+    properties:
+      id:
+        type: string
+      label:
+        type: string
+      score:
+        type: number
+      signals:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.SignalMetric'
+        type: array
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.Evaluation:
+    properties:
+      dataQuality:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.DataQualityNote'
+        type: array
+      dimensions:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.DimensionScore'
+        type: array
+      from:
+        type: string
+      generatedAt:
+        type: string
+      health:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.EvaluationHealth'
+      scenarios:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.ScenarioEvaluation'
+        type: array
+      spaceId:
+        type: string
+      to:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.EvaluationHealth:
+    properties:
+      citationMissingTotal:
+        type: integer
+      memoryLinksByType:
+        additionalProperties:
+          type: integer
+        type: object
+      replayMismatchRate:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.SignalMetric'
+      threadSealRate:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.SignalMetric'
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.ReviewRubric:
+    properties:
+      citable:
+        type: integer
+      correctness:
+        type: integer
+      efficiency:
+        type: integer
+      safety:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.RubricDimDef:
+    properties:
+      key:
+        type: string
+      label:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.RubricSchema:
+    properties:
+      dimensions:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.RubricDimDef'
+        type: array
+      id:
+        type: string
+      max:
+        type: integer
+      min:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.ScenarioEvaluation:
+    properties:
+      dimensions:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.DimensionScore'
+        type: array
+      gateHints:
+        items:
+          type: string
+        type: array
+      profileId:
+        type: string
+      rankScore:
+        type: number
+      runCount:
+        type: integer
+      scenario:
+        type: string
+      status:
+        type: string
+      version:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_scoring.SignalMetric:
+    properties:
+      denominator:
+        type: integer
+      id:
+        type: string
+      label:
+        type: string
+      numerator:
+        type: integer
+      unit:
+        type: string
+      value:
+        type: number
+    type: object
   github_com_ash-repwiki_ash_internal_security.LeakFinding:
     properties:
       pattern:
@@ -2509,6 +2908,49 @@ definitions:
         type: string
       relPath:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.EffectivePolicy:
+    properties:
+      citationMode:
+        type: string
+      multiSign:
+        type: boolean
+      reviewSlaHours:
+        type: integer
+      sources:
+        items:
+          type: string
+        type: array
+      spaceId:
+        type: string
+      spaceKind:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.Pack:
+    properties:
+      bodyJson:
+        type: string
+      citationMode:
+        type: string
+      multiSign:
+        type: boolean
+      reviewSlaHours:
+        type: integer
+      spaceId:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.PutPackRequest:
+    properties:
+      bodyJson:
+        type: string
+      citationMode:
+        type: string
+      multiSign:
+        type: boolean
+      reviewSlaHours:
+        type: integer
     type: object
   github_com_ash-repwiki_ash_internal_spacerules.Defaults:
     properties:
@@ -3217,9 +3659,12 @@ definitions:
         type: string
       id:
         type: string
+      kind:
+        description: user|team
+        type: string
       name:
         type: string
-      orgID:
+      orgId:
         type: string
       slug:
         type: string
@@ -4283,6 +4728,13 @@ definitions:
     - currentPassword
     - newPassword
     type: object
+  internal_api.compareThreadsRequest:
+    properties:
+      left:
+        type: string
+      right:
+        type: string
+    type: object
   internal_api.createDeviceSessionRequest:
     properties:
       deviceId:
@@ -4429,6 +4881,9 @@ definitions:
     type: object
   internal_api.createSpaceRequest:
     properties:
+      kind:
+        description: user|team
+        type: string
       name:
         type: string
       orgId:
@@ -4704,6 +5159,13 @@ definitions:
       spaceId:
         type: string
     type: object
+  internal_api.spacePolicyResponse:
+    properties:
+      effective:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.EffectivePolicy'
+      pack:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.Pack'
+    type: object
   internal_api.toolRiskCatalogResponse:
     properties:
       docRef:
@@ -4774,6 +5236,73 @@ info:
   title: ASH Worker API
   version: "0.1"
 paths:
+  /api/v1/agents/assets:
+    get:
+      parameters:
+      - description: draft|active|disabled
+        in: query
+        name: status
+        type: string
+      - description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.AgentAssetListResponse'
+      summary: List agent registry assets
+      tags:
+      - registry
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: asset
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.CreateAgentAssetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.AgentAssetView'
+      summary: Create agent registry asset
+      tags:
+      - registry
+  /api/v1/agents/assets/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: asset id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.PatchStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.AgentAssetView'
+      summary: Enable/disable agent asset
+      tags:
+      - registry
   /api/v1/agents/sessions:
     post:
       consumes:
@@ -6328,6 +6857,171 @@ paths:
       summary: Rollback promoted proposal
       tags:
       - improve
+  /api/v1/interactions/by-run/{runId}:
+    get:
+      parameters:
+      - description: run id
+        in: path
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.ByRunView'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Resolve Session/Thread for a run
+      tags:
+      - interactions
+  /api/v1/interactions/compare:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: left/right thread ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.compareThreadsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.CompareResult'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Compare two threads
+      tags:
+      - interactions
+  /api/v1/interactions/threads/{threadId}:
+    get:
+      parameters:
+      - description: thread id
+        in: path
+        name: threadId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.FoldResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Fold thread timeline nodes + digest
+      tags:
+      - interactions
+  /api/v1/interactions/threads/{threadId}/memory-links:
+    get:
+      parameters:
+      - description: thread id
+        in: path
+        name: threadId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Memory links for a thread
+      tags:
+      - interactions
+  /api/v1/interactions/threads/{threadId}/replay:
+    post:
+      parameters:
+      - description: thread id
+        in: path
+        name: threadId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.ReplayResult'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Replay fold and verify sealed digest
+      tags:
+      - interactions
+  /api/v1/interactions/threads/{threadId}/seal:
+    post:
+      parameters:
+      - description: thread id
+        in: path
+        name: threadId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Seal thread digest
+      tags:
+      - interactions
+  /api/v1/interactions/threads/ensure:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: ensure
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.EnsureRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Ensure main thread for a run
+      tags:
+      - interactions
   /api/v1/mcp/tools:
     get:
       produces:
@@ -6376,6 +7070,73 @@ paths:
       summary: Register an MCP tool
       tags:
       - mcp
+  /api/v1/memory/assets:
+    get:
+      parameters:
+      - description: draft|active|disabled
+        in: query
+        name: status
+        type: string
+      - description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.MemoryAssetListResponse'
+      summary: List memory registry assets
+      tags:
+      - registry
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: asset
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.CreateMemoryAssetRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.MemoryAssetView'
+      summary: Create memory registry asset
+      tags:
+      - registry
+  /api/v1/memory/assets/{id}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: asset id
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: status
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.PatchStatusRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_registry.MemoryAssetView'
+      summary: Enable/disable memory asset
+      tags:
+      - registry
   /api/v1/memory/candidates:
     get:
       parameters:
@@ -8733,6 +9494,18 @@ paths:
       summary: Validate scenario DSL (raw YAML body)
       tags:
       - scenarios
+  /api/v1/scores/rubrics:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.RubricSchema'
+      summary: Default review rubric schema
+      tags:
+      - scores
   /api/v1/secrets:
     get:
       produces:
@@ -9016,6 +9789,46 @@ paths:
       summary: Create space
       tags:
       - spaces
+  /api/v1/spaces/{spaceId}/evaluation:
+    get:
+      description: Aggregate Quality/Safety/Efficiency/Governance plus seal/replay/memory-link
+        health and scenario ranking (GV06–07).
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: RFC3339 start time
+        in: query
+        name: from
+        type: string
+      - description: RFC3339 end time
+        in: query
+        name: to
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_scoring.Evaluation'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Space dual-core evaluation
+      tags:
+      - spaces
   /api/v1/spaces/{spaceId}/members:
     get:
       parameters:
@@ -9113,6 +9926,49 @@ paths:
       summary: M2 permission matrix for a specific space
       tags:
       - permissions
+  /api/v1/spaces/{spaceId}/policy:
+    get:
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.spacePolicyResponse'
+      summary: Get space policy pack and effective merge
+      tags:
+      - spaces
+    put:
+      consumes:
+      - application/json
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: pack
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.PutPackRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.spacePolicyResponse'
+      summary: Upsert space policy pack
+      tags:
+      - spaces
   /api/v1/spaces/{spaceId}/resource-scopes:
     get:
       parameters:

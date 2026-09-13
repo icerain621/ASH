@@ -54,8 +54,50 @@ vi.mock("@/modules/quest/api/quest.api", () => ({
   })),
   listDiffComments: vi.fn(async () => ({ items: [] })),
   createDiffComment: vi.fn(),
-  rateRunStep: vi.fn(),
   rejectRunDiff: vi.fn(),
+}));
+
+vi.mock("@/modules/agent-session/api/session.api", async () => {
+  const actual = await vi.importActual<typeof import("@/modules/agent-session/api/session.api")>(
+    "@/modules/agent-session/api/session.api",
+  );
+  return {
+    ...actual,
+    createAgentSession: vi.fn(async () => ({
+      id: "sess_quest",
+      spaceId: "local",
+      status: "active",
+      runId: "run_1",
+    })),
+    listSessionEvents: vi.fn(async () => ({ sessionId: "sess_quest", runId: "run_1", items: [] })),
+    submitSessionIntent: vi.fn(async () => ({
+      id: "sess_quest",
+      spaceId: "local",
+      status: "active",
+      runId: "run_1",
+    })),
+  };
+});
+
+vi.mock("@/modules/interactions/api/interactions.api", () => ({
+  getInteractionByRun: vi.fn(async () => ({
+    runId: "run_1",
+    thread: { id: "th_quest", spaceId: "local", runId: "run_1", kind: "main", status: "open" },
+  })),
+  listInteractionMemoryLinks: vi.fn(async () => ({ threadId: "th_quest", items: [] })),
+  getInteractionThread: vi.fn(async () => ({
+    threadId: "th_quest",
+    runId: "run_1",
+    spaceId: "local",
+    nodes: [],
+    links: [],
+    digest: "thd_test",
+    headSeq: 0,
+  })),
+  sealInteractionThread: vi.fn(),
+  replayInteractionThread: vi.fn(),
+  compareInteractionThreads: vi.fn(),
+  ensureInteractionThread: vi.fn(),
 }));
 
 vi.mock("@/modules/runs/api/runs.api", () => ({

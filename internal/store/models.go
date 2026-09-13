@@ -662,12 +662,13 @@ type Org struct {
 func (Org) TableName() string { return "orgs" }
 
 type Space struct {
-	ID        string `gorm:"primaryKey;size:64"`
-	OrgID     string `gorm:"index;size:64;not null"`
-	Name      string `gorm:"size:256;not null"`
-	Slug      string `gorm:"size:128;index"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string `gorm:"primaryKey;size:64" json:"id"`
+	OrgID     string `gorm:"index;size:64;not null" json:"orgId"`
+	Name      string `gorm:"size:256;not null" json:"name"`
+	Slug      string `gorm:"size:128;index" json:"slug,omitempty"`
+	Kind      string `gorm:"size:16;not null;default:team;index" json:"kind"` // user|team
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func (Space) TableName() string { return "spaces" }
@@ -768,6 +769,8 @@ type ImproveProposal struct {
 	ChangeSummary   string `gorm:"type:text"`
 	CanaryPercent   int    `gorm:"not null;default:0"`
 	CompareJSON     string `gorm:"type:text;not null;default:'{}'"`
+	Source          string `gorm:"size:64"`          // low_score|verify|manual
+	ScoreEventID    string `gorm:"size:64;index"`    // optional link to score_events
 	ActorID         string `gorm:"size:128"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -863,6 +866,83 @@ type SpaceRule struct {
 }
 
 func (SpaceRule) TableName() string { return "space_rules" }
+
+// InteractionThread indexes Session→Thread for review observability (v5 GV04).
+// Truth remains run_events; this row is the stable Thread identity + seal digest.
+type InteractionThread struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"index;size:64;not null;default:local"`
+	SessionID string    `gorm:"index;size:64"`
+	RunID     string    `gorm:"uniqueIndex:uniq_interaction_thread_run_kind,priority:1;size:64;not null"`
+	Kind      string    `gorm:"uniqueIndex:uniq_interaction_thread_run_kind,priority:2;size:32;not null;default:main"`
+	Status    string    `gorm:"size:32;not null;default:open;index"` // open|sealed
+	Digest    string    `gorm:"size:128"`
+	HeadSeq   int64     `gorm:"not null;default:0"`
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+}
+
+func (InteractionThread) TableName() string { return "interaction_threads" }
+
+// AgentAsset is a registry entry for harness/adapter/skill assets (v5 P2).
+type AgentAsset struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"index;size:64;not null;default:local"`
+	Kind      string    `gorm:"size:64;not null;index"` // harness_profile|adapter|skill|…
+	RefID     string    `gorm:"size:128"`
+	Name      string    `gorm:"size:256;not null"`
+	Status    string    `gorm:"size:32;not null;default:draft;index"` // draft|active|disabled
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+}
+
+func (AgentAsset) TableName() string { return "agent_assets" }
+
+// MemoryAsset is a registry entry for memory records/skills (v5 P2).
+type MemoryAsset struct {
+	ID        string    `gorm:"primaryKey;size:64"`
+	SpaceID   string    `gorm:"index;size:64;not null;default:local"`
+	Kind      string    `gorm:"size:64;not null;index"` // record|skill|…
+	RefID     string    `gorm:"size:128"`
+	Name      string    `gorm:"size:256;not null"`
+	Status    string    `gorm:"size:32;not null;default:draft;index"` // draft|active|disabled
+	CreatedAt time.Time `gorm:"not null"`
+	UpdatedAt time.Time `gorm:"not null"`
+}
+
+func (MemoryAsset) TableName() string { return "memory_assets" }
+
+// SpacePolicyPack stores per-space governance defaults (v5 P2).
+type SpacePolicyPack struct {
+	SpaceID        string    `gorm:"primaryKey;size:64"`
+	CitationMode   string    `gorm:"size:64;not null;default:optional"`
+	MultiSign      bool      `gorm:"not null;default:false"`
+	ReviewSLAHours int       `gorm:"not null;default:72"`
+	BodyJSON       string    `gorm:"type:text;not null;default:'{}'"`
+	CreatedAt      time.Time `gorm:"not null"`
+	UpdatedAt      time.Time `gorm:"not null"`
+}
+
+func (SpacePolicyPack) TableName() string { return "space_policy_packs" }
+
+// ScoreEvent records a review rubric score (v5 P2).
+type ScoreEvent struct {
+	ID          string    `gorm:"primaryKey;size:64"`
+	SpaceID     string    `gorm:"index;size:64;not null;default:local"`
+	TargetType  string    `gorm:"size:64;not null;index"`
+	TargetID    string    `gorm:"size:128;not null;index"`
+	RunID       string    `gorm:"size:64;index"`
+	Correctness int       `gorm:"not null;default:0"`
+	Safety      int       `gorm:"not null;default:0"`
+	Citable     int       `gorm:"not null;default:0"`
+	Efficiency  int       `gorm:"not null;default:0"`
+	Composite   float64   `gorm:"not null;default:0"`
+	ActorID     string    `gorm:"size:128"`
+	Reason      string    `gorm:"type:text"`
+	CreatedAt   time.Time `gorm:"not null"`
+}
+
+func (ScoreEvent) TableName() string { return "score_events" }
 
 type SchemaMeta struct {
 	Key       string `gorm:"primaryKey;size:64"`

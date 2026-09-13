@@ -22,7 +22,8 @@ var profileSchemaJSON []byte
 
 const (
 	StatusDraft    = "draft"
-	StatusInReview = "in_review"
+	StatusInReview      = "in_review"
+	StatusPendingSecond = "pending_second"
 	StatusActive   = "active"
 	StatusArchived = "archived"
 
@@ -301,12 +302,30 @@ func (s *Service) Reject(id, actorID, reason string) (*ProfileView, error) {
 	if err := s.db.First(&row, "id = ?", strings.TrimSpace(id)).Error; err != nil {
 		return nil, err
 	}
-	if row.Status != StatusInReview && row.Status != StatusDraft {
-		return nil, fmt.Errorf("profile must be draft or in_review to reject")
+	if row.Status != StatusInReview && row.Status != StatusDraft && row.Status != StatusPendingSecond {
+		return nil, fmt.Errorf("profile must be draft, in_review, or pending_second to reject")
 	}
 	_ = actorID
 	_ = reason
 	row.Status = StatusArchived
+	row.UpdatedAt = time.Now().UTC()
+	if err := s.db.Save(&row).Error; err != nil {
+		return nil, err
+	}
+	return toView(row)
+}
+
+// MarkPendingSecond records the first approver and waits for a second sign-off.
+func (s *Service) MarkPendingSecond(id, actorID string) (*ProfileView, error) {
+	var row store.HarnessProfileVersion
+	if err := s.db.First(&row, "id = ?", strings.TrimSpace(id)).Error; err != nil {
+		return nil, err
+	}
+	if row.Status != StatusInReview {
+		return nil, fmt.Errorf("profile must be in_review for pending_second")
+	}
+	row.Status = StatusPendingSecond
+	row.PromotedBy = strings.TrimSpace(actorID) // first approver
 	row.UpdatedAt = time.Now().UTC()
 	if err := s.db.Save(&row).Error; err != nil {
 		return nil, err
@@ -319,8 +338,8 @@ func (s *Service) Promote(id, actorID string) (*ProfileView, error) {
 	if err := s.db.First(&row, "id = ?", strings.TrimSpace(id)).Error; err != nil {
 		return nil, err
 	}
-	if row.Status != StatusInReview {
-		return nil, fmt.Errorf("profile must be in_review to promote (submit-review first)")
+	if row.Status != StatusInReview && row.Status != StatusPendingSecond {
+		return nil, fmt.Errorf("profile must be in_review or pending_second to promote")
 	}
 	now := time.Now().UTC()
 	err := s.db.Transaction(func(tx *gorm.DB) error {

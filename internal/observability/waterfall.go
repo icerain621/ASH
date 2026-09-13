@@ -3,6 +3,7 @@ package observability
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/store"
@@ -55,6 +56,7 @@ func BuildWaterfall(db *store.DB, runID string) (*Waterfall, error) {
 		GeneratedAt: time.Now().UTC().UnixMilli(),
 	}
 	out.Spans = append(out.Spans, runSpan(run))
+	attachInteractionAttrs(db, runID, &out.Spans[0])
 	if run.ErrorCode != "" || run.ErrorMessage != "" {
 		out.Failures = append(out.Failures, FailureAttribution{
 			Type: "run", Ref: run.ID, Code: run.ErrorCode, Message: run.ErrorMessage,
@@ -177,6 +179,105 @@ func runSpan(run store.RunRecord) Span {
 			"recovered":     run.Recovered,
 			"repoRoot":      run.RepoRoot,
 		},
+	}
+}
+
+// attachInteractionAttrs adds Interaction session/thread/memoryIds onto the run span (GV05–06).
+// agent span sessionId remains ACP/AgentTask session and is intentionally separate.
+func attachInteractionAttrs(db *store.DB, runID string, span *Span) {
+	if db == nil || span == nil {
+		return
+	}
+	var th store.InteractionThread
+	if err := db.Where("run_id = ? AND kind = ?", runID, "main").First(&th).Error; err != nil {
+		return
+	}
+	if span.Attributes == nil {
+		span.Attributes = map[string]any{}
+	}
+	if th.SessionID != "" {
+		span.Attributes["sessionId"] = th.SessionID
+	}
+	span.Attributes["threadId"] = th.ID
+	ids := collectMemoryIDs(db, runID, th.HeadSeq)
+	if len(ids) > 0 {
+		span.Attributes["memoryIds"] = ids
+	}
+}
+
+func collectMemoryIDs(db *store.DB, runID string, headSeq int64) []string {
+	q := db.Where("run_id = ? AND type IN ?", runID, []string{
+		"memory.hit_used", "memory.injected", "memory.candidate", "knowledge.injected", "skills.injected",
+	}).Order("seq asc")
+	if headSeq > 0 {
+		q = q.Where("seq <= ?", headSeq)
+	}
+	var evs []store.RunEvent
+	if err := q.Find(&evs).Error; err != nil {
+		return nil
+	}
+	seen := map[string]struct{}{}
+	var out []string
+	for _, ev := range evs {
+		payload := map[string]any{}
+		_ = json.Unmarshal([]byte(ev.PayloadJSON), &payload)
+		for _, id := range memoryIDsFromPayload(ev.Type, payload) {
+			if id == "" {
+				continue
+			}
+			if _, ok := seen[id]; ok {
+				continue
+			}
+			seen[id] = struct{}{}
+			out = append(out, id)
+		}
+	}
+	return out
+}
+
+func memoryIDsFromPayload(eventType string, p map[string]any) []string {
+	switch eventType {
+	case "memory.hit_used", "memory.injected":
+		return anyStringSlice(p["recordIds"])
+	case "memory.candidate":
+		var ids []string
+		if id := stringField(p, "candidateId"); id != "" {
+			ids = append(ids, id)
+		}
+		if id := stringField(p, "recordId"); id != "" {
+			ids = append(ids, id)
+		}
+		return ids
+	case "knowledge.injected", "skills.injected":
+		var ids []string
+		for _, ref := range anyStringSlice(p["refs"]) {
+			if strings.HasPrefix(ref, "memory:") {
+				id := strings.TrimSpace(strings.TrimPrefix(ref, "memory:"))
+				if id != "" {
+					ids = append(ids, id)
+				}
+			}
+		}
+		return ids
+	default:
+		return nil
+	}
+}
+
+func anyStringSlice(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
 	}
 }
 

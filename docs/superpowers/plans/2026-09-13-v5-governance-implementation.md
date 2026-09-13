@@ -586,9 +586,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** 新事件带 `model_visible|ui_only|audit`；旧事件兼容默认
 
-- [ ] **Step 1:** schema 与单测（缺字段默认）  
-- [ ] **Step 2:** 写入路径打标  
-- [ ] **Step 3:** `go test ./internal/events/...`  
+- [x] **Step 1:** schema 与单测（缺字段默认）  
+- [x] **Step 2:** 写入路径打标  
+- [x] **Step 3:** `go test ./internal/events/...`  
 
 ---
 
@@ -601,10 +601,10 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** prompt/approve/cancel 语义清晰；Session 绑定 main Thread id
 
-- [ ] **Step 1:** 梳理现有 create/turn/events API 与文档  
-- [ ] **Step 2:** 意图收口（无应答 approve → fail-closed）  
-- [ ] **Step 3:** EnsureThread 最小实现 + 单测  
-- [ ] **Step 4:** OpenAPI 更新 agents/sessions  
+- [x] **Step 1:** 梳理现有 create/turn/events API 与文档  
+- [x] **Step 2:** 意图收口（无应答 approve → fail-closed）  
+- [x] **Step 3:** EnsureThread 最小实现 + 单测  
+- [x] **Step 4:** OpenAPI 更新 agents/sessions  
 
 ---
 
@@ -617,10 +617,10 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** UI 只渲染事件投影；底部意图条
 
-- [ ] **Step 1:** 事件→节点渲染注册表  
-- [ ] **Step 2:** 意图条 prompt/approve/cancel  
-- [ ] **Step 3:** 去掉本页本地策略/评分入口  
-- [ ] **Step 4:** vitest  
+- [x] **Step 1:** 事件→节点渲染注册表  
+- [x] **Step 2:** 意图条 prompt/approve/cancel  
+- [x] **Step 3:** 去掉本页本地策略/评分入口  
+- [x] **Step 4:** vitest  
 
 ---
 
@@ -634,9 +634,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** P0 DoD 全部满足
 
-- [ ] **Step 1:** DeriveModelVisible 单测  
-- [ ] **Step 2:** 执行面改用 fold（或明确后续接线点）  
-- [ ] **Step 3:** Quest 去厚 + 回归  
+- [x] **Step 1:** DeriveModelVisible 单测  
+- [x] **Step 2:** 执行面改用 fold（或明确后续接线点）  
+- [x] **Step 3:** Quest 去厚 + 回归  
 - [ ] **Step 4:** 记录 P0 完成证据（可选 smoke）  
 
 ---
@@ -652,10 +652,10 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** `Space.Kind` ∈ {`user`,`team`}；默认兼容
 
-- [ ] **Step 1:** 写迁移与模型字段测试（缺 kind 列则失败）  
-- [ ] **Step 2:** 实现默认值与模板挂载 1×user + N×team  
-- [ ] **Step 3:** `go test` 相关包通过  
-- [ ] **Step 4:** 更新 OpenAPI Space schema  
+- [x] **Step 1:** 写迁移与模型字段测试（缺 kind 列则失败）  
+- [x] **Step 2:** 实现默认值与模板挂载 1×user + N×team  
+- [x] **Step 3:** `go test` 相关包通过  
+- [x] **Step 4:** 更新 OpenAPI Space schema  
 
 ---
 
@@ -670,10 +670,10 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** `GET/POST /api/v1/agents/assets`, `/memory/assets`
 
-- [ ] **Step 1:** 表 + Service Create/List/Patch status  
-- [ ] **Step 2:** API + 权限 + 单测  
-- [ ] **Step 3:** 前端列表只读 + 启停  
-- [ ] **Step 4:** `make swagger && make openapi-check`  
+- [x] **Step 1:** 表 + Service Create/List/Patch status  
+- [x] **Step 2:** API + 权限 + 单测  
+- [x] **Step 3:** 前端列表只读 + 启停  
+- [x] **Step 4:** `make swagger && make openapi-check`  
 
 ---
 
@@ -687,8 +687,8 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** 更严者优先的 EffectivePolicy
 
-- [ ] **Step 1:** 单测覆盖 kind 默认 < pack < ResourceScope  
-- [ ] **Step 2:** API + Space UI 摘要  
+- [x] **Step 1:** 单测覆盖 kind 默认 < pack < ResourceScope  
+- [x] **Step 2:** API + Space UI 摘要  
 
 ---
 
@@ -702,9 +702,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** 四维分入库；decide 必填 reason+rubric（可配置）
 
-- [ ] **Step 1:** Rubric 校验与合成分  
-- [ ] **Step 2:** Decide 写 score_events  
-- [ ] **Step 3:** API 测试  
+- [x] **Step 1:** Rubric 校验与合成分  
+- [x] **Step 2:** Decide 写 score_events  
+- [x] **Step 3:** API 测试  
 
 ---
 
@@ -717,9 +717,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Produces:** 左队列 / 中占位事件 / 右打分决定
 
-- [ ] **Step 1:** 布局三栏  
-- [ ] **Step 2:** decide 提交 rubric  
-- [ ] **Step 3:** vitest  
+- [x] **Step 1:** 布局三栏  
+- [x] **Step 2:** decide 提交 rubric  
+- [x] **Step 3:** vitest  
 
 ---
 
@@ -736,12 +736,12 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 - Produces: `EnsureThread`, `FoldThread(threadID) → (nodes, links, digest)`, `Seal`, `Replay`, `Compare`
 - Consumes: `events.List`, run/step/tool, existing agent session
 
-- [ ] **Step 1:** 模型 + EnsureThread（Run 绑定 main thread）单测  
-- [ ] **Step 2:** FoldThread + MemoryLink + digest 单测（含 hit_used）  
-- [ ] **Step 3:** Seal / Replay（mismatch 错误码）  
-- [ ] **Step 4:** Compare 两线程 diff  
-- [ ] **Step 5:** HTTP APIs + 权限 + `by-run` 兼容  
-- [ ] **Step 6:** `go test ./internal/interaction/...`  
+- [x] **Step 1:** 模型 + EnsureThread（Run 绑定 main thread）单测  
+- [x] **Step 2:** FoldThread + MemoryLink + digest 单测（含 hit_used）  
+- [x] **Step 3:** Seal / Replay（mismatch 错误码） *(GV05)*  
+- [x] **Step 4:** Compare 两线程 diff *(GV05)*  
+- [x] **Step 5:** HTTP APIs + 权限 + `by-run` 兼容 *(GV04 + GV05 seal/replay/compare)*  
+- [x] **Step 6:** `go test ./internal/interaction/...`  
 
 ---
 
@@ -753,9 +753,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 - Modify: `internal/observability/derive/parity_test.go`
 - Modify: `doc/appendices/D-Observability-指标与告警.md`
 
-- [ ] **Step 1:** span attributes 挂 `sessionId`/`threadId`/memoryIds  
-- [ ] **Step 2:** derive：seal / replay_mismatch / memory_link 计数 + parity  
-- [ ] **Step 3:** Doctor 对齐 waterfall/replay 指标  
+- [x] **Step 1:** span attributes 挂 `sessionId`/`threadId`/memoryIds  
+- [x] **Step 2:** derive：seal / replay_mismatch / memory_link 计数 + parity  
+- [x] **Step 3:** Doctor 对齐 waterfall/replay 指标 *(TR3-11)*  
 
 ---
 
@@ -768,13 +768,13 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 - Modify: `QuestPage.tsx`（Diff → MemoryLink 精简）  
 - Test: vitest
 
-- [ ] **Step 1:** API client（session/thread/seal/replay/compare）  
-- [ ] **Step 2:** Timeline 按 Thread + seal 徽章  
-- [ ] **Step 3:** MemoryLinkPanel + 联动高亮  
-- [ ] **Step 4:** 复现校验按钮（digest 红绿）  
-- [ ] **Step 5:** 双 Thread 比对视图  
-- [ ] **Step 6:** 挂 Observability + Quest Diff  
-- [ ] **Step 7:** `npm test -- --run` 相关用例  
+- [x] **Step 1:** API client（session/thread/seal/replay/compare）  
+- [x] **Step 2:** Timeline 按 Thread + seal 徽章  
+- [x] **Step 3:** MemoryLinkPanel + 联动高亮 *(Quest Timeline ↔ MemoryLink 按 seq)*  
+- [x] **Step 4:** 复现校验按钮（digest 红绿）  
+- [x] **Step 5:** 双 Thread 比对视图  
+- [x] **Step 6:** 挂 Observability + Quest Diff  
+- [x] **Step 7:** `npm test -- --run` 相关用例 *(MemoryLinkPanel + Quest + Timeline/Compare/Obs)*  
 
 ---
 
@@ -786,9 +786,9 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 - Config: scenario rubric weights（YAML under `configs/` or DB）
 - Frontend: MetricsPage 卡片
 
-- [ ] **Step 1:** 四维 + citation/link 指标聚合（服务端）  
-- [ ] **Step 2:** 按 scenario 分组  
-- [ ] **Step 3:** UI 卡片  
+- [x] **Step 1:** 四维 + citation/link 指标聚合（服务端）  
+- [x] **Step 2:** 按 scenario 分组  
+- [x] **Step 3:** UI 卡片  
 
 ---
 
@@ -802,10 +802,10 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **Files:** `internal/improve`, `internal/evolve`, `internal/doctor`, checklists
 
-- [ ] **Step 1:** 低分 → proposal  
-- [ ] **Step 2:** pending_second  
-- [ ] **Step 3:** Doctor 探针与计数  
-- [ ] **Step 4:** 文档与签字清单  
+- [x] **Step 1:** 低分 → proposal  
+- [x] **Step 2:** pending_second  
+- [x] **Step 3:** Doctor 探针与计数  
+- [x] **Step 4:** 文档与签字清单  
 
 ---
 

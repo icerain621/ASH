@@ -1141,6 +1141,100 @@ components:
         prompt: { type: string }
         reason: { type: string }
         actorId: { type: string }
+    InteractionThread:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        sessionId: { type: string }
+        runId: { type: string }
+        kind: { type: string }
+        status: { type: string }
+        digest: { type: string }
+        headSeq: { type: integer, format: int64 }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+    InteractionByRunResponse:
+      type: object
+      properties:
+        runId: { type: string }
+        thread: { $ref: "#/components/schemas/InteractionThread" }
+    InteractionTimelineNode:
+      type: object
+      properties:
+        id: { type: string }
+        seq: { type: integer, format: int64 }
+        ts: { type: integer, format: int64 }
+        type: { type: string }
+        visibility: { type: string }
+        severity: { type: string }
+        stepId: { type: string }
+        payload: { type: object, additionalProperties: true }
+    InteractionMemoryLink:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        sessionId: { type: string }
+        threadId: { type: string }
+        runId: { type: string }
+        eventSeq: { type: integer, format: int64 }
+        eventId: { type: string }
+        memoryId: { type: string }
+        linkType: { type: string, enum: [hit_used, context_ref, citation, candidate_out] }
+        layer: { type: string }
+        ts: { type: integer, format: int64 }
+        digest: { type: string }
+    InteractionFoldResult:
+      type: object
+      properties:
+        sessionId: { type: string }
+        threadId: { type: string }
+        runId: { type: string }
+        spaceId: { type: string }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/InteractionTimelineNode" }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/InteractionMemoryLink" }
+        digest: { type: string }
+        headSeq: { type: integer, format: int64 }
+    InteractionReplayResult:
+      type: object
+      properties:
+        threadId: { type: string }
+        ok: { type: boolean }
+        digest: { type: string }
+        sealedDigest: { type: string }
+        mismatchSeq: { type: integer, format: int64 }
+        status: { type: string }
+        headSeq: { type: integer, format: int64 }
+        nodes:
+          type: array
+          items: { $ref: "#/components/schemas/InteractionTimelineNode" }
+        links:
+          type: array
+          items: { $ref: "#/components/schemas/InteractionMemoryLink" }
+    InteractionCompareResult:
+      type: object
+      properties:
+        leftThreadId: { type: string }
+        rightThreadId: { type: string }
+        leftDigest: { type: string }
+        rightDigest: { type: string }
+        nodesAdded: { type: array, items: { type: string } }
+        nodesRemoved: { type: array, items: { type: string } }
+        nodesChanged: { type: array, items: { type: string } }
+        linksAdded: { type: array, items: { type: string } }
+        linksRemoved: { type: array, items: { type: string } }
+    EnsureInteractionThreadRequest:
+      type: object
+      required: [runId]
+      properties:
+        runId: { type: string }
+        sessionId: { type: string }
+        spaceId: { type: string }
     TimelineAPIResponse:
       type: object
       required: [items]
@@ -1412,6 +1506,67 @@ components:
         metricId: { type: string }
         status: { type: string }
         message: { type: string }
+    EvaluationSignal:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        value: { type: number }
+        unit: { type: string }
+        numerator: { type: integer }
+        denominator: { type: integer }
+    EvaluationDimension:
+      type: object
+      properties:
+        id: { type: string }
+        label: { type: string }
+        score: { type: number }
+        status: { type: string }
+        signals:
+          type: array
+          items: { $ref: "#/components/schemas/EvaluationSignal" }
+    EvaluationHealth:
+      type: object
+      properties:
+        threadSealRate: { $ref: "#/components/schemas/EvaluationSignal" }
+        replayMismatchRate: { $ref: "#/components/schemas/EvaluationSignal" }
+        citationMissingTotal: { type: integer }
+        memoryLinksByType:
+          type: object
+          additionalProperties: { type: integer }
+    ScenarioEvaluation:
+      type: object
+      properties:
+        scenario: { type: string }
+        version: { type: string }
+        profileId: { type: string }
+        runCount: { type: integer }
+        rankScore: { type: number }
+        status: { type: string }
+        dimensions:
+          type: array
+          items: { $ref: "#/components/schemas/EvaluationDimension" }
+        gateHints:
+          type: array
+          items: { type: string }
+    SpaceEvaluationResponse:
+      type: object
+      description: Space dual-core evaluation (Quality/Safety/Efficiency/Governance) with scenario ranking.
+      properties:
+        spaceId: { type: string }
+        from: { type: string, format: date-time }
+        to: { type: string, format: date-time }
+        generatedAt: { type: string, format: date-time }
+        dimensions:
+          type: array
+          items: { $ref: "#/components/schemas/EvaluationDimension" }
+        health: { $ref: "#/components/schemas/EvaluationHealth" }
+        scenarios:
+          type: array
+          items: { $ref: "#/components/schemas/ScenarioEvaluation" }
+        dataQuality:
+          type: array
+          items: { $ref: "#/components/schemas/DataQualityNote" }
     MetricsOverviewResponse:
       type: object
       description: KPI dashboard overview for a space/project window.
@@ -1654,6 +1809,16 @@ components:
         reason: { type: string }
         policyProfile: { type: string }
         actorId: { type: string }
+        runId: { type: string }
+        rubric:
+          $ref: "#/components/schemas/ReviewRubric"
+    ReviewRubric:
+      type: object
+      properties:
+        correctness: { type: integer, minimum: 1, maximum: 5 }
+        safety: { type: integer, minimum: 1, maximum: 5 }
+        citable: { type: integer, minimum: 1, maximum: 5 }
+        efficiency: { type: integer, minimum: 1, maximum: 5 }
     ReviewsDecideResponse:
       type: object
       properties:
@@ -1663,6 +1828,84 @@ components:
         targetId: { type: string }
         decision: { type: string }
         status: { type: string }
+        scoreEventId: { type: string }
+        composite: { type: number }
+        improveDraftId: { type: string }
+    RegistryAsset:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        kind: { type: string }
+        refId: { type: string }
+        name: { type: string }
+        status: { type: string, enum: [draft, active, disabled] }
+        createdAt: { type: integer, format: int64 }
+    RegistryAssetList:
+      type: object
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/RegistryAsset" }
+    CreateRegistryAssetRequest:
+      type: object
+      required: [kind, name]
+      properties:
+        spaceId: { type: string }
+        kind: { type: string }
+        refId: { type: string }
+        name: { type: string }
+        status: { type: string }
+    PatchRegistryStatusRequest:
+      type: object
+      required: [status]
+      properties:
+        status: { type: string, enum: [draft, active, disabled] }
+    SpacePolicyPack:
+      type: object
+      properties:
+        spaceId: { type: string }
+        citationMode: { type: string }
+        multiSign: { type: boolean }
+        reviewSlaHours: { type: integer }
+        bodyJson: { type: string }
+        updatedAt: { type: integer, format: int64 }
+    EffectiveSpacePolicy:
+      type: object
+      properties:
+        spaceId: { type: string }
+        spaceKind: { type: string }
+        citationMode: { type: string }
+        multiSign: { type: boolean }
+        reviewSlaHours: { type: integer }
+        sources:
+          type: array
+          items: { type: string }
+    SpacePolicyResponse:
+      type: object
+      properties:
+        pack: { $ref: "#/components/schemas/SpacePolicyPack" }
+        effective: { $ref: "#/components/schemas/EffectiveSpacePolicy" }
+    PutSpacePolicyRequest:
+      type: object
+      properties:
+        citationMode: { type: string }
+        multiSign: { type: boolean }
+        reviewSlaHours: { type: integer }
+        bodyJson: { type: string }
+    RubricSchema:
+      type: object
+      properties:
+        id: { type: string }
+        min: { type: integer }
+        max: { type: integer }
+        dimensions:
+          type: array
+          items:
+            type: object
+            properties:
+              key: { type: string }
+              label: { type: string }
     HarnessProviderSpec:
       type: object
       required: [kind]
@@ -2353,9 +2596,10 @@ components:
       type: object
       properties:
         id: { type: string }
-        orgID: { type: string }
+        orgId: { type: string }
         name: { type: string }
         slug: { type: string }
+        kind: { type: string, enum: [user, team], description: "Space kind (GV07); no separate Team table" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     CreateSpaceRequest:
@@ -2365,6 +2609,7 @@ components:
         orgId: { type: string }
         name: { type: string }
         slug: { type: string }
+        kind: { type: string, enum: [user, team] }
     MemberItem:
       type: object
       properties:
@@ -3531,6 +3776,181 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AgentSessionEventsResponse" }
+
+  /api/v1/agents/assets:
+    get:
+      tags: [Registry]
+      summary: List agent registry assets
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAssetList" }
+    post:
+      tags: [Registry]
+      summary: Create agent registry asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRegistryAssetRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAsset" }
+
+  /api/v1/agents/assets/{id}:
+    patch:
+      tags: [Registry]
+      summary: Patch agent asset status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatchRegistryStatusRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAsset" }
+
+  /api/v1/interactions/by-run/{runId}:
+    get:
+      tags: [Interactions]
+      summary: Resolve main Thread for a run
+      parameters:
+        - in: path
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionByRunResponse" }
+  /api/v1/interactions/threads/ensure:
+    post:
+      tags: [Interactions]
+      summary: Ensure main Thread for a run
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/EnsureInteractionThreadRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionThread" }
+  /api/v1/interactions/threads/{threadId}:
+    get:
+      tags: [Interactions]
+      summary: Fold Thread timeline + digest
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionFoldResult" }
+  /api/v1/interactions/threads/{threadId}/memory-links:
+    get:
+      tags: [Interactions]
+      summary: Memory links for a Thread
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  threadId: { type: string }
+                  items:
+                    type: array
+                    items: { $ref: "#/components/schemas/InteractionMemoryLink" }
+  /api/v1/interactions/threads/{threadId}/seal:
+    post:
+      tags: [Interactions]
+      summary: Seal thread digest
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: sealed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionThread" }
+  /api/v1/interactions/threads/{threadId}/replay:
+    post:
+      tags: [Interactions]
+      summary: Replay fold and verify sealed digest
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionReplayResult" }
+        "409":
+          description: digest mismatch
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+  /api/v1/interactions/compare:
+    post:
+      tags: [Interactions]
+      summary: Compare two threads
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [left, right]
+              properties:
+                left: { type: string }
+                right: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionCompareResult" }
   /v1/spaces:
     post:
       tags: [Spaces]
@@ -4712,6 +5132,59 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MemoryCreateCandidateResponse" }
+
+  /api/v1/memory/assets:
+    get:
+      tags: [Registry]
+      summary: List memory registry assets
+      parameters:
+        - in: query
+          name: status
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAssetList" }
+    post:
+      tags: [Registry]
+      summary: Create memory registry asset
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateRegistryAssetRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAsset" }
+
+  /api/v1/memory/assets/{id}:
+    patch:
+      tags: [Registry]
+      summary: Patch memory asset status
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PatchRegistryStatusRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RegistryAsset" }
 
   /api/v1/memory/candidates/{candidateId}/review:
     post:
@@ -6424,6 +6897,90 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ResourceScopeView" }
+
+  /api/v1/spaces/{spaceId}/evaluation:
+    get:
+      tags: [Spaces]
+      summary: Space dual-core evaluation
+      description: Aggregate Quality/Safety/Efficiency/Governance plus seal/replay/memory-link health and scenario ranking (GV06–07).
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: from
+          schema: { type: string, format: date-time }
+        - in: query
+          name: to
+          schema: { type: string, format: date-time }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceEvaluationResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+
+  /api/v1/spaces/{spaceId}/policy:
+    get:
+      tags: [Spaces]
+      summary: Get space policy pack and effective merge
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpacePolicyResponse" }
+    put:
+      tags: [Spaces]
+      summary: Upsert space policy pack
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/PutSpacePolicyRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpacePolicyResponse" }
+
+  /api/v1/scores/rubrics:
+    get:
+      tags: [Scores]
+      summary: Default review rubric schema
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/RubricSchema" }
+        "500":
+          description: server error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
 
   /api/v1/spaces/{spaceId}/rules:
     get:

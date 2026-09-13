@@ -5,6 +5,7 @@ export type Space = {
   orgId?: string;
   name: string;
   slug?: string;
+  kind?: "user" | "team" | string;
 };
 
 export type Org = {
@@ -279,6 +280,7 @@ function normalizeSpace(raw: RawRecord): Space {
     orgId: str(raw, "orgId", "OrgID"),
     name: str(raw, "name", "Name"),
     slug: str(raw, "slug", "Slug"),
+    kind: str(raw, "kind", "Kind") || "team",
   };
 }
 
@@ -519,7 +521,7 @@ export function provisionOrgTemplate(templateId: string, body?: { name?: string;
   });
 }
 
-export function createSpace(body: { orgId: string; name: string; slug?: string }) {
+export function createSpace(body: { orgId: string; name: string; slug?: string; kind?: string }) {
   return api<RawRecord>("/spaces", {
     method: "POST",
     body: JSON.stringify(body),

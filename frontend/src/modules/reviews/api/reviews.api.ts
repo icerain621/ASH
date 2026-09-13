@@ -39,7 +39,15 @@ export function listReviewsQueue(queue = "all", limit = 50) {
   return api<{ items: ReviewItem[]; queue?: string }>(`/reviews/queue?${q}`);
 }
 
-export function decideReview(reviewId: string, body: { decision: string; reason: string; policyProfile?: string }) {
+export function decideReview(
+  reviewId: string,
+  body: {
+    decision: string;
+    reason: string;
+    policyProfile?: string;
+    rubric?: { correctness: number; safety: number; citable: number; efficiency: number };
+  },
+) {
   return api(`/reviews/${encodeURIComponent(reviewId)}/decide`, {
     method: "POST",
     body: JSON.stringify(body),

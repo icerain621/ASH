@@ -109,7 +109,13 @@ describe("ObservabilityPage", () => {
       ],
     });
     vi.mocked(getPrometheusText).mockResolvedValue(
-      '# HELP ash_run_inflight_live\nash_run_inflight_live{space_id="local"} 3\n',
+      [
+        "# HELP ash_run_inflight_live",
+        'ash_run_inflight_live{space_id="local"} 3',
+        "ash_interaction_thread_sealed_total 2",
+        "ash_interaction_replay_mismatch_total 1",
+        'ash_memory_link_total{type="hit_used"} 5',
+      ].join("\n") + "\n",
     );
     vi.mocked(getWakerStatus).mockResolvedValue(wakerStatus);
     vi.mocked(getWakerQueue).mockResolvedValue({
@@ -135,6 +141,16 @@ describe("ObservabilityPage", () => {
       expect(screen.getByText("1 条")).toBeInTheDocument();
     });
     expect(screen.getByText(/ash_run_inflight_live/)).toBeInTheDocument();
+  });
+
+  it("renders interaction derive summary from prometheus text", async () => {
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("interaction-metrics-summary")).toBeInTheDocument();
+      expect(screen.getByTestId("ix-metric-sealed")).toHaveTextContent("2");
+      expect(screen.getByTestId("ix-metric-mismatch")).toHaveTextContent("1");
+      expect(screen.getByTestId("ix-metric-link-hit_used")).toHaveTextContent("5");
+    });
   });
 
   it("renders Waker heading and duty kind", async () => {

@@ -20,17 +20,21 @@ import (
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/idp"
 	"github.com/ash-repwiki/ash/internal/improve"
+	"github.com/ash-repwiki/ash/internal/interaction"
 	"github.com/ash-repwiki/ash/internal/knowledge"
 	"github.com/ash-repwiki/ash/internal/memory"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/opsenv"
 	"github.com/ash-repwiki/ash/internal/quest"
+	"github.com/ash-repwiki/ash/internal/registry"
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/scenariopatch"
+	"github.com/ash-repwiki/ash/internal/scoring"
 	"github.com/ash-repwiki/ash/internal/secrets"
 	"github.com/ash-repwiki/ash/internal/session"
+	"github.com/ash-repwiki/ash/internal/spacepolicy"
 	"github.com/ash-repwiki/ash/internal/spacerules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -48,6 +52,7 @@ type Handler struct {
 	improve       *improve.Service
 	ci            *ci.Service
 	metrics       *metricssvc.Service
+	scoring       *scoring.Service
 	alerts        *alerts.Service
 	releases      *releases.Service
 	harness       *harness.Service
@@ -59,6 +64,9 @@ type Handler struct {
 	knowledge     *knowledge.Service
 	spaceRules    *spacerules.Service
 	session       *session.Service
+	interaction   *interaction.Service
+	registry      *registry.Service
+	spacePolicy   *spacepolicy.Service
 	waker         *waker.Service
 	oidc          *idp.Client
 }
@@ -82,29 +90,34 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
 	sessionSvc := session.NewService(db, goalSvc, ev).WithRunControl(sessionRunControl{runs: runsSvc})
 	runsSvc.WithSessionService(sessionRunLinker{svc: sessionSvc})
+	interactionSvc := interaction.NewService(db, ev)
 	h := &Handler{
-		db:         db,
-		events:     ev,
-		scenarios:  scenarios,
-		runs:       runsSvc,
-		doctor:     doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
-		memory:     memSvc,
-		improve:    improveSvc,
-		ci:         ciSvc,
-		metrics:    metricssvc.NewService(db),
-		alerts:     alerts.NewService(db),
-		releases:   releases.NewService(db),
-		harness:    harSvc,
-		patches:    patchSvc,
-		evolve:     evolve.NewService(db, memSvc, harSvc, patchSvc),
-		goal:       goalSvc,
-		quest:      quest.NewService(db, runsSvc),
-		diffReview: diffreview.NewService(db, runsSvc),
-		knowledge:  knowledge.NewService(db, memSvc),
-		spaceRules: spacerules.NewService(db),
-		session:    sessionSvc,
-		waker:      waker.NewService(db),
-		oidc:       idp.NewClient(idp.LoadConfig()),
+		db:          db,
+		events:      ev,
+		scenarios:   scenarios,
+		runs:        runsSvc,
+		doctor:      doctor.NewService(runsSvc, ev, scenarios, db.DataDir()),
+		memory:      memSvc,
+		improve:     improveSvc,
+		ci:          ciSvc,
+		metrics:     metricssvc.NewService(db),
+		scoring:     scoring.NewService(db),
+		alerts:      alerts.NewService(db),
+		releases:    releases.NewService(db),
+		harness:     harSvc,
+		patches:     patchSvc,
+		evolve:      evolve.NewService(db, memSvc, harSvc, patchSvc),
+		goal:        goalSvc,
+		quest:       quest.NewService(db, runsSvc),
+		diffReview:  diffreview.NewService(db, runsSvc),
+		knowledge:   knowledge.NewService(db, memSvc),
+		spaceRules:  spacerules.NewService(db),
+		session:     sessionSvc,
+		interaction: interactionSvc,
+		registry:    registry.NewService(db),
+		spacePolicy: spacepolicy.NewService(db),
+		waker:       waker.NewService(db),
+		oidc:        idp.NewClient(idp.LoadConfig()),
 	}
 	if h.doctor != nil {
 		adapter := doctorWakerAdapter{svc: h.doctor}
@@ -148,6 +161,16 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
 		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)
 		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)
+		v1.GET("/agents/assets", h.listAgentAssets)
+		v1.POST("/agents/assets", h.createAgentAsset)
+		v1.PATCH("/agents/assets/:id", h.patchAgentAssetStatus)
+		v1.GET("/interactions/by-run/:runId", h.getInteractionByRun)
+		v1.POST("/interactions/threads/ensure", h.ensureInteractionThread)
+		v1.GET("/interactions/threads/:threadId", h.getInteractionThread)
+		v1.GET("/interactions/threads/:threadId/memory-links", h.listInteractionMemoryLinks)
+		v1.POST("/interactions/threads/:threadId/seal", h.sealInteractionThread)
+		v1.POST("/interactions/threads/:threadId/replay", h.replayInteractionThread)
+		v1.POST("/interactions/compare", h.compareInteractionThreads)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)
 		v1.GET("/runs/:runId/tree", h.getRunTree)
@@ -192,6 +215,9 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/memory/ttl-queue", h.getMemoryTTLQueue)
 		v1.POST("/memory/ttl-sweep", h.sweepMemoryTTL)
 		v1.POST("/memory/hit-used", h.memoryHitUsed)
+		v1.GET("/memory/assets", h.listMemoryAssets)
+		v1.POST("/memory/assets", h.createMemoryAsset)
+		v1.PATCH("/memory/assets/:id", h.patchMemoryAssetStatus)
 
 		v1.GET("/waker/queue", h.getWakerQueue)
 		v1.POST("/waker/sweep", h.postWakerSweep)
@@ -308,6 +334,10 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/scale/readiness", h.scaleReadiness)
 		v1.GET("/permissions/matrix", h.permissionMatrix)
 		v1.GET("/spaces/:spaceId/permissions/matrix", h.spacePermissionMatrix)
+		v1.GET("/spaces/:spaceId/evaluation", h.getSpaceEvaluation)
+		v1.GET("/spaces/:spaceId/policy", h.getSpacePolicy)
+		v1.PUT("/spaces/:spaceId/policy", h.putSpacePolicy)
+		v1.GET("/scores/rubrics", h.getScoreRubrics)
 		v1.GET("/audit/logs", h.listAuditLogs)
 		v1.GET("/audit/policy", h.getAuditPolicy)
 		v1.PUT("/audit/policy", h.updateAuditPolicy)

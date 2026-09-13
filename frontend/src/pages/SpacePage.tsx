@@ -30,6 +30,7 @@ import {
 } from "@/modules/platform/api/platform.api";
 import { getReadyz } from "@/modules/health/api/health.api";
 import { isConsoleAuthRequiredFlag } from "@/modules/platform/auth/consoleGate";
+import { RegistryAssetsPanel } from "@/modules/registry/components/RegistryAssetsPanel";
 import { getAuthToken, getCurrentSpaceId, getRefreshToken, setAuthSession } from "@/services/http/client";
 import type { AuthSessionResponse } from "@/modules/platform/api/platform.api";
 
@@ -639,6 +640,7 @@ export function SpacePage() {
                 <th>ID</th>
                 <th>Name</th>
                 <th>Slug</th>
+                <th>Kind</th>
                 <th>Scope</th>
               </tr>
             </thead>
@@ -648,6 +650,7 @@ export function SpacePage() {
                   <td>{space.id}</td>
                   <td>{space.name}</td>
                   <td>{space.slug || "-"}</td>
+                  <td data-testid={`space-kind-${space.id}`}>{space.kind || "team"}</td>
                   <td>
                     {activeSpaceId === space.id ? (
                       <span className="status-pill ok">
@@ -665,7 +668,7 @@ export function SpacePage() {
               ))}
               {!spacesQuery.data?.items.length && (
                 <tr className="empty-row">
-                  <td colSpan={4}>暂无空间。</td>
+                  <td colSpan={5}>暂无空间。</td>
                 </tr>
               )}
             </tbody>
@@ -931,6 +934,8 @@ export function SpacePage() {
           在合规控制台查看资源作用域 →
         </Link>
       </div>
+
+      <RegistryAssetsPanel spaceId={activeSpaceId} />
     </section>
   );
 }

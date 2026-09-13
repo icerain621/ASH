@@ -13,6 +13,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifactstore"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/interaction"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
@@ -22,6 +23,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/rag"
+	"github.com/ash-repwiki/ash/internal/registry"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/security"
@@ -119,6 +121,8 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
 		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
 		rep.Results = append(rep.Results, s.tr3ReadyzContract())
+		rep.Results = append(rep.Results, s.tr3InteractionSealReplay())
+		rep.Results = append(rep.Results, s.tr3SpaceKindRegistry())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -155,6 +159,8 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3PrometheusReplaySegment())
 		rep.Results = append(rep.Results, s.tr3OpenAPIContract())
 		rep.Results = append(rep.Results, s.tr3ReadyzContract())
+		rep.Results = append(rep.Results, s.tr3InteractionSealReplay())
+		rep.Results = append(rep.Results, s.tr3SpaceKindRegistry())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -2139,6 +2145,143 @@ func (s *Service) tr3ReadyzContract() CaseResult {
 		Evidence{Kind: "readyzHealth", Ref: "HealthResponse"},
 		Evidence{Kind: "sqlExpected", Ref: fmt.Sprintf("%d", expected)},
 		Evidence{Kind: "rlsPolicies", Ref: fmt.Sprintf("expected=%d", store.PostgresRLSExpectedPolicyCount())},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3InteractionSealReplay() CaseResult {
+	res := CaseResult{ID: "TR3-11", Status: "fail"}
+	create, _, err := s.createProbeRun("TR3-11")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.RunID = create.RunID
+
+	ix := interaction.NewService(s.runs.DB(), s.events)
+	th, _, err := ix.EnsureThread(interaction.EnsureRequest{
+		SpaceID: "local", SessionID: "sess_tr3_11", RunID: create.RunID,
+	})
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if _, err := s.events.Append(create.RunID, create.TraceID, "memory.hit_used", "info", map[string]any{
+		"recordIds": []string{"mem_tr3_11"}, "count": 1,
+	}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	sealed, err := ix.Seal(th.ID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	replay, err := ix.Replay(th.ID)
+	if err != nil || replay == nil || !replay.OK || replay.Digest != sealed.Digest {
+		if err != nil {
+			res.Message = err.Error()
+		} else {
+			res.Message = fmt.Sprintf("replay digest mismatch sealed=%s live=%s", sealed.Digest, replay.Digest)
+		}
+		return res
+	}
+	waterfall, err := observability.BuildWaterfall(s.runs.DB(), create.RunID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var runSpan *observability.Span
+	for i := range waterfall.Spans {
+		if waterfall.Spans[i].Type == "run" {
+			runSpan = &waterfall.Spans[i]
+			break
+		}
+	}
+	if runSpan == nil || runSpan.Attributes["threadId"] != th.ID {
+		res.Message = "waterfall run span missing interaction threadId"
+		return res
+	}
+	if runSpan.Attributes["sessionId"] != "sess_tr3_11" {
+		res.Message = "waterfall run span missing interaction sessionId"
+		return res
+	}
+	ids, _ := runSpan.Attributes["memoryIds"].([]string)
+	if len(ids) == 0 || ids[0] != "mem_tr3_11" {
+		res.Message = fmt.Sprintf("waterfall memoryIds=%v", runSpan.Attributes["memoryIds"])
+		return res
+	}
+
+	var rows []store.RunEvent
+	if err := s.runs.DB().Where("run_id = ?", create.RunID).Order("seq asc").Find(&rows).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	evs := make([]derive.Event, len(rows))
+	for i, row := range rows {
+		evs[i] = derive.Event{RunID: row.RunID, Type: row.Type, PayloadJSON: row.PayloadJSON}
+	}
+	if err := derive.ValidateReplayParity(evs); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	snap := derive.Replay(evs)
+	if snap.Counters["ash_interaction_thread_sealed_total"] < 1 {
+		res.Message = "missing ash_interaction_thread_sealed_total"
+		return res
+	}
+	if snap.Counters[`ash_memory_link_total{type="hit_used"}`] < 1 {
+		res.Message = "missing ash_memory_link_total{type=hit_used}"
+		return res
+	}
+
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "interactionSeal", Ref: sealed.Digest},
+		Evidence{Kind: "interactionReplay", Ref: "ok"},
+		Evidence{Kind: "waterfallAttrs", Ref: th.ID},
+		Evidence{Kind: "metricsParity", Ref: "interaction+memory_link"},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3SpaceKindRegistry() CaseResult {
+	res := CaseResult{ID: "TR3-12", Status: "fail"}
+	db := s.runs.DB()
+	now := time.Now().UTC()
+	spaceID := "sp_tr3_12_" + fmt.Sprintf("%d", now.UnixNano())
+	if err := db.Create(&store.Space{
+		ID: spaceID, OrgID: "org_local", Name: "TR3-12", Kind: "team",
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var loaded store.Space
+	if err := db.First(&loaded, "id = ?", spaceID).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if loaded.Kind != "team" && loaded.Kind != "user" {
+		res.Message = fmt.Sprintf("space.kind=%q", loaded.Kind)
+		return res
+	}
+	reg := registry.NewService(db)
+	agents, err := reg.ListAgentAssets(spaceID, "", 10)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	mems, err := reg.ListMemoryAssets(spaceID, "", 10)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "spaceKind", Ref: loaded.Kind},
+		Evidence{Kind: "registryAgents", Ref: fmt.Sprintf("%d", len(agents.Items))},
+		Evidence{Kind: "registryMemory", Ref: fmt.Sprintf("%d", len(mems.Items))},
 	)
 	res.Status = "pass"
 	return res

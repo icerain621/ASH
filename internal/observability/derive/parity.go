@@ -36,10 +36,27 @@ func ValidateReplayParity(events []Event) error {
 	if err := checkCounterSum(snap, "ash_policy_denied_total", "", typeCounts["policy.denied"]); err != nil {
 		return err
 	}
+	if err := checkCounterSum(snap, "ash_interaction_thread_sealed_total", "", typeCounts["interaction.thread_sealed"]); err != nil {
+		return err
+	}
+	if err := checkCounterSum(snap, "ash_interaction_replay_mismatch_total", "", typeCounts["interaction.replay_mismatch"]); err != nil {
+		return err
+	}
+	if err := checkCounterSum(snap, "ash_memory_link_total", "", countMemoryLinks(events)); err != nil {
+		return err
+	}
 	if err := checkInflightGauges(events, snap); err != nil {
 		return err
 	}
 	return nil
+}
+
+func countMemoryLinks(events []Event) int {
+	var n float64
+	for _, ev := range events {
+		n += memoryLinkCount(ev.Type, parsePayload(ev.PayloadJSON))
+	}
+	return int(n)
 }
 
 func checkCounterSum(snap Snapshot, prefix, labelNeedle string, want int) error {

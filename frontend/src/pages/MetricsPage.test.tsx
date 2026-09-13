@@ -27,6 +27,29 @@ vi.mock("@/modules/metrics/api/metrics.api", () => ({
       },
     ],
   }),
+  getSpaceEvaluation: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    from: "2026-07-01T00:00:00Z",
+    to: "2026-07-07T00:00:00Z",
+    generatedAt: "2026-07-07T12:00:00Z",
+    dimensions: [
+      { id: "quality", label: "Quality", score: 0.8, status: "ok", signals: [{ id: "run_success_rate", label: "任务成功率", value: 0.8, unit: "ratio" }] },
+      { id: "safety", label: "Safety", score: 0.9, status: "ok", signals: [] },
+      { id: "efficiency", label: "Efficiency", score: 0.7, status: "ok", signals: [] },
+      { id: "governance", label: "Governance", score: 0.5, status: "ok", signals: [] },
+    ],
+    health: {
+      threadSealRate: { id: "thread_seal_rate", label: "Thread 封印率", value: 0.5, unit: "ratio", numerator: 1, denominator: 2 },
+      replayMismatchRate: { id: "replay_mismatch_rate", label: "Replay mismatch 率", value: 0, unit: "ratio", numerator: 0, denominator: 1 },
+      citationMissingTotal: 2,
+      memoryLinksByType: { hit_used: 3 },
+    },
+    scenarios: [
+      { scenario: "hotfix", version: "1.0.0", profileId: "hotfix", runCount: 2, rankScore: 0.88, status: "ok", dimensions: [] },
+      { scenario: "feature_delivery", version: "1.0.0", profileId: "feature_delivery", runCount: 4, rankScore: 0.72, status: "ok", dimensions: [] },
+    ],
+    dataQuality: [{ metricId: "rubric", status: "partial", message: "proxy" }],
+  }),
 }));
 
 describe("MetricsPage", () => {
@@ -36,6 +59,16 @@ describe("MetricsPage", () => {
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "刷新" })).toBeInTheDocument();
       expect(screen.getByText("Space: local")).toBeInTheDocument();
+    });
+  });
+
+  it("renders space evaluation dimensions and scenario rank", async () => {
+    renderPage(<MetricsPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("metrics-evaluation-section")).toBeInTheDocument();
+      expect(screen.getByTestId("eval-dim-quality")).toBeInTheDocument();
+      expect(screen.getByTestId("metrics-evaluation-scenarios")).toHaveTextContent("hotfix");
+      expect(screen.getByTestId("metrics-evaluation-health")).toHaveTextContent("缺引用事件");
     });
   });
 

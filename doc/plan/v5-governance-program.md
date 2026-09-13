@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**GV01 进行中**（2026-09-13：visibility + 意图 API + 顶栏使用/管控切换）  
+> 状态：**P2 GV07–10 + Task 11 硬化已落地**（Space.Kind · Registry · PolicyPack · Rubric/score_events · Reviews Workbench · multi_sign/pending_second · TR3-12 · `make v5-signoff`）；下一优先级可观测深化或 SLA/assign  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
@@ -77,3 +77,6 @@
 | 2026-09-13 | Interaction Timeline 升格为 Session/Thread；seal/replay/compare 保障评审三性 |
 | 2026-09-13 | **确认计划：优先实现现行智能体薄交互（P0 / GV01–03）** |
 | 2026-09-13 | 补充 Agent↔DSH 交互对齐；顶栏 **Agent 使用 / 评审管控** 切换；GV01 后端切片落地 |
+| 2026-09-13 | **P0 完成**：GV02 ConversationNode/意图条/Quest 去厚；GV03 DeriveModelVisible |
+| 2026-09-13 | **GV04**：interaction_threads · FoldThread · MemoryLink · by-run/threads API |
+| 2026-09-13 | **P2 + Task 11**：Registry/Policy/Rubric/Workbench · multi_sign · TR3-12 · `make v5-signoff` |

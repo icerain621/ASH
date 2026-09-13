@@ -215,6 +215,11 @@ func (db *DB) migrate() error {
 		&GoalPlan{},
 		&DiffReviewComment{},
 		&SpaceRule{},
+		&InteractionThread{},
+		&AgentAsset{},
+		&MemoryAsset{},
+		&SpacePolicyPack{},
+		&ScoreEvent{},
 		&SchemaMeta{},
 	); err != nil {
 		return fmt.Errorf("automigrate: %w", err)

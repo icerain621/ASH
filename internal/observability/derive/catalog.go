@@ -325,5 +325,58 @@ func Catalog() []Rule {
 				{Name: "ok", JSONField: "_migration_ok"},
 			},
 		},
+		// GV05–06 interaction / MemoryLink
+		{
+			EventType: "interaction.thread_sealed",
+			Metric:    "ash_interaction_thread_sealed_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+		},
+		{
+			EventType: "interaction.replay_mismatch",
+			Metric:    "ash_interaction_replay_mismatch_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+		},
+		{
+			EventType: "memory.hit_used",
+			Metric:    "ash_memory_link_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "type", Static: "hit_used"}},
+			ValueJSON: "_link_count",
+		},
+		{
+			EventType: "memory.injected",
+			Metric:    "ash_memory_link_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "type", Static: "context_ref"}},
+			ValueJSON: "_link_count",
+		},
+		{
+			EventType: "memory.candidate",
+			Metric:    "ash_memory_link_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "type", Static: "candidate_out"}},
+			ValueJSON: "_link_count",
+		},
+		{
+			EventType: "knowledge.injected",
+			Metric:    "ash_memory_link_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "type", Static: "context_ref"}},
+			ValueJSON: "_link_count",
+		},
+		{
+			EventType: "skills.injected",
+			Metric:    "ash_memory_link_total",
+			Kind:      MetricCounter,
+			Op:        OpInc,
+			Labels:    []LabelSpec{{Name: "type", Static: "context_ref"}},
+			ValueJSON: "_link_count",
+		},
 	}
 }

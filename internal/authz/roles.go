@@ -18,6 +18,7 @@ func BuiltinRoles() []BuiltinRole {
 				"run:*", "memory:*", "rag:*", "model:route", "plugin:*",
 				"artifact:read", "storage:read", "feedback:*", "mcp:write",
 				"repo:*", "ci:*", "observability:*", "release:*",
+				"agents:manage", "spaces:policy",
 			},
 		},
 		{

@@ -9,6 +9,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/evolve"
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/scoring"
 )
 
 func TestReviewsQueueHarnessDecide(t *testing.T) {
@@ -37,7 +38,10 @@ func TestReviewsQueueHarnessDecide(t *testing.T) {
 		t.Fatal("expected orchestration item")
 	}
 
-	body, _ := json.Marshal(evolve.DecideRequest{Decision: "approve", Reason: "ok"})
+	body, _ := json.Marshal(evolve.DecideRequest{
+		Decision: "approve", Reason: "ok",
+		Rubric: &scoring.ReviewRubric{Correctness: 4, Safety: 4, Citable: 4, Efficiency: 4},
+	})
 	w2 := httptest.NewRecorder()
 	req2 := httptest.NewRequest(http.MethodPost, "/api/v1/reviews/"+queue.Items[0].ID+"/decide", bytes.NewReader(body))
 	req2.Header.Set("Content-Type", "application/json")

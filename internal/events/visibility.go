@@ -19,6 +19,7 @@ func DefaultVisibility(eventType string) string {
 		strings.HasPrefix(t, "audit."):
 		return VisibilityAudit
 	case strings.HasPrefix(t, "ui."),
+		strings.HasPrefix(t, "interaction."),
 		t == "gate.waiting_approval":
 		return VisibilityUIOnly
 	default:

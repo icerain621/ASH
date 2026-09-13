@@ -35,6 +35,8 @@ const TR3_CHECKS = [
   { id: "TR3-08", title: "Prometheus replay 段", hint: "ASH_METRICS_EVENT_REPLAY=1 时 /metrics 含 derive ash_* replay" },
   { id: "TR3-09", title: "OpenAPI 契约对齐", hint: "手写 /api/v1 路径与 swag 一致；2xx 无泛型 ApiResponse" },
   { id: "TR3-10", title: "Readyz 健康契约", hint: "/readyz HealthResponse 含 RLS/SQL 漂移字段；与 swag 一致" },
+  { id: "TR3-11", title: "交互 Seal/Replay", hint: "Interaction Thread seal→replay digest 一致；waterfall 挂 session/thread/memoryIds；derive seal/memory_link" },
+  { id: "TR3-12", title: "Space.Kind / Registry", hint: "Space.Kind 存在；Agent/Memory 资产列表可空" },
 ] as const;
 
 export function ScalePage() {

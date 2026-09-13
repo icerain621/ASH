@@ -30,6 +30,7 @@ type RoleSpec struct {
 type SpaceSpec struct {
 	Name string `json:"name"`
 	Slug string `json:"slug"`
+	Kind string `json:"kind,omitempty"` // user|team; default team
 }
 
 // Template is a catalog entry for org commercial landing.
@@ -62,7 +63,10 @@ func Catalog() []Template {
 			Approver:       "同一 Tech Lead（门禁 human step）",
 			DefaultOrgName: "Startup Delivery",
 			DefaultOrgSlug: "startup-delivery",
-			Spaces:         []SpaceSpec{{Name: "Delivery", Slug: "delivery"}},
+			Spaces: []SpaceSpec{
+				{Name: "Personal", Slug: "personal", Kind: "user"},
+				{Name: "Delivery", Slug: "delivery", Kind: "team"},
+			},
 			ExtraRoles: []RoleSpec{
 				{Name: "operator", Permissions: []string{
 					"run:create", "run:cancel", "artifact:read", "memory:create", "memory:read", "memory:query",
@@ -87,8 +91,9 @@ func Catalog() []Template {
 			DefaultOrgName: "Enterprise Engineering",
 			DefaultOrgSlug: "enterprise-eng",
 			Spaces: []SpaceSpec{
-				{Name: "Product Delivery", Slug: "product-delivery"},
-				{Name: "Platform", Slug: "platform"},
+				{Name: "Product Delivery", Slug: "product-delivery", Kind: "team"},
+				{Name: "Platform", Slug: "platform", Kind: "team"},
+				{Name: "Owner Desk", Slug: "owner-desk", Kind: "user"},
 			},
 			ExtraRoles: []RoleSpec{
 				{Name: "operator", Permissions: []string{
@@ -123,8 +128,9 @@ func Catalog() []Template {
 			DefaultOrgName: "Regulated Delivery",
 			DefaultOrgSlug: "regulated-delivery",
 			Spaces: []SpaceSpec{
-				{Name: "Controlled Delivery", Slug: "controlled"},
-				{Name: "Audit", Slug: "audit"},
+				{Name: "Controlled Delivery", Slug: "controlled", Kind: "team"},
+				{Name: "Audit", Slug: "audit", Kind: "team"},
+				{Name: "CISO Desk", Slug: "ciso-desk", Kind: "user"},
 			},
 			ExtraRoles: []RoleSpec{
 				{Name: "operator", Permissions: []string{
@@ -236,6 +242,7 @@ func Provision(tx *gorm.DB, templateID string, req ProvisionRequest) (ProvisionR
 		space := store.Space{
 			ID: "space_" + uuid.NewString(), OrgID: org.ID,
 			Name: spec.Name, Slug: firstNonEmpty(spec.Slug, slugify(spec.Name)),
+			Kind: NormalizeSpaceKind(spec.Kind),
 			CreatedAt: now, UpdatedAt: now,
 		}
 		if err := tx.Create(&space).Error; err != nil {
@@ -278,6 +285,16 @@ func spaceIDs(spaces []store.Space) []string {
 		out = append(out, s.ID)
 	}
 	return out
+}
+
+// NormalizeSpaceKind returns user|team; empty/invalid → team.
+func NormalizeSpaceKind(kind string) string {
+	switch strings.ToLower(strings.TrimSpace(kind)) {
+	case "user":
+		return "user"
+	default:
+		return "team"
+	}
 }
 
 func firstNonEmpty(values ...string) string {

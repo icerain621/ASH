@@ -56,6 +56,11 @@
 - `ash_memory_deprecated_total{layer,reason}`（counter）
 - `ash_memory_migration_runs_total{from,to,ok}`（counter）
 
+### 3.6 Interaction / MemoryLink（GV05–06）
+- `ash_interaction_thread_sealed_total`（counter）
+- `ash_interaction_replay_mismatch_total`（counter）
+- `ash_memory_link_total{type}`（counter；`type=hit_used|context_ref|candidate_out`，与 Fold MemoryLink 基数对齐）
+
 ## 4. 事件 → 指标派生（摘要规则）
 > 指标从事件派生，事件可重算；监控系统的数据允许丢失但事件不可丢。
 
@@ -72,13 +77,17 @@
 - **RAG FTS 引擎**：SQLite `fts5` 虚拟表；Postgres `rag_chunks.search_vector`（`tsvector` + GIN，SQL rev **17**）
 - `memory.candidate_created` → candidates/missing_evidence/backlog
 - `memory.reviewed` → reviews/latency/backlog
-- `memory.hit_used` → `ash_memory_hit_used_total{layer}`（按 `hitsByLayer` 分层计数）
+- `memory.hit_used` → `ash_memory_hit_used_total{layer}`（按 `hitsByLayer` 分层计数）；同时 → `ash_memory_link_total{type="hit_used"}`（按 `recordIds` 基数）
+- `memory.injected` / `knowledge.injected` / `skills.injected` → `ash_memory_link_total{type="context_ref"}`
+- `memory.candidate` → `ash_memory_link_total{type="candidate_out"}`
+- `interaction.thread_sealed` → `ash_interaction_thread_sealed_total++`
+- `interaction.replay_mismatch` → `ash_interaction_replay_mismatch_total++`
 - `memory.deprecated` → `ash_memory_deprecated_total{layer,reason}`
 - `memory.query` → `ash_memory_queries_total{layersKey}`、`ash_memory_query_latency_ms`（需 `runId` 写入 run_events）
 - `memory.migrated` → `ash_memory_migration_runs_total{from,to,ok}`
 
-**状态**：TR0 核心 + 记忆 P1 事件已表驱动实现（`internal/observability/derive/catalog.go`）。  
-**验收方式**：对同一 run 的事件重放，离线重算指标与实时指标口径一致（Doctor **TR3-05**、`derive.ValidateReplayParity`）。
+**状态**：TR0 核心 + 记忆 P1 + GV05–06 interaction/MemoryLink 已表驱动实现（`internal/observability/derive/catalog.go`）。  
+**验收方式**：对同一 run 的事件重放，离线重算指标与实时指标口径一致（Doctor **TR3-05** / **TR3-11**、`derive.ValidateReplayParity`）。
 
 ## 5. Traces（OTel 骨架）
 建议 Span 树：
@@ -89,7 +98,8 @@
     - `model.chat`
     - `tool.call`
 
-关键 attributes：`runId/scenarioVersion/stepId/role/tool/provider/model/checkpointId`。
+关键 attributes：`runId/scenarioVersion/stepId/role/tool/provider/model/checkpointId`。  
+Waterfall run span（GV05–06）另挂 Interaction：`sessionId` / `threadId` / `memoryIds`（与 ACP `agent.sessionId` 区分）。
 
 **实现**：`internal/observability/otel`（Provider、Span 辅助、waterfall 批量导出）。  
 **配置**：`config/ash-observability.yaml` → `plugins.otel`；或 `ASH_OTEL_ENABLED=1` + `ASH_OTEL_ENDPOINT`。  
@@ -112,6 +122,7 @@
 - 评审 SLA 超时（P1 细化）
 - **默认告警规则**（`internal/alerts`）：`memory_unreviewed_backlog`、`rag_fts_fallback_rate`、`plugin_export_failures`、`run_inflight_count`
 - **Prometheus live 段**：`ash_memory_unreviewed_backlog_live`、`ash_rag_fts_fallback_live`、`ash_plugin_export_errors_live`、`ash_run_inflight_live`
+- Interaction（建议）：`ash_interaction_replay_mismatch_total` 短窗突增
 
 ## 7. 插件健康与自监控
 - `plugin_registry` 列：`last_export_at`、`export_errors`、`drop_count`（SQL revision **16**）

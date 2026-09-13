@@ -9,7 +9,17 @@ import {
   submitScenarioPatchReview,
   type ReviewItem,
 } from "@/modules/reviews/api/reviews.api";
+import { ThreadComparePanel } from "@/modules/interactions/components/ThreadComparePanel";
 import { getCurrentSpaceId } from "@/services/http/client";
+
+type RubricForm = {
+  correctness: number;
+  safety: number;
+  citable: number;
+  efficiency: number;
+};
+
+const defaultRubric: RubricForm = { correctness: 4, safety: 4, citable: 4, efficiency: 4 };
 
 export function ReviewsPage() {
   const qc = useQueryClient();
@@ -17,6 +27,8 @@ export function ReviewsPage() {
   const [queue, setQueue] = useState<"all" | "orchestration" | "memory">("orchestration");
   const [reason, setReason] = useState("reviewed from UI");
   const [message, setMessage] = useState("");
+  const [selected, setSelected] = useState<ReviewItem | null>(null);
+  const [rubric, setRubric] = useState<RubricForm>(defaultRubric);
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -29,7 +41,7 @@ export function ReviewsPage() {
 
   const decideMut = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) =>
-      decideReview(id, { decision, reason, policyProfile: "default" }),
+      decideReview(id, { decision, reason, policyProfile: "default", rubric }),
     onSuccess: () => {
       setMessage("评审已提交");
       qc.invalidateQueries({ queryKey: ["reviews-queue"] });
@@ -78,7 +90,7 @@ export function ReviewsPage() {
         <div>
           <h1>评审管控</h1>
           <p>
-            治理台：Harness Profile / Scenario patch / Memory candidate。会话门禁请回「Agent 使用」。{" "}
+            Workbench：左队列 / 中时间线占位 / 右打分决定。{" "}
             <a href="/ui/m/reviews" data-testid="reviews-mobile-link">
               移动审阅
             </a>
@@ -94,10 +106,6 @@ export function ReviewsPage() {
               <option value="all">全部</option>
             </select>
           </label>
-          <label className="scenario-picker">
-            决定原因
-            <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
-          </label>
           <button type="button" className="btn icon-btn" onClick={() => queueQuery.refetch()} disabled={queueQuery.isFetching}>
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
@@ -106,10 +114,10 @@ export function ReviewsPage() {
       </div>
       {message ? <p className="muted-line">{message}</p> : null}
 
-      <div className="split ops-split">
+      <div className="split ops-split" data-testid="reviews-workbench" style={{ gridTemplateColumns: "1fr 1fr 1fr" }}>
         <div className="pane">
           <div className="pane-title">
-            <h2>待审项</h2>
+            <h2>待审队列</h2>
             <span>{items.length} 项</span>
           </div>
           {queueQuery.isLoading ? <p className="muted-line">加载中…</p> : null}
@@ -118,24 +126,36 @@ export function ReviewsPage() {
               <tr>
                 <th>Item</th>
                 <th>Type</th>
-                <th>Action</th>
               </tr>
             </thead>
             <tbody>
               {items.map((item) => (
-                <ReviewRow key={item.id} item={item} busy={decideMut.isPending} onDecide={(d) => decideMut.mutate({ id: item.id, decision: d })} />
+                <tr
+                  key={item.id}
+                  data-testid={`review-item-${item.targetType}`}
+                  className={selected?.id === item.id ? "selected" : undefined}
+                  onClick={() => setSelected(item)}
+                  style={{ cursor: "pointer" }}
+                >
+                  <td>
+                    <strong>{item.title}</strong>
+                    {item.summary ? <div className="muted-line">{item.summary}</div> : null}
+                  </td>
+                  <td>
+                    {item.targetType}
+                    <div className="muted-line">{item.status}</div>
+                  </td>
+                </tr>
               ))}
               {items.length === 0 && !queueQuery.isLoading && (
                 <tr className="empty-row">
-                  <td colSpan={3}>队列为空</td>
+                  <td colSpan={2}>队列为空</td>
                 </tr>
               )}
             </tbody>
           </table>
-        </div>
 
-        <div className="pane">
-          <div className="pane-title">
+          <div className="pane-title" style={{ marginTop: 16 }}>
             <h2>Scenario patch 草稿</h2>
             <span>{draftsQuery.data?.items.length ?? 0} 草稿</span>
           </div>
@@ -155,36 +175,22 @@ export function ReviewsPage() {
               标题
               <input name="title" required placeholder="收紧 citation gate" data-testid="patch-title" />
             </label>
-            <label>
-              from
-              <input name="fromVersion" placeholder="1.0.0" />
-            </label>
-            <label>
-              to
-              <input name="toVersion" placeholder="1.1.0" />
-            </label>
             <label className="wide-field">
               Diff / 说明
-              <textarea name="diffText" required rows={6} placeholder="- gate: require citations&#10;+ gate: require citations + human" data-testid="patch-diff" />
+              <textarea name="diffText" required rows={4} data-testid="patch-diff" />
             </label>
+            <input type="hidden" name="fromVersion" />
+            <input type="hidden" name="toVersion" />
             <button type="submit" className="btn primary icon-btn" data-testid="patch-create" disabled={createPatchMut.isPending}>
               <Send size={16} strokeWidth={1.8} />
               创建草稿
             </button>
           </form>
           <table className="table" data-testid="patch-draft-list">
-            <thead>
-              <tr>
-                <th>Title</th>
-                <th>Scenario</th>
-                <th>Action</th>
-              </tr>
-            </thead>
             <tbody>
               {(draftsQuery.data?.items ?? []).map((p) => (
                 <tr key={p.id}>
                   <td>{p.title}</td>
-                  <td>{p.scenarioName}</td>
                   <td>
                     <button
                       type="button"
@@ -198,49 +204,78 @@ export function ReviewsPage() {
                   </td>
                 </tr>
               ))}
-              {!(draftsQuery.data?.items ?? []).length && (
-                <tr className="empty-row">
-                  <td colSpan={3}>暂无草稿。</td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+
+        <div className="pane" data-testid="reviews-timeline-placeholder">
+          <div className="pane-title">
+            <h2>时间线 / 事件</h2>
+          </div>
+          {selected ? (
+            <>
+              <p>
+                <strong>{selected.title}</strong> ({selected.targetType})
+              </p>
+              <p className="muted-line">中栏占位：后续接入 Thread Timeline / MemoryLink。</p>
+              {selected.diff ? <pre className="code-block compact">{selected.diff}</pre> : null}
+              <ThreadComparePanel />
+            </>
+          ) : (
+            <p className="muted-line">选择左侧队列项以查看详情。</p>
+          )}
+        </div>
+
+        <div className="pane" data-testid="reviews-decide-form">
+          <div className="pane-title">
+            <h2>决定 + Rubric</h2>
+          </div>
+          <label className="scenario-picker">
+            原因
+            <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
+          </label>
+          {(
+            [
+              ["correctness", "正确性"],
+              ["safety", "安全性"],
+              ["citable", "可引用"],
+              ["efficiency", "效率"],
+            ] as const
+          ).map(([key, label]) => (
+            <label key={key} className="scenario-picker">
+              {label}
+              <input
+                type="number"
+                min={1}
+                max={5}
+                value={rubric[key]}
+                onChange={(e) => setRubric((r) => ({ ...r, [key]: Number(e.target.value) }))}
+                data-testid={`rubric-${key}`}
+              />
+            </label>
+          ))}
+          <div className="row-actions">
+            <button
+              type="button"
+              className="btn mini ok"
+              disabled={decideMut.isPending || !selected}
+              onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
+              data-testid="review-approve"
+            >
+              批准
+            </button>
+            <button
+              type="button"
+              className="btn mini err"
+              disabled={decideMut.isPending || !selected}
+              onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
+              data-testid="review-reject"
+            >
+              拒绝
+            </button>
+          </div>
+        </div>
       </div>
     </section>
-  );
-}
-
-function ReviewRow({
-  item,
-  busy,
-  onDecide,
-}: {
-  item: ReviewItem;
-  busy: boolean;
-  onDecide: (d: "approve" | "reject") => void;
-}) {
-  return (
-    <tr data-testid={`review-item-${item.targetType}`}>
-      <td>
-        <strong>{item.title}</strong>
-        {item.summary ? <div className="muted-line">{item.summary}</div> : null}
-        {item.diff ? <pre className="code-block compact">{item.diff}</pre> : null}
-      </td>
-      <td>
-        {item.targetType}
-        <div className="muted-line">{item.queue}</div>
-      </td>
-      <td>
-        <div className="row-actions">
-          <button type="button" className="btn mini ok" disabled={busy} onClick={() => onDecide("approve")} data-testid="review-approve">
-            批准
-          </button>
-          <button type="button" className="btn mini err" disabled={busy} onClick={() => onDecide("reject")} data-testid="review-reject">
-            拒绝
-          </button>
-        </div>
-      </td>
-    </tr>
   );
 }

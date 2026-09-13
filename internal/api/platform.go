@@ -82,6 +82,7 @@ type createSpaceRequest struct {
 	OrgID string `json:"orgId" binding:"required"`
 	Name  string `json:"name" binding:"required"`
 	Slug  string `json:"slug,omitempty"`
+	Kind  string `json:"kind,omitempty"` // user|team
 }
 
 type createRoleRequest struct {
@@ -627,7 +628,7 @@ func (h *Handler) listSpaces(c *gin.Context) {
 		return
 	}
 	if len(rows) == 0 && currentSpace(c) == "local" {
-		c.JSON(http.StatusOK, gin.H{"items": []gin.H{{"id": "local", "name": "Local", "slug": "local"}}})
+		c.JSON(http.StatusOK, gin.H{"items": []gin.H{{"id": "local", "name": "Local", "slug": "local", "kind": "team"}}})
 		return
 	}
 	c.JSON(http.StatusOK, gin.H{"items": rows})
@@ -661,7 +662,9 @@ func (h *Handler) createSpace(c *gin.Context) {
 	now := time.Now().UTC()
 	space := store.Space{
 		ID: "space_" + uuid.NewString(), OrgID: org.ID, Name: strings.TrimSpace(req.Name),
-		Slug: firstNonEmptyAPI(req.Slug, slugify(req.Name)), CreatedAt: now, UpdatedAt: now,
+		Slug: firstNonEmptyAPI(req.Slug, slugify(req.Name)),
+		Kind: orgtemplates.NormalizeSpaceKind(req.Kind),
+		CreatedAt: now, UpdatedAt: now,
 	}
 	if space.Name == "" {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "name is required"))

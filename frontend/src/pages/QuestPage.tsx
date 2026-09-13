@@ -1,17 +1,19 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Download, KanbanSquare, MessageSquarePlus, RefreshCcw, Star } from "lucide-react";
+import { Download, KanbanSquare, MessageSquarePlus, RefreshCcw } from "lucide-react";
 import { useMemo, useState } from "react";
 import {
   createDiffComment,
   getQuestBoard,
   getRunDiff,
   listDiffComments,
-  rateRunStep,
   rejectRunDiff,
   type BoardItem,
   type DiffComment,
   type DiffFile,
 } from "@/modules/quest/api/quest.api";
+import { AgentSessionPanel } from "@/modules/agent-session/components/AgentSessionPanel";
+import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
+import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import {
   approveGoalPlan,
   approveRun,
@@ -77,11 +79,10 @@ export function QuestPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
+  const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<string>("");
   const [draftComment, setDraftComment] = useState("");
   const [anchor, setAnchor] = useState<{ filePath: string; lineIndex: number; side: string } | null>(null);
-  const [stepId, setStepId] = useState("");
-  const [rating, setRating] = useState(4);
   const [message, setMessage] = useState("");
   const [goalText, setGoalText] = useState("");
   const [goalRepo, setGoalRepo] = useState(".");
@@ -142,12 +143,6 @@ export function QuestPage() {
       setMessage("批注已保存");
       qc.invalidateQueries({ queryKey: ["quest-diff-comments", selectedRunId] });
     },
-    onError: (e: Error) => setMessage(e.message),
-  });
-
-  const rateMut = useMutation({
-    mutationFn: () => rateRunStep(selectedRunId!, stepId.trim(), { rating, comment: "quest step rating" }),
-    onSuccess: () => setMessage(`步骤 ${stepId} 已评分 ${rating}`),
     onError: (e: Error) => setMessage(e.message),
   });
 
@@ -268,17 +263,10 @@ export function QuestPage() {
     return map;
   }, [commentsQuery.data]);
 
-  const stepIds = useMemo(() => {
-    const set = new Set<string>();
-    for (const item of timelineQuery.data?.items ?? []) {
-      if (item.stepId) set.add(item.stepId);
-    }
-    return Array.from(set);
-  }, [timelineQuery.data]);
-
   async function selectItem(item: BoardItem) {
     if (item.kind === "run" && item.runId) {
       setSelectedRunId(item.runId);
+      setHighlightSeq(null);
       setSelectedFile("");
       setActivePlan(null);
       setArtifactAccess(null);
@@ -288,6 +276,7 @@ export function QuestPage() {
     const planId = item.planId || (item.kind === "plan" ? item.id : "");
     if (planId) {
       setSelectedRunId(null);
+      setHighlightSeq(null);
       try {
         const plan = await getGoalPlan(planId);
         setActivePlan(plan);
@@ -454,6 +443,16 @@ export function QuestPage() {
 
       {selectedRunId ? (
         <>
+          <AgentSessionPanel
+            runId={selectedRunId}
+            runStatus={runStatus}
+            gateReason={gate?.reason}
+            onIntentSuccess={() => {
+              void qc.invalidateQueries({ queryKey: ["quest-run", selectedRunId] });
+              void qc.invalidateQueries({ queryKey: ["quest-timeline", selectedRunId] });
+              void qc.invalidateQueries({ queryKey: ["quest-board", spaceId] });
+            }}
+          />
           {runStatus === "waiting_approval" ? (
             <div className="pane" data-testid="quest-gate-panel" style={{ marginBottom: "1rem" }}>
               <div className="pane-title">
@@ -635,36 +634,19 @@ export function QuestPage() {
             ) : null}
           </div>
 
-          <div className="pane">
+          <div className="pane" data-testid="quest-timeline-pane">
             <div className="pane-title">
-              <h2>步骤评分</h2>
-              <span>{stepIds.length} steps</span>
+              <h2>步骤时间线</h2>
+              <span className="muted">评分请进「评审管控」</span>
             </div>
-            <label className="scenario-picker">
-              stepId
-              <select value={stepId} onChange={(e) => setStepId(e.target.value)} data-testid="quest-step-select">
-                <option value="">选择步骤</option>
-                {stepIds.map((id) => (
-                  <option key={id} value={id}>
-                    {id}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="scenario-picker">
-              rating
-              <input type="number" min={1} max={5} value={rating} onChange={(e) => setRating(Number(e.target.value))} />
-            </label>
-            <button
-              type="button"
-              className="btn primary"
-              disabled={!stepId || rateMut.isPending}
-              onClick={() => rateMut.mutate()}
-              data-testid="quest-rate-step"
-            >
-              <Star size={14} /> 提交评分
-            </button>
+            <p className="muted-line">本地步骤评分已从 Agent 使用面移除（GV02 去厚）。</p>
             <TimelineMini items={timelineQuery.data?.items ?? []} />
+            <ThreadTimeline runId={selectedRunId} highlightSeq={highlightSeq} onSelectSeq={setHighlightSeq} />
+            <MemoryLinkPanel
+              runId={selectedRunId}
+              highlightSeq={highlightSeq}
+              onSelectLinkSeq={setHighlightSeq}
+            />
           </div>
 
           <div className="pane" data-testid="quest-artifacts-pane">

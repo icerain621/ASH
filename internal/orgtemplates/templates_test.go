@@ -35,8 +35,15 @@ func TestProvisionSmallTeam(t *testing.T) {
 	if result.Org.Slug != "demo-startup" || result.TemplateID != IDSmallTeam {
 		t.Fatalf("result=%+v", result)
 	}
-	if len(result.Spaces) != 1 {
-		t.Fatalf("spaces=%d want 1", len(result.Spaces))
+	if len(result.Spaces) != 2 {
+		t.Fatalf("spaces=%d want 2 (user+team)", len(result.Spaces))
+	}
+	kinds := map[string]string{}
+	for _, s := range result.Spaces {
+		kinds[s.Slug] = s.Kind
+	}
+	if kinds["personal"] != "user" || kinds["delivery"] != "team" {
+		t.Fatalf("kinds=%v", kinds)
 	}
 	if len(result.Roles) < 3 { // admin + operator + reviewer
 		t.Fatalf("roles=%d want >=3", len(result.Roles))

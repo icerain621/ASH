@@ -22,6 +22,7 @@ const (
 	QueueMemory        = "memory"
 	QueueOrchestration = "orchestration"
 	StatusPending      = "pending"
+	StatusPendingSecond = "pending_second"
 	StatusApproved     = "approved"
 	StatusRejected     = "rejected"
 

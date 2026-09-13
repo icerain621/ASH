@@ -42,6 +42,40 @@ func TestValidateReplayParity_toolAndPolicy(t *testing.T) {
 	}
 }
 
+func TestValidateReplayParity_interactionAndMemoryLink(t *testing.T) {
+	events := []Event{
+		{
+			RunID: "run_ix", Type: "run.started",
+			PayloadJSON: `{"scenario":{"name":"feature_delivery","scenarioVersion":"1"},"policyProfile":"default","inputsDigest":"d"}`,
+		},
+		{RunID: "run_ix", Type: "memory.hit_used", PayloadJSON: `{"recordIds":["m1","m2"],"count":2}`},
+		{RunID: "run_ix", Type: "memory.injected", PayloadJSON: `{"recordIds":["m3"]}`},
+		{RunID: "run_ix", Type: "memory.candidate", PayloadJSON: `{"candidateId":"c1"}`},
+		{RunID: "run_ix", Type: "interaction.thread_sealed", PayloadJSON: `{"threadId":"th1","digest":"d"}`},
+		{RunID: "run_ix", Type: "interaction.replay_mismatch", PayloadJSON: `{"threadId":"th1","sealedDigest":"a","liveDigest":"b"}`},
+		{RunID: "run_ix", Type: "run.finished", PayloadJSON: `{"ok":true,"durationMs":50}`},
+	}
+	if err := ValidateReplayParity(events); err != nil {
+		t.Fatal(err)
+	}
+	snap := Replay(events)
+	if got := snap.Counters["ash_interaction_thread_sealed_total"]; got != 1 {
+		t.Fatalf("sealed=%g want 1", got)
+	}
+	if got := snap.Counters["ash_interaction_replay_mismatch_total"]; got != 1 {
+		t.Fatalf("mismatch=%g want 1", got)
+	}
+	if got := snap.Counters[`ash_memory_link_total{type="hit_used"}`]; got != 2 {
+		t.Fatalf("hit_used links=%g want 2", got)
+	}
+	if got := snap.Counters[`ash_memory_link_total{type="context_ref"}`]; got != 1 {
+		t.Fatalf("context_ref links=%g want 1", got)
+	}
+	if got := snap.Counters[`ash_memory_link_total{type="candidate_out"}`]; got != 1 {
+		t.Fatalf("candidate_out links=%g want 1", got)
+	}
+}
+
 func TestValidateReplayParity_matchesDBEvents(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	events := []Event{

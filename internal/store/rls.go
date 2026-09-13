@@ -130,6 +130,11 @@ func PostgresRLSTables() []PostgresRLSTable {
 		{Table: "goal_plans", SpaceColumn: "space_id"},
 		{Table: "diff_review_comments", SpaceColumn: "space_id"},
 		{Table: "space_rules", SpaceColumn: "space_id"},
+		{Table: "interaction_threads", SpaceColumn: "space_id"},
+		{Table: "agent_assets", SpaceColumn: "space_id"},
+		{Table: "memory_assets", SpaceColumn: "space_id"},
+		{Table: "space_policy_packs", SpaceColumn: "space_id"},
+		{Table: "score_events", SpaceColumn: "space_id"},
 		{Table: "spaces", SpaceColumn: "id"},
 	}
 }

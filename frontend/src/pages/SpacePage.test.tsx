@@ -79,6 +79,27 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   devLogin: vi.fn().mockResolvedValue({ token: "t", spaceId: "local" }),
 }));
 
+vi.mock("@/modules/registry/api/registry.api", () => ({
+  listAgentAssets: vi.fn().mockResolvedValue({ items: [] }),
+  listMemoryAssets: vi.fn().mockResolvedValue({ items: [] }),
+  getSpacePolicy: vi.fn().mockResolvedValue({
+    pack: { spaceId: "local", citationMode: "optional", multiSign: false, reviewSlaHours: 72 },
+    effective: {
+      spaceId: "local",
+      spaceKind: "team",
+      citationMode: "required",
+      multiSign: false,
+      reviewSlaHours: 72,
+      sources: ["kind:team"],
+    },
+  }),
+  putSpacePolicy: vi.fn(),
+  createAgentAsset: vi.fn(),
+  createMemoryAsset: vi.fn(),
+  patchAgentAssetStatus: vi.fn(),
+  patchMemoryAssetStatus: vi.fn(),
+}));
+
 describe("SpacePage", () => {
   beforeEach(() => {
     localStorage.clear();

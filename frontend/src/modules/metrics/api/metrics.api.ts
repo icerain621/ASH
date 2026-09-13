@@ -68,3 +68,59 @@ export function getMetricsOverview(params: MetricsOverviewParams = {}) {
   const suffix = qs.toString() ? `?${qs.toString()}` : "";
   return api<MetricsOverview>(`/metrics/overview${suffix}`);
 }
+
+export type EvaluationSignal = {
+  id: string;
+  label: string;
+  value: number;
+  unit: string;
+  numerator?: number;
+  denominator?: number;
+};
+
+export type EvaluationDimension = {
+  id: string;
+  label: string;
+  score: number;
+  status: string;
+  signals: EvaluationSignal[];
+};
+
+export type SpaceEvaluation = {
+  spaceId: string;
+  from: string;
+  to: string;
+  generatedAt: string;
+  dimensions: EvaluationDimension[];
+  health: {
+    threadSealRate: EvaluationSignal;
+    replayMismatchRate: EvaluationSignal;
+    citationMissingTotal: number;
+    memoryLinksByType?: Record<string, number>;
+  };
+  scenarios: Array<{
+    scenario: string;
+    version?: string;
+    profileId: string;
+    runCount: number;
+    rankScore: number;
+    status: string;
+    dimensions: EvaluationDimension[];
+    gateHints?: string[];
+  }>;
+  dataQuality: DataQualityNote[];
+};
+
+export type SpaceEvaluationParams = {
+  from?: string;
+  to?: string;
+};
+
+export function getSpaceEvaluation(spaceId: string, params: SpaceEvaluationParams = {}) {
+  const qs = new URLSearchParams();
+  Object.entries(params).forEach(([key, value]) => {
+    if (value) qs.set(key, value);
+  });
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  return api<SpaceEvaluation>(`/spaces/${encodeURIComponent(spaceId)}/evaluation${suffix}`);
+}

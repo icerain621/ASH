@@ -73,10 +73,22 @@ func TestBuildWaterfallAggregatesSpansFailuresAndMetrics(t *testing.T) {
 			Type: "policy.denied", Severity: "warn",
 			PayloadJSON: `{"target":"tool","ref":"runtime.command","reason":"approval required"}`, CreatedAt: now,
 		},
+		{
+			ID: "ev_memory_hit", RunID: run.ID, Seq: 4, TS: now.UnixMilli(),
+			Type: "memory.hit_used", Severity: "info",
+			PayloadJSON: `{"recordIds":["mem_wf_1","mem_wf_2"],"count":2}`, CreatedAt: now,
+		},
 	} {
 		if err := db.Create(&ev).Error; err != nil {
 			t.Fatal(err)
 		}
+	}
+	if err := db.Create(&store.InteractionThread{
+		ID: "th_waterfall", SpaceID: "local", SessionID: "sess_waterfall",
+		RunID: run.ID, Kind: "main", Status: "open", HeadSeq: 4,
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
 	}
 
 	waterfall, err := BuildWaterfall(db, run.ID)
@@ -118,5 +130,19 @@ func TestBuildWaterfallAggregatesSpansFailuresAndMetrics(t *testing.T) {
 	}
 	if len(waterfall.Metrics) != 1 || waterfall.Metrics[0].Name != "tool_failure_rate" {
 		t.Fatalf("metrics=%+v want tool_failure_rate", waterfall.Metrics)
+	}
+	var runAttrs map[string]any
+	for _, span := range waterfall.Spans {
+		if span.Type == "run" {
+			runAttrs = span.Attributes
+			break
+		}
+	}
+	if runAttrs["sessionId"] != "sess_waterfall" || runAttrs["threadId"] != "th_waterfall" {
+		t.Fatalf("run attrs=%+v want session/thread", runAttrs)
+	}
+	ids, _ := runAttrs["memoryIds"].([]string)
+	if len(ids) != 2 || ids[0] != "mem_wf_1" || ids[1] != "mem_wf_2" {
+		t.Fatalf("memoryIds=%v", runAttrs["memoryIds"])
 	}
 }

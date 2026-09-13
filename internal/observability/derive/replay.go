@@ -45,16 +45,30 @@ func Replay(events []Event) Snapshot {
 			}
 		}
 		enriched := enrichPayload(payload, scenarioByRun[ev.RunID], stepByRun[ev.RunID])
+		attachMemoryLinkCount(ev.Type, enriched)
 		payloads := []map[string]any{enriched}
+		hitExpanded := false
 		if ev.Type == "memory.hit_used" {
 			payloads = expandHitsByLayer(enriched)
+			hitExpanded = true
 		}
 		for _, p := range payloads {
 			for _, rule := range rules {
 				if rule.EventType != ev.Type {
 					continue
 				}
+				// memory.hit_used expands by layer for hit_used_total; apply link once below.
+				if hitExpanded && rule.Metric == "ash_memory_link_total" {
+					continue
+				}
 				applyRule(&snap, rule, p)
+			}
+		}
+		if hitExpanded {
+			for _, rule := range rules {
+				if rule.EventType == "memory.hit_used" && rule.Metric == "ash_memory_link_total" {
+					applyRule(&snap, rule, enriched)
+				}
 			}
 		}
 	}
@@ -91,6 +105,62 @@ func expandHitsByLayer(payload map[string]any) []map[string]any {
 		return []map[string]any{{"layer": "mixed", "count": float64(1)}}
 	}
 	return out
+}
+
+// attachMemoryLinkCount sets _link_count to match interaction fold MemoryLink cardinality.
+func attachMemoryLinkCount(eventType string, payload map[string]any) {
+	n := memoryLinkCount(eventType, payload)
+	if n <= 0 {
+		return
+	}
+	payload["_link_count"] = n
+}
+
+func memoryLinkCount(eventType string, payload map[string]any) float64 {
+	switch eventType {
+	case "memory.hit_used", "memory.injected":
+		ids := anyStringSlice(payload["recordIds"])
+		return float64(len(ids))
+	case "memory.candidate":
+		n := 0.0
+		if stringField(payload, "candidateId") != "" {
+			n++
+		}
+		if stringField(payload, "recordId") != "" {
+			n++
+		}
+		return n
+	case "knowledge.injected", "skills.injected":
+		n := 0.0
+		for _, ref := range anyStringSlice(payload["refs"]) {
+			if strings.HasPrefix(strings.TrimSpace(ref), "memory:") {
+				id := strings.TrimSpace(strings.TrimPrefix(ref, "memory:"))
+				if id != "" {
+					n++
+				}
+			}
+		}
+		return n
+	default:
+		return 0
+	}
+}
+
+func anyStringSlice(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok && s != "" {
+				out = append(out, s)
+			}
+		}
+		return out
+	default:
+		return nil
+	}
 }
 
 func enrichPayload(payload map[string]any, scenario, stepID string) map[string]any {
