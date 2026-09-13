@@ -15,17 +15,19 @@ type CreateProposalRequest struct {
 }
 
 type ProposalView struct {
-	ID              string          `json:"id"`
-	Title           string          `json:"title"`
-	Description     string          `json:"description,omitempty"`
-	BaselineRunID   string          `json:"baselineRunId"`
-	ExperimentRunID string          `json:"experimentRunId,omitempty"`
-	Status          string          `json:"status"`
-	ChangeSummary   string          `json:"changeSummary,omitempty"`
-	CanaryPercent   int             `json:"canaryPercent"`
+	ID              string           `json:"id"`
+	Title           string           `json:"title"`
+	Description     string           `json:"description,omitempty"`
+	BaselineRunID   string           `json:"baselineRunId"`
+	ExperimentRunID string           `json:"experimentRunId,omitempty"`
+	Status          string           `json:"status"`
+	ChangeSummary   string           `json:"changeSummary,omitempty"`
+	CanaryPercent   int              `json:"canaryPercent"`
+	Source          string           `json:"source,omitempty"`       // low_score|verify|manual
+	ScoreEventID    string           `json:"scoreEventId,omitempty"` // optional link to score_events
 	Compare         *ArtifactCompare `json:"compare,omitempty"`
-	CreatedAt       int64           `json:"createdAt"`
-	UpdatedAt       int64           `json:"updatedAt"`
+	CreatedAt       int64            `json:"createdAt"`
+	UpdatedAt       int64            `json:"updatedAt"`
 }
 
 type ArtifactCompare struct {

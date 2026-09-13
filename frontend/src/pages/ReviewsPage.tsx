@@ -9,7 +9,10 @@ import {
   submitScenarioPatchReview,
   type ReviewItem,
 } from "@/modules/reviews/api/reviews.api";
+import { getSpacePolicy } from "@/modules/registry/api/registry.api";
+import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadComparePanel } from "@/modules/interactions/components/ThreadComparePanel";
+import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 type RubricForm = {
@@ -21,6 +24,10 @@ type RubricForm = {
 
 const defaultRubric: RubricForm = { correctness: 4, safety: 4, citable: 4, efficiency: 4 };
 
+function isPendingSecond(status: string | undefined) {
+  return status === "pending_second";
+}
+
 export function ReviewsPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
@@ -29,6 +36,8 @@ export function ReviewsPage() {
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<ReviewItem | null>(null);
   const [rubric, setRubric] = useState<RubricForm>(defaultRubric);
+  const [inspectRunId, setInspectRunId] = useState("");
+  const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -37,6 +46,10 @@ export function ReviewsPage() {
   const draftsQuery = useQuery({
     queryKey: ["scenario-patches", "draft", spaceId],
     queryFn: () => listScenarioPatches("draft"),
+  });
+  const policyQuery = useQuery({
+    queryKey: ["space-policy", spaceId],
+    queryFn: () => getSpacePolicy(spaceId),
   });
 
   const decideMut = useMutation({
@@ -79,6 +92,8 @@ export function ReviewsPage() {
   }
 
   const items = queueQuery.data?.items ?? [];
+  const reviewSlaHours = policyQuery.data?.effective?.reviewSlaHours;
+  const secondSign = isPendingSecond(selected?.status);
 
   return (
     <section className="panel active" data-testid="reviews-page">
@@ -96,6 +111,11 @@ export function ReviewsPage() {
             </a>
           </p>
           <span className="scope-badge">Space: {spaceId}</span>
+          {typeof reviewSlaHours === "number" ? (
+            <span className="scope-badge" data-testid="reviews-sla-hint" style={{ marginLeft: 8 }}>
+              评审 SLA: {reviewSlaHours}h
+            </span>
+          ) : null}
         </div>
         <div className="toolbar metrics-toolbar">
           <label className="scenario-picker">
@@ -139,6 +159,11 @@ export function ReviewsPage() {
                 >
                   <td>
                     <strong>{item.title}</strong>
+                    {isPendingSecond(item.status) ? (
+                      <span className="scope-badge" data-testid="review-pending-second-badge" style={{ marginLeft: 6 }}>
+                        待第二签
+                      </span>
+                    ) : null}
                     {item.summary ? <div className="muted-line">{item.summary}</div> : null}
                   </td>
                   <td>
@@ -210,16 +235,48 @@ export function ReviewsPage() {
 
         <div className="pane" data-testid="reviews-timeline-placeholder">
           <div className="pane-title">
-            <h2>时间线 / 事件</h2>
+            <h2>时间线 / MemoryLink</h2>
           </div>
           {selected ? (
             <>
               <p>
                 <strong>{selected.title}</strong> ({selected.targetType})
+                {isPendingSecond(selected.status) ? (
+                  <span className="scope-badge" data-testid="review-detail-pending-second" style={{ marginLeft: 6 }}>
+                    待第二签
+                  </span>
+                ) : null}
               </p>
-              <p className="muted-line">中栏占位：后续接入 Thread Timeline / MemoryLink。</p>
               {selected.diff ? <pre className="code-block compact">{selected.diff}</pre> : null}
-              <ThreadComparePanel />
+              <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
+                关联 Run（探查 Thread）
+                <input
+                  data-testid="reviews-inspect-run"
+                  value={inspectRunId}
+                  placeholder="run_…"
+                  onChange={(e) => {
+                    setInspectRunId(e.target.value);
+                    setHighlightSeq(null);
+                  }}
+                />
+              </label>
+              {inspectRunId.trim() ? (
+                <>
+                  <ThreadTimeline
+                    runId={inspectRunId.trim()}
+                    highlightSeq={highlightSeq}
+                    onSelectSeq={setHighlightSeq}
+                  />
+                  <MemoryLinkPanel
+                    runId={inspectRunId.trim()}
+                    highlightSeq={highlightSeq}
+                    onSelectLinkSeq={setHighlightSeq}
+                  />
+                </>
+              ) : (
+                <p className="muted-line">输入 Run ID 后加载 Thread 时间线与 MemoryLink。</p>
+              )}
+              <ThreadComparePanel defaultLeftRunId={inspectRunId.trim()} />
             </>
           ) : (
             <p className="muted-line">选择左侧队列项以查看详情。</p>
@@ -228,7 +285,7 @@ export function ReviewsPage() {
 
         <div className="pane" data-testid="reviews-decide-form">
           <div className="pane-title">
-            <h2>决定 + Rubric</h2>
+            <h2>{secondSign ? "第二签决定 + Rubric" : "决定 + Rubric"}</h2>
           </div>
           <label className="scenario-picker">
             原因
@@ -262,7 +319,7 @@ export function ReviewsPage() {
               onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
               data-testid="review-approve"
             >
-              批准
+              {secondSign ? "第二签批准" : "批准"}
             </button>
             <button
               type="button"
@@ -271,7 +328,7 @@ export function ReviewsPage() {
               onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
               data-testid="review-reject"
             >
-              拒绝
+              {secondSign ? "第二签拒绝" : "拒绝"}
             </button>
           </div>
         </div>

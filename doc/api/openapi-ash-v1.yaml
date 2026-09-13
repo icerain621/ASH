@@ -2162,6 +2162,8 @@ components:
         experimentRunId: { type: string }
         status: { type: string }
         canaryPercent: { type: integer }
+        source: { type: string, description: "low_score|verify|manual" }
+        scoreEventId: { type: string }
         compare: { $ref: "#/components/schemas/ImproveArtifactCompare" }
         createdAt: { type: integer, format: int64 }
         updatedAt: { type: integer, format: int64 }

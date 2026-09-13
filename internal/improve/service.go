@@ -239,6 +239,7 @@ func (s *Service) view(row store.ImproveProposal) *ProposalView {
 		ID: row.ID, Title: row.Title, Description: row.Description,
 		BaselineRunID: row.BaselineRunID, ExperimentRunID: row.ExperimentRunID,
 		Status: row.Status, ChangeSummary: row.ChangeSummary, CanaryPercent: row.CanaryPercent,
+		Source: row.Source, ScoreEventID: row.ScoreEventID,
 		Compare: compare, CreatedAt: ms(row.CreatedAt), UpdatedAt: ms(row.UpdatedAt),
 	}
 }

@@ -826,24 +826,33 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 
 **可观测运行系统（Session/Thread）**
 - [ ] Run 自动绑定 main Thread；Session 可列出多 Thread  
-- [ ] 按 Thread 打开 Interaction Timeline（turn/step/tool/approval/score）  
-- [ ] Waterfall attributes 含 sessionId/threadId + memory  
-- [ ] derive/KPI 含 seal、replay_mismatch、memory_link  
+  （证据：`EnsureThread` / by-run 已落地；Session 多 Thread 列表 API 尚未暴露）
+- [x] 按 Thread 打开 Interaction Timeline（turn/step/tool/approval/score）  
+  （`ThreadTimeline` + Quest Diff）
+- [x] Waterfall attributes 含 sessionId/threadId + memory  
+  （`attachInteractionAttrs` + waterfall_test）
+- [x] derive/KPI 含 seal、replay_mismatch、memory_link  
+  （derive catalog + parity_test + Metrics evaluation）
 
 **可比对 / 可复现**
-- [ ] Thread seal 后 digest 稳定  
-- [ ] replay 与存档 digest 一致；人为改事件则 `REPLAY_DIGEST_MISMATCH`  
-- [ ] compare 两 Thread 能标出节点/记忆边差异  
-- [ ] Workbench 有复现校验与双栏比对入口  
+- [x] Thread seal 后 digest 稳定  
+- [x] replay 与存档 digest 一致；人为改事件则 `REPLAY_DIGEST_MISMATCH`  
+- [x] compare 两 Thread 能标出节点/记忆边差异  
+- [x] Workbench 有复现校验与双栏比对入口  
+  （复现：`MemoryLinkPanel`；双栏：`ThreadComparePanel` on Reviews）
 
 **记忆关联展示**
-- [ ] MemoryLink 带 sessionId+threadId；类型齐全  
-- [ ] Workbench / Observability / Quest Diff 可看关联  
-- [ ] 空关联有明确空态  
+- [x] MemoryLink 带 sessionId+threadId；类型齐全  
+- [x] Workbench / Observability / Quest Diff 可看关联  
+  （Quest Diff + Reviews 中栏 Timeline/MemoryLink + Obs derive 摘要）
+- [x] 空关联有明确空态  
+  （`memory-link-empty`）
 
 **排期**
-- [ ] F1–F21 + Session/Thread 增量进 GV 板  
-- [ ] 打包迁移不在板内  
+- [x] F1–F21 + Session/Thread 增量进 GV 板  
+  （本计划 §0.1 / §4 Sprint 表）
+- [x] 打包迁移不在板内  
+  （规格与本计划明确暂缓）
 
 ---
 

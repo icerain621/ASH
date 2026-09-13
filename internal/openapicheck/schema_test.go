@@ -53,7 +53,7 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		{"ModelRouterDecision", "github_com_ash-repwiki_ash_internal_modelrouter.Decision", 6},
 		{"PluginRegistryListResponse", "internal_api.PluginRegistryListResponse", 1},
 		{"ImproveListProposalsResponse", "github_com_ash-repwiki_ash_internal_improve.ListProposalsResponse", 1},
-		{"ImproveProposalView", "github_com_ash-repwiki_ash_internal_improve.ProposalView", 8},
+		{"ImproveProposalView", "github_com_ash-repwiki_ash_internal_improve.ProposalView", 10},
 		{"ImproveStartExperimentResponse", "github_com_ash-repwiki_ash_internal_improve.StartExperimentResponse", 2},
 		{"ImproveStatusResponse", "github_com_ash-repwiki_ash_internal_improve.StatusResponse", 2},
 		{"MemoryListCandidatesResponse", "github_com_ash-repwiki_ash_internal_memory.ListCandidatesResponse", 3},

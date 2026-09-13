@@ -18,6 +18,9 @@ export type ImproveProposal = {
   status: string;
   changeSummary?: string;
   canaryPercent: number;
+  /** low_score | verify | manual — set when auto-drafted from review score */
+  source?: string;
+  scoreEventId?: string;
   compare?: ArtifactCompare;
 };
 

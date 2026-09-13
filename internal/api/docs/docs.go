@@ -9287,6 +9287,14 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "scoreEventId": {
+                    "description": "optional link to score_events",
+                    "type": "string"
+                },
+                "source": {
+                    "description": "low_score|verify|manual",
+                    "type": "string"
+                },
                 "status": {
                     "type": "string"
                 },

@@ -8,8 +8,23 @@ import {
   rollbackImproveProposal,
   startImproveCanary,
   startImproveExperiment,
+  type ImproveProposal,
 } from "@/modules/improve/api/improve.api";
 import { shortId } from "@/shared/utils/format";
+
+/** True when proposal was auto-drafted from a low review score. */
+export function isLowScoreTriggered(item: Pick<ImproveProposal, "source" | "scoreEventId" | "changeSummary">): boolean {
+  if (item.source === "low_score") return true;
+  if (item.scoreEventId) return true;
+  if (item.changeSummary?.includes("low_score")) return true;
+  return false;
+}
+
+export function lowScoreSourceLabel(item: Pick<ImproveProposal, "scoreEventId">): string {
+  const id = item.scoreEventId?.trim();
+  if (id) return `由低分触发 · scoreEvent ${shortId(id)}`;
+  return "由低分触发";
+}
 
 export function ImproveProposalsPane() {
   const qc = useQueryClient();
@@ -78,7 +93,7 @@ export function ImproveProposalsPane() {
   const items = proposalsQuery.data?.items ?? [];
 
   return (
-    <div className="pane">
+    <div className="pane" data-testid="improve-proposals-pane">
       <div className="pane-title">
         <h2>
           <FlaskConical size={15} strokeWidth={1.8} />
@@ -122,8 +137,15 @@ export function ImproveProposalsPane() {
         </thead>
         <tbody>
           {items.map((item) => (
-            <tr key={item.id}>
-              <td title={item.id}>{item.title}</td>
+            <tr key={item.id} data-testid={`improve-proposal-${item.id}`}>
+              <td title={item.id}>
+                {item.title}
+                {isLowScoreTriggered(item) ? (
+                  <div className="muted-line" data-testid="improve-low-score-source">
+                    {lowScoreSourceLabel(item)}
+                  </div>
+                ) : null}
+              </td>
               <td>{item.status}</td>
               <td title={item.baselineRunId}>{shortId(item.baselineRunId)}</td>
               <td title={item.experimentRunId}>{item.experimentRunId ? shortId(item.experimentRunId) : "-"}</td>
