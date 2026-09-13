@@ -134,6 +134,7 @@ var Catalog = map[string]Entry{
 	"REVIEWS_QUEUE_FAILED":       {Domain: "evolve", Summary: "Failed to list review queue"},
 	"INVALID_REVIEW_ID":          {Domain: "evolve", Summary: "Invalid review queue item id"},
 	"REVIEW_DECIDE_FAILED":       {Domain: "evolve", Summary: "Failed to decide review item"},
+	"REVIEW_ASSIGN_FAILED":       {Domain: "evolve", Summary: "Failed to assign review item"},
 	"GOAL_ROUTE_FAILED":          {Domain: "goal", Summary: "Failed to route goal to scenario"},
 	"GOAL_PLAN_NOT_FOUND":        {Domain: "goal", Summary: "Goal plan not found"},
 	"GOAL_PLAN_GET_FAILED":       {Domain: "goal", Summary: "Failed to load goal plan"},

@@ -48,5 +48,6 @@ func Catalog() []PermissionDef {
 		{Key: "storage:read", Group: "platform", Label: "读取存储配置"},
 		{Key: "feedback:read", Group: "platform", Label: "读取反馈"},
 		{Key: "feedback:write", Group: "platform", Label: "提交与处理反馈"},
+		{Key: "reviews:assign", Group: "platform", Label: "分配评审责任人"},
 	}
 }

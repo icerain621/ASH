@@ -22,6 +22,45 @@ func TestNormalizeTargetType(t *testing.T) {
 	}
 }
 
+func TestAssignRoundtrip(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	mem := memory.NewService(db, ev)
+	har := harness.NewService(db)
+	svc := evolve.NewService(db, mem, har, nil)
+
+	created, err := har.Create(harness.CreateRequest{Name: "assign-me", Spec: harness.DefaultSpec()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := har.SubmitReview(created.ID); err != nil {
+		t.Fatal(err)
+	}
+	itemID := evolve.ItemID("harness_profile", created.ID)
+	if err := svc.Assign("local", itemID, "op1", "rev_alice"); err != nil {
+		t.Fatal(err)
+	}
+	q, err := svc.ListQueue("local", evolve.QueueOrchestration, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, it := range q.Items {
+		if it.ID == itemID {
+			found = true
+			if it.AssigneeID != "rev_alice" {
+				t.Fatalf("assigneeId=%q", it.AssigneeID)
+			}
+		}
+	}
+	if !found {
+		t.Fatal("expected item in queue")
+	}
+	if err := svc.Assign("local", itemID, "op1", ""); err == nil {
+		t.Fatal("empty assignee should fail")
+	}
+}
+
 func TestQueueAndDecideHarness(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)

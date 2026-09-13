@@ -1,6 +1,7 @@
 package evolve
 
 import (
+	"encoding/json"
 	"fmt"
 	"strings"
 	"time"
@@ -26,6 +27,7 @@ type Item struct {
 	Status     string `json:"status"`
 	SpaceID    string `json:"spaceId"`
 	CreatedAt  int64  `json:"createdAt"`
+	AssigneeID string `json:"assigneeId,omitempty"`
 }
 
 type ListResponse struct {
@@ -188,7 +190,7 @@ func (s *Service) listMemory(spaceID string, limit int) ([]Item, error) {
 		if first, ok := s.loadPendingApprover("memory", it.ID); ok && first != "" {
 			status = StatusPendingSecond
 		}
-		out = append(out, Item{
+		item := Item{
 			ID:         ItemID("memory", it.ID),
 			Queue:      QueueMemory,
 			TargetType: "memory",
@@ -198,7 +200,11 @@ func (s *Service) listMemory(spaceID string, limit int) ([]Item, error) {
 			Status:     status,
 			SpaceID:    spaceID,
 			CreatedAt:  it.CreatedAt,
-		})
+		}
+		if aid, ok := s.loadAssignee("memory", it.ID); ok {
+			item.AssigneeID = aid
+		}
+		out = append(out, item)
 	}
 	return out, nil
 }
@@ -219,7 +225,7 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 				if v.Status == harness.StatusPendingSecond {
 					status = StatusPendingSecond
 				}
-				out = append(out, Item{
+				item := Item{
 					ID:         ItemID("harness_profile", v.ID),
 					Queue:      QueueOrchestration,
 					TargetType: "harness_profile",
@@ -229,7 +235,11 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 					Status:     status,
 					SpaceID:    v.SpaceID,
 					CreatedAt:  v.UpdatedAt,
-				})
+				}
+				if aid, ok := s.loadAssignee("harness_profile", v.ID); ok {
+					item.AssigneeID = aid
+				}
+				out = append(out, item)
 			}
 		}
 	}
@@ -242,7 +252,7 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 			if len(out) >= limit {
 				break
 			}
-			out = append(out, Item{
+			item := Item{
 				ID:         ItemID("scenario_patch", p.ID),
 				Queue:      QueueOrchestration,
 				TargetType: "scenario_patch",
@@ -253,10 +263,46 @@ func (s *Service) listOrchestration(spaceID string, limit int) ([]Item, error) {
 				Status:     StatusPending,
 				SpaceID:    p.SpaceID,
 				CreatedAt:  p.UpdatedAt,
-			})
+			}
+			if aid, ok := s.loadAssignee("scenario_patch", p.ID); ok {
+				item.AssigneeID = aid
+			}
+			out = append(out, item)
 		}
 	}
 	return out, nil
+}
+
+// Assign sets the review queue assignee for a pending item (persisted via audit_log).
+func (s *Service) Assign(spaceID, itemID, actorID, assigneeID string) error {
+	space := strings.TrimSpace(spaceID)
+	if space == "" {
+		space = "local"
+	}
+	targetType, targetID, ok := ParseItemID(itemID)
+	if !ok {
+		return fmt.Errorf("invalid review id")
+	}
+	assigneeID = strings.TrimSpace(assigneeID)
+	if assigneeID == "" {
+		return fmt.Errorf("assigneeId is required")
+	}
+	q, err := s.ListQueue(space, "all", 100)
+	if err != nil {
+		return err
+	}
+	found := false
+	for _, it := range q.Items {
+		if it.ID == itemID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		return fmt.Errorf("review item not in pending queue")
+	}
+	s.saveAssignee(space, targetType, targetID, assigneeID, actorID)
+	return nil
 }
 
 func (s *Service) Decide(spaceID, itemID string, req DecideRequest) (*DecideResponse, error) {
@@ -519,6 +565,69 @@ func (s *Service) decideHarness(spaceID, profileID, decision string, req DecideR
 		TargetType: "harness_profile", TargetID: profileID,
 		Decision: decision, Status: StatusRejected,
 	}, nil
+}
+
+func assigneeAuditKey(targetType, targetID string) string {
+	return "review-assignee:" + targetType + ":" + targetID
+}
+
+func (s *Service) writeAudit(spaceID, actorID, kind string, payload map[string]string) {
+	if s.db == nil {
+		return
+	}
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		spaceID = "local"
+	}
+	b, _ := json.Marshal(payload)
+	_ = s.db.Create(&store.AuditLog{
+		ID: "aud_" + uuid.NewString(), SpaceID: spaceID,
+		ActorID: actorID, EventType: kind,
+		PayloadJSON: string(b), CreatedAt: time.Now().UTC(),
+	}).Error
+}
+
+func (s *Service) saveAssignee(spaceID, targetType, targetID, assigneeID, actorID string) {
+	if s.db == nil || assigneeID == "" {
+		return
+	}
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		spaceID = "local"
+	}
+	// Replace prior assignment rows for this target (latest-wins via load).
+	_ = s.db.Where("event_type = ? AND payload_json LIKE ?", "review.assigned", "%\"targetId\":\""+targetID+"\"%").
+		Delete(&store.AuditLog{}).Error
+	s.writeAudit(spaceID, actorID, "review.assigned", map[string]string{
+		"targetType": targetType, "targetId": targetID, "assigneeId": assigneeID,
+		"key": assigneeAuditKey(targetType, targetID),
+	})
+}
+
+func (s *Service) loadAssignee(targetType, targetID string) (assigneeID string, ok bool) {
+	if s.db == nil {
+		return "", false
+	}
+	var row store.AuditLog
+	err := s.db.Where("event_type = ? AND payload_json LIKE ?", "review.assigned", "%\"targetId\":\""+targetID+"\"%").
+		Order("created_at desc").First(&row).Error
+	if err != nil {
+		return "", false
+	}
+	if !strings.Contains(row.PayloadJSON, `"targetType":"`+targetType+`"`) {
+		return "", false
+	}
+	const marker = `"assigneeId":"`
+	i := strings.Index(row.PayloadJSON, marker)
+	if i < 0 {
+		return "", true
+	}
+	rest := row.PayloadJSON[i+len(marker):]
+	j := strings.IndexByte(rest, '"')
+	if j < 0 {
+		return "", true
+	}
+	return rest[:j], true
 }
 
 func (s *Service) savePendingApprover(targetType, targetID, actor string) {

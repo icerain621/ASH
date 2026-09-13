@@ -92,6 +92,47 @@ func (h *Handler) decideReview(c *gin.Context) {
 	c.JSON(http.StatusOK, resp)
 }
 
+type assignReviewRequest struct {
+	AssigneeID string `json:"assigneeId" binding:"required"`
+	ActorID    string `json:"actorId,omitempty"`
+}
+
+// AssignReview godoc
+// @Summary Assign a review queue item to an operator/reviewer
+// @Tags reviews
+// @Accept json
+// @Produce json
+// @Param reviewId path string true "memory:<id> or harness_profile:<id>"
+// @Param body body assignReviewRequest true "assignee"
+// @Success 200 {object} map[string]any
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/reviews/{reviewId}/assign [post]
+func (h *Handler) assignReview(c *gin.Context) {
+	space := currentSpace(c)
+	if !h.requirePermission(c, permReviewsAssign, space) {
+		return
+	}
+	var req assignReviewRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	actor := req.ActorID
+	if actor == "" {
+		actor = currentActor(c)
+	}
+	reviewID := c.Param("reviewId")
+	if _, _, ok := evolve.ParseItemID(reviewID); !ok {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REVIEW_ID", "expected memory:<id> or harness_profile:<id>"))
+		return
+	}
+	if err := h.evolveFor(c).Assign(space, reviewID, actor, req.AssigneeID); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("REVIEW_ASSIGN_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, gin.H{"ok": true, "reviewId": reviewID, "assigneeId": req.AssigneeID})
+}
+
 func (h *Handler) evolveFor(c *gin.Context) *evolve.Service {
 	db := h.db.BindContext(c.Request.Context())
 	mem := h.memory.WithContext(c.Request.Context())

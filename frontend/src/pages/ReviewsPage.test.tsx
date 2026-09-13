@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReviewsPage } from "./ReviewsPage";
-import { decideReview, listReviewsQueue } from "@/modules/reviews/api/reviews.api";
+import { decideReview, listReviewsQueue, assignReview } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
 
 vi.mock("@/modules/reviews/api/reviews.api", () => ({
@@ -17,6 +17,7 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
         status: "pending",
         spaceId: "local",
         createdAt: 1,
+        assigneeId: "rev_bob",
       },
       {
         id: "harness_profile:hprof_2",
@@ -32,6 +33,7 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
   })),
   listScenarioPatches: vi.fn(async () => ({ items: [] })),
   decideReview: vi.fn().mockResolvedValue({ ok: true }),
+  assignReview: vi.fn().mockResolvedValue({ ok: true, reviewId: "harness_profile:hprof_1", assigneeId: "op_x" }),
   createScenarioPatch: vi.fn(),
   submitScenarioPatchReview: vi.fn(),
 }));
@@ -136,5 +138,25 @@ describe("ReviewsPage", () => {
       );
     });
     expect(listReviewsQueue).toHaveBeenCalled();
+  });
+
+  it("shows assignee and submits assign", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ReviewsPage />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId("review-assignee-badge")).toHaveTextContent("负责人: rev_bob");
+    fireEvent.click(screen.getByText("default@v1"));
+    expect(screen.getByTestId("review-detail-assignee")).toHaveTextContent("负责人: rev_bob");
+    fireEvent.change(screen.getByTestId("reviews-assignee-input"), { target: { value: "op_x" } });
+    fireEvent.click(screen.getByTestId("review-assign"));
+    await waitFor(() => {
+      expect(assignReview).toHaveBeenCalledWith(
+        "harness_profile:hprof_1",
+        expect.objectContaining({ assigneeId: "op_x" }),
+      );
+    });
   });
 });

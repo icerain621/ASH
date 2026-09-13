@@ -11,6 +11,12 @@ export type ReviewItem = {
   status: string;
   spaceId: string;
   createdAt: number;
+  assigneeId?: string;
+};
+
+export type AssignPayload = {
+  assigneeId: string;
+  actorId?: string;
 };
 
 export type ScenarioPatch = {
@@ -52,6 +58,13 @@ export function decideReview(
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export function assignReview(reviewId: string, body: AssignPayload) {
+  return api<{ ok: boolean; reviewId: string; assigneeId: string }>(
+    `/reviews/${encodeURIComponent(reviewId)}/assign`,
+    { method: "POST", body: JSON.stringify(body) },
+  );
 }
 
 export function listScenarioPatches(status = "") {

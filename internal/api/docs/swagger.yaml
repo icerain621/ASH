@@ -498,6 +498,8 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_evolve.Item:
     properties:
+      assigneeId:
+        type: string
       createdAt:
         type: integer
       diff:
@@ -4726,6 +4728,15 @@ definitions:
       artifacts: {}
       manifest: {}
     type: object
+  internal_api.assignReviewRequest:
+    properties:
+      actorId:
+        type: string
+      assigneeId:
+        type: string
+    required:
+    - assigneeId
+    type: object
   internal_api.authSessionListResponse:
     properties:
       items:
@@ -8538,6 +8549,37 @@ paths:
       summary: Build ephemeral repo profile
       tags:
       - knowledge
+  /api/v1/reviews/{reviewId}/assign:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: memory:<id> or harness_profile:<id>
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      - description: assignee
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.assignReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Assign a review queue item to an operator/reviewer
+      tags:
+      - reviews
   /api/v1/reviews/{reviewId}/decide:
     post:
       consumes:

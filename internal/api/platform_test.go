@@ -212,8 +212,8 @@ func TestListAndProvisionOrgTemplates(t *testing.T) {
 	if result.TemplateID != "mid_enterprise" || result.Org.Slug != "mid-demo" {
 		t.Fatalf("result=%+v", result)
 	}
-	if len(result.Spaces) != 2 {
-		t.Fatalf("spaces=%d want 2", len(result.Spaces))
+	if len(result.Spaces) != 3 {
+		t.Fatalf("spaces=%d want 3", len(result.Spaces))
 	}
 	if len(result.Roles) < 5 {
 		t.Fatalf("roles=%d want >=5", len(result.Roles))

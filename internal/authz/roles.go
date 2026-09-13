@@ -18,7 +18,7 @@ func BuiltinRoles() []BuiltinRole {
 				"run:*", "memory:*", "rag:*", "model:route", "plugin:*",
 				"artifact:read", "storage:read", "feedback:*", "mcp:write",
 				"repo:*", "ci:*", "observability:*", "release:*",
-				"agents:manage", "spaces:policy",
+				"agents:manage", "spaces:policy", "reviews:assign",
 			},
 		},
 		{
@@ -27,18 +27,18 @@ func BuiltinRoles() []BuiltinRole {
 			Permissions: []string{
 				"run:create", "run:cancel", "artifact:read", "rag:query",
 				"repo:read", "ci:read", "ci:diagnose", "feedback:read", "feedback:write",
-				"observability:read", "release:read",
+				"observability:read", "release:read", "reviews:assign",
 			},
 		},
 		{
 			Name:        "operator",
 			Label:       "操作员",
-			Permissions: []string{"run:create", "run:cancel", "artifact:read", "rag:query", "repo:read", "ci:read", "ci:diagnose", "observability:read", "release:read"},
+			Permissions: []string{"run:create", "run:cancel", "artifact:read", "rag:query", "repo:read", "ci:read", "ci:diagnose", "observability:read", "release:read", "reviews:assign"},
 		},
 		{
 			Name:        "reviewer",
 			Label:       "评审员",
-			Permissions: []string{"memory:review", "run:approve", "artifact:read"},
+			Permissions: []string{"memory:review", "run:approve", "artifact:read", "reviews:assign"},
 		},
 		{Name: "auditor", Label: "审计员", Permissions: []string{"audit:export", "artifact:read", "repo:read", "ci:read", "ci:diagnose", "feedback:read", "observability:read", "release:read"}},
 		{

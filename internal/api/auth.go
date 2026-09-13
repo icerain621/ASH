@@ -35,6 +35,7 @@ const (
 	permCIDiagnose         = "ci:diagnose"
 	permFeedbackRead       = "feedback:read"
 	permFeedbackWrite      = "feedback:write"
+	permReviewsAssign      = "reviews:assign"
 	permMemberRead         = "member:read"
 	permMemberWrite        = "member:write"
 	permMemoryCreate       = "memory:create"

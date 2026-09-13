@@ -5110,6 +5110,53 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/reviews/{reviewId}/assign": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Assign a review queue item to an operator/reviewer",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "memory:\u003cid\u003e or harness_profile:\u003cid\u003e",
+                        "name": "reviewId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "assignee",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.assignReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/reviews/{reviewId}/decide": {
             "post": {
                 "consumes": [
@@ -8917,6 +8964,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_evolve.Item": {
             "type": "object",
             "properties": {
+                "assigneeId": {
+                    "type": "string"
+                },
                 "createdAt": {
                     "type": "integer"
                 },
@@ -15349,6 +15399,20 @@ const docTemplate = `{
             "properties": {
                 "artifacts": {},
                 "manifest": {}
+            }
+        },
+        "internal_api.assignReviewRequest": {
+            "type": "object",
+            "required": [
+                "assigneeId"
+            ],
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "assigneeId": {
+                    "type": "string"
+                }
             }
         },
         "internal_api.authSessionListResponse": {

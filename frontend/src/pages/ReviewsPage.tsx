@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList, RefreshCcw, Send } from "lucide-react";
 import { useState } from "react";
 import {
+  assignReview,
   createScenarioPatch,
   decideReview,
   listReviewsQueue,
@@ -38,6 +39,7 @@ export function ReviewsPage() {
   const [rubric, setRubric] = useState<RubricForm>(defaultRubric);
   const [inspectRunId, setInspectRunId] = useState("");
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
+  const [assigneeInput, setAssigneeInput] = useState("");
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -57,6 +59,17 @@ export function ReviewsPage() {
       decideReview(id, { decision, reason, policyProfile: "default", rubric }),
     onSuccess: () => {
       setMessage("评审已提交");
+      qc.invalidateQueries({ queryKey: ["reviews-queue"] });
+    },
+    onError: (e: Error) => setMessage(e.message),
+  });
+
+  const assignMut = useMutation({
+    mutationFn: ({ id, assigneeId }: { id: string; assigneeId: string }) =>
+      assignReview(id, { assigneeId }),
+    onSuccess: (_data, vars) => {
+      setMessage(`已分配给 ${vars.assigneeId}`);
+      setAssigneeInput("");
       qc.invalidateQueries({ queryKey: ["reviews-queue"] });
     },
     onError: (e: Error) => setMessage(e.message),
@@ -164,6 +177,11 @@ export function ReviewsPage() {
                         待第二签
                       </span>
                     ) : null}
+                    {item.assigneeId ? (
+                      <span className="scope-badge" data-testid="review-assignee-badge" style={{ marginLeft: 6 }}>
+                        负责人: {item.assigneeId}
+                      </span>
+                    ) : null}
                     {item.summary ? <div className="muted-line">{item.summary}</div> : null}
                   </td>
                   <td>
@@ -246,6 +264,11 @@ export function ReviewsPage() {
                     待第二签
                   </span>
                 ) : null}
+                {selected.assigneeId ? (
+                  <span className="scope-badge" data-testid="review-detail-assignee" style={{ marginLeft: 6 }}>
+                    负责人: {selected.assigneeId}
+                  </span>
+                ) : null}
               </p>
               {selected.diff ? <pre className="code-block compact">{selected.diff}</pre> : null}
               <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
@@ -291,6 +314,28 @@ export function ReviewsPage() {
             原因
             <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
           </label>
+          <label className="scenario-picker">
+            分配给
+            <input
+              value={assigneeInput}
+              onChange={(e) => setAssigneeInput(e.target.value)}
+              placeholder="assigneeId"
+              data-testid="reviews-assignee-input"
+            />
+          </label>
+          <div className="row-actions" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className="btn mini"
+              disabled={assignMut.isPending || !selected || !assigneeInput.trim()}
+              onClick={() =>
+                selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
+              }
+              data-testid="review-assign"
+            >
+              分配
+            </button>
+          </div>
           {(
             [
               ["correctness", "正确性"],

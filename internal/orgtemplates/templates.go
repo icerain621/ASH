@@ -71,10 +71,11 @@ func Catalog() []Template {
 				{Name: "operator", Permissions: []string{
 					"run:create", "run:cancel", "artifact:read", "memory:create", "memory:read", "memory:query",
 					"rag:query", "ci:read", "ci:diagnose", "feedback:read", "feedback:write", "observability:read",
+					"reviews:assign",
 				}},
 				{Name: "reviewer", Permissions: []string{
 					"run:approve", "artifact:read", "memory:read", "memory:review", "memory:query",
-					"ci:read", "feedback:read", "feedback:write", "observability:read",
+					"ci:read", "feedback:read", "feedback:write", "observability:read", "reviews:assign",
 				}},
 			},
 			RecommendedKPIs: []string{"KPI-01", "KPI-02", "KPI-06", "KPI-11"},
@@ -99,11 +100,11 @@ func Catalog() []Template {
 				{Name: "operator", Permissions: []string{
 					"run:create", "run:cancel", "artifact:read", "memory:create", "memory:read", "memory:query",
 					"rag:query", "repo:read", "ci:read", "ci:diagnose", "feedback:read", "feedback:write",
-					"observability:read", "release:read",
+					"observability:read", "release:read", "reviews:assign",
 				}},
 				{Name: "reviewer", Permissions: []string{
 					"run:approve", "artifact:read", "memory:read", "memory:review", "memory:query",
-					"ci:read", "feedback:read", "release:read", "observability:read",
+					"ci:read", "feedback:read", "release:read", "observability:read", "reviews:assign",
 				}},
 				{Name: "release_manager", Permissions: []string{
 					"run:approve", "artifact:read", "release:read", "release:write", "ci:read",

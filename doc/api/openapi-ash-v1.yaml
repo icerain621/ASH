@@ -1800,6 +1800,7 @@ components:
         status: { type: string }
         spaceId: { type: string }
         createdAt: { type: integer, format: int64 }
+        assigneeId: { type: string }
     ReviewsQueueResponse:
       type: object
       required: [items]
@@ -1819,6 +1820,18 @@ components:
         runId: { type: string }
         rubric:
           $ref: "#/components/schemas/ReviewRubric"
+    ReviewsAssignRequest:
+      type: object
+      required: [assigneeId]
+      properties:
+        assigneeId: { type: string }
+        actorId: { type: string }
+    ReviewsAssignResponse:
+      type: object
+      properties:
+        ok: { type: boolean }
+        reviewId: { type: string }
+        assigneeId: { type: string }
     ReviewRubric:
       type: object
       properties:
@@ -4815,6 +4828,27 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ReviewsDecideResponse" }
+
+  /api/v1/reviews/{reviewId}/assign:
+    post:
+      tags: [Reviews]
+      summary: Assign a review queue item
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/ReviewsAssignRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewsAssignResponse" }
 
   /api/v1/harness/profiles:
     get:

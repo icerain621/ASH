@@ -185,7 +185,7 @@ func (s *Service) listProbeFindings(spaceID string, limit int) ([]Item, error) {
 		limit = defaultMaxItems
 	}
 	var rows []store.WakerDutyRun
-	if err := s.q().Where("space_id = ? AND kind IN ? AND flagged > 0", spaceID, []string{KindDoctorSubset, KindKPIDrift}).
+	if err := s.q().Where("space_id = ? AND kind IN ? AND flagged > 0", spaceID, []string{KindDoctorSubset, KindKPIDrift, KindReviewSLA}).
 		Order("started_at DESC").Limit(20).Find(&rows).Error; err != nil {
 		return nil, err
 	}
@@ -194,7 +194,7 @@ func (s *Service) listProbeFindings(spaceID string, limit int) ([]Item, error) {
 	now := time.Now().UTC()
 	for _, r := range rows {
 		for _, token := range strings.Fields(r.Summary) {
-			if !strings.HasPrefix(token, "doctor_subset:") && !strings.HasPrefix(token, "kpi_drift:") {
+			if !strings.HasPrefix(token, "doctor_subset:") && !strings.HasPrefix(token, "kpi_drift:") && !strings.HasPrefix(token, "sla_breach:") {
 				continue
 			}
 			if seen[token] {
@@ -202,8 +202,11 @@ func (s *Service) listProbeFindings(spaceID string, limit int) ([]Item, error) {
 			}
 			seen[token] = true
 			kind := KindDoctorSubset
-			if strings.HasPrefix(token, "kpi_drift:") {
+			switch {
+			case strings.HasPrefix(token, "kpi_drift:"):
 				kind = KindKPIDrift
+			case strings.HasPrefix(token, "sla_breach:"):
+				kind = KindReviewSLA
 			}
 			out = append(out, Item{
 				RunID: r.ID, SpaceID: r.SpaceID, Status: "flagged",

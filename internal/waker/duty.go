@@ -155,6 +155,11 @@ func (s *Service) EnsureKPIDriftDuty(spaceID string, enabled bool) (store.WakerD
 	return s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabled, true)
 }
 
+// EnsureReviewSLADuty upserts (space_id, kind=review_sla) and sets enabled.
+func (s *Service) EnsureReviewSLADuty(spaceID string, enabled bool) (store.WakerDuty, error) {
+	return s.ensureProbeDuty(spaceID, KindReviewSLA, `{"action":"report"}`, enabled, true)
+}
+
 // SeedProbeDuties ensures probe duty rows exist without changing enabled on existing rows (DX15).
 func (s *Service) SeedProbeDuties(spaceID string) error {
 	enabledOnCreate := ProbesEnabledOnBoot()
@@ -162,6 +167,9 @@ func (s *Service) SeedProbeDuties(spaceID string) error {
 		return err
 	}
 	if _, err := s.ensureProbeDuty(spaceID, KindKPIDrift, `{"metric":"KPI-17","threshold":50}`, enabledOnCreate, false); err != nil {
+		return err
+	}
+	if _, err := s.ensureProbeDuty(spaceID, KindReviewSLA, `{"action":"report"}`, enabledOnCreate, false); err != nil {
 		return err
 	}
 	return nil
@@ -243,16 +251,18 @@ func (s *Service) ensureProbeDuty(spaceID, kind, defaultConfig string, enabled, 
 }
 
 func probesAvailable(duties []store.WakerDuty) bool {
-	hasDoctor, hasKPI := false, false
+	hasDoctor, hasKPI, hasSLA := false, false, false
 	for _, d := range duties {
 		switch d.Kind {
 		case KindDoctorSubset:
 			hasDoctor = true
 		case KindKPIDrift:
 			hasKPI = true
+		case KindReviewSLA:
+			hasSLA = true
 		}
 	}
-	return hasDoctor && hasKPI
+	return hasDoctor && hasKPI && hasSLA
 }
 
 // ListDuties returns duties for a space.
@@ -320,7 +330,7 @@ func (s *Service) Status(spaceID string, recent int) (StatusResponse, error) {
 	alertCount := 0
 	if q, qErr := s.Queue(spaceID, "", 50); qErr == nil {
 		for _, it := range q.Items {
-			if it.Kind == KindDoctorSubset || it.Kind == KindKPIDrift {
+			if it.Kind == KindDoctorSubset || it.Kind == KindKPIDrift || it.Kind == KindReviewSLA {
 				alertCount++
 			}
 		}
@@ -375,6 +385,8 @@ func (s *Service) executeDuty(duty store.WakerDuty, dryRun bool) (SweepResponse,
 		return s.runDoctorSubset(duty, dryRun)
 	case KindKPIDrift:
 		return s.runKPIDrift(duty, dryRun)
+	case KindReviewSLA:
+		return s.runReviewSLA(duty, dryRun)
 	default:
 		return SweepResponse{}, ErrUnsupportedDutyKind
 	}
@@ -406,7 +418,7 @@ func (s *Service) RunDueDuties(now time.Time) (int, error) {
 		} else if runErr != nil {
 			status = dutyStatusFailed
 			resp.Summary = runErr.Error()
-		} else if resp.Flagged > 0 && (duty.Kind == KindDoctorSubset || duty.Kind == KindKPIDrift) {
+		} else if resp.Flagged > 0 && (duty.Kind == KindDoctorSubset || duty.Kind == KindKPIDrift || duty.Kind == KindReviewSLA) {
 			status = dutyStatusFailed
 		}
 		if err := s.persistDutyRun(duty, status, resp, started); err != nil {

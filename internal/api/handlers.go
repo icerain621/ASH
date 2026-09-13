@@ -262,6 +262,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 
 		v1.GET("/reviews/queue", h.listReviewsQueue)
 		v1.POST("/reviews/:reviewId/decide", h.decideReview)
+		v1.POST("/reviews/:reviewId/assign", h.assignReview)
 		v1.POST("/repo/connections", h.createRepoConnection)
 		v1.GET("/repo/connections", h.listRepoConnections)
 		v1.GET("/ci/runs", h.listCIRuns)

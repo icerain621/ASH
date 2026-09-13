@@ -231,20 +231,22 @@ func TestStatusAutoSeedsProbesDisabled(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	var doctor, kpi store.WakerDuty
+	var doctor, kpi, sla store.WakerDuty
 	for _, d := range list {
 		switch d.Kind {
 		case KindDoctorSubset:
 			doctor = d
 		case KindKPIDrift:
 			kpi = d
+		case KindReviewSLA:
+			sla = d
 		}
 	}
-	if doctor.ID == "" || kpi.ID == "" {
+	if doctor.ID == "" || kpi.ID == "" || sla.ID == "" {
 		t.Fatalf("want seeded probe duties: %+v", list)
 	}
-	if doctor.Enabled || kpi.Enabled {
-		t.Fatalf("seeded probes must be disabled by default: doctor=%v kpi=%v", doctor.Enabled, kpi.Enabled)
+	if doctor.Enabled || kpi.Enabled || sla.Enabled {
+		t.Fatalf("seeded probes must be disabled by default: doctor=%v kpi=%v sla=%v", doctor.Enabled, kpi.Enabled, sla.Enabled)
 	}
 	// Second Status must not flip enabled after explicit enable.
 	if _, err := svc.SetDutyEnabled(doctor.ID, true); err != nil {
@@ -306,7 +308,7 @@ func TestProbesEnabledOnBoot(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, d := range list {
-		if (d.Kind == KindDoctorSubset || d.Kind == KindKPIDrift) && !d.Enabled {
+		if (d.Kind == KindDoctorSubset || d.Kind == KindKPIDrift || d.Kind == KindReviewSLA) && !d.Enabled {
 			t.Fatalf("want probes enabled on create when env set: %+v", d)
 		}
 	}
