@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "ASH Run 执行时序",
+    "locale": "zh-CN",
+    "output": "ash-run-execution.html",
+    "viewBox": [1080, 560],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "start-run", "label": "发起 Run", "focus": ["operator", "console", "worker", "runs"], "note": "Console POST /api/v1/runs 进入编排主循环。" },
+      { "id": "tool-exec", "label": "工具执行", "focus": ["runs", "toolbus", "sandbox"], "note": "ToolBus 路由 native 或沙箱执行。" },
+      { "id": "sse-stream", "label": "SSE 事件流", "focus": ["runs", "events", "console"], "note": "run_events 异步推送到 Console Timeline。" }
+    ]
+  },
+  "participants": [
+    { "id": "operator", "type": "external", "label": "Operator", "sublabel": "开发者" },
+    { "id": "console", "type": "frontend", "label": "Console", "sublabel": "React /ui/" },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin API" },
+    { "id": "runs", "type": "backend", "label": "Run Engine", "sublabel": "internal/runs" },
+    { "id": "toolbus", "type": "backend", "label": "ToolBus", "sublabel": "native tools" },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "Docker / jail" },
+    { "id": "events", "type": "messagebus", "label": "run_events", "sublabel": "SSE 源" }
+  ],
+  "segments": [
+    { "from": 150, "to": 240, "label": "创建 Run" },
+    { "from": 250, "to": 385, "label": "工具调用" },
+    { "from": 395, "to": 480, "label": "事件回流" }
+  ],
+  "messages": [
+    { "id": "click-start", "from": "operator", "to": "console", "y": 160, "label": "start run", "variant": "default" },
+    { "id": "post-runs", "from": "console", "to": "worker", "y": 185, "label": "POST /api/v1/runs", "variant": "emphasis" },
+    { "id": "create-run", "from": "worker", "to": "runs", "y": 210, "label": "create + start", "variant": "default" },
+    { "id": "run-id", "from": "worker", "to": "console", "y": 230, "label": "201 {runId}", "variant": "return" },
+    { "id": "emit-started", "from": "runs", "to": "events", "y": 245, "label": "emit run.started", "variant": "dashed" },
+    { "id": "invoke-tool", "from": "runs", "to": "toolbus", "y": 278, "label": "tool.call", "variant": "emphasis" },
+    { "id": "sandbox-exec", "from": "toolbus", "to": "sandbox", "y": 305, "label": "danger exec", "variant": "security" },
+    { "id": "sandbox-result", "from": "sandbox", "to": "toolbus", "y": 340, "label": "stdout/exit", "variant": "return" },
+    { "id": "tool-result", "from": "toolbus", "to": "runs", "y": 370, "label": "tool result", "variant": "return" },
+    { "id": "emit-events", "from": "runs", "to": "events", "y": 400, "label": "emit step/tool.*", "variant": "dashed" },
+    { "id": "sse-push", "from": "events", "to": "console", "y": 435, "label": "SSE push", "variant": "emphasis" },
+    { "id": "timeline", "from": "console", "to": "operator", "y": 455, "label": "timeline update", "variant": "return" },
+    { "id": "run-finished", "from": "runs", "to": "worker", "y": 475, "label": "status=finished", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "console", "from": 180, "to": 462, "type": "frontend" },
+    { "participant": "worker", "from": 185, "to": 482, "type": "backend" },
+    { "participant": "runs", "from": 205, "to": 482, "type": "backend" },
+    { "participant": "toolbus", "from": 270, "to": 378, "type": "backend" },
+    { "participant": "sandbox", "from": 300, "to": 347, "type": "security" },
+    { "participant": "events", "from": 243, "to": 438, "type": "messagebus" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "主路径",
+      "items": [
+        "Console → Worker → Run Engine 创建并启动 run",
+        "ToolBus 执行工具，危险操作路由 Sandbox"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "SSE 真相流",
+      "items": [
+        "run_events 异步写入并 SSE 推送",
+        "Console Timeline 续传，不阻塞 HTTP 响应"
+      ]
+    }
+  ]
+}

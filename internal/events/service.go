@@ -14,14 +14,15 @@ import (
 )
 
 type Envelope struct {
-	ID       string          `json:"id"`
-	TraceID  string          `json:"traceId"`
-	RunID    string          `json:"runId"`
-	Seq      int64           `json:"seq"`
-	TS       int64           `json:"ts"`
-	Type     string          `json:"type"`
-	Severity string          `json:"severity"`
-	Payload  json.RawMessage `json:"payload"`
+	ID         string          `json:"id"`
+	TraceID    string          `json:"traceId"`
+	RunID      string          `json:"runId"`
+	Seq        int64           `json:"seq"`
+	TS         int64           `json:"ts"`
+	Type       string          `json:"type"`
+	Severity   string          `json:"severity"`
+	Visibility string          `json:"visibility"`
+	Payload    json.RawMessage `json:"payload"`
 }
 
 type Service struct {
@@ -51,7 +52,7 @@ func (s *Service) gdb() *gorm.DB {
 	return s.db.DB
 }
 
-func (s *Service) Append(runID, traceID, eventType, severity string, payload any) (*Envelope, error) {
+func (s *Service) Append(runID, traceID, eventType, severity string, payload any, opts ...AppendOption) (*Envelope, error) {
 	payloadBytes, err := json.Marshal(payload)
 	if err != nil {
 		return nil, fmt.Errorf("marshal payload: %w", err)
@@ -61,6 +62,7 @@ func (s *Service) Append(runID, traceID, eventType, severity string, payload any
 			return nil, err
 		}
 	}
+	visibility := resolveAppendVisibility(eventType, opts)
 
 	var env Envelope
 	err = s.gdb().Transaction(func(tx *gorm.DB) error {
@@ -81,22 +83,14 @@ func (s *Service) Append(runID, traceID, eventType, severity string, payload any
 			TS:          now.UnixMilli(),
 			Type:        eventType,
 			Severity:    severity,
+			Visibility:  visibility,
 			PayloadJSON: string(payloadBytes),
 			CreatedAt:   now,
 		}
 		if err := tx.Create(&rec).Error; err != nil {
 			return err
 		}
-		env = Envelope{
-			ID:       rec.ID,
-			TraceID:  traceID,
-			RunID:    runID,
-			Seq:      rec.Seq,
-			TS:       rec.TS,
-			Type:     rec.Type,
-			Severity: rec.Severity,
-			Payload:  json.RawMessage(rec.PayloadJSON),
-		}
+		env = envelopeFromRow(rec, traceID)
 		return nil
 	})
 	if err != nil {
@@ -116,15 +110,7 @@ func (s *Service) ListAfter(runID string, afterSeq int64, limit int) ([]Envelope
 	}
 	out := make([]Envelope, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, Envelope{
-			ID:       r.ID,
-			RunID:    r.RunID,
-			Seq:      r.Seq,
-			TS:       r.TS,
-			Type:     r.Type,
-			Severity: r.Severity,
-			Payload:  json.RawMessage(r.PayloadJSON),
-		})
+		out = append(out, envelopeFromRow(r, ""))
 	}
 	if len(out) > 0 {
 		var run store.RunRecord
@@ -135,6 +121,20 @@ func (s *Service) ListAfter(runID string, afterSeq int64, limit int) ([]Envelope
 		}
 	}
 	return out, nil
+}
+
+func envelopeFromRow(r store.RunEvent, traceID string) Envelope {
+	return Envelope{
+		ID:         r.ID,
+		TraceID:    traceID,
+		RunID:      r.RunID,
+		Seq:        r.Seq,
+		TS:         r.TS,
+		Type:       r.Type,
+		Severity:   r.Severity,
+		Visibility: NormalizeVisibility(r.Type, r.Visibility),
+		Payload:    json.RawMessage(r.PayloadJSON),
+	}
 }
 
 func (s *Service) SeqFromEventID(runID, eventID string) (int64, error) {
@@ -192,10 +192,7 @@ func (s *Service) ListAfterSpace(spaceID string, afterTS int64, limit int) ([]En
 	}
 	out := make([]Envelope, 0, len(rows))
 	for _, r := range rows {
-		out = append(out, Envelope{
-			ID: r.ID, RunID: r.RunID, Seq: r.Seq, TS: r.TS,
-			Type: r.Type, Severity: r.Severity, Payload: json.RawMessage(r.PayloadJSON),
-		})
+		out = append(out, envelopeFromRow(r, ""))
 	}
 	return out, nil
 }

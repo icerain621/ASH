@@ -16,6 +16,8 @@ const payloadSchemaID = "ash.events.payloads.tr0/v0.1"
 var tr0PayloadSchemaJSON []byte
 
 // PayloadValidationEnabled reports whether Append validates TR0 payload schemas.
+// Note (GV01): event visibility lives on the Envelope / run_events.visibility column,
+// not inside payload JSON, so TR0 $defs keep additionalProperties:false.
 func PayloadValidationEnabled() bool {
 	switch strings.ToLower(strings.TrimSpace(os.Getenv("ASH_VALIDATE_EVENT_PAYLOADS"))) {
 	case "1", "true", "yes", "on":

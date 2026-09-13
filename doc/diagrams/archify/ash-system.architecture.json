@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH 系统架构",
+    "locale": "zh-CN",
+    "output": "ash-system.html",
+    "quality_profile": "showcase",
+    "viewBox": [1180, 660],
+    "views": [
+      {
+        "id": "request-path",
+        "label": "主请求路径",
+        "focus": ["operator", "console", "worker", "runs", "toolbus"],
+        "note": "从控制台或 CLI 发起 run，经 API 进入编排主循环。"
+      },
+      {
+        "id": "truth-and-stream",
+        "label": "事件与存储",
+        "focus": ["runs", "events", "memory", "db"],
+        "note": "run_events 为真相来源，SSE 推送到控制台，记忆与元数据持久化。"
+      },
+      {
+        "id": "isolation-and-ext",
+        "label": "隔离与扩展",
+        "focus": ["toolbus", "sandbox", "plugins", "idp"],
+        "note": "危险工具走沙箱；进程外插件经 gRPC/HTTP/MCP 接入 ToolBus。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "operator", "type": "external", "label": "Operator", "sublabel": "开发者 / 运维", "pos": [40, 300], "size": [120, 60] },
+    { "id": "idp", "type": "security", "label": "OIDC IdP", "sublabel": "Console Auth", "pos": [40, 120], "size": [120, 64], "tag": "RS256 / Session" },
+    { "id": "console", "type": "frontend", "label": "React Console", "sublabel": "Vite · /ui/", "pos": [230, 300], "size": [130, 60], "tag": "TanStack" },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin :8080", "pos": [430, 300], "size": [130, 60] },
+    { "id": "runs", "type": "backend", "label": "Run Engine", "sublabel": "internal/runs", "pos": [630, 300], "size": [130, 60], "tag": "checkpoint" },
+    { "id": "rules", "type": "backend", "label": "Scenario DSL", "sublabel": "internal/rules", "pos": [630, 120], "size": [130, 60] },
+    { "id": "toolbus", "type": "backend", "label": "ToolBus", "sublabel": "native + harness", "pos": [830, 300], "size": [130, 60] },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "Docker / jail", "pos": [1030, 300], "size": [120, 60], "tag": "danger tools" },
+    { "id": "plugins", "type": "external", "label": "External Plugins", "sublabel": "gRPC / HTTP / MCP", "pos": [1030, 120], "size": [120, 64] },
+    { "id": "events", "type": "messagebus", "label": "run_events", "sublabel": "SSE 续传", "pos": [430, 450], "size": [130, 60] },
+    { "id": "memory", "type": "database", "label": "Memory + RAG", "sublabel": "FTS / 向量可选", "pos": [630, 450], "size": [130, 60] },
+    { "id": "db", "type": "database", "label": "SQLite / Postgres", "sublabel": ".ash/ash.db", "pos": [830, 450], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Monorepo · ash-worker 单体", "wraps": ["worker", "runs", "rules", "toolbus", "events", "memory"] },
+    { "kind": "security-group", "label": "Policy / Gate / RBAC", "wraps": ["worker", "runs", "toolbus", "sandbox"] }
+  ],
+  "connections": [
+    { "id": "operator-console", "from": "operator", "to": "console", "label": "HTTPS", "variant": "emphasis" },
+    { "id": "console-worker", "from": "console", "to": "worker", "label": "REST /api/v1" },
+    { "id": "idp-console", "from": "idp", "to": "console", "label": "OIDC login", "variant": "security", "fromSide": "right", "toSide": "top" },
+    { "id": "worker-runs", "from": "worker", "to": "runs", "label": "orchestrate" },
+    { "id": "rules-runs", "from": "rules", "to": "runs", "label": "YAML scenarios", "fromSide": "bottom", "toSide": "top", "labelAt": [695, 194] },
+    { "id": "runs-toolbus", "from": "runs", "to": "toolbus", "label": "tool calls" },
+    { "id": "toolbus-sandbox", "from": "toolbus", "to": "sandbox", "label": "danger exec", "variant": "security" },
+    { "id": "toolbus-plugins", "from": "toolbus", "to": "plugins", "label": "gRPC/HTTP", "variant": "dashed", "fromSide": "top", "toSide": "left" },
+    { "id": "runs-events", "from": "runs", "to": "events", "fromSide": "bottom", "toSide": "top" },
+    { "id": "events-console", "from": "events", "to": "console", "label": "SSE stream", "variant": "emphasis", "fromSide": "left", "toSide": "bottom" },
+    { "id": "runs-memory", "from": "runs", "to": "memory", "label": "candidates", "fromSide": "bottom", "toSide": "top", "labelAt": [730, 390] },
+    { "id": "memory-db", "from": "memory", "to": "db", "label": "GORM persist", "labelDy": -18 }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "应用形态",
+      "items": [
+        "Monorepo：worker + cli + frontend",
+        "M0 单体 Worker，插件化扩展"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "编排与真相",
+      "items": [
+        "run_events 为回放审计真相来源",
+        "Memory 候选 → 评审 → 检索闭环"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "安全与扩展",
+      "items": [
+        "Policy / Gate deny 危险工具",
+        "Sandbox + gRPC/HTTP 插件扩展"
+      ]
+    }
+  ]
+}

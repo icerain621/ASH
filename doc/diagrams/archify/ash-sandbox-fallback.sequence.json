@@ -1,0 +1,271 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "ASH Sandbox 路由降级",
+    "locale": "zh-CN",
+    "output": "ash-sandbox-fallback.html",
+    "viewBox": [
+      1080,
+      560
+    ],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "start-run",
+        "label": "策略解析",
+        "focus": [
+          "operator",
+          "console",
+          "worker",
+          "runs"
+        ],
+        "note": "ToolBus 请求 DefaultRouter.Route(risk, mode)。"
+      },
+      {
+        "id": "tool-exec",
+        "label": "执行器选择",
+        "focus": [
+          "runs",
+          "toolbus",
+          "sandbox"
+        ],
+        "note": "isolated：landlock → docker → process。"
+      },
+      {
+        "id": "sse-stream",
+        "label": "回落结果",
+        "focus": [
+          "runs",
+          "events",
+          "console"
+        ],
+        "note": "Decision.executor 回写调度结果。"
+      }
+    ]
+  },
+  "participants": [
+    {
+      "id": "operator",
+      "type": "backend",
+      "label": "ToolBus",
+      "sublabel": "tool.call"
+    },
+    {
+      "id": "console",
+      "type": "security",
+      "label": "Router",
+      "sublabel": "sandbox.Route"
+    },
+    {
+      "id": "worker",
+      "type": "cloud",
+      "label": "Remote",
+      "sublabel": "opt-in"
+    },
+    {
+      "id": "runs",
+      "type": "security",
+      "label": "Landlock",
+      "sublabel": "Linux LSM"
+    },
+    {
+      "id": "toolbus",
+      "type": "backend",
+      "label": "Docker",
+      "sublabel": "PreferDocker"
+    },
+    {
+      "id": "sandbox",
+      "type": "backend",
+      "label": "Process",
+      "sublabel": "jail"
+    },
+    {
+      "id": "events",
+      "type": "messagebus",
+      "label": "Decision",
+      "sublabel": "executor"
+    }
+  ],
+  "segments": [
+    {
+      "from": 150,
+      "to": 240,
+      "label": "创建 Run"
+    },
+    {
+      "from": 250,
+      "to": 385,
+      "label": "工具调用"
+    },
+    {
+      "from": 395,
+      "to": 480,
+      "label": "事件回流"
+    }
+  ],
+  "messages": [
+    {
+      "id": "click-start",
+      "from": "operator",
+      "to": "console",
+      "y": 160,
+      "label": "Route(req)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "post-runs",
+      "from": "console",
+      "to": "worker",
+      "y": 185,
+      "label": "authorize",
+      "variant": "security"
+    },
+    {
+      "id": "create-run",
+      "from": "worker",
+      "to": "runs",
+      "y": 210,
+      "label": "try remote",
+      "variant": "dashed"
+    },
+    {
+      "id": "run-id",
+      "from": "worker",
+      "to": "console",
+      "y": 230,
+      "label": "miss",
+      "variant": "return"
+    },
+    {
+      "id": "emit-started",
+      "from": "runs",
+      "to": "events",
+      "y": 245,
+      "label": "try landlock",
+      "variant": "dashed"
+    },
+    {
+      "id": "invoke-tool",
+      "from": "runs",
+      "to": "toolbus",
+      "y": 278,
+      "label": "miss",
+      "variant": "return"
+    },
+    {
+      "id": "sandbox-exec",
+      "from": "toolbus",
+      "to": "sandbox",
+      "y": 305,
+      "label": "try docker",
+      "variant": "security"
+    },
+    {
+      "id": "sandbox-result",
+      "from": "sandbox",
+      "to": "toolbus",
+      "y": 340,
+      "label": "miss",
+      "variant": "return"
+    },
+    {
+      "id": "tool-result",
+      "from": "toolbus",
+      "to": "runs",
+      "y": 370,
+      "label": "process-jail",
+      "variant": "emphasis"
+    },
+    {
+      "id": "emit-events",
+      "from": "runs",
+      "to": "events",
+      "y": 400,
+      "label": "executor=process",
+      "variant": "dashed"
+    },
+    {
+      "id": "sse-push",
+      "from": "events",
+      "to": "console",
+      "y": 435,
+      "label": "Decision",
+      "variant": "emphasis"
+    },
+    {
+      "id": "timeline",
+      "from": "console",
+      "to": "operator",
+      "y": 455,
+      "label": "dispatch",
+      "variant": "default"
+    },
+    {
+      "id": "run-finished",
+      "from": "runs",
+      "to": "worker",
+      "y": 475,
+      "label": "result",
+      "variant": "return"
+    }
+  ],
+  "activations": [
+    {
+      "participant": "console",
+      "from": 180,
+      "to": 462,
+      "type": "frontend"
+    },
+    {
+      "participant": "worker",
+      "from": 185,
+      "to": 482,
+      "type": "backend"
+    },
+    {
+      "participant": "runs",
+      "from": 205,
+      "to": 482,
+      "type": "backend"
+    },
+    {
+      "participant": "toolbus",
+      "from": 270,
+      "to": 378,
+      "type": "backend"
+    },
+    {
+      "participant": "sandbox",
+      "from": 300,
+      "to": 347,
+      "type": "security"
+    },
+    {
+      "participant": "events",
+      "from": 243,
+      "to": 438,
+      "type": "messagebus"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "rose",
+      "title": "isolated 优先级",
+      "items": [
+        "remote → landlock → docker → process",
+        "Authorize 失败 → executor=none"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "DefaultRouter",
+      "items": [
+        "对齐 internal/sandbox/router.go",
+        "mode=off → in-process"
+      ]
+    }
+  ]
+}

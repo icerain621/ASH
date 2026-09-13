@@ -35,15 +35,19 @@ func TestAgentSessionAPIBindRunTurnEvents(t *testing.T) {
 		t.Fatalf("create status=%d body=%s", w.Code, w.Body.String())
 	}
 	var sess struct {
-		ID        string `json:"id"`
-		RunID     string `json:"runId"`
-		StreamURL string `json:"streamUrl"`
+		ID        string         `json:"id"`
+		RunID     string         `json:"runId"`
+		StreamURL string         `json:"streamUrl"`
+		Meta      map[string]any `json:"meta"`
 	}
 	if err := json.Unmarshal(w.Body.Bytes(), &sess); err != nil {
 		t.Fatal(err)
 	}
 	if sess.ID == "" || sess.RunID != run.ID || sess.StreamURL == "" {
 		t.Fatalf("sess=%+v", sess)
+	}
+	if tid, _ := sess.Meta["threadId"].(string); tid == "" || sess.Meta["threadKind"] != "main" {
+		t.Fatalf("meta=%v want main thread", sess.Meta)
 	}
 
 	turnW := httptest.NewRecorder()
@@ -64,7 +68,8 @@ func TestAgentSessionAPIBindRunTurnEvents(t *testing.T) {
 	var evResp struct {
 		StreamURL string `json:"streamUrl"`
 		Items     []struct {
-			Type string `json:"type"`
+			Type       string `json:"type"`
+			Visibility string `json:"visibility"`
 		} `json:"items"`
 	}
 	if err := json.Unmarshal(evW.Body.Bytes(), &evResp); err != nil {
@@ -77,10 +82,32 @@ func TestAgentSessionAPIBindRunTurnEvents(t *testing.T) {
 	for _, item := range evResp.Items {
 		if item.Type == "session.turn" {
 			found = true
+			if item.Visibility != "model_visible" {
+				t.Fatalf("session.turn visibility=%q", item.Visibility)
+			}
 			break
 		}
 	}
 	if !found {
 		t.Fatalf("events=%+v want session.turn", evResp.Items)
+	}
+
+	// Fail-closed approve while run is running (not waiting_approval).
+	actW := httptest.NewRecorder()
+	actReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/actions",
+		bytes.NewReader([]byte(`{"action":"approve","reason":"nope"}`)))
+	actReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(actW, actReq)
+	if actW.Code != http.StatusConflict {
+		t.Fatalf("approve status=%d body=%s want 409", actW.Code, actW.Body.String())
+	}
+
+	promptW := httptest.NewRecorder()
+	promptReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/actions",
+		bytes.NewReader([]byte(`{"action":"prompt","prompt":"via intent"}`)))
+	promptReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(promptW, promptReq)
+	if promptW.Code != http.StatusOK {
+		t.Fatalf("intent prompt status=%d body=%s", promptW.Code, promptW.Body.String())
 	}
 }

@@ -76,6 +76,7 @@ type Service struct {
 	db     *store.DB
 	goal   *goal.Service
 	events *events.Service
+	runs   RunControl
 	ctx    context.Context
 }
 
@@ -172,6 +173,7 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 	}
 	view.StreamURL = streamURL(view.RunID)
 	s.applyProviderKind(view, req.ProviderKind)
+	s.ensureMainThread(view)
 	if err := s.save(view); err != nil {
 		return nil, err
 	}

@@ -21,6 +21,13 @@
 4. [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md) — Feedback / 双评审 / Improve  
 5. 回读 [`HLD-总体设计.md`](HLD-总体设计.md) §2.2 / §3.2.1 / §4.1  
 
+### v5（双核管控 × 厚评审 × 薄交互）
+
+1. [`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md) — 设计规格（评审稿）  
+2. [`../plan/v5-governance-program.md`](../plan/v5-governance-program.md) — 程序与分期  
+3. [`../diagrams/archify/`](../diagrams/archify/README.md) — `ash-v5-*` 架构 / 时序 / 数据流 / 工作流 / 状态机  
+4. 回读 [`HLD-双核心-v2.md`](HLD-双核心-v2.md) 与 [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md)  
+
 ## 归属边界
 
 | 属于 design | 不属于（请放到别处） |

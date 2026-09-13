@@ -176,9 +176,11 @@ var Catalog = map[string]Entry{
 	"WEBHOOK_INGEST_FAILED":         {Domain: "ci", Summary: "Failed to ingest GitHub webhook payload"},
 
 	// agents / session
-	"SESSION_CREATE_FAILED": {Domain: "agents", Summary: "Failed to create agent session"},
-	"SESSION_NOT_FOUND":     {Domain: "agents", Summary: "Agent session id not found"},
-	"SESSION_TURN_FAILED":   {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
+	"SESSION_CREATE_FAILED":    {Domain: "agents", Summary: "Failed to create agent session"},
+	"SESSION_NOT_FOUND":        {Domain: "agents", Summary: "Agent session id not found"},
+	"SESSION_TURN_FAILED":      {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
+	"SESSION_INTENT_FAILED":    {Domain: "agents", Summary: "Failed to apply thin session intent"},
+	"SESSION_INTENT_REJECTED":  {Domain: "agents", Summary: "Session intent rejected (fail-closed)"},
 	"INVALID_FROM":                  {Domain: "metrics", Summary: "metrics overview from timestamp invalid"},
 	"INVALID_TO":                    {Domain: "metrics", Summary: "metrics overview to timestamp invalid"},
 	"METRICS_OVERVIEW_FAILED":       {Domain: "metrics", Summary: "KPI overview query failed"},

@@ -22,3 +22,6 @@ shell-test*.txt
 doctor-tr0.md
 *.log
 .worktrees/
+
+# Mermaid ER 图（本地/生成产物，不纳入提交）
+doc/diagrams/er/

@@ -1,0 +1,282 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ASH security_patch 场景",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "ash-security-patch.html",
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "安全补丁主路径",
+        "focus": [
+          "clarify",
+          "design",
+          "implement",
+          "verify",
+          "review",
+          "ship"
+        ],
+        "note": "Security 评估 → 补丁 → 回归 → 人审 → 公告。"
+      },
+      {
+        "id": "gates",
+        "label": "门禁与危险工具",
+        "focus": [
+          "implement",
+          "clean",
+          "deny",
+          "approval"
+        ],
+        "note": "git.status 工作区门禁；shell.exec danger 默认 deny。"
+      },
+      {
+        "id": "verify-retry",
+        "label": "引用门禁",
+        "focus": [
+          "clarify",
+          "design"
+        ],
+        "note": "缺 citation 时 onMissingCitations=block。"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "plan",
+      "label": "安全评估"
+    },
+    {
+      "id": "build",
+      "label": "补丁与回归"
+    },
+    {
+      "id": "policy",
+      "label": "门禁与审批",
+      "variant": "exception"
+    },
+    {
+      "id": "ship",
+      "label": "安全公告"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "澄清 + 设计",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "code",
+      "label": "实现 + 验证",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "release",
+      "label": "评审 + 打包",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "dsl-steps",
+      "label": "scenario steps",
+      "lane": "build",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "gate-path",
+      "label": "policy / hook",
+      "lane": "policy",
+      "fromCol": 2,
+      "toCol": 4,
+      "variant": "security"
+    }
+  ],
+  "mainPath": [
+    "clarify",
+    "design",
+    "clean",
+    "implement",
+    "verify",
+    "review",
+    "ship"
+  ],
+  "nodes": [
+    {
+      "id": "clarify",
+      "lane": "plan",
+      "col": 0,
+      "type": "backend",
+      "label": "security.assess",
+      "sublabel": "role: Security",
+      "width": 132
+    },
+    {
+      "id": "design",
+      "lane": "plan",
+      "col": 1,
+      "type": "backend",
+      "label": "security.risk_matrix",
+      "sublabel": "RAG + citation",
+      "tag": "citation block",
+      "width": 132
+    },
+    {
+      "id": "clean",
+      "lane": "policy",
+      "col": 2,
+      "type": "security",
+      "label": "gate.repo.clean",
+      "sublabel": "git.status",
+      "tag": "blocking",
+      "width": 132
+    },
+    {
+      "id": "implement",
+      "lane": "build",
+      "col": 2,
+      "type": "backend",
+      "label": "code.patch",
+      "sublabel": "adapter: codex",
+      "tag": "isolated",
+      "width": 132
+    },
+    {
+      "id": "verify",
+      "lane": "build",
+      "col": 3,
+      "type": "backend",
+      "label": "qa.regression",
+      "sublabel": "test.run changed",
+      "width": 132
+    },
+    {
+      "id": "deny",
+      "lane": "policy",
+      "col": 3,
+      "type": "security",
+      "label": "hook.pre_tool",
+      "sublabel": "shell.exec danger",
+      "tag": "deny",
+      "width": 132
+    },
+    {
+      "id": "approval",
+      "lane": "policy",
+      "col": 4,
+      "type": "security",
+      "label": "approve_ship",
+      "sublabel": "kind: human",
+      "width": 132
+    },
+    {
+      "id": "review",
+      "lane": "ship",
+      "col": 4,
+      "type": "backend",
+      "label": "advisory pack",
+      "sublabel": "notes + rollback",
+      "width": 132
+    },
+    {
+      "id": "ship",
+      "lane": "ship",
+      "col": 5,
+      "type": "cloud",
+      "label": "ship.advisory",
+      "sublabel": "公告草稿",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "clarify-design",
+      "from": "clarify",
+      "to": "design",
+      "variant": "emphasis"
+    },
+    {
+      "id": "design-clean",
+      "from": "design",
+      "to": "clean",
+      "label": "before implement",
+      "variant": "security"
+    },
+    {
+      "id": "clean-code",
+      "from": "clean",
+      "to": "implement",
+      "label": "workspace clean",
+      "variant": "emphasis"
+    },
+    {
+      "id": "code-verify",
+      "from": "implement",
+      "to": "verify",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verify-review",
+      "from": "verify",
+      "to": "review",
+      "variant": "emphasis"
+    },
+    {
+      "id": "review-ship",
+      "from": "review",
+      "to": "ship",
+      "variant": "emphasis"
+    },
+    {
+      "id": "code-deny",
+      "from": "implement",
+      "to": "deny",
+      "label": "danger tool",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "deny-approval",
+      "from": "deny",
+      "to": "approval",
+      "label": "policy.denied",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "verify-retry",
+      "from": "verify",
+      "to": "implement",
+      "label": "improve retry",
+      "variant": "dashed",
+      "role": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Scenario DSL",
+      "items": [
+        "steps 对齐 scenarios/security_patch.yaml",
+        "产物：diff / test_report / release_notes / rollback_plan"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "门禁",
+      "items": [
+        "缺 citation → block；approve_ship 人审",
+        "hook.pre_tool 对 danger shell.exec 默认 deny"
+      ]
+    }
+  ]
+}

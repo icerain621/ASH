@@ -1,0 +1,101 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH 部署拓扑 · Stage 2 控制/数据分离",
+    "locale": "zh-CN",
+    "output": "ash-deploy-stage2.html",
+    "quality_profile": "showcase",
+    "engineering_profile": "deployment-ownership",
+    "viewBox": [1360, 700],
+    "views": [
+      {
+        "id": "request-boundary",
+        "label": "请求入站",
+        "focus": ["user", "console", "gateway", "control-api", "orchestrator"],
+        "note": "公共流量经 Console / Gateway 进入控制面。"
+      },
+      {
+        "id": "state-ownership",
+        "label": "状态与所有权",
+        "focus": ["control-api", "orchestrator", "queue", "pg", "object"],
+        "note": "无状态控制面与 data team 拥有的持久状态分离。"
+      },
+      {
+        "id": "async-operations",
+        "label": "异步执行",
+        "focus": ["orchestrator", "queue", "worker-pool", "sandbox-pool", "obs"],
+        "note": "队列驱动 Worker / Sandbox 池，并产出可观测证据。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "user", "type": "external", "label": "操作者", "sublabel": "人 / CI", "pos": [38, 300], "size": [122, 60] },
+    { "id": "console", "type": "frontend", "label": "Console", "sublabel": "SPA /ui/", "pos": [230, 300], "size": [126, 60], "tag": "frontend" },
+    { "id": "gateway", "type": "security", "label": "API Gateway", "sublabel": "TLS :443", "pos": [430, 300], "size": [128, 60], "tag": "platform" },
+    { "id": "control-api", "type": "backend", "label": "Control API", "sublabel": "Runs / Goals", "pos": [630, 195], "size": [136, 62], "tag": "platform" },
+    { "id": "orchestrator", "type": "backend", "label": "Orchestrator", "sublabel": "调度器", "pos": [630, 405], "size": [136, 62], "tag": "platform" },
+    { "id": "queue", "type": "messagebus", "label": "Queue", "sublabel": "任务队列", "pos": [840, 195], "size": [126, 62], "tag": "platform" },
+    { "id": "pg", "type": "database", "label": "PostgreSQL", "sublabel": "权威元数据", "pos": [840, 405], "size": [126, 62], "tag": "data team" },
+    { "id": "worker-pool", "type": "backend", "label": "Worker Pool", "sublabel": "任务执行", "pos": [1040, 300], "size": [126, 60], "tag": "app team" },
+    { "id": "sandbox-pool", "type": "security", "label": "Sandbox Pool", "sublabel": "隔离执行", "pos": [1190, 300], "size": [126, 60], "tag": "platform" },
+    { "id": "object", "type": "cloud", "label": "Object Store", "sublabel": "artifacts", "pos": [1040, 520], "size": [126, 62], "tag": "data team" },
+    { "id": "obs", "type": "external", "label": "Observability", "sublabel": "metrics + traces", "pos": [1190, 85], "size": [126, 62], "tag": "SRE" }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "平台集群 · Stage 2（P2 设计目标）",
+      "wraps": ["console", "gateway", "control-api", "orchestrator", "queue", "pg", "worker-pool", "sandbox-pool", "object"],
+      "pad": 20
+    },
+    {
+      "kind": "security-group",
+      "label": "private 应用网络",
+      "wraps": ["control-api", "orchestrator", "queue", "pg", "worker-pool", "sandbox-pool"],
+      "pad": 14
+    }
+  ],
+  "connections": [
+    { "from": "user", "to": "console", "label": "HTTPS", "variant": "emphasis" },
+    { "from": "console", "to": "gateway", "label": "BFF", "variant": "security" },
+    { "from": "gateway", "to": "control-api", "label": "mTLS", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 275] },
+    { "from": "gateway", "to": "orchestrator", "label": "mTLS", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 385] },
+    { "from": "control-api", "to": "queue", "label": "enqueue", "route": "straight" },
+    { "from": "orchestrator", "to": "pg", "label": "SQL/TLS", "route": "straight" },
+    { "from": "control-api", "to": "worker-pool", "label": "dispatch", "variant": "dashed", "fromSide": "top", "toSide": "top", "via": [[698, 170], [1103, 170]] },
+    { "from": "orchestrator", "to": "worker-pool", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "via": [[698, 380], [1103, 380]] },
+    { "from": "queue", "to": "worker-pool", "label": "dequeue", "variant": "emphasis" },
+    { "from": "worker-pool", "to": "sandbox-pool", "label": "Docker API", "variant": "security", "labelAt": [1170, 280] },
+    { "from": "worker-pool", "to": "object", "label": "S3 API", "fromSide": "bottom", "toSide": "top", "labelAt": [1100, 450] },
+    { "from": "sandbox-pool", "to": "obs", "label": "OTLP", "variant": "dashed", "route": "orthogonal-v" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Stage 2 目标",
+      "items": [
+        "控制面 / 执行面 / 数据面分离",
+        "P2 设计目标，非当前实现"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "命名跨界",
+      "items": [
+        "HTTPS → Console → Gateway",
+        "mTLS 进入 private 应用网络",
+        "SQL/TLS · S3 · Docker API · OTLP"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "所有权",
+      "items": [
+        "platform 拥有 Gateway / 队列 / Sandbox",
+        "app team 拥有 Worker Pool",
+        "data team 拥有 Postgres / Object"
+      ]
+    }
+  ]
+}

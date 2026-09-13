@@ -80,7 +80,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	improveSvc := improve.NewService(db, runsSvc, ev)
 	runsSvc.SetImproveDrafter(improveSvc)
 	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
-	sessionSvc := session.NewService(db, goalSvc, ev)
+	sessionSvc := session.NewService(db, goalSvc, ev).WithRunControl(sessionRunControl{runs: runsSvc})
 	runsSvc.WithSessionService(sessionRunLinker{svc: sessionSvc})
 	h := &Handler{
 		db:         db,
@@ -146,6 +146,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/sessions", h.createAgentSession)
 		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
+		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)
 		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)
 		v1.GET("/runs", h.listRuns)
 		v1.GET("/runs/:runId", h.getRun)

@@ -1,0 +1,79 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "ASH v5 厚评审时序",
+    "locale": "zh-CN",
+    "output": "ash-v5-review-thick.html",
+    "viewBox": [1080, 600],
+    "column_fit": "spread",
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "emit-and-score", "label": "事件与评分", "focus": ["user", "worker", "events", "monitor", "scoring"], "note": "意图落库后投影时间线并量纲打分。" },
+      { "id": "human-review", "label": "人工评审", "focus": ["scoring", "queue", "reviewer", "worker"], "note": "低分或需人审时打开回放并决定。" },
+      { "id": "improve-loop", "label": "Improve 闭环", "focus": ["worker", "improve", "events"], "note": "低分阈值触发提案，仍需人工升格。" }
+    ]
+  },
+  "participants": [
+    { "id": "user", "type": "external", "label": "用户", "sublabel": "intent" },
+    { "id": "worker", "type": "backend", "label": "Worker", "sublabel": "host" },
+    { "id": "events", "type": "messagebus", "label": "EventLog", "sublabel": "log" },
+    { "id": "monitor", "type": "backend", "label": "Interaction", "sublabel": "fold" },
+    { "id": "scoring", "type": "backend", "label": "Scoring", "sublabel": "rubric" },
+    { "id": "queue", "type": "cloud", "label": "Queue", "sublabel": "evolve" },
+    { "id": "reviewer", "type": "frontend", "label": "Reviewer", "sublabel": "UI" },
+    { "id": "improve", "type": "cloud", "label": "Improve", "sublabel": "loop" }
+  ],
+  "segments": [
+    { "from": 150, "to": 280, "label": "执行与投影" },
+    { "from": 290, "to": 400, "label": "评分与入队" },
+    { "from": 410, "to": 540, "label": "决定与 Improve" }
+  ],
+  "messages": [
+    { "id": "intent", "from": "user", "to": "worker", "y": 165, "label": "intent prompt/run", "variant": "emphasis" },
+    { "id": "append", "from": "worker", "to": "events", "y": 200, "label": "append events" },
+    { "id": "project", "from": "events", "to": "monitor", "y": 235, "label": "project timeline" },
+    { "id": "score-req", "from": "monitor", "to": "scoring", "y": 270, "label": "score dimensions" },
+    { "id": "enqueue", "from": "scoring", "to": "queue", "y": 310, "label": "enqueue if low", "variant": "security" },
+    { "id": "open", "from": "reviewer", "to": "worker", "y": 350, "label": "open + replay", "variant": "emphasis" },
+    { "id": "decide", "from": "reviewer", "to": "worker", "y": 390, "label": "decide + rubric", "variant": "security" },
+    { "id": "decided", "from": "worker", "to": "events", "y": 430, "label": "review_decided" },
+    { "id": "proposal", "from": "worker", "to": "improve", "y": 470, "label": "open proposal", "variant": "dashed" },
+    { "id": "done", "from": "worker", "to": "reviewer", "y": 510, "label": "200 decided", "variant": "return" }
+  ],
+  "activations": [
+    { "participant": "worker", "from": 160, "to": 520, "type": "backend" },
+    { "participant": "events", "from": 195, "to": 445, "type": "messagebus" },
+    { "participant": "monitor", "from": 230, "to": 285, "type": "backend" },
+    { "participant": "scoring", "from": 265, "to": 330, "type": "backend" },
+    { "participant": "queue", "from": 305, "to": 360, "type": "cloud" },
+    { "participant": "reviewer", "from": 345, "to": 520, "type": "frontend" },
+    { "participant": "improve", "from": 465, "to": 495, "type": "cloud" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "事件真相",
+      "items": [
+        "所有步骤先 append 再投影",
+        "评分与评审事件写入 EventLog"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "厚评审",
+      "items": [
+        "Workbench 加载只读交互回放",
+        "决定必须携带量纲与原因"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "升格闸门",
+      "items": [
+        "低分可开 Improve，不可自动 promote",
+        "人工批准仍是唯一升格路径"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,281 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ASH Quest 场景",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "ash-quest-goal.html",
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "主路径",
+        "focus": [
+          "clarify",
+          "design",
+          "implement",
+          "verify",
+          "review",
+          "ship"
+        ],
+        "note": "from-goal → 路由 → draft → 批准 → Run。"
+      },
+      {
+        "id": "gates",
+        "label": "审批与拒绝",
+        "focus": [
+          "implement",
+          "deny",
+          "approval"
+        ],
+        "note": "draft 可 Approve 或 Reject。"
+      },
+      {
+        "id": "verify-retry",
+        "label": "自动批准",
+        "focus": [
+          "verify",
+          "implement"
+        ],
+        "note": "autoApprove 跳过人审。"
+      }
+    ]
+  },
+  "lanes": [
+    {
+      "id": "plan",
+      "label": "Goal 入口"
+    },
+    {
+      "id": "build",
+      "label": "Plan 编排"
+    },
+    {
+      "id": "policy",
+      "label": "门禁与审批",
+      "variant": "exception"
+    },
+    {
+      "id": "ship",
+      "label": "Run 启动"
+    }
+  ],
+  "phases": [
+    {
+      "id": "intake",
+      "label": "澄清 + 设计",
+      "fromCol": 0,
+      "toCol": 1
+    },
+    {
+      "id": "code",
+      "label": "实现 + 验证",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "release",
+      "label": "评审 + 打包",
+      "fromCol": 4,
+      "toCol": 5,
+      "variant": "dashed"
+    }
+  ],
+  "groups": [
+    {
+      "id": "dsl-steps",
+      "label": "scenario steps",
+      "lane": "build",
+      "fromCol": 2,
+      "toCol": 3,
+      "variant": "emphasis"
+    },
+    {
+      "id": "gate-path",
+      "label": "policy / hook",
+      "lane": "policy",
+      "fromCol": 2,
+      "toCol": 4,
+      "variant": "security"
+    }
+  ],
+  "mainPath": [
+    "clarify",
+    "design",
+    "clean",
+    "implement",
+    "verify",
+    "review",
+    "ship"
+  ],
+  "nodes": [
+    {
+      "id": "clarify",
+      "lane": "plan",
+      "col": 0,
+      "type": "backend",
+      "label": "from-goal",
+      "sublabel": "goal + repo",
+      "width": 132
+    },
+    {
+      "id": "design",
+      "lane": "plan",
+      "col": 1,
+      "type": "backend",
+      "label": "goal.route",
+      "sublabel": "scenario pick",
+      "tag": "requireCitations",
+      "width": 132
+    },
+    {
+      "id": "clean",
+      "lane": "policy",
+      "col": 2,
+      "type": "security",
+      "label": "policy.bind",
+      "sublabel": "space rules",
+      "tag": "blocking",
+      "width": 132
+    },
+    {
+      "id": "implement",
+      "lane": "build",
+      "col": 2,
+      "type": "backend",
+      "label": "plan.draft",
+      "sublabel": "status=draft",
+      "tag": "isolated",
+      "width": 132
+    },
+    {
+      "id": "verify",
+      "lane": "build",
+      "col": 3,
+      "type": "backend",
+      "label": "plan.view",
+      "sublabel": "steps preview",
+      "width": 132
+    },
+    {
+      "id": "deny",
+      "lane": "policy",
+      "col": 3,
+      "type": "security",
+      "label": "plan.reject",
+      "sublabel": "status=rejected",
+      "tag": "deny",
+      "width": 132
+    },
+    {
+      "id": "approval",
+      "lane": "policy",
+      "col": 4,
+      "type": "security",
+      "label": "plan.approve",
+      "sublabel": "human / auto",
+      "width": 132
+    },
+    {
+      "id": "review",
+      "lane": "ship",
+      "col": 4,
+      "type": "backend",
+      "label": "runs.create",
+      "sublabel": "bind runId",
+      "width": 132
+    },
+    {
+      "id": "ship",
+      "lane": "ship",
+      "col": 5,
+      "type": "cloud",
+      "label": "plan.start",
+      "sublabel": "SSE board",
+      "width": 132
+    }
+  ],
+  "edges": [
+    {
+      "id": "clarify-design",
+      "from": "clarify",
+      "to": "design",
+      "variant": "emphasis"
+    },
+    {
+      "id": "design-clean",
+      "from": "design",
+      "to": "clean",
+      "label": "before implement",
+      "variant": "security"
+    },
+    {
+      "id": "clean-code",
+      "from": "clean",
+      "to": "implement",
+      "label": "workspace clean",
+      "variant": "emphasis"
+    },
+    {
+      "id": "code-verify",
+      "from": "implement",
+      "to": "verify",
+      "variant": "emphasis"
+    },
+    {
+      "id": "verify-review",
+      "from": "verify",
+      "to": "review",
+      "variant": "emphasis"
+    },
+    {
+      "id": "review-ship",
+      "from": "review",
+      "to": "ship",
+      "variant": "emphasis"
+    },
+    {
+      "id": "code-deny",
+      "from": "implement",
+      "to": "deny",
+      "label": "danger tool",
+      "variant": "security",
+      "role": "error"
+    },
+    {
+      "id": "deny-approval",
+      "from": "deny",
+      "to": "approval",
+      "label": "policy.denied",
+      "variant": "security",
+      "role": "branch"
+    },
+    {
+      "id": "verify-retry",
+      "from": "verify",
+      "to": "implement",
+      "label": "improve retry",
+      "variant": "dashed",
+      "role": "return"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Scenario DSL",
+      "items": [
+        "steps 对齐 internal/goal FromGoal",
+        "产物：GoalPlan → Run 绑定"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "门禁",
+      "items": [
+        "draft 经 Approve 进入 started",
+        "Reject 终止；autoApprove 可跳过"
+      ]
+    }
+  ]
+}

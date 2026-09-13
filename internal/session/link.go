@@ -56,6 +56,7 @@ func (s *Service) EnsureForRun(spaceID, runID, repoRoot, createdBy string, bind 
 		if existing.RepoRoot == "" {
 			existing.RepoRoot = strings.TrimSpace(repoRoot)
 		}
+		s.ensureMainThread(existing)
 		if err := s.save(existing); err != nil {
 			return nil, false, err
 		}

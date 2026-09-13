@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -104,6 +105,50 @@ func (h *Handler) promptAgentSessionTurn(c *gin.Context) {
 	}
 	_ = h.dbFor(c).Create(auditRow(view.SpaceID, currentActor(c), "agent.session_turn", map[string]any{
 		"sessionId": view.ID, "turnId": turn.ID, "runId": view.RunID,
+	})).Error
+	c.JSON(http.StatusOK, view)
+}
+
+// AgentSessionIntent godoc
+// @Summary Apply a thin session intent (prompt|approve|cancel|reject)
+// @Description Fail-closed: approve without an approvable run gate returns 409.
+// @Tags agents
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "session id"
+// @Param body body session.IntentRequest true "intent"
+// @Success 200 {object} session.View
+// @Failure 400 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} APIErrorResponse
+// @Router /api/v1/agents/sessions/{sessionId}/actions [post]
+func (h *Handler) agentSessionIntent(c *gin.Context) {
+	var req session.IntentRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	if req.ActorID == "" {
+		req.ActorID = currentActor(c)
+	}
+	view, err := h.sessionFor(c).Intent(c.Param("sessionId"), req)
+	if err != nil {
+		if strings.Contains(err.Error(), "not found") {
+			c.JSON(http.StatusNotFound, errorBody("SESSION_NOT_FOUND", err.Error()))
+			return
+		}
+		if errors.Is(err, session.ErrIntentRejected) {
+			c.JSON(http.StatusConflict, errorBody("SESSION_INTENT_REJECTED", err.Error()))
+			return
+		}
+		c.JSON(http.StatusBadRequest, errorBody("SESSION_INTENT_FAILED", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, view.SpaceID) {
+		return
+	}
+	_ = h.dbFor(c).Create(auditRow(view.SpaceID, currentActor(c), "agent.session_intent", map[string]any{
+		"sessionId": view.ID, "action": req.Action, "runId": view.RunID,
 	})).Error
 	c.JSON(http.StatusOK, view)
 }

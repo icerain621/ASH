@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH v5 双核管控架构",
+    "locale": "zh-CN",
+    "output": "ash-v5-governance.html",
+    "quality_profile": "showcase",
+    "viewBox": [1240, 680],
+    "views": [
+      { "id": "thin-entry", "label": "薄交互入口", "focus": ["console", "worker", "agent-core"], "note": "控制台只发意图；编排在 Worker。" },
+      { "id": "dual-core", "label": "双核与登记", "focus": ["agent-core", "memory-core", "policy"], "note": "智能体与记忆体协作，策略包约束空间。" },
+      { "id": "thick-review", "label": "厚评审平面", "focus": ["monitor", "scoring", "evolve", "improve"], "note": "监控、评分、队列与 Improve 闭环。" }
+    ]
+  },
+  "components": [
+    { "id": "console", "type": "frontend", "label": "薄控制台", "sublabel": "意图 / SSE", "pos": [40, 300], "size": [130, 60] },
+    { "id": "cli", "type": "external", "label": "CLI / CI", "sublabel": "Quest · Webhook", "pos": [40, 120], "size": [130, 60] },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin 宿主", "pos": [250, 300], "size": [130, 60] },
+    { "id": "policy", "type": "security", "label": "SpacePolicy", "sublabel": "user/team 管控", "pos": [250, 120], "size": [130, 64], "tag": "治理" },
+    { "id": "agent-core", "type": "backend", "label": "Agent Core", "sublabel": "Registry · Run", "pos": [470, 300], "size": [130, 60], "tag": "智能体" },
+    { "id": "memory-core", "type": "database", "label": "Memory Core", "sublabel": "Registry · RAG", "pos": [470, 460], "size": [130, 60], "tag": "记忆体" },
+    { "id": "monitor", "type": "backend", "label": "Interaction", "sublabel": "监控投影", "pos": [690, 220], "size": [130, 60], "tag": "厚评审" },
+    { "id": "scoring", "type": "backend", "label": "Scoring", "sublabel": "量纲引擎", "pos": [690, 360], "size": [130, 60] },
+    { "id": "evolve", "type": "cloud", "label": "Review Queue", "sublabel": "evolve 扩展", "pos": [910, 290], "size": [130, 60] },
+    { "id": "improve", "type": "cloud", "label": "Improve", "sublabel": "实验 · 升格", "pos": [1100, 290], "size": [110, 60] },
+    { "id": "db", "type": "database", "label": "Postgres RLS", "sublabel": "事件 · 评分", "pos": [690, 500], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "ash-worker 宿主（Stage 1 单体）", "wraps": ["worker", "policy", "agent-core", "memory-core", "monitor", "scoring", "evolve", "improve", "db"], "pad": 16 },
+    { "kind": "security-group", "label": "管控与门禁", "wraps": ["policy", "agent-core", "evolve"], "pad": 12 }
+  ],
+  "connections": [
+    { "id": "console-worker", "from": "console", "to": "worker", "label": "intent", "variant": "emphasis", "labelAt": [185, 280] },
+    { "id": "cli-worker", "from": "cli", "to": "worker", "variant": "dashed" },
+    { "id": "policy-worker", "from": "policy", "to": "worker", "label": "gate", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [315, 220] },
+    { "id": "worker-agent", "from": "worker", "to": "agent-core", "label": "orchestrate" },
+    { "id": "agent-memory", "from": "agent-core", "to": "memory-core", "label": "contextRefs", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [535, 400] },
+    { "id": "agent-monitor", "from": "agent-core", "to": "monitor", "label": "events" },
+    { "id": "monitor-score", "from": "monitor", "to": "scoring", "label": "timeline", "fromSide": "bottom", "toSide": "top", "labelAt": [755, 304] },
+    { "id": "score-evolve", "from": "scoring", "to": "evolve", "label": "enqueue", "labelAt": [830, 440] },
+    { "id": "evolve-improve", "from": "evolve", "to": "improve", "label": "decide" },
+    { "id": "scoring-db", "from": "scoring", "to": "db", "label": "score_events", "fromSide": "bottom", "toSide": "top", "labelAt": [755, 450] },
+    { "id": "memory-db", "from": "memory-core", "to": "db", "label": "persist" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "薄交互",
+      "items": [
+        "控制台只发意图并渲染投影",
+        "借鉴 DSH 事件真相，不引入 Cordis"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "双核数据化",
+      "items": [
+        "Agent / Memory 均为可登记资产",
+        "SpacePolicy 约束 user/team 空间"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "厚评审",
+      "items": [
+        "Interaction → Scoring → Review Queue",
+        "人工批准仍为升格唯一闸门"
+      ]
+    }
+  ]
+}

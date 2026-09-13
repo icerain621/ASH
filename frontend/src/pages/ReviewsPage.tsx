@@ -76,9 +76,9 @@ export function ReviewsPage() {
       </div>
       <div className="page-heading">
         <div>
-          <h1>编排与记忆评审</h1>
+          <h1>评审管控</h1>
           <p>
-            统一队列：Harness Profile / Scenario patch / Memory candidate。批准后才可升格。{" "}
+            治理台：Harness Profile / Scenario patch / Memory candidate。会话门禁请回「Agent 使用」。{" "}
             <a href="/ui/m/reviews" data-testid="reviews-mobile-link">
               移动审阅
             </a>

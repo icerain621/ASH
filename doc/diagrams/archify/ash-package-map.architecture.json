@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH Go 包边界架构",
+    "locale": "zh-CN",
+    "output": "ash-package-map.html",
+    "quality_profile": "showcase",
+    "viewBox": [1240, 660],
+    "views": [
+      {
+        "id": "agent",
+        "label": "Agent Core",
+        "focus": ["runs", "harness", "toolbus", "sandbox"],
+        "note": "Run → Harness → ToolBus → Sandbox 执行栈。"
+      },
+      {
+        "id": "memory",
+        "label": "Memory Core",
+        "focus": ["memory", "rag", "store"],
+        "note": "记忆候选、RAG 与持久化。"
+      },
+      {
+        "id": "evolve",
+        "label": "演进平面",
+        "focus": ["improve", "api"],
+        "note": "Feedback → Improve 闭环。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "cli", "type": "frontend", "label": "cmd/cli", "sublabel": "doctor", "pos": [40, 120], "size": [130, 60] },
+    { "id": "worker", "type": "backend", "label": "cmd/worker", "sublabel": "HTTP 宿主", "pos": [40, 280], "size": [130, 60] },
+    { "id": "api", "type": "backend", "label": "internal/api", "sublabel": "Gin handlers", "pos": [250, 280], "size": [130, 60] },
+    { "id": "rules", "type": "backend", "label": "internal/rules", "sublabel": "Scenario DSL", "pos": [250, 120], "size": [130, 64], "tag": "Agent" },
+    { "id": "runs", "type": "backend", "label": "internal/runs", "sublabel": "状态机 / SSE", "pos": [460, 280], "size": [130, 60], "tag": "Agent" },
+    { "id": "harness", "type": "backend", "label": "internal/harness", "sublabel": "Profile + Loop", "pos": [660, 280], "size": [130, 60], "tag": "Agent" },
+    { "id": "toolbus", "type": "backend", "label": "internal/toolbus", "sublabel": "工具总线", "pos": [860, 280], "size": [130, 60], "tag": "Agent" },
+    { "id": "sandbox", "type": "security", "label": "internal/sandbox", "sublabel": "Docker / jail", "pos": [1060, 280], "size": [120, 60], "tag": "Agent" },
+    { "id": "memory", "type": "database", "label": "internal/memory", "sublabel": "候选 / 评审", "pos": [460, 450], "size": [130, 60], "tag": "Memory" },
+    { "id": "rag", "type": "database", "label": "internal/rag", "sublabel": "检索", "pos": [660, 450], "size": [130, 60], "tag": "Memory" },
+    { "id": "store", "type": "database", "label": "internal/store", "sublabel": "GORM", "pos": [860, 450], "size": [130, 60] },
+    { "id": "improve", "type": "cloud", "label": "internal/improve", "sublabel": "演进平面", "pos": [1060, 450], "size": [120, 60], "tag": "Evolve" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "ash-worker 宿主（同进程包边界）", "wraps": ["api", "runs", "harness", "toolbus", "memory", "rag", "store", "improve"], "pad": 16 },
+    { "kind": "security-group", "label": "Agent 执行栈", "wraps": ["rules", "runs", "harness", "toolbus", "sandbox"], "pad": 12 }
+  ],
+  "connections": [
+    { "id": "entry-cli", "from": "cli", "to": "api", "variant": "dashed" },
+    { "id": "entry-worker", "from": "worker", "to": "api", "label": "mount", "variant": "emphasis", "labelAt": [240, 354] },
+    { "id": "rules-api", "from": "rules", "to": "api", "label": "DSL load", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [315, 194] },
+    { "id": "api-runs", "from": "api", "to": "runs", "label": "orchestrate" },
+    { "id": "runs-harness", "from": "runs", "to": "harness", "label": "loop step" },
+    { "id": "harness-toolbus", "from": "harness", "to": "toolbus", "label": "tool calls" },
+    { "id": "toolbus-sandbox", "from": "toolbus", "to": "sandbox", "label": "danger exec", "variant": "security" },
+    { "id": "runs-memory", "from": "runs", "to": "memory", "label": "contextRefs", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [455, 385] },
+    { "id": "memory-rag", "from": "memory", "to": "rag", "label": "query", "labelDy": -18 },
+    { "id": "rag-store", "from": "rag", "to": "store", "label": "persist" },
+    { "id": "runs-improve", "from": "runs", "to": "improve", "label": "feedback", "fromSide": "bottom", "toSide": "top", "via": [[525, 430], [1120, 430]], "labelAt": [900, 424] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "包边界",
+      "items": [
+        "Agent / Memory / Evolution 同进程分包",
+        "对齐 HLD-双核心-v2 §2.3"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "执行栈",
+      "items": [
+        "runs → harness → toolbus → sandbox",
+        "Stage 1 不拆微服务"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "契约",
+      "items": [
+        "contextRefs / citation / candidate",
+        "Feedback 驱动演进平面"
+      ]
+    }
+  ]
+}

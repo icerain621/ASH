@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "ASH GoalPlan 生命周期",
+    "locale": "zh-CN",
+    "output": "ash-goal-plan-lifecycle.html",
+    "viewBox": [1030, 630],
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "main-path", "label": "主路径", "focus": ["running", "finished"], "note": "draft 经 Approve 进入 started。" },
+      { "id": "approval-gate", "label": "人审门禁", "focus": ["running", "waiting_approval"], "note": "Quest 板展示 draft，等待 Approve。" },
+      { "id": "failure-exit", "label": "拒绝与终态", "focus": ["running", "failed", "canceled"], "note": "Reject → rejected；无重试回 draft。" }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Plan 状态" },
+    { "id": "waiting", "label": "等待审批" },
+    { "id": "exceptions", "label": "拒绝" },
+    { "id": "terminal", "label": "终态" }
+  ],
+  "states": [
+    { "id": "running", "type": "active", "label": "draft", "sublabel": "plan.created", "lane": "main", "col": 2, "step": "01", "tag": "entry" },
+    { "id": "finished", "type": "success", "label": "started", "sublabel": "runs.Create ok", "lane": "main", "col": 4, "step": "02", "tag": "done" },
+    { "id": "waiting_approval", "type": "waiting", "label": "await approve", "sublabel": "Quest board", "lane": "waiting", "col": 0, "tag": "human" },
+    { "id": "failed", "type": "failure", "label": "rejected", "sublabel": "plan.rejected", "lane": "exceptions", "col": 0, "yOffset": 78, "tag": "terminal" },
+    { "id": "canceled", "type": "failure", "label": "expired", "sublabel": "abandoned", "lane": "terminal", "col": 0, "tag": "terminal" }
+  ],
+  "transitions": [
+    { "id": "to-approval", "from": "running", "to": "waiting_approval", "variant": "security", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "to-finished", "from": "running", "to": "finished", "variant": "emphasis" },
+    { "id": "execution-failed", "from": "running", "to": "failed", "variant": "security", "fromSide": "left", "toSide": "left", "via": [[320, 157], [320, 385]] },
+    { "id": "failed-retry", "from": "failed", "to": "running", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[20, 385], [20, 80], [402, 80]] },
+    { "id": "approval-resume", "from": "waiting_approval", "to": "running", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[320, 307], [320, 80], [402, 80]] },
+    { "id": "approval-canceled", "from": "waiting_approval", "to": "canceled", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[480, 336], [480, 432], [402, 432]] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "合法迁移",
+      "items": [
+        "draft → started（Approve / autoApprove）",
+        "draft → rejected（Reject）"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "事件",
+      "items": [
+        "plan.created / plan.approved / plan.started",
+        "plan.rejected；Approve 后绑定 runId"
+      ]
+    }
+  ]
+}

@@ -457,6 +457,8 @@ definitions:
         type: integer
       type:
         type: string
+      visibility:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_evolve.DecideRequest:
     properties:
@@ -2239,6 +2241,8 @@ definitions:
         type: integer
       type:
         type: string
+      visibility:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_runs.TreeNode:
     properties:
@@ -2346,6 +2350,19 @@ definitions:
         type: string
       streamUrl:
         type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.IntentRequest:
+    properties:
+      action:
+        type: string
+      actorId:
+        type: string
+      prompt:
+        type: string
+      reason:
+        type: string
+    required:
+    - action
     type: object
   github_com_ash-repwiki_ash_internal_session.Turn:
     properties:
@@ -3144,6 +3161,9 @@ definitions:
       ts:
         type: integer
       type:
+        type: string
+      visibility:
+        description: model_visible|ui_only|audit; empty = legacy
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_store.RunRecord:
@@ -4805,6 +4825,45 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Get agent session
+      tags:
+      - agents
+  /api/v1/agents/sessions/{sessionId}/actions:
+    post:
+      consumes:
+      - application/json
+      description: 'Fail-closed: approve without an approvable run gate returns 409.'
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: intent
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.IntentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Apply a thin session intent (prompt|approve|cancel|reject)
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/events:

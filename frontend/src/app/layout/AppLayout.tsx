@@ -1,37 +1,38 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import {
-	Activity,
-	BarChart3,
-	Brain,
-	Building2,
-	ClipboardCheck,
-	ClipboardList,
-	Gauge,
-	HeartPulse,
-	KanbanSquare,
-	BookOpen,
-	MessageSquarePlus,
-	GitBranch,
-	RadioTower,
-	ShieldCheck,
-	ShieldAlert,
-	Workflow,
+  Activity,
+  BarChart3,
+  Brain,
+  Building2,
+  ClipboardCheck,
+  ClipboardList,
+  Gauge,
+  HeartPulse,
+  KanbanSquare,
+  BookOpen,
+  MessageSquarePlus,
+  GitBranch,
+  RadioTower,
+  ShieldCheck,
+  ShieldAlert,
+  Workflow,
 } from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
+import { persistWorkMode, workModeFromPath } from "./workMode";
 
 const tabs = [
-	{ to: "/runs", label: "运行", icon: Activity },
-	{ to: "/memory", label: "记忆", icon: Brain },
-	{ to: "/reviews", label: "评审", icon: ClipboardList },
-	{ to: "/quest", label: "Quest", icon: KanbanSquare },
-	{ to: "/knowledge", label: "知识", icon: BookOpen },
-	{ to: "/automation", label: "自动化", icon: Workflow },
-	{ to: "/feedback", label: "反馈", icon: MessageSquarePlus },
-	{ to: "/ci", label: "CI", icon: GitBranch },
-	{ to: "/metrics", label: "指标", icon: BarChart3 },
-	{ to: "/observability", label: "观测", icon: ShieldAlert },
-	{ to: "/releases", label: "发布", icon: ClipboardCheck },
-	{ to: "/space", label: "空间", icon: Building2 },
+  { to: "/runs", label: "运行", icon: Activity },
+  { to: "/memory", label: "记忆", icon: Brain },
+  { to: "/reviews", label: "评审", icon: ClipboardList },
+  { to: "/quest", label: "Quest", icon: KanbanSquare },
+  { to: "/knowledge", label: "知识", icon: BookOpen },
+  { to: "/automation", label: "自动化", icon: Workflow },
+  { to: "/feedback", label: "反馈", icon: MessageSquarePlus },
+  { to: "/ci", label: "CI", icon: GitBranch },
+  { to: "/metrics", label: "指标", icon: BarChart3 },
+  { to: "/observability", label: "观测", icon: ShieldAlert },
+  { to: "/releases", label: "发布", icon: ClipboardCheck },
+  { to: "/space", label: "空间", icon: Building2 },
   { to: "/compliance", label: "合规", icon: ShieldCheck },
   { to: "/scale", label: "规模化", icon: Gauge },
   { to: "/doctor", label: "诊断", icon: HeartPulse },
@@ -41,6 +42,7 @@ export function AppLayout() {
   const activeSpaceId = getCurrentSpaceId();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const mobileShell = pathname.startsWith("/m/");
+  const workMode = workModeFromPath(pathname);
 
   if (mobileShell) {
     return (
@@ -60,6 +62,33 @@ export function AppLayout() {
           <span>
             ASH <span className="muted">控制台</span>
           </span>
+        </div>
+        <div
+          className="work-mode"
+          role="tablist"
+          aria-label="Agent 使用与评审管控切换"
+          data-testid="work-mode-switch"
+        >
+          <Link
+            to="/quest"
+            role="tab"
+            aria-selected={workMode === "agent"}
+            className={workMode === "agent" ? "work-mode-btn active" : "work-mode-btn"}
+            data-testid="work-mode-agent"
+            onClick={() => persistWorkMode("agent")}
+          >
+            Agent 使用
+          </Link>
+          <Link
+            to="/reviews"
+            role="tab"
+            aria-selected={workMode === "review"}
+            className={workMode === "review" ? "work-mode-btn active" : "work-mode-btn"}
+            data-testid="work-mode-review"
+            onClick={() => persistWorkMode("review")}
+          >
+            评审管控
+          </Link>
         </div>
         <nav className="tabs">
           {tabs.map((tab) => {

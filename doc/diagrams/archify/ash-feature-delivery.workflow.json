@@ -1,0 +1,86 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ASH feature_delivery 场景",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "ash-feature-delivery.html",
+    "views": [
+      {
+        "id": "happy-path",
+        "label": "主交付路径",
+        "focus": ["clarify", "design", "implement", "verify", "review", "ship"],
+        "note": "PM → Architect → Coder → QA → Reviewer → Shipper。"
+      },
+      {
+        "id": "gates",
+        "label": "门禁与危险工具",
+        "focus": ["implement", "clean", "deny", "approval"],
+        "note": "git.status 工作区门禁；shell.exec danger 默认 deny。"
+      },
+      {
+        "id": "verify-retry",
+        "label": "验证与改进",
+        "focus": ["verify", "implement"],
+        "note": "qa.verify onFail=improve，最多重试 2 次。"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "plan", "label": "需求与设计" },
+    { "id": "build", "label": "实现与验证" },
+    { "id": "policy", "label": "门禁与审批", "variant": "exception" },
+    { "id": "ship", "label": "评审与交付" }
+  ],
+  "phases": [
+    { "id": "intake", "label": "澄清 + 设计", "fromCol": 0, "toCol": 1 },
+    { "id": "code", "label": "实现 + 验证", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "release", "label": "评审 + 打包", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "dsl-steps", "label": "scenario steps", "lane": "build", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "gate-path", "label": "policy / hook", "lane": "policy", "fromCol": 2, "toCol": 4, "variant": "security" }
+  ],
+  "mainPath": ["clarify", "design", "clean", "implement", "verify", "review", "ship"],
+  "nodes": [
+    { "id": "clarify", "lane": "plan", "col": 0, "type": "backend", "label": "pm.clarify", "sublabel": "role: PM", "width": 132 },
+    { "id": "design", "lane": "plan", "col": 1, "type": "backend", "label": "arch.design", "sublabel": "RAG + citation", "tag": "requireCitations", "width": 132 },
+    { "id": "clean", "lane": "policy", "col": 2, "type": "security", "label": "gate.repo.clean", "sublabel": "git.status", "tag": "blocking", "width": 132 },
+    { "id": "implement", "lane": "build", "col": 2, "type": "backend", "label": "code.implement", "sublabel": "adapter: codex", "tag": "agent", "width": 132 },
+    { "id": "verify", "lane": "build", "col": 3, "type": "backend", "label": "qa.verify", "sublabel": "test.run changed", "tag": "onFail=improve", "width": 132 },
+    { "id": "deny", "lane": "policy", "col": 3, "type": "security", "label": "hook.pre_tool", "sublabel": "shell.exec danger", "tag": "deny", "width": 132 },
+    { "id": "approval", "lane": "policy", "col": 4, "type": "security", "label": "waiting_approval", "sublabel": "human gate", "width": 132 },
+    { "id": "review", "lane": "ship", "col": 4, "type": "backend", "label": "review.quality", "sublabel": "role: Reviewer", "width": 132 },
+    { "id": "ship", "lane": "ship", "col": 5, "type": "cloud", "label": "ship.release", "sublabel": "四件套产物", "width": 132 }
+  ],
+  "edges": [
+    { "id": "clarify-design", "from": "clarify", "to": "design", "variant": "emphasis" },
+    { "id": "design-clean", "from": "design", "to": "clean", "label": "before implement", "variant": "security" },
+    { "id": "clean-code", "from": "clean", "to": "implement", "label": "workspace clean", "variant": "emphasis" },
+    { "id": "code-verify", "from": "implement", "to": "verify", "variant": "emphasis" },
+    { "id": "verify-review", "from": "verify", "to": "review", "variant": "emphasis" },
+    { "id": "review-ship", "from": "review", "to": "ship", "variant": "emphasis" },
+    { "id": "code-deny", "from": "implement", "to": "deny", "label": "danger tool", "variant": "security", "role": "error" },
+    { "id": "deny-approval", "from": "deny", "to": "approval", "label": "policy.denied", "variant": "security", "role": "branch" },
+    { "id": "verify-retry", "from": "verify", "to": "implement", "label": "improve retry", "variant": "dashed", "role": "return" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Scenario DSL",
+      "items": [
+        "steps 对齐 scenarios/feature_delivery.yaml",
+        "产物：diff / test_report / release_notes / rollback_plan"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "门禁",
+      "items": [
+        "gate.repo.clean 在 code.implement 前阻塞",
+        "hook.pre_tool 对 danger shell.exec 默认 deny"
+      ]
+    }
+  ]
+}

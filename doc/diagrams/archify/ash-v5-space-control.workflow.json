@@ -1,0 +1,102 @@
+{
+  "schema_version": 2,
+  "diagram_type": "workflow",
+  "meta": {
+    "title": "ASH v5 空间管控与测评流程",
+    "locale": "zh-CN",
+    "quality_profile": "showcase",
+    "output": "ash-v5-space-control.html",
+    "views": [
+      {
+        "id": "register",
+        "label": "登记与策略",
+        "focus": ["admin", "registry", "policy", "space"],
+        "note": "在用户/团队空间登记双核资产并绑定策略包。"
+      },
+      {
+        "id": "run-score",
+        "label": "运行与评分",
+        "focus": ["user", "intent", "run", "monitor", "score"],
+        "note": "薄意图触发 Run，监控投影后量纲评分。"
+      },
+      {
+        "id": "govern",
+        "label": "评审与测评",
+        "focus": ["score", "queue", "eval", "improve"],
+        "note": "评审决定进入空间测评，低分可开 Improve。"
+      }
+    ]
+  },
+  "lanes": [
+    { "id": "control", "label": "空间管控" },
+    { "id": "runtime", "label": "薄交互运行" },
+    { "id": "review", "label": "厚评审与测评", "variant": "exception" },
+    { "id": "evolve", "label": "演进闭环" }
+  ],
+  "phases": [
+    { "id": "setup", "label": "登记", "fromCol": 0, "toCol": 1 },
+    { "id": "execute", "label": "执行", "fromCol": 2, "toCol": 3, "variant": "emphasis" },
+    { "id": "govern", "label": "治理", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "groups": [
+    { "id": "asset_bind", "label": "资产与策略", "lane": "control", "fromCol": 0, "toCol": 1, "variant": "emphasis" },
+    { "id": "thin_run", "label": "薄运行", "lane": "runtime", "fromCol": 2, "toCol": 3, "variant": "dashed" },
+    { "id": "thick_gate", "label": "厚评审闸门", "lane": "review", "fromCol": 3, "toCol": 5, "variant": "security" },
+    { "id": "improve_loop", "label": "Improve", "lane": "evolve", "fromCol": 4, "toCol": 5, "variant": "dashed" }
+  ],
+  "mainPath": ["admin", "registry", "policy", "space", "run", "monitor", "score", "queue"],
+  "nodes": [
+    { "id": "admin", "lane": "control", "col": 0, "type": "external", "label": "管理员", "sublabel": "Org / Space", "width": 132 },
+    { "id": "registry", "lane": "control", "col": 1, "type": "backend", "label": "双核 Registry", "sublabel": "Agent · Memory", "width": 132 },
+    { "id": "policy", "lane": "control", "col": 2, "type": "security", "label": "PolicyPack", "sublabel": "配额 · SLA", "tag": "更严优先", "width": 132 },
+    { "id": "space", "lane": "control", "col": 3, "type": "database", "label": "Space", "sublabel": "user | team", "width": 132 },
+    { "id": "user", "lane": "runtime", "col": 1, "type": "external", "label": "用户", "sublabel": "薄入口", "width": 132 },
+    { "id": "intent", "lane": "runtime", "col": 2, "type": "frontend", "label": "Intent API", "sublabel": "prompt/approve", "width": 132 },
+    { "id": "run", "lane": "runtime", "col": 3, "type": "backend", "label": "Run", "sublabel": "Harness", "width": 132 },
+    { "id": "monitor", "lane": "review", "col": 3, "type": "backend", "label": "Interaction", "sublabel": "时间线", "width": 132 },
+    { "id": "score", "lane": "review", "col": 4, "type": "backend", "label": "Scoring", "sublabel": "四维量纲", "width": 132 },
+    { "id": "queue", "lane": "review", "col": 5, "type": "security", "label": "Review Queue", "sublabel": "人工决定", "tag": "fail-closed", "width": 132 },
+    { "id": "eval", "lane": "evolve", "col": 4, "type": "database", "label": "Evaluation", "sublabel": "空间测评", "width": 132 },
+    { "id": "improve", "lane": "evolve", "col": 5, "type": "cloud", "label": "Improve", "sublabel": "实验升格", "width": 132 }
+  ],
+  "edges": [
+    { "id": "admin-reg", "from": "admin", "to": "registry", "label": "登记资产", "variant": "emphasis" },
+    { "id": "reg-policy", "from": "registry", "to": "policy", "label": "绑定", "variant": "security" },
+    { "id": "policy-space", "from": "policy", "to": "space", "variant": "default" },
+    { "id": "user-intent", "from": "user", "to": "intent", "variant": "emphasis" },
+    { "id": "intent-run", "from": "intent", "to": "run", "label": "编排", "variant": "default" },
+    { "id": "space-run", "from": "space", "to": "run", "label": "作用域", "variant": "dashed" },
+    { "id": "run-monitor", "from": "run", "to": "monitor", "label": "events", "variant": "dashed" },
+    { "id": "monitor-score", "from": "monitor", "to": "score", "variant": "emphasis" },
+    { "id": "score-queue", "from": "score", "to": "queue", "label": "需人审?", "variant": "security" },
+    { "id": "score-eval", "from": "score", "to": "eval", "label": "入账", "variant": "emphasis" },
+    { "id": "queue-improve", "from": "queue", "to": "improve", "label": "低分", "variant": "dashed", "role": "branch" },
+    { "id": "improve-eval", "from": "improve", "to": "eval", "label": "升格后重测", "variant": "dashed", "role": "return" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "管控",
+      "items": [
+        "user/team Space 登记双核资产",
+        "PolicyPack 合并规则更严者优先"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "运行",
+      "items": [
+        "薄 Intent 驱动 Run",
+        "交互监控与量纲评分后置加厚"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "测评",
+      "items": [
+        "评分进入空间 Evaluation",
+        "Improve 不可跳过人工闸门"
+      ]
+    }
+  ]
+}

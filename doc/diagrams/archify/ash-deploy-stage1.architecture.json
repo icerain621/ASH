@@ -1,0 +1,100 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH 部署拓扑 · Stage 1 Worker+Sandbox",
+    "locale": "zh-CN",
+    "output": "ash-deploy-stage1.html",
+    "quality_profile": "showcase",
+    "engineering_profile": "deployment-ownership",
+    "viewBox": [1360, 700],
+    "views": [
+      {
+        "id": "request-boundary",
+        "label": "请求入站",
+        "focus": ["user", "console", "worker", "toolbus"],
+        "note": "操作者经 Console/CLI 进入 ash-worker。"
+      },
+      {
+        "id": "state-ownership",
+        "label": "状态与所有权",
+        "focus": ["runs", "db", "repo", "artifacts"],
+        "note": "元数据、工作区与产物分属不同所有者。"
+      },
+      {
+        "id": "async-operations",
+        "label": "沙盒执行",
+        "focus": ["toolbus", "sandbox", "plugins", "metrics"],
+        "note": "危险工具走 Docker/jail；插件外置；指标 scrape。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "user", "type": "external", "label": "操作者", "sublabel": "人 / CI", "pos": [38, 300], "size": [122, 60] },
+    { "id": "console", "type": "frontend", "label": "Console / CLI", "sublabel": "/ui/ · doctor", "pos": [230, 300], "size": [126, 60], "tag": "frontend" },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin :8080", "pos": [430, 300], "size": [128, 60], "tag": "platform" },
+    { "id": "toolbus", "type": "backend", "label": "ToolBus", "sublabel": "router", "pos": [630, 195], "size": [136, 62], "tag": "platform" },
+    { "id": "runs", "type": "backend", "label": "Run Engine", "sublabel": "internal/runs", "pos": [630, 405], "size": [136, 62], "tag": "platform" },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "Docker / jail", "pos": [840, 195], "size": [126, 62], "tag": "platform" },
+    { "id": "db", "type": "database", "label": "SQLite / PG", "sublabel": "元数据", "pos": [840, 405], "size": [126, 62], "tag": "data team" },
+    { "id": "plugins", "type": "external", "label": "Plugins", "sublabel": "gRPC / HTTP", "pos": [1040, 300], "size": [126, 60], "tag": "app team" },
+    { "id": "repo", "type": "cloud", "label": "工作区", "sublabel": "volume", "pos": [1190, 300], "size": [126, 60], "tag": "app team" },
+    { "id": "artifacts", "type": "cloud", "label": "artifacts", "sublabel": "产物包", "pos": [1040, 520], "size": [126, 62], "tag": "platform" },
+    { "id": "metrics", "type": "external", "label": "/metrics", "sublabel": "Prometheus", "pos": [1190, 85], "size": [126, 62], "tag": "SRE" }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "应用主机 · Stage 1（v2 主路径）",
+      "wraps": ["console", "worker", "toolbus", "runs", "sandbox", "db", "plugins", "repo", "artifacts"],
+      "pad": 20
+    },
+    {
+      "kind": "security-group",
+      "label": "private 应用网络",
+      "wraps": ["worker", "toolbus", "runs", "sandbox", "db"],
+      "pad": 14
+    }
+  ],
+  "connections": [
+    { "from": "user", "to": "console", "label": "HTTPS / TTY", "variant": "emphasis" },
+    { "from": "console", "to": "worker", "label": "REST/SSE", "variant": "emphasis" },
+    { "from": "worker", "to": "toolbus", "label": "in-proc", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 275] },
+    { "from": "worker", "to": "runs", "label": "orchestrate", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 385] },
+    { "from": "toolbus", "to": "sandbox", "label": "Docker API", "variant": "security", "route": "straight" },
+    { "from": "runs", "to": "db", "label": "SQL", "route": "straight" },
+    { "from": "toolbus", "to": "plugins", "label": "gRPC/HTTP", "variant": "dashed", "fromSide": "top", "toSide": "top", "via": [[698, 170], [1103, 170]] },
+    { "from": "runs", "to": "plugins", "label": "status hook", "variant": "dashed", "fromSide": "top", "toSide": "bottom", "via": [[698, 380], [1103, 380]] },
+    { "from": "plugins", "to": "repo", "label": "volume mount", "variant": "emphasis", "labelAt": [1170, 280] },
+    { "from": "repo", "to": "artifacts", "label": "fs write", "fromSide": "bottom", "toSide": "top", "labelAt": [1150, 450] },
+    { "from": "repo", "to": "metrics", "label": "scrape", "variant": "dashed", "route": "orthogonal-v" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Stage 1",
+      "items": [
+        "Worker 仍为单体宿主",
+        "Sandbox / 插件可外置"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "命名跨界",
+      "items": [
+        "HTTPS/TTY → Console → Worker",
+        "Docker API / gRPC 出进程",
+        "SQL · volume mount · scrape"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "所有权",
+      "items": [
+        "platform 拥有 Worker / Sandbox",
+        "data team 拥有 SQLite/PG",
+        "app team 拥有工作区与插件"
+      ]
+    }
+  ]
+}

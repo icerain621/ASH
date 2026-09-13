@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH 部署拓扑 · Stage 0 本地",
+    "locale": "zh-CN",
+    "output": "ash-deploy-local.html",
+    "quality_profile": "showcase",
+    "engineering_profile": "deployment-ownership",
+    "viewBox": [1180, 620],
+    "views": [
+      {
+        "id": "request-boundary",
+        "label": "本地入口",
+        "focus": ["dev", "console", "worker"],
+        "note": "开发者经 Console/CLI 进入本机 ash-worker。"
+      },
+      {
+        "id": "state-ownership",
+        "label": "状态与所有权",
+        "focus": ["worker", "events", "db", "repo"],
+        "note": "SQLite 与工作区同机，分属 platform / app team。"
+      },
+      {
+        "id": "runtime",
+        "label": "运行时",
+        "focus": ["worker", "toolbus", "events", "metrics"],
+        "note": "ToolBus 进程内执行；run_events 持久化；无独立沙盒。"
+      }
+    ]
+  },
+  "components": [
+    { "id": "dev", "type": "external", "label": "开发者", "sublabel": "本机", "pos": [38, 300], "size": [122, 60] },
+    { "id": "console", "type": "frontend", "label": "Console / CLI", "sublabel": "/ui/ · doctor", "pos": [230, 300], "size": [126, 60], "tag": "frontend" },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin :8080", "pos": [430, 300], "size": [128, 60], "tag": "platform" },
+    { "id": "toolbus", "type": "backend", "label": "ToolBus", "sublabel": "process", "pos": [630, 195], "size": [136, 62], "tag": "platform" },
+    { "id": "events", "type": "messagebus", "label": "run_events", "sublabel": "SSE 真相源", "pos": [630, 405], "size": [136, 62], "tag": "platform" },
+    { "id": "repo", "type": "cloud", "label": "工作区", "sublabel": "git repo", "pos": [840, 195], "size": [126, 62], "tag": "app team" },
+    { "id": "db", "type": "database", "label": ".ash/ash.db", "sublabel": "SQLite", "pos": [840, 405], "size": [126, 62], "tag": "platform" },
+    { "id": "metrics", "type": "external", "label": "/metrics", "sublabel": "Prometheus", "pos": [430, 85], "size": [126, 62], "tag": "SRE" }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "开发机 · Stage 0",
+      "wraps": ["console", "worker", "toolbus", "events", "repo", "db"],
+      "pad": 20
+    },
+    {
+      "kind": "security-group",
+      "label": "private 本地进程与状态",
+      "wraps": ["worker", "toolbus", "events", "db"],
+      "pad": 14
+    }
+  ],
+  "connections": [
+    { "from": "dev", "to": "console", "label": "HTTPS / TTY", "variant": "emphasis" },
+    { "from": "console", "to": "worker", "label": "REST/SSE", "variant": "emphasis" },
+    { "from": "worker", "to": "toolbus", "label": "in-proc", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 275] },
+    { "from": "worker", "to": "events", "label": "emit", "variant": "emphasis", "route": "orthogonal-h", "labelAt": [594, 385] },
+    { "from": "toolbus", "to": "repo", "label": "fs I/O", "route": "straight" },
+    { "from": "events", "to": "db", "label": "SQLite", "route": "straight" },
+    { "from": "worker", "to": "metrics", "label": "scrape", "variant": "dashed", "route": "orthogonal-v" }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Stage 0",
+      "items": [
+        "单机 · 单进程 · SQLite",
+        "无独立沙盒 / 无外部 IdP"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "命名跨界",
+      "items": [
+        "HTTPS/TTY → Console → Worker",
+        "in-proc ToolBus · fs I/O",
+        "run_events → SQLite · scrape"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "所有权",
+      "items": [
+        "platform 拥有 Worker / DB / events",
+        "app team 拥有工作区",
+        "SRE 拥有 /metrics"
+      ]
+    }
+  ]
+}

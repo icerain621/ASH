@@ -139,6 +139,7 @@ type RunEvent struct {
 	TS          int64  `gorm:"not null"`
 	Type        string `gorm:"size:128;not null;index"`
 	Severity    string `gorm:"size:16;not null;default:info"`
+	Visibility  string `gorm:"size:32;not null;default:''"` // model_visible|ui_only|audit; empty = legacy
 	PayloadJSON string `gorm:"type:text;not null"`
 	CreatedAt   time.Time
 }

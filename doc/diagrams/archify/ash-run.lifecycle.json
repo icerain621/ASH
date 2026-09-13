@@ -1,0 +1,55 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "ASH Run 生命周期",
+    "locale": "zh-CN",
+    "output": "ash-run-lifecycle.html",
+    "viewBox": [1030, 630],
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "main-path", "label": "主路径", "focus": ["running", "finished"], "note": "running 正常完成进入 finished。" },
+      { "id": "approval-gate", "label": "人工门禁", "focus": ["running", "waiting_approval"], "note": "策略触发 waiting_approval，批准后恢复 running。" },
+      { "id": "failure-exit", "label": "失败与取消", "focus": ["running", "failed", "canceled"], "note": "failed 可重试；canceled 为终态。" }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "Run 状态" },
+    { "id": "waiting", "label": "等待" },
+    { "id": "exceptions", "label": "恢复" },
+    { "id": "terminal", "label": "终态" }
+  ],
+  "states": [
+    { "id": "running", "type": "active", "label": "running", "sublabel": "编排执行中", "lane": "main", "col": 2, "step": "01", "tag": "active" },
+    { "id": "finished", "type": "success", "label": "finished", "sublabel": "正常完成", "lane": "main", "col": 4, "step": "02", "tag": "done" },
+    { "id": "waiting_approval", "type": "waiting", "label": "waiting_approval", "sublabel": "人工审批", "lane": "waiting", "col": 0, "tag": "gate" },
+    { "id": "failed", "type": "failure", "label": "failed", "sublabel": "可重试错误", "lane": "exceptions", "col": 0, "yOffset": 78, "tag": "retryable" },
+    { "id": "canceled", "type": "failure", "label": "canceled", "sublabel": "用户取消", "lane": "terminal", "col": 0, "tag": "terminal" }
+  ],
+  "transitions": [
+    { "id": "to-approval", "from": "running", "to": "waiting_approval", "variant": "security", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "to-finished", "from": "running", "to": "finished", "variant": "emphasis" },
+    { "id": "execution-failed", "from": "running", "to": "failed", "variant": "security", "fromSide": "left", "toSide": "left", "via": [[320, 157], [320, 385]] },
+    { "id": "failed-retry", "from": "failed", "to": "running", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[20, 385], [20, 80], [402, 80]] },
+    { "id": "approval-resume", "from": "waiting_approval", "to": "running", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[320, 307], [320, 80], [402, 80]] },
+    { "id": "approval-canceled", "from": "waiting_approval", "to": "canceled", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[480, 336], [480, 432], [402, 432]] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "合法迁移",
+      "items": [
+        "running → waiting_approval | finished | failed | canceled",
+        "waiting_approval → running | canceled；failed → running"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "门禁与回放",
+      "items": [
+        "tool_risk / policy 触发 waiting_approval",
+        "run_events 记录每步，支持 SSE 续传与 replay"
+      ]
+    }
+  ]
+}

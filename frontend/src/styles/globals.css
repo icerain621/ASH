@@ -85,6 +85,43 @@ textarea {
   font-weight: 400;
 }
 
+.work-mode {
+  display: inline-flex;
+  align-items: stretch;
+  flex-shrink: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow: hidden;
+  background: #f8faf9;
+}
+
+.work-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.35rem 0.75rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--muted);
+  text-decoration: none;
+  border-right: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.work-mode-btn:last-child {
+  border-right: none;
+}
+
+.work-mode-btn.active,
+.work-mode-btn[aria-selected="true"] {
+  color: var(--accent-ink, #065f46);
+  background: #ecfdf5;
+}
+
+.work-mode-btn:hover {
+  color: var(--text);
+  background: rgba(15, 159, 110, 0.08);
+}
+
 .status {
   margin-left: auto;
   display: inline-flex;

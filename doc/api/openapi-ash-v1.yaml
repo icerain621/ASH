@@ -1110,9 +1110,37 @@ components:
         ts: { type: integer, format: int64 }
         type: { type: string }
         severity: { type: string }
+        visibility:
+          type: string
+          enum: [model_visible, ui_only, audit]
+          description: "GV01 event visibility; empty legacy rows default by type at read time"
         stepId: { type: string }
         status: { type: string }
         payload: { type: object, additionalProperties: true }
+    EventEnvelope:
+      type: object
+      properties:
+        id: { type: string }
+        traceId: { type: string }
+        runId: { type: string }
+        seq: { type: integer, format: int64 }
+        ts: { type: integer, format: int64 }
+        type: { type: string }
+        severity: { type: string }
+        visibility:
+          type: string
+          enum: [model_visible, ui_only, audit]
+        payload: { type: object, additionalProperties: true }
+    AgentSessionIntentRequest:
+      type: object
+      required: [action]
+      properties:
+        action:
+          type: string
+          enum: [prompt, approve, cancel, reject]
+        prompt: { type: string }
+        reason: { type: string }
+        actorId: { type: string }
     TimelineAPIResponse:
       type: object
       required: [items]
@@ -1505,7 +1533,7 @@ components:
         streamUrl: { type: string }
         items:
           type: array
-          items: { type: object, additionalProperties: true }
+          items: { $ref: "#/components/schemas/EventEnvelope" }
     CIDiagnosisListResponse:
       type: object
       required: [items]
@@ -3456,6 +3484,32 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AgentSessionView" }
+  /api/v1/agents/sessions/{sessionId}/actions:
+    post:
+      tags: [Agents]
+      summary: Apply thin session intent
+      description: prompt|approve|cancel|reject. Approve without an approvable gate fails closed (409).
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentSessionIntentRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
+        "409":
+          description: intent rejected (fail-closed)
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/agents/sessions/{sessionId}/events:
     get:
       tags: [Agents]

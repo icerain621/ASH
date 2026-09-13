@@ -1,0 +1,71 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "ASH v2 双核心架构",
+    "locale": "zh-CN",
+    "output": "ash-v2-dual-core.html",
+    "quality_profile": "showcase",
+    "viewBox": [1240, 660],
+    "views": [
+      { "id": "dual-core", "label": "双核心协作", "focus": ["agent-core", "memory-core", "governance"], "note": "Agent Core 与 Memory Core 通过 contextRefs / citation 契约协作。" },
+      { "id": "execution", "label": "执行面", "focus": ["agent-core", "harness", "toolbus", "sandbox"], "note": "Harness + ToolBus + Sandbox 构成 v2 执行栈。" },
+      { "id": "evolution", "label": "演进闭环", "focus": ["agent-core", "evolution"], "note": "统一 Feedback 驱动编排与记忆双评审。" }
+    ]
+  },
+  "components": [
+    { "id": "console", "type": "frontend", "label": "Console / Quest", "sublabel": "Web + CLI", "pos": [40, 280], "size": [130, 60] },
+    { "id": "webhook", "type": "external", "label": "Webhook / CI", "sublabel": "外部触发", "pos": [40, 120], "size": [130, 60] },
+    { "id": "worker", "type": "backend", "label": "ash-worker", "sublabel": "Gin 宿主进程", "pos": [250, 280], "size": [130, 60] },
+    { "id": "governance", "type": "security", "label": "治理平面", "sublabel": "DSL / Gate / Doctor", "pos": [250, 120], "size": [130, 64], "tag": "M4+" },
+    { "id": "agent-core", "type": "backend", "label": "Agent Core", "sublabel": "Goal + Run + SSE", "pos": [460, 280], "size": [130, 60], "tag": "智能体核心" },
+    { "id": "harness", "type": "backend", "label": "Harness", "sublabel": "Profile + Loop", "pos": [660, 280], "size": [130, 60] },
+    { "id": "toolbus", "type": "backend", "label": "ToolBus", "sublabel": "native + gRPC", "pos": [860, 280], "size": [130, 60], "tag": "HTTP plugin" },
+    { "id": "sandbox", "type": "security", "label": "Sandbox", "sublabel": "Docker / jail", "pos": [1060, 280], "size": [120, 60] },
+    { "id": "memory-core", "type": "database", "label": "Memory Core", "sublabel": "RAG / Wiki / Profile", "pos": [460, 450], "size": [130, 60], "tag": "记忆体核心" },
+    { "id": "db", "type": "database", "label": "SQLite / Postgres", "sublabel": "元数据 + 事件", "pos": [660, 450], "size": [130, 60] },
+    { "id": "evolution", "type": "cloud", "label": "演进平面", "sublabel": "Feedback + Improve", "pos": [860, 450], "size": [130, 60] }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "ash-worker 宿主（Stage 1 单体）", "wraps": ["worker", "agent-core", "harness", "toolbus", "memory-core", "db", "evolution"], "pad": 16 },
+    { "kind": "security-group", "label": "Policy / Gate / RBAC", "wraps": ["governance", "agent-core", "harness", "toolbus", "sandbox"], "pad": 12 }
+  ],
+  "connections": [
+    { "id": "entry-console", "from": "console", "to": "worker", "label": "REST / SSE", "variant": "emphasis", "labelAt": [240, 354] },
+    { "id": "entry-webhook", "from": "webhook", "to": "worker", "variant": "dashed" },
+    { "id": "gov-worker", "from": "governance", "to": "worker", "label": "policy gate", "variant": "security", "fromSide": "bottom", "toSide": "top", "labelAt": [315, 194] },
+    { "id": "worker-agent", "from": "worker", "to": "agent-core", "label": "orchestrate" },
+    { "id": "agent-harness", "from": "agent-core", "to": "harness", "label": "loop step" },
+    { "id": "harness-toolbus", "from": "harness", "to": "toolbus", "label": "tool calls" },
+    { "id": "toolbus-sandbox", "from": "toolbus", "to": "sandbox", "label": "danger exec", "variant": "security" },
+    { "id": "agent-memory", "from": "agent-core", "to": "memory-core", "label": "contextRefs", "variant": "emphasis", "fromSide": "bottom", "toSide": "top", "labelAt": [455, 385] },
+    { "id": "memory-db", "from": "memory-core", "to": "db", "label": "persist", "labelDy": -18 },
+    { "id": "agent-evolution", "from": "agent-core", "to": "evolution", "label": "feedback", "fromSide": "bottom", "toSide": "top", "via": [[525, 430], [925, 430]], "labelAt": [820, 424] }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "v2 双核心",
+      "items": [
+        "Agent Core：Goal + Run + Harness + Sandbox",
+        "Memory Core：RAG / Wiki / 候选评审"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "契约协作",
+      "items": [
+        "contextRefs / citation / candidate 显式边界",
+        "Stage 1 同进程包边界，非微服务拆分"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "演进闭环",
+      "items": [
+        "统一 Feedback → Improve → 双评审",
+        "治理平面约束 DSL / Gate / Doctor"
+      ]
+    }
+  ]
+}

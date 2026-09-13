@@ -1,0 +1,52 @@
+{
+  "schema_version": 1,
+  "diagram_type": "lifecycle",
+  "meta": {
+    "title": "ASH v5 评审项状态机",
+    "locale": "zh-CN",
+    "output": "ash-v5-review-lifecycle.html",
+    "viewBox": [1030, 630],
+    "quality_profile": "showcase",
+    "views": [
+      { "id": "main", "label": "主路径", "focus": ["in_review", "approved"], "note": "评审中正常完成进入 Approved。" },
+      { "id": "team-sign", "label": "团队多签", "focus": ["in_review", "pending_second"], "note": "team 空间可要求第二签后恢复评审。" },
+      { "id": "reject-path", "label": "拒绝", "focus": ["in_review", "rejected"], "note": "拒绝为终态。" }
+    ]
+  },
+  "lanes": [
+    { "id": "main", "label": "评审主轨" },
+    { "id": "waiting", "label": "等待" },
+    { "id": "exceptions", "label": "恢复" },
+    { "id": "terminal", "label": "终态" }
+  ],
+  "states": [
+    { "id": "in_review", "type": "active", "label": "In Review", "sublabel": "回放打分", "lane": "main", "col": 2, "step": "01", "tag": "work" },
+    { "id": "approved", "type": "success", "label": "Approved", "sublabel": "通过", "lane": "main", "col": 4, "step": "02", "tag": "done" },
+    { "id": "pending_second", "type": "waiting", "label": "Second Sign", "sublabel": "待第二签", "lane": "waiting", "col": 0, "tag": "team" },
+    { "id": "rejected", "type": "failure", "label": "Rejected", "sublabel": "拒绝归档", "lane": "terminal", "col": 0, "tag": "terminal" }
+  ],
+  "transitions": [
+    { "id": "to-second", "from": "in_review", "to": "pending_second", "variant": "security", "fromSide": "bottom", "toSide": "top", "route": "straight" },
+    { "id": "to-approved", "from": "in_review", "to": "approved", "variant": "emphasis" },
+    { "id": "second-resume", "from": "pending_second", "to": "in_review", "variant": "emphasis", "fromSide": "left", "toSide": "top", "via": [[320, 307], [320, 80], [402, 80]] },
+    { "id": "to-rejected", "from": "pending_second", "to": "rejected", "variant": "security", "fromSide": "bottom", "toSide": "top", "via": [[480, 336], [480, 432], [402, 432]] }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "主路径",
+      "items": [
+        "In Review → Approved 为默认通过路径",
+        "决定必须带原因与量纲分"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "多签与拒绝",
+      "items": [
+        "Second Sign 后恢复 In Review",
+        "第二签拒绝进入 Rejected 终态"
+      ]
+    }
+  ]
+}

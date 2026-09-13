@@ -102,13 +102,14 @@ type TimelineResponse struct {
 }
 
 type TimelineItem struct {
-	Seq      int64           `json:"seq,omitempty"`
-	TS       int64           `json:"ts,omitempty"`
-	Type     string          `json:"type"`
-	Severity string          `json:"severity,omitempty"`
-	StepID   string          `json:"stepId,omitempty"`
-	Status   string          `json:"status,omitempty"`
-	Payload  json.RawMessage `json:"payload,omitempty"`
+	Seq        int64           `json:"seq,omitempty"`
+	TS         int64           `json:"ts,omitempty"`
+	Type       string          `json:"type"`
+	Severity   string          `json:"severity,omitempty"`
+	Visibility string          `json:"visibility,omitempty"`
+	StepID     string          `json:"stepId,omitempty"`
+	Status     string          `json:"status,omitempty"`
+	Payload    json.RawMessage `json:"payload,omitempty"`
 }
 
 type CancelResponse struct {
@@ -493,7 +494,8 @@ func (s *Service) Timeline(runID string, limit int) (*TimelineResponse, error) {
 	out := make([]TimelineItem, 0, len(evs))
 	for _, ev := range evs {
 		out = append(out, TimelineItem{
-			Seq: ev.Seq, TS: ev.TS, Type: ev.Type, Severity: ev.Severity, Payload: ev.Payload,
+			Seq: ev.Seq, TS: ev.TS, Type: ev.Type, Severity: ev.Severity,
+			Visibility: ev.Visibility, Payload: ev.Payload,
 		})
 	}
 	return &TimelineResponse{Items: out}, nil

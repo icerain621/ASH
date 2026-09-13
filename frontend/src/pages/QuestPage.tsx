@@ -330,7 +330,9 @@ export function QuestPage() {
       <div className="page-heading">
         <div>
           <h1>Quest 工作台</h1>
-          <p>从目标生成 Plan 并批准；看板跟踪 Plan/Run；深 Diff 行级批注；步骤评分；Sub-run 树。</p>
+          <p>
+            Agent 使用面（对齐 DSH 薄交互）：目标→Plan→门禁意图；看板与 Diff；评分/策略请进「评审管控」。
+          </p>
           <span className="scope-badge">Space: {spaceId}</span>
         </div>
         <button type="button" className="btn icon-btn" onClick={() => boardQuery.refetch()}>

@@ -1,7 +1,7 @@
 # ASH 文档归属索引
 
-> 更新：2026-08-28  
-> 代码水位：tag **`v0.1.0-mvp`** · Doctor ALL **55/55** · SQL rev **27** · RLS **46**（v2 DH–DV；v2.1 DW–DX5 冻结；tag 待人工）
+> 更新：2026-09-10  
+> 代码水位：**v4.0 Auth 已冻结**（DX61–DX66）· Doctor ALL **57/57** · M4 **10/10** · SQL rev **32** · RLS **51** · tag `v4.0.0` 待人工；下一轨 **v4.1**（见 [`plan/v4.x-program.md`](plan/v4.x-program.md)）
 
 文档按**归属**分三类；契约与门禁路径保持稳定，避免打断脚本。
 
@@ -26,6 +26,7 @@ doc/
 | [`HLD-总体设计.md`](design/HLD-总体设计.md) | 系统拆分、数据与安全概览（含 v1/v2 总图） | 架构/后端 |
 | [`HLD-双核心-v2.md`](design/HLD-双核心-v2.md) | **v2** 记忆体 × 智能体双核架构与契约 | 架构/后端 |
 | [`HLD-Harness与沙盒.md`](design/HLD-Harness与沙盒.md) | **v2** Harness Profile / Loop / Sandbox | 平台/安全 |
+| [v5 双核管控规格](../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md) | **v5** 管控 × 厚评审 × 薄交互（设计评审稿） | 架构/产品 |
 | [`ARCH-架构与技术选型.md`](design/ARCH-架构与技术选型.md) | 为何这样选、可替换项；Stage1=v2 | 平台/架构 |
 | [`M3-多租户与Postgres演进.md`](design/M3-多租户与Postgres演进.md) | 多租户 / Postgres / RLS | 后端/运维 |
 | [`appendices/`](appendices/README.md) | 协议、Schema、Doctor、Artifacts | 对应域负责人 |
@@ -36,6 +37,9 @@ doc/
 |------|------|------------|
 | [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **排期与完成度真相源** | 项目经理/技术 |
 | [`TODO.md`](plan/TODO.md) | 未完成短清单（P0–P3） | 全员更新 |
+| [`v4.x-program.md`](plan/v4.x-program.md) | **v4.x** 四代分冻（Auth → 企业 Agentic → Stage-1 → 生态） | 项目经理/架构 |
+| [`v4.0-release-scope.md`](plan/v4.0-release-scope.md) | v4.0 Auth 硬化范围（**已冻结**） | 产品/发布 |
+| [`v5-governance-program.md`](plan/v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互（设计评审中） | 项目经理/架构 |
 | [`v2-dual-core-evolution-plan.md`](plan/v2-dual-core-evolution-plan.md) | **v2** 双核心 + Harness 排期 | 项目经理/架构 |
 | [`sprint-dh-harness-implementation.md`](plan/sprint-dh-harness-implementation.md) | Sprint DH Harness 骨架任务板 | 后端 |
 | [`sprint-di-loop-implementation.md`](plan/sprint-di-loop-implementation.md) | Sprint DI Loop Adapter 任务板 | 后端 |
@@ -50,8 +54,9 @@ doc/
 | 文档 / 目录 | 职责 | Owner 角色 |
 |-------------|------|------------|
 | [`mvp-release-checklist.md`](progress/mvp-release-checklist.md) | MVP 发布勾选总表 | 发布 |
-| [`checklists/`](checklists/smoke-index.md) | 烟测 / RDS / 签字 runbook | 发布/运维 |
+| [`checklists/`](checklists/smoke-index.md) | 烟测 / RDS / 签字 runbook（含 `v4.0-signoff`） | 发布/运维 |
 | [`evidence/`](evidence/README.md) | 门禁产出证据（自动写入） | 发布门禁 |
+| [`diagrams/archify/`](diagrams/archify/README.md) | 可交互架构 / 时序 / 场景图 | 架构 |
 
 日常进度叙事写在 `plan/PLAN` 与 `plan/TODO`；勾选与证据落在 `progress/` + `checklists/` + `evidence/`。
 
