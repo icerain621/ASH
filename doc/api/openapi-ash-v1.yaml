@@ -1159,6 +1159,13 @@ components:
       properties:
         runId: { type: string }
         thread: { $ref: "#/components/schemas/InteractionThread" }
+    InteractionSessionThreadsResponse:
+      type: object
+      properties:
+        sessionId: { type: string }
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/InteractionThread" }
     InteractionTimelineNode:
       type: object
       properties:
@@ -3847,6 +3854,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InteractionByRunResponse" }
+  /api/v1/interactions/sessions/{sessionId}/threads:
+    get:
+      tags: [Interactions]
+      summary: List Threads for a Session
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionSessionThreadsResponse" }
   /api/v1/interactions/threads/ensure:
     post:
       tags: [Interactions]

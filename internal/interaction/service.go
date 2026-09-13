@@ -103,6 +103,40 @@ func (s *Service) GetThread(threadID string) (*Thread, error) {
 	return threadFromRow(row), nil
 }
 
+// ListThreads returns interaction_threads for a session ordered by created_at.
+func (s *Service) ListThreads(sessionID string) ([]Thread, error) {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return nil, fmt.Errorf("sessionId is required")
+	}
+	var rows []store.InteractionThread
+	if err := s.q().Where("session_id = ?", sessionID).Order("created_at ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]Thread, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, *threadFromRow(row))
+	}
+	return out, nil
+}
+
+// ListThreadsByRun returns interaction_threads for a run ordered by created_at.
+func (s *Service) ListThreadsByRun(runID string) ([]Thread, error) {
+	runID = strings.TrimSpace(runID)
+	if runID == "" {
+		return nil, fmt.Errorf("runId is required")
+	}
+	var rows []store.InteractionThread
+	if err := s.q().Where("run_id = ?", runID).Order("created_at ASC").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	out := make([]Thread, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, *threadFromRow(row))
+	}
+	return out, nil
+}
+
 // ListMemoryLinks returns fold links for a thread.
 func (s *Service) ListMemoryLinks(threadID string) ([]MemoryLink, error) {
 	fold, err := s.FoldThread(threadID)

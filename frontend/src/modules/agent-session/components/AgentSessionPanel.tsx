@@ -6,6 +6,7 @@ import {
   submitSessionIntent,
   type SessionEventEnvelope,
 } from "../api/session.api";
+import { SessionThreadsList } from "@/modules/interactions/components/SessionThreadsList";
 import { ConversationThread } from "./ConversationThread";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 
@@ -76,6 +77,7 @@ export function AgentSessionPanel({ runId, runStatus, gateReason, onIntentSucces
         </p>
       ) : null}
       <ConversationThread events={events} />
+      {sessionId ? <SessionThreadsList sessionId={sessionId} /> : null}
       <div style={{ marginTop: "0.75rem" }}>
         <IntentBar
           mode={mode}

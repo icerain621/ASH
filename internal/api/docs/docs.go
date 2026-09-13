@@ -2582,6 +2582,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/interactions/sessions/{sessionId}/threads": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interactions"
+                ],
+                "summary": "List threads for a session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "session id",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_interaction.SessionThreadsView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/interactions/threads/ensure": {
             "post": {
                 "consumes": [
@@ -9516,6 +9550,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "threadId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_interaction.SessionThreadsView": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread"
+                    }
+                },
+                "sessionId": {
                     "type": "string"
                 }
             }

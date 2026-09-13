@@ -915,6 +915,15 @@ definitions:
       threadId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_interaction.SessionThreadsView:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread'
+        type: array
+      sessionId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_interaction.Thread:
     properties:
       createdAt:
@@ -6908,6 +6917,28 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Compare two threads
+      tags:
+      - interactions
+  /api/v1/interactions/sessions/{sessionId}/threads:
+    get:
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.SessionThreadsView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List threads for a session
       tags:
       - interactions
   /api/v1/interactions/threads/{threadId}:

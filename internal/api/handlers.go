@@ -165,6 +165,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/assets", h.createAgentAsset)
 		v1.PATCH("/agents/assets/:id", h.patchAgentAssetStatus)
 		v1.GET("/interactions/by-run/:runId", h.getInteractionByRun)
+		v1.GET("/interactions/sessions/:sessionId/threads", h.listInteractionSessionThreads)
 		v1.POST("/interactions/threads/ensure", h.ensureInteractionThread)
 		v1.GET("/interactions/threads/:threadId", h.getInteractionThread)
 		v1.GET("/interactions/threads/:threadId/memory-links", h.listInteractionMemoryLinks)

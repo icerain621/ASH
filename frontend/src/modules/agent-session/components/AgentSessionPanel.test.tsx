@@ -6,6 +6,7 @@ import { AgentSessionPanel } from "./AgentSessionPanel";
 const createAgentSession = vi.fn();
 const listSessionEvents = vi.fn();
 const submitSessionIntent = vi.fn();
+const listInteractionSessionThreads = vi.fn();
 
 vi.mock("@/modules/agent-session/api/session.api", async () => {
   const actual = await vi.importActual<typeof import("../api/session.api")>("../api/session.api");
@@ -16,6 +17,10 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
     submitSessionIntent: (...args: unknown[]) => submitSessionIntent(...args),
   };
 });
+
+vi.mock("@/modules/interactions/api/interactions.api", () => ({
+  listInteractionSessionThreads: (...args: unknown[]) => listInteractionSessionThreads(...args),
+}));
 
 describe("AgentSessionPanel", () => {
   beforeEach(() => {
@@ -53,6 +58,10 @@ describe("AgentSessionPanel", () => {
       ],
     });
     submitSessionIntent.mockResolvedValue({ id: "sess_1", spaceId: "local", status: "active", runId: "run_1" });
+    listInteractionSessionThreads.mockResolvedValue({
+      sessionId: "sess_1",
+      items: [{ id: "th_1", spaceId: "local", sessionId: "sess_1", runId: "run_1", kind: "main", status: "open" }],
+    });
   });
 
   it("binds session and renders visible conversation nodes only", async () => {
@@ -67,6 +76,8 @@ describe("AgentSessionPanel", () => {
     const nodes = await screen.findAllByTestId("agent-conversation-node");
     expect(nodes).toHaveLength(1);
     expect(nodes[0]).toHaveAttribute("data-node-kind", "session.turn");
+    await waitFor(() => expect(listInteractionSessionThreads).toHaveBeenCalledWith("sess_1"));
+    expect(await screen.findByTestId("session-threads-list")).toBeInTheDocument();
   });
 
   it("sends prompt via intent bar", async () => {

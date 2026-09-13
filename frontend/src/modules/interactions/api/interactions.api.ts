@@ -42,6 +42,12 @@ export async function getInteractionByRun(runId: string) {
   );
 }
 
+export async function listInteractionSessionThreads(sessionId: string) {
+  return api<{ sessionId: string; items: InteractionThread[] }>(
+    `/interactions/sessions/${encodeURIComponent(sessionId)}/threads`,
+  );
+}
+
 export async function getInteractionThread(threadId: string) {
   return api<InteractionFoldResult>(`/interactions/threads/${encodeURIComponent(threadId)}`);
 }

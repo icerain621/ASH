@@ -10,6 +10,31 @@ import (
 	"github.com/ash-repwiki/ash/internal/interaction"
 )
 
+// ListInteractionSessionThreads godoc
+// @Summary List threads for a session
+// @Tags interactions
+// @Produce json
+// @Param sessionId path string true "session id"
+// @Success 200 {object} interaction.SessionThreadsView
+// @Failure 400 {object} APIErrorResponse
+// @Router /api/v1/interactions/sessions/{sessionId}/threads [get]
+func (h *Handler) listInteractionSessionThreads(c *gin.Context) {
+	sessionID := strings.TrimSpace(c.Param("sessionId"))
+	if sessionID == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "sessionId is required"))
+		return
+	}
+	items, err := h.interactionFor(c).ListThreads(sessionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	if len(items) > 0 && !h.requireRequestSpace(c, items[0].SpaceID) {
+		return
+	}
+	c.JSON(http.StatusOK, interaction.SessionThreadsView{SessionID: sessionID, Items: items})
+}
+
 // GetInteractionByRun godoc
 // @Summary Resolve Session/Thread for a run
 // @Tags interactions

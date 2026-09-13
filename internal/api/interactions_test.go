@@ -101,3 +101,49 @@ func TestInteractionByRunFoldAndLinks(t *testing.T) {
 		t.Fatalf("replay status=%d body=%s", rw.Code, rw.Body.String())
 	}
 }
+
+func TestListInteractionSessionThreads(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	for _, runID := range []string{"run_sess_th_a", "run_sess_th_b"} {
+		run := store.RunRecord{
+			ID: runID, TraceID: "tr_" + runID,
+			ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+			PolicyProfile: "default", Status: "running", SpaceID: "local",
+			RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+		}
+		if err := db.Create(&run).Error; err != nil {
+			t.Fatal(err)
+		}
+		ew := httptest.NewRecorder()
+		ereq := httptest.NewRequest(http.MethodPost, "/api/v1/interactions/threads/ensure",
+			bytes.NewReader([]byte(`{"runId":"`+runID+`","sessionId":"sess_multi"}`)))
+		ereq.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(ew, ereq)
+		if ew.Code != http.StatusOK {
+			t.Fatalf("ensure %s status=%d body=%s", runID, ew.Code, ew.Body.String())
+		}
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/interactions/sessions/sess_multi/threads", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("list threads status=%d body=%s", w.Code, w.Body.String())
+	}
+	var out struct {
+		SessionID string `json:"sessionId"`
+		Items     []struct {
+			ID    string `json:"id"`
+			RunID string `json:"runId"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(w.Body.Bytes(), &out); err != nil {
+		t.Fatal(err)
+	}
+	if out.SessionID != "sess_multi" || len(out.Items) != 2 {
+		t.Fatalf("out=%+v", out)
+	}
+}

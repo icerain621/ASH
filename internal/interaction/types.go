@@ -79,3 +79,9 @@ type ByRunView struct {
 	RunID  string `json:"runId"`
 	Thread Thread `json:"thread"`
 }
+
+// SessionThreadsView lists threads bound to a session.
+type SessionThreadsView struct {
+	SessionID string   `json:"sessionId"`
+	Items     []Thread `json:"items"`
+}

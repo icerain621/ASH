@@ -825,8 +825,8 @@ cd frontend && npm test -- --run src/modules/interactions src/pages/Observabilit
 ## 7. 验收清单（相对用户关注点）
 
 **可观测运行系统（Session/Thread）**
-- [ ] Run 自动绑定 main Thread；Session 可列出多 Thread  
-  （证据：`EnsureThread` / by-run 已落地；Session 多 Thread 列表 API 尚未暴露）
+- [x] Run 自动绑定 main Thread；Session 可列出多 Thread  
+  （证据：`EnsureThread` / by-run；`GET /interactions/sessions/{sessionId}/threads` + `SessionThreadsList`）
 - [x] 按 Thread 打开 Interaction Timeline（turn/step/tool/approval/score）  
   （`ThreadTimeline` + Quest Diff）
 - [x] Waterfall attributes 含 sessionId/threadId + memory  
