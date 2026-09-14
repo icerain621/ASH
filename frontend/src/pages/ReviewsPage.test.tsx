@@ -75,24 +75,6 @@ vi.mock("@/modules/registry/api/registry.api", () => ({
   patchMemoryAssetStatus: vi.fn(),
 }));
 
-vi.mock("@/modules/metrics/api/metrics.api", () => ({
-  getMetricsOverview: vi.fn().mockResolvedValue({
-    spaceId: "local",
-    from: "",
-    to: "",
-    period: "day",
-    summary: [{ id: "KPI-01", label: "交付成功率", value: 0.9, unit: "ratio", status: "ok" }],
-    trends: [],
-    breakdowns: [],
-    dataQuality: [],
-    generatedAt: "",
-  }),
-}));
-
-vi.mock("@/modules/closure/api/closure.api", () => ({
-  getPrometheusText: vi.fn().mockResolvedValue(""),
-}));
-
 vi.mock("@/modules/platform/api/platform.api", () => ({
   getAuthMe: vi.fn().mockResolvedValue({
     user: { id: "u1", displayName: "Reviewer" },
@@ -120,6 +102,10 @@ vi.mock("@/modules/interactions/api/interactions.api", () => ({
   sealInteractionThread: vi.fn(),
   replayInteractionThread: vi.fn(),
   compareInteractionThreads: vi.fn(),
+}));
+
+vi.mock("@/pages/ObservabilityPage", () => ({
+  ObservabilityPage: () => <div data-testid="observability-page-stub">Observability stub (review_sla)</div>,
 }));
 
 vi.mock("@/services/http/client", () => ({
@@ -159,32 +145,31 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("reviews-page")).toBeTruthy();
     expect(screen.getByTestId("review-pillar-nav")).toBeTruthy();
     expect(screen.getByTestId("review-nav-queue")).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByTestId("review-nav-registry")).toBeTruthy();
-    expect(screen.getByTestId("review-nav-monitor")).toBeTruthy();
-    expect(screen.getByTestId("review-nav-orchestration")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-assets")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-observe")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-orchestrate")).toBeTruthy();
     expect(screen.getByTestId("reviews-workbench")).toBeTruthy();
-    expect(screen.queryByTestId("review-registry-section")).toBeNull();
+    expect(screen.queryByTestId("review-assets-panel")).toBeNull();
   });
 
-  it("switches to registry, monitor, and orchestration panels", async () => {
+  it("switches to assets, observe, and orchestrate panels", async () => {
     renderReviews();
     expect(await screen.findByTestId("review-pillar-nav")).toBeTruthy();
 
-    fireEvent.click(screen.getByTestId("review-nav-registry"));
-    expect(await screen.findByTestId("review-registry-section")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("review-nav-assets"));
+    expect(await screen.findByTestId("review-assets-panel")).toBeTruthy();
     expect(await screen.findByTestId("registry-assets-panel")).toBeTruthy();
     expect(await screen.findByTestId("effective-policy-summary")).toHaveTextContent("生效策略");
-    expect(screen.getByTestId("review-link-space")).toHaveAttribute("data-to", "/space");
+    expect(screen.getByTestId("review-assets-space-link")).toHaveAttribute("data-to", "/space");
     expect(screen.queryByTestId("reviews-workbench")).toBeNull();
 
-    fireEvent.click(screen.getByTestId("review-nav-monitor"));
-    expect(await screen.findByTestId("review-monitor-section")).toBeTruthy();
-    expect(screen.getByTestId("review-link-metrics")).toHaveAttribute("data-to", "/metrics");
-    expect(screen.getByTestId("review-link-observability")).toHaveAttribute("data-to", "/observability");
-    expect(await screen.findByTestId("interaction-metrics-summary")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("review-nav-observe"));
+    expect(await screen.findByTestId("review-observe-panel")).toBeTruthy();
+    expect(screen.getByTestId("observability-page-stub")).toBeTruthy();
+    expect(screen.getByTestId("review-open-metrics")).toHaveAttribute("data-to", "/metrics");
 
-    fireEvent.click(screen.getByTestId("review-nav-orchestration"));
-    expect(await screen.findByTestId("review-orchestration-section")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("review-nav-orchestrate"));
+    expect(await screen.findByTestId("review-orchestrate-panel")).toBeTruthy();
     expect(screen.getByTestId("review-link-runs")).toHaveAttribute("data-to", "/runs");
     expect(screen.getByTestId("review-link-automation")).toHaveAttribute("data-to", "/automation");
 
