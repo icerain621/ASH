@@ -18,7 +18,9 @@ make swagger
 make openapi-check
 
 echo "== v5: frontend workbench / space / scale =="
+# Use npx vitest (same as v3x/v40 gates): `npm test` under GNU make on Win/Git Bash
+# often exits 1 before vitest runs (empty stderr); direct vitest is reliable.
 cd frontend
-npm test -- --run src/pages/ReviewsPage.test.tsx src/pages/SpacePage.test.tsx src/pages/ScalePage.test.tsx
+npx vitest --run src/pages/ReviewsPage.test.tsx src/pages/SpacePage.test.tsx src/pages/ScalePage.test.tsx
 
 echo "v5-signoff OK — also review doc/checklists/v5.0-signoff.md manual items"

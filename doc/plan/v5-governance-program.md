@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 / FE-16 / BE-46 已落地**；**score_appeal（BE-18 remainder）已落地**（audit-backed `appeal` 队列 · keep/void · 无 SQL 迁移）；**FE-44 文案/空态/权限提示已落地**；**v5 signoff 进行中**  
+> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 / FE-16 / BE-46 已落地**；**score_appeal（BE-18 remainder）已落地**（audit-backed `appeal` 队列 · keep/void · 无 SQL 迁移）；**FE-44 文案/空态/权限提示已落地**；**`make v5-signoff` 自动门禁已通过**（手工抽查仍待）  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
@@ -63,9 +63,9 @@
 
 ## 5. 下一步
 
-1. **FE-44 已落地**（Reviews/Mobile/Observability/Registry/Quest 中文空态与权限提示）
-2. **下一步**：`make v5-signoff` 并勾选 [`../checklists/v5.0-signoff.md`](../checklists/v5.0-signoff.md)
-3. 门禁：`make v5-signoff`（含 Doctor TR3）
+1. **FE-44 已落地**；**`make v5-signoff` 自动门禁已通过**（见 [`../checklists/v5.0-signoff.md`](../checklists/v5.0-signoff.md)）
+2. **下一步**：完成 checklist 手工抽查项（Registry / 多签 / Improve / 人审闸门）
+3. 门禁回归：`make v5-signoff`（含 Doctor TR3）
 
 ## 6. 修订记录
 
@@ -84,3 +84,4 @@
 | 2026-09-14 | **BE-46 / TR3-13**：PolicyPack merge + scoring/rubric 一致性探针落地；下一步 score_appeal 或 FE 文案打磨 |
 | 2026-09-14 | **BE-18 remainder / score_appeal**：audit-backed appeal 队列（keep/void）落地；下一步 FE-44 或 signoff |
 | 2026-09-14 | **FE-44**：评审/移动/可观测/登记/Quest 中文空态与权限提示落地；signoff 进行中 |
+| 2026-09-14 | **v5-signoff**：自动门禁通过；checklist 勾选 FE-44 / score_appeal；门禁 FE 改为 `npx vitest` |
