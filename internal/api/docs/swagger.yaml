@@ -2791,6 +2791,11 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
         type: array
     type: object
+  github_com_ash-repwiki_ash_internal_session.PatchRequest:
+    properties:
+      title:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_session.Turn:
     properties:
       createdAt:
@@ -2839,6 +2844,8 @@ definitions:
       status:
         type: string
       streamUrl:
+        type: string
+      title:
         type: string
       traceId:
         type: string
@@ -5352,7 +5359,7 @@ paths:
   /api/v1/agents/sessions:
     get:
       description: List agent.session audit documents for a space, newest updatedAt
-        first.
+        first. Closed sessions are excluded unless includeClosed=1.
       parameters:
       - description: 'space id (default: current space)'
         in: query
@@ -5363,6 +5370,10 @@ paths:
         in: query
         name: limit
         type: integer
+      - description: set to 1/true to include status=closed
+        in: query
+        name: includeClosed
+        type: string
       produces:
       - application/json
       responses:
@@ -5412,6 +5423,28 @@ paths:
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}:
+    delete:
+      description: Sets status=closed (soft delete). List excludes closed by default.
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Soft-close agent session
+      tags:
+      - agents
     get:
       parameters:
       - description: session id
@@ -5433,11 +5466,47 @@ paths:
       summary: Get agent session
       tags:
       - agents
+    patch:
+      consumes:
+      - application/json
+      description: 'Partial update; currently supports { "title": "..." }. Empty title
+        clears auto-title.'
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.PatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Patch agent session (rename title)
+      tags:
+      - agents
   /api/v1/agents/sessions/{sessionId}/actions:
     post:
       consumes:
       - application/json
-      description: 'Fail-closed: approve without an approvable run gate returns 409.'
+      description: 'Fail-closed: approve without an approvable run gate returns 409.
+        action "stop" is an alias of "cancel".'
       parameters:
       - description: session id
         in: path
@@ -5469,7 +5538,7 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Apply a thin session intent (prompt|approve|cancel|reject)
+      summary: Apply a thin session intent (prompt|approve|cancel|stop|reject)
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/events:

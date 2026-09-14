@@ -1137,7 +1137,8 @@ components:
       properties:
         action:
           type: string
-          enum: [prompt, approve, cancel, reject]
+          enum: [prompt, approve, cancel, stop, reject]
+          description: "stop is an alias of cancel"
         prompt: { type: string }
         reason: { type: string }
         actorId: { type: string }
@@ -1668,6 +1669,7 @@ components:
         id: { type: string }
         spaceId: { type: string }
         status: { type: string }
+        title: { type: string, description: "Display title; auto-filled from goal/first prompt when empty" }
         goal: { type: string }
         planId: { type: string }
         runId: { type: string }
@@ -1687,6 +1689,10 @@ components:
         meta:
           type: object
           additionalProperties: true
+    AgentSessionPatchRequest:
+      type: object
+      properties:
+        title: { type: string, description: "Session display title (truncated ~48 runes)" }
     AgentSessionListResponse:
       type: object
       required: [items]
@@ -3719,7 +3725,7 @@ paths:
     get:
       tags: [Agents]
       summary: List agent sessions
-      description: List agent.session documents for a space (newest updatedAt first).
+      description: List agent.session documents for a space (newest updatedAt first). Closed sessions excluded unless includeClosed=1.
       parameters:
         - in: query
           name: spaceId
@@ -3727,6 +3733,10 @@ paths:
         - in: query
           name: limit
           schema: { type: integer, default: 50 }
+        - in: query
+          name: includeClosed
+          schema: { type: string }
+          description: Set to 1/true to include status=closed
       responses:
         "200":
           description: ok
@@ -3763,6 +3773,41 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AgentSessionView" }
+    patch:
+      tags: [Agents]
+      summary: Patch agent session (rename title)
+      description: Partial update; currently supports title.
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentSessionPatchRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
+    delete:
+      tags: [Agents]
+      summary: Soft-close agent session
+      description: Sets status=closed. List excludes closed by default.
+      parameters:
+        - in: path
+          name: sessionId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionView" }
   /api/v1/agents/sessions/{sessionId}/turns:
     post:
       tags: [Agents]
@@ -3787,7 +3832,7 @@ paths:
     post:
       tags: [Agents]
       summary: Apply thin session intent
-      description: prompt|approve|cancel|reject. Approve without an approvable gate fails closed (409).
+      description: prompt|approve|cancel|stop|reject. stop is an alias of cancel. Approve without an approvable gate fails closed (409).
       parameters:
         - in: path
           name: sessionId

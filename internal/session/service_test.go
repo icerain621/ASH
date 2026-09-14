@@ -206,7 +206,7 @@ func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
 		t.Fatalf("blank session should have empty runId: %+v", blank)
 	}
 
-	listed, err := svc.List("local", 50)
+	listed, err := svc.List("local", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -266,7 +266,7 @@ func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
 	if bound.RunID != run.ID {
 		t.Fatalf("bound=%+v", bound)
 	}
-	listed, err = svc.List("local", 50)
+	listed, err = svc.List("local", 50, false)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,5 +276,102 @@ func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
 	}
 	if !ids[blank.ID] || !ids[bound.ID] {
 		t.Fatalf("list ids=%v want blank+bound", ids)
+	}
+}
+
+func TestPromptTurnAutoTitle(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blank.Title != "" {
+		t.Fatalf("blank title=%q want empty", blank.Title)
+	}
+	long := "一二三四五六七八九十" + "一二三四五六七八九十" + "一二三四五六七八九十" + "一二三四五六七八九十" + "尾部"
+	view, _, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: long + "\nsecond line"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.Title == "" {
+		t.Fatal("expected auto title from first prompt line")
+	}
+	runes := []rune(view.Title)
+	if len(runes) > 48 {
+		t.Fatalf("title runes=%d want <=48: %q", len(runes), view.Title)
+	}
+	if strings.Contains(view.Title, "\n") {
+		t.Fatalf("title should be first line only: %q", view.Title)
+	}
+}
+
+func TestUpdateTitleAndCloseListFilter(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+
+	view, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	title := "My session"
+	patched, err := svc.Update(view.ID, PatchRequest{Title: &title})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if patched.Title != title {
+		t.Fatalf("patched=%+v", patched)
+	}
+
+	closed, err := svc.Close(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if closed.Status != StatusClosed {
+		t.Fatalf("status=%q", closed.Status)
+	}
+
+	active, err := svc.List("local", 50, false)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range active {
+		if item.ID == view.ID {
+			t.Fatalf("closed session should be excluded by default: %+v", active)
+		}
+	}
+	all, err := svc.List("local", 50, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range all {
+		if item.ID == view.ID {
+			found = true
+			if item.Status != StatusClosed || item.Title != title {
+				t.Fatalf("item=%+v", item)
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("includeClosed list=%+v want %s", all, view.ID)
+	}
+
+	_, _, err = svc.PromptTurn(view.ID, TurnRequest{Prompt: "nope"})
+	if err == nil {
+		t.Fatal("closed session must reject turns")
+	}
+}
+
+func TestTruncateTitleRunes(t *testing.T) {
+	got := truncateTitle("hello\nworld", 48)
+	if got != "hello" {
+		t.Fatalf("got=%q", got)
+	}
+	s := strings.Repeat("あ", 60)
+	got = truncateTitle(s, 48)
+	if len([]rune(got)) != 48 {
+		t.Fatalf("len=%d got=%q", len([]rune(got)), got)
 	}
 }

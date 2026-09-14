@@ -108,6 +108,14 @@ func TestIntent_promptApproveCancel(t *testing.T) {
 	if rc.cancelCalls != 1 {
 		t.Fatalf("cancelCalls=%d", rc.cancelCalls)
 	}
+
+	_, err = svc.Intent(view.ID, session.IntentRequest{Action: "stop", ActorID: "actor1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rc.cancelCalls != 2 {
+		t.Fatalf("stop alias cancelCalls=%d want 2", rc.cancelCalls)
+	}
 }
 
 func TestIntent_approveFailClosedWithoutGate(t *testing.T) {

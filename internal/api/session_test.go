@@ -198,3 +198,117 @@ func TestAgentSessionAPIListBlankAndEvents(t *testing.T) {
 		t.Fatalf("payload=%v", payload)
 	}
 }
+
+func TestAgentSessionAPIPatchCloseAndStopAlias(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_api_sess_close", TraceID: "trace_api_sess_close",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	createW := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions",
+		bytes.NewReader([]byte(`{"runId":"run_api_sess_close"}`)))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createW.Code, createW.Body.String())
+	}
+	var sess struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createW.Body.Bytes(), &sess); err != nil {
+		t.Fatal(err)
+	}
+
+	patchW := httptest.NewRecorder()
+	patchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/agents/sessions/"+sess.ID,
+		bytes.NewReader([]byte(`{"title":"Renamed chat"}`)))
+	patchReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(patchW, patchReq)
+	if patchW.Code != http.StatusOK {
+		t.Fatalf("patch status=%d body=%s", patchW.Code, patchW.Body.String())
+	}
+	var patched struct {
+		Title string `json:"title"`
+	}
+	if err := json.Unmarshal(patchW.Body.Bytes(), &patched); err != nil {
+		t.Fatal(err)
+	}
+	if patched.Title != "Renamed chat" {
+		t.Fatalf("patched=%+v", patched)
+	}
+
+	stopW := httptest.NewRecorder()
+	stopReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/actions",
+		bytes.NewReader([]byte(`{"action":"stop"}`)))
+	stopReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(stopW, stopReq)
+	if stopW.Code != http.StatusOK {
+		t.Fatalf("stop status=%d body=%s", stopW.Code, stopW.Body.String())
+	}
+
+	closeW := httptest.NewRecorder()
+	closeReq := httptest.NewRequest(http.MethodDelete, "/api/v1/agents/sessions/"+sess.ID, nil)
+	r.ServeHTTP(closeW, closeReq)
+	if closeW.Code != http.StatusOK {
+		t.Fatalf("close status=%d body=%s", closeW.Code, closeW.Body.String())
+	}
+	var closed struct {
+		Status string `json:"status"`
+		Title  string `json:"title"`
+	}
+	if err := json.Unmarshal(closeW.Body.Bytes(), &closed); err != nil {
+		t.Fatal(err)
+	}
+	if closed.Status != "closed" || closed.Title != "Renamed chat" {
+		t.Fatalf("closed=%+v", closed)
+	}
+
+	listW := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions?limit=50", nil)
+	r.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list status=%d", listW.Code)
+	}
+	var listResp struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(listW.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range listResp.Items {
+		if item.ID == sess.ID {
+			t.Fatalf("closed session visible without includeClosed")
+		}
+	}
+
+	inclW := httptest.NewRecorder()
+	inclReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions?includeClosed=1", nil)
+	r.ServeHTTP(inclW, inclReq)
+	if inclW.Code != http.StatusOK {
+		t.Fatalf("includeClosed status=%d", inclW.Code)
+	}
+	if err := json.Unmarshal(inclW.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range listResp.Items {
+		if item.ID == sess.ID {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("includeClosed list missing %s", sess.ID)
+	}
+}

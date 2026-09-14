@@ -28,6 +28,7 @@ type View struct {
 	ID               string         `json:"id"`
 	SpaceID          string         `json:"spaceId"`
 	Status           string         `json:"status"`
+	Title            string         `json:"title,omitempty"`
 	Goal             string         `json:"goal,omitempty"`
 	PlanID           string         `json:"planId,omitempty"`
 	RunID            string         `json:"runId,omitempty"`
@@ -44,6 +45,13 @@ type View struct {
 	UpdatedAt        int64          `json:"updatedAt"`
 	Meta             map[string]any `json:"meta,omitempty"`
 }
+
+// PatchRequest updates mutable session fields (title).
+type PatchRequest struct {
+	Title *string `json:"title"`
+}
+
+const maxTitleRunes = 48
 
 type Turn struct {
 	ID        string `json:"id"`
@@ -156,6 +164,9 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 			return nil, fmt.Errorf("goal service is not configured")
 		}
 		view.Goal = goalText
+		if view.Title == "" {
+			view.Title = truncateTitle(goalText, maxTitleRunes)
+		}
 		plan, err := goalSvc.FromGoal(goal.FromGoalRequest{
 			Goal: goalText, RepoRoot: firstNonEmpty(view.RepoRoot, "."),
 			SpaceID: space, ActorRole: firstNonEmpty(req.ActorRole, "maintainer"),
@@ -200,7 +211,8 @@ func (s *Service) Get(sessionID string) (*View, error) {
 }
 
 // List returns agent sessions for a space, newest UpdatedAt/CreatedAt first.
-func (s *Service) List(spaceID string, limit int) ([]View, error) {
+// By default closed sessions are excluded; pass includeClosed=true to include them.
+func (s *Service) List(spaceID string, limit int, includeClosed bool) ([]View, error) {
 	spaceID = firstNonEmpty(strings.TrimSpace(spaceID), "local")
 	if limit <= 0 {
 		limit = 50
@@ -217,6 +229,9 @@ func (s *Service) List(spaceID string, limit int) ([]View, error) {
 	for _, row := range rows {
 		view, err := decodeView(row)
 		if err != nil {
+			continue
+		}
+		if !includeClosed && view.Status == StatusClosed {
 			continue
 		}
 		view.StreamURL = streamURL(view.RunID)
@@ -267,6 +282,9 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	}
 	view.Turns = append(view.Turns, turn)
 	view.UpdatedAt = turn.CreatedAt
+	if view.Title == "" {
+		view.Title = truncateTitle(prompt, maxTitleRunes)
+	}
 
 	acpPayload := s.forwardTurnACP(view, turn)
 
@@ -285,6 +303,42 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	}
 	view.StreamURL = streamURL(view.RunID)
 	return view, &turn, nil
+}
+
+// Update applies a partial patch (currently title only).
+func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
+	view, err := s.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if req.Title != nil {
+		view.Title = truncateTitle(strings.TrimSpace(*req.Title), maxTitleRunes)
+	}
+	view.UpdatedAt = time.Now().UTC().Unix()
+	if err := s.save(view); err != nil {
+		return nil, err
+	}
+	view.StreamURL = streamURL(view.RunID)
+	return view, nil
+}
+
+// Close soft-closes a session (status=closed). Turns are rejected afterwards.
+func (s *Service) Close(sessionID string) (*View, error) {
+	view, err := s.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if view.Status == StatusClosed {
+		view.StreamURL = streamURL(view.RunID)
+		return view, nil
+	}
+	view.Status = StatusClosed
+	view.UpdatedAt = time.Now().UTC().Unix()
+	if err := s.save(view); err != nil {
+		return nil, err
+	}
+	view.StreamURL = streamURL(view.RunID)
+	return view, nil
 }
 
 // ListEvents returns recent run events for the session's bound run.
@@ -424,4 +478,23 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+// truncateTitle takes the first line and caps length by Unicode runes.
+func truncateTitle(text string, maxRunes int) string {
+	text = strings.TrimSpace(text)
+	if text == "" {
+		return ""
+	}
+	if i := strings.IndexByte(text, '\n'); i >= 0 {
+		text = strings.TrimSpace(text[:i])
+	}
+	if maxRunes <= 0 {
+		return text
+	}
+	runes := []rune(text)
+	if len(runes) <= maxRunes {
+		return string(runes)
+	}
+	return string(runes[:maxRunes])
 }

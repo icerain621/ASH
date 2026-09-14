@@ -53,7 +53,7 @@ func (s *Service) Intent(sessionID string, req IntentRequest) (*View, error) {
 		return view, err
 	case IntentApprove, IntentReject:
 		return s.intentApprove(sessionID, req, action)
-	case IntentCancel:
+	case IntentCancel, "stop": // stop is a UX alias of cancel
 		return s.intentCancel(sessionID, req)
 	default:
 		return nil, fmt.Errorf("%w: unknown action %q", ErrIntentRejected, req.Action)

@@ -159,6 +159,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/sessions", h.createAgentSession)
 		v1.GET("/agents/sessions", h.listAgentSessions)
 		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
+		v1.PATCH("/agents/sessions/:sessionId", h.patchAgentSession)
+		v1.DELETE("/agents/sessions/:sessionId", h.closeAgentSession)
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
 		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)
 		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)

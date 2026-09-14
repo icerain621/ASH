@@ -126,7 +126,7 @@ const docTemplate = `{
         },
         "/api/v1/agents/sessions": {
             "get": {
-                "description": "List agent.session audit documents for a space, newest updatedAt first.",
+                "description": "List agent.session audit documents for a space, newest updatedAt first. Closed sessions are excluded unless includeClosed=1.",
                 "produces": [
                     "application/json"
                 ],
@@ -146,6 +146,12 @@ const docTemplate = `{
                         "default": 50,
                         "description": "max items",
                         "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "set to 1/true to include status=closed",
+                        "name": "includeClosed",
                         "in": "query"
                     }
                 ],
@@ -247,11 +253,42 @@ const docTemplate = `{
                         }
                     }
                 }
-            }
-        },
-        "/api/v1/agents/sessions/{sessionId}/actions": {
-            "post": {
-                "description": "Fail-closed: approve without an approvable run gate returns 409.",
+            },
+            "delete": {
+                "description": "Sets status=closed (soft delete). List excludes closed by default.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Soft-close agent session",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "session id",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.View"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
+            "patch": {
+                "description": "Partial update; currently supports { \"title\": \"...\" }. Empty title clears auto-title.",
                 "consumes": [
                     "application/json"
                 ],
@@ -261,7 +298,60 @@ const docTemplate = `{
                 "tags": [
                     "agents"
                 ],
-                "summary": "Apply a thin session intent (prompt|approve|cancel|reject)",
+                "summary": "Patch agent session (rename title)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "session id",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.PatchRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.View"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agents/sessions/{sessionId}/actions": {
+            "post": {
+                "description": "Fail-closed: approve without an approvable run gate returns 409. action \"stop\" is an alias of \"cancel\".",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Apply a thin session intent (prompt|approve|cancel|stop|reject)",
                 "parameters": [
                     {
                         "type": "string",
@@ -12546,6 +12636,14 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_session.PatchRequest": {
+            "type": "object",
+            "properties": {
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_session.Turn": {
             "type": "object",
             "properties": {
@@ -12618,6 +12716,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "streamUrl": {
+                    "type": "string"
+                },
+                "title": {
                     "type": "string"
                 },
                 "traceId": {

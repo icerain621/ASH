@@ -187,6 +187,8 @@ var Catalog = map[string]Entry{
 	"SESSION_LIST_FAILED":      {Domain: "agents", Summary: "Failed to list agent sessions"},
 	"SESSION_NOT_FOUND":        {Domain: "agents", Summary: "Agent session id not found"},
 	"SESSION_TURN_FAILED":      {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
+	"SESSION_UPDATE_FAILED":    {Domain: "agents", Summary: "Failed to patch agent session"},
+	"SESSION_CLOSE_FAILED":     {Domain: "agents", Summary: "Failed to soft-close agent session"},
 	"SESSION_INTENT_FAILED":    {Domain: "agents", Summary: "Failed to apply thin session intent"},
 	"SESSION_INTENT_REJECTED":  {Domain: "agents", Summary: "Session intent rejected (fail-closed)"},
 	"INTERACTION_NOT_FOUND":    {Domain: "interactions", Summary: "Interaction session/thread not found for run"},

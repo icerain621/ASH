@@ -13,11 +13,12 @@ import (
 
 // ListAgentSessions godoc
 // @Summary List agent sessions
-// @Description List agent.session audit documents for a space, newest updatedAt first.
+// @Description List agent.session audit documents for a space, newest updatedAt first. Closed sessions are excluded unless includeClosed=1.
 // @Tags agents
 // @Produce json
 // @Param spaceId query string false "space id (default: current space)"
 // @Param limit query int false "max items" default(50)
+// @Param includeClosed query string false "set to 1/true to include status=closed"
 // @Success 200 {object} session.ListResponse
 // @Failure 403 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
@@ -28,7 +29,8 @@ func (h *Handler) listAgentSessions(c *gin.Context) {
 		return
 	}
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
-	items, err := h.sessionFor(c).List(spaceID, limit)
+	includeClosed := queryTruthy(c.Query("includeClosed"))
+	items, err := h.sessionFor(c).List(spaceID, limit, includeClosed)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("SESSION_LIST_FAILED", err.Error()))
 		return
@@ -102,6 +104,78 @@ func (h *Handler) getAgentSession(c *gin.Context) {
 	c.JSON(http.StatusOK, view)
 }
 
+// PatchAgentSession godoc
+// @Summary Patch agent session (rename title)
+// @Description Partial update; currently supports { "title": "..." }. Empty title clears auto-title.
+// @Tags agents
+// @Accept json
+// @Produce json
+// @Param sessionId path string true "session id"
+// @Param body body session.PatchRequest true "patch"
+// @Success 200 {object} session.View
+// @Failure 400 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agents/sessions/{sessionId} [patch]
+func (h *Handler) patchAgentSession(c *gin.Context) {
+	var req session.PatchRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	view, err := h.sessionFor(c).Get(c.Param("sessionId"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("SESSION_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, view.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permRunCreate, view.SpaceID) {
+		return
+	}
+	updated, err := h.sessionFor(c).Update(c.Param("sessionId"), req)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("SESSION_UPDATE_FAILED", err.Error()))
+		return
+	}
+	_ = h.dbFor(c).Create(auditRow(updated.SpaceID, currentActor(c), "agent.session_updated", map[string]any{
+		"sessionId": updated.ID, "title": updated.Title, "runId": updated.RunID,
+	})).Error
+	c.JSON(http.StatusOK, updated)
+}
+
+// CloseAgentSession godoc
+// @Summary Soft-close agent session
+// @Description Sets status=closed (soft delete). List excludes closed by default.
+// @Tags agents
+// @Produce json
+// @Param sessionId path string true "session id"
+// @Success 200 {object} session.View
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agents/sessions/{sessionId} [delete]
+func (h *Handler) closeAgentSession(c *gin.Context) {
+	view, err := h.sessionFor(c).Get(c.Param("sessionId"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("SESSION_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, view.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permRunCreate, view.SpaceID) {
+		return
+	}
+	closed, err := h.sessionFor(c).Close(c.Param("sessionId"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("SESSION_CLOSE_FAILED", err.Error()))
+		return
+	}
+	_ = h.dbFor(c).Create(auditRow(closed.SpaceID, currentActor(c), "agent.session_closed", map[string]any{
+		"sessionId": closed.ID, "runId": closed.RunID, "status": closed.Status,
+	})).Error
+	c.JSON(http.StatusOK, closed)
+}
+
 // PromptAgentSessionTurn godoc
 // @Summary Submit a turn.prompt to a session
 // @Tags agents
@@ -138,8 +212,8 @@ func (h *Handler) promptAgentSessionTurn(c *gin.Context) {
 }
 
 // AgentSessionIntent godoc
-// @Summary Apply a thin session intent (prompt|approve|cancel|reject)
-// @Description Fail-closed: approve without an approvable run gate returns 409.
+// @Summary Apply a thin session intent (prompt|approve|cancel|stop|reject)
+// @Description Fail-closed: approve without an approvable run gate returns 409. action "stop" is an alias of "cancel".
 // @Tags agents
 // @Accept json
 // @Produce json
@@ -209,4 +283,13 @@ func (h *Handler) listAgentSessionEvents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+func queryTruthy(v string) bool {
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		return true
+	default:
+		return false
+	}
 }
