@@ -124,6 +124,25 @@ textarea {
   background: rgba(15, 159, 110, 0.08);
 }
 
+.review-pillar-nav {
+  margin: 0 0 1rem;
+  width: fit-content;
+  max-width: 100%;
+}
+
+button.work-mode-btn {
+  appearance: none;
+  background: transparent;
+  border: none;
+  border-right: 1px solid var(--border);
+  cursor: pointer;
+  font: inherit;
+}
+
+button.work-mode-btn:last-child {
+  border-right: none;
+}
+
 .header-actions {
   margin-left: auto;
   display: inline-flex;
