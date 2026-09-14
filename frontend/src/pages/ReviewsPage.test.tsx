@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReviewsPage } from "./ReviewsPage";
 import { decideReview, listReviewsQueue, assignReview, createScoreAppeal } from "@/modules/reviews/api/reviews.api";
@@ -54,6 +55,8 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
 }));
 
 vi.mock("@/modules/registry/api/registry.api", () => ({
+  listAgentAssets: vi.fn().mockResolvedValue({ items: [] }),
+  listMemoryAssets: vi.fn().mockResolvedValue({ items: [] }),
   getSpacePolicy: vi.fn().mockResolvedValue({
     pack: { spaceId: "local", citationMode: "optional", multiSign: true, reviewSlaHours: 48 },
     effective: {
@@ -65,6 +68,29 @@ vi.mock("@/modules/registry/api/registry.api", () => ({
       sources: ["kind:team"],
     },
   }),
+  putSpacePolicy: vi.fn(),
+  createAgentAsset: vi.fn(),
+  createMemoryAsset: vi.fn(),
+  patchAgentAssetStatus: vi.fn(),
+  patchMemoryAssetStatus: vi.fn(),
+}));
+
+vi.mock("@/modules/metrics/api/metrics.api", () => ({
+  getMetricsOverview: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    from: "",
+    to: "",
+    period: "day",
+    summary: [{ id: "KPI-01", label: "交付成功率", value: 0.9, unit: "ratio", status: "ok" }],
+    trends: [],
+    breakdowns: [],
+    dataQuality: [],
+    generatedAt: "",
+  }),
+}));
+
+vi.mock("@/modules/closure/api/closure.api", () => ({
+  getPrometheusText: vi.fn().mockResolvedValue(""),
 }));
 
 vi.mock("@/modules/platform/api/platform.api", () => ({
@@ -100,6 +126,14 @@ vi.mock("@/services/http/client", () => ({
   getCurrentSpaceId: () => "local",
 }));
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, ...props }: { children: ReactNode; to?: string; className?: string }) => (
+    <a href={props.to ?? "#"} className={props.className} data-to={props.to} data-testid={(props as { "data-testid"?: string })["data-testid"]}>
+      {children}
+    </a>
+  ),
+}));
+
 function renderReviews() {
   const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
@@ -118,6 +152,44 @@ describe("ReviewsPage", () => {
       role: "reviewer",
       permissions: ["reviews:assign", "memory:review"],
     });
+  });
+
+  it("renders pillar sub-nav and defaults to queue workbench", async () => {
+    renderReviews();
+    expect(await screen.findByTestId("reviews-page")).toBeTruthy();
+    expect(screen.getByTestId("review-pillar-nav")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-queue")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("review-nav-registry")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-monitor")).toBeTruthy();
+    expect(screen.getByTestId("review-nav-orchestration")).toBeTruthy();
+    expect(screen.getByTestId("reviews-workbench")).toBeTruthy();
+    expect(screen.queryByTestId("review-registry-section")).toBeNull();
+  });
+
+  it("switches to registry, monitor, and orchestration panels", async () => {
+    renderReviews();
+    expect(await screen.findByTestId("review-pillar-nav")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("review-nav-registry"));
+    expect(await screen.findByTestId("review-registry-section")).toBeTruthy();
+    expect(await screen.findByTestId("registry-assets-panel")).toBeTruthy();
+    expect(await screen.findByTestId("effective-policy-summary")).toHaveTextContent("生效策略");
+    expect(screen.getByTestId("review-link-space")).toHaveAttribute("data-to", "/space");
+    expect(screen.queryByTestId("reviews-workbench")).toBeNull();
+
+    fireEvent.click(screen.getByTestId("review-nav-monitor"));
+    expect(await screen.findByTestId("review-monitor-section")).toBeTruthy();
+    expect(screen.getByTestId("review-link-metrics")).toHaveAttribute("data-to", "/metrics");
+    expect(screen.getByTestId("review-link-observability")).toHaveAttribute("data-to", "/observability");
+    expect(await screen.findByTestId("interaction-metrics-summary")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("review-nav-orchestration"));
+    expect(await screen.findByTestId("review-orchestration-section")).toBeTruthy();
+    expect(screen.getByTestId("review-link-runs")).toHaveAttribute("data-to", "/runs");
+    expect(screen.getByTestId("review-link-automation")).toHaveAttribute("data-to", "/automation");
+
+    fireEvent.click(screen.getByTestId("review-nav-queue"));
+    expect(await screen.findByTestId("reviews-workbench")).toBeTruthy();
   });
 
   it("renders workbench columns and submits rubric", async () => {
