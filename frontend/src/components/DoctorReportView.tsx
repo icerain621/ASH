@@ -31,6 +31,7 @@ const CASE_LABELS: Record<string, string> = {
   "TR3-10": "Readyz 健康契约",
   "TR3-11": "交互 Seal/Replay",
   "TR3-12": "Space.Kind / Registry",
+  "TR3-13": "PolicyPack / Scoring",
   "M2-01": "权限矩阵",
   "M2-02": "场景策略更新",
   "M2-03": "运行期策略拒绝",

@@ -26,7 +26,9 @@ import (
 	"github.com/ash-repwiki/ash/internal/registry"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/scoring"
 	"github.com/ash-repwiki/ash/internal/security"
+	"github.com/ash-repwiki/ash/internal/spacepolicy"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -123,6 +125,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3ReadyzContract())
 		rep.Results = append(rep.Results, s.tr3InteractionSealReplay())
 		rep.Results = append(rep.Results, s.tr3SpaceKindRegistry())
+		rep.Results = append(rep.Results, s.tr3PolicyPackScoring())
 	case "ALL":
 		rep.Results = append(rep.Results, s.tr0DeliveryLoop())
 		rep.Results = append(rep.Results, s.tr0EventStream())
@@ -161,6 +164,7 @@ func (s *Service) RunSuite(suite string) (*Report, error) {
 		rep.Results = append(rep.Results, s.tr3ReadyzContract())
 		rep.Results = append(rep.Results, s.tr3InteractionSealReplay())
 		rep.Results = append(rep.Results, s.tr3SpaceKindRegistry())
+		rep.Results = append(rep.Results, s.tr3PolicyPackScoring())
 	default:
 		return nil, fmt.Errorf("unsupported suite %q", suite)
 	}
@@ -2282,6 +2286,115 @@ func (s *Service) tr3SpaceKindRegistry() CaseResult {
 		Evidence{Kind: "spaceKind", Ref: loaded.Kind},
 		Evidence{Kind: "registryAgents", Ref: fmt.Sprintf("%d", len(agents.Items))},
 		Evidence{Kind: "registryMemory", Ref: fmt.Sprintf("%d", len(mems.Items))},
+	)
+	res.Status = "pass"
+	return res
+}
+
+func (s *Service) tr3PolicyPackScoring() CaseResult {
+	res := CaseResult{ID: "TR3-13", Status: "fail"}
+	db := s.runs.DB()
+	now := time.Now().UTC()
+	spaceID := "sp_tr3_13_" + fmt.Sprintf("%d", now.UnixNano())
+	if err := db.Create(&store.Space{
+		ID: spaceID, OrgID: "org_local", Name: "TR3-13", Kind: "team",
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+
+	pol := spacepolicy.NewService(db)
+	softFalse := false
+	softSLA := 200
+	if _, err := pol.PutPack(spaceID, spacepolicy.PutPackRequest{
+		CitationMode: spacepolicy.CitationOptional, MultiSign: &softFalse, ReviewSLAHours: &softSLA,
+	}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	softEff, err := pol.EffectivePolicy(spaceID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if softEff.CitationMode != spacepolicy.CitationRequired {
+		res.Message = fmt.Sprintf("soft pack citation=%s want required", softEff.CitationMode)
+		return res
+	}
+	if !softEff.MultiSign {
+		res.Message = "soft pack must not weaken multiSign"
+		return res
+	}
+	if softEff.ReviewSLAHours <= 0 || softEff.ReviewSLAHours > 72 {
+		res.Message = fmt.Sprintf("soft pack sla=%d want <=72", softEff.ReviewSLAHours)
+		return res
+	}
+
+	strictTrue := true
+	strictSLA := 24
+	if _, err := pol.PutPack(spaceID, spacepolicy.PutPackRequest{
+		CitationMode: spacepolicy.CitationStrict, MultiSign: &strictTrue, ReviewSLAHours: &strictSLA,
+	}); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	strictEff, err := pol.EffectivePolicy(spaceID)
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if strictEff.CitationMode != spacepolicy.CitationStrict || !strictEff.MultiSign || strictEff.ReviewSLAHours != 24 {
+		res.Message = fmt.Sprintf("strict pack effective=%+v", strictEff)
+		return res
+	}
+
+	schema := scoring.DefaultRubricSchema()
+	if schema.ID != "ash.review.v1" || len(schema.Dimensions) != 4 {
+		res.Message = fmt.Sprintf("rubric schema id=%s dims=%d", schema.ID, len(schema.Dimensions))
+		return res
+	}
+	bad := scoring.ReviewRubric{Correctness: 0, Safety: 5, Citable: 3, Efficiency: 4}
+	if err := bad.Validate(); err == nil {
+		res.Message = "Validate should reject out-of-range rubric"
+		return res
+	}
+	rubric := scoring.ReviewRubric{Correctness: 4, Safety: 5, Citable: 3, Efficiency: 4}
+	if err := rubric.Validate(); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	wantComposite := 4.0
+	if got := rubric.Composite(); got != wantComposite {
+		res.Message = fmt.Sprintf("composite=%v want %v", got, wantComposite)
+		return res
+	}
+
+	scoreSvc := scoring.NewService(db)
+	targetID := "probe_tr3_13_" + fmt.Sprintf("%d", now.UnixNano())
+	ev, err := scoreSvc.RecordScore(spaceID, "memory", targetID, "", rubric, "doctor", "TR3-13")
+	if err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var loaded store.ScoreEvent
+	if err := db.First(&loaded, "id = ?", ev.ID).Error; err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	if loaded.Composite != wantComposite ||
+		loaded.Correctness != rubric.Correctness || loaded.Safety != rubric.Safety ||
+		loaded.Citable != rubric.Citable || loaded.Efficiency != rubric.Efficiency {
+		res.Message = fmt.Sprintf("score reload mismatch composite=%v dims=%d/%d/%d/%d",
+			loaded.Composite, loaded.Correctness, loaded.Safety, loaded.Citable, loaded.Efficiency)
+		return res
+	}
+
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "effectivePolicy", Ref: fmt.Sprintf("%s;multi=%v;sla=%d", strictEff.CitationMode, strictEff.MultiSign, strictEff.ReviewSLAHours)},
+		Evidence{Kind: "policyMerge", Ref: fmt.Sprintf("softKeepRequired;strictSLA=%d", strictEff.ReviewSLAHours)},
+		Evidence{Kind: "rubricSchema", Ref: schema.ID},
+		Evidence{Kind: "scoreEvent", Ref: loaded.ID},
 	)
 	res.Status = "pass"
 	return res

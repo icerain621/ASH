@@ -37,6 +37,7 @@ const TR3_CHECKS = [
   { id: "TR3-10", title: "Readyz 健康契约", hint: "/readyz HealthResponse 含 RLS/SQL 漂移字段；与 swag 一致" },
   { id: "TR3-11", title: "交互 Seal/Replay", hint: "Interaction Thread seal→replay digest 一致；waterfall 挂 session/thread/memoryIds；derive seal/memory_link" },
   { id: "TR3-12", title: "Space.Kind / Registry", hint: "Space.Kind 存在；Agent/Memory 资产列表可空" },
+  { id: "TR3-13", title: "PolicyPack / Scoring", hint: "PolicyPack 合并不放宽；rubric 四维校验与 score round-trip" },
 ] as const;
 
 export function ScalePage() {

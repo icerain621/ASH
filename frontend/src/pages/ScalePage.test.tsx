@@ -85,6 +85,7 @@ describe("ScalePage", () => {
       expect(screen.getByText("TR3-10")).toBeInTheDocument();
       expect(screen.getByText("TR3-11")).toBeInTheDocument();
       expect(screen.getByText("TR3-12")).toBeInTheDocument();
+      expect(screen.getByText("TR3-13")).toBeInTheDocument();
     });
   });
 

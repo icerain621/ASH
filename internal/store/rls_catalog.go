@@ -103,8 +103,24 @@ func VerifyRLSMigrationSQL() error {
 	if err != nil {
 		return err
 	}
-	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24 + "\n" + raw25 + "\n" + raw26 + "\n" + raw28 + "\n" + raw29 + "\n" + raw31
-	tenantSQL := raw13 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24 + "\n" + raw25 + "\n" + raw26 + "\n" + raw28 + "\n" + raw29 + "\n" + raw31
+	raw34, err := sqlmigrations.ReadPostgresUpSQL("000034_interaction_threads.up.sql")
+	if err != nil {
+		return err
+	}
+	raw36, err := sqlmigrations.ReadPostgresUpSQL("000036_registry_assets.up.sql")
+	if err != nil {
+		return err
+	}
+	raw37, err := sqlmigrations.ReadPostgresUpSQL("000037_space_policy_packs.up.sql")
+	if err != nil {
+		return err
+	}
+	raw38, err := sqlmigrations.ReadPostgresUpSQL("000038_score_events.up.sql")
+	if err != nil {
+		return err
+	}
+	combined := raw13 + "\n" + raw18 + "\n" + raw19 + "\n" + raw20 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24 + "\n" + raw25 + "\n" + raw26 + "\n" + raw28 + "\n" + raw29 + "\n" + raw31 + "\n" + raw34 + "\n" + raw36 + "\n" + raw37 + "\n" + raw38
+	tenantSQL := raw13 + "\n" + raw21 + "\n" + raw23 + "\n" + raw24 + "\n" + raw25 + "\n" + raw26 + "\n" + raw28 + "\n" + raw29 + "\n" + raw31 + "\n" + raw34 + "\n" + raw36 + "\n" + raw37 + "\n" + raw38
 
 	for _, tbl := range PostgresRLSTables() {
 		needleParen := "('" + tbl.Table + "'"

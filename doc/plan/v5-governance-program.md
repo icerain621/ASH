@@ -63,9 +63,9 @@
 
 ## 5. 下一步
 
-1. **立即**：按实现计划 **GV01–03（P0 薄交互）** 开工  
-2. 基线：`internal/session` + `/agents/sessions*` + Run SSE  
-3. P1 起再上 Thread Timeline / MemoryLink；P2 再上 Registry/Workbench  
+1. **TR3-13 已落地**（PolicyPack merge + scoring/rubric 一致性）
+2. **下一步**：`score_appeal` 或 FE 文案打磨
+3. 门禁：`make v5-signoff`（含 Doctor TR3）
 
 ## 6. 修订记录
 
@@ -81,3 +81,4 @@
 | 2026-09-13 | **GV04**：interaction_threads · FoldThread · MemoryLink · by-run/threads API |
 | 2026-09-13 | **P2 + Task 11**：Registry/Policy/Rubric/Workbench · multi_sign · TR3-12 · `make v5-signoff` |
 | 2026-09-14 | **FE-16**：Mobile Reviews 薄批准面同步徽章/逾期筛选/rubric/分配闸门 |
+| 2026-09-14 | **BE-46 / TR3-13**：PolicyPack merge + scoring/rubric 一致性探针落地；下一步 score_appeal 或 FE 文案打磨 |
