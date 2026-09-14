@@ -2,7 +2,7 @@
 
 > Status: **living backlog**（2026-09-15）  
 > Spec: [`2026-09-15-agent-chat-dsh-parity-design.md`](./2026-09-15-agent-chat-dsh-parity-design.md)  
-> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流 · P3 Workspace `f711d93` / FE `f4ace5b`
+> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流 · P3 Workspace `f711d93` / FE `7c29e5f`
 > 原则：不引入 Cordis / 不嵌入 `dsh web`
 
 本文记录 **相对 DSH Agent Chat 仍缺的后端能力**，供续推复刻时排期；FE 可先用现有 API 做近似体验的项另标。
@@ -68,4 +68,4 @@
 | 2026-09-15 | 初稿：P0–P5 缺口与建议形状 |
 | 2026-09-15 | 落地 P0 FE（SSE/工具卡/Stop）+ P1 title/PATCH/DELETE/`stop` 别名；P2–P5 仍开 |
 | 2026-09-15 | 落地 P2：`assistant.delta`/`assistant.message` + 空白会话 echo stub；真 LLM 流仍开 |
-| 2026-09-15 | 落地 P3：Agent Workspace API `f711d93` + Chat 侧栏按 Workspace 分组 `f4ace5b` |
+| 2026-09-15 | 落地 P3：Agent Workspace API `f711d93` + Chat 侧栏按 Workspace 分组 `7c29e5f` |
