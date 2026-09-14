@@ -1,0 +1,151 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import type { ComponentProps } from "react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { AgentChatShell } from "./AgentChatShell";
+
+const listAgentSessions = vi.fn();
+const createAgentSession = vi.fn();
+const listSessionEvents = vi.fn();
+const submitSessionIntent = vi.fn();
+const getAgentSession = vi.fn();
+
+vi.mock("@/modules/agent-session/api/session.api", async () => {
+  const actual = await vi.importActual<typeof import("../api/session.api")>("../api/session.api");
+  return {
+    ...actual,
+    listAgentSessions: (...args: unknown[]) => listAgentSessions(...args),
+    createAgentSession: (...args: unknown[]) => createAgentSession(...args),
+    listSessionEvents: (...args: unknown[]) => listSessionEvents(...args),
+    submitSessionIntent: (...args: unknown[]) => submitSessionIntent(...args),
+    getAgentSession: (...args: unknown[]) => getAgentSession(...args),
+  };
+});
+
+vi.mock("@/modules/interactions/api/interactions.api", () => ({
+  getInteractionByRun: vi.fn(async () => ({
+    runId: "run_1",
+    thread: { id: "th_1", spaceId: "local", runId: "run_1", kind: "main", status: "open" },
+  })),
+  getInteractionThread: vi.fn(async () => ({
+    threadId: "th_1",
+    runId: "run_1",
+    spaceId: "local",
+    nodes: [],
+    links: [],
+    digest: "thd_test",
+    headSeq: 0,
+  })),
+}));
+
+function renderShell(props: Partial<ComponentProps<typeof AgentChatShell>> = {}) {
+  const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
+    <QueryClientProvider client={qc}>
+      <AgentChatShell
+        selectedSessionId={props.selectedSessionId ?? null}
+        onSelectSession={props.onSelectSession ?? vi.fn()}
+        runStatus={props.runStatus}
+        gateReason={props.gateReason}
+        onIntentSuccess={props.onIntentSuccess}
+      />
+    </QueryClientProvider>,
+  );
+}
+
+describe("AgentChatShell", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    listAgentSessions.mockResolvedValue({
+      items: [
+        {
+          id: "sess_a",
+          spaceId: "local",
+          status: "active",
+          goal: "Ship chat",
+          runId: "run_1",
+          updatedAt: 2,
+        },
+        {
+          id: "sess_b",
+          spaceId: "local",
+          status: "active",
+          updatedAt: 1,
+        },
+      ],
+    });
+    createAgentSession.mockResolvedValue({
+      id: "sess_new",
+      spaceId: "local",
+      status: "active",
+      updatedAt: 3,
+    });
+    getAgentSession.mockResolvedValue({
+      id: "sess_a",
+      spaceId: "local",
+      status: "active",
+      runId: "run_1",
+      goal: "Ship chat",
+    });
+    listSessionEvents.mockResolvedValue({
+      sessionId: "sess_a",
+      runId: "run_1",
+      items: [
+        {
+          id: "evt_1",
+          runId: "run_1",
+          seq: 1,
+          ts: 1,
+          type: "session.turn",
+          severity: "info",
+          visibility: "model_visible",
+          payload: { prompt: "hello" },
+        },
+      ],
+    });
+    submitSessionIntent.mockResolvedValue({
+      id: "sess_a",
+      spaceId: "local",
+      status: "active",
+      runId: "run_1",
+    });
+  });
+
+  it("renders three-column shell with session list", async () => {
+    renderShell();
+    expect(await screen.findByTestId("agent-chat-shell")).toBeTruthy();
+    expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(await screen.findByText("Ship chat")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-details")).toBeTruthy();
+  });
+
+  it("creates a blank session on New without requiring goal", async () => {
+    const onSelectSession = vi.fn();
+    renderShell({ onSelectSession });
+    fireEvent.click(await screen.findByTestId("agent-history-new"));
+    await waitFor(() => {
+      expect(createAgentSession).toHaveBeenCalledWith({});
+      expect(onSelectSession).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "sess_new" }),
+      );
+    });
+  });
+
+  it("switches Chat and Trajectory tabs", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-chat-tab-trajectory"));
+    expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-chat-tab-chat"));
+    expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
+  });
+
+  it("toggles details pane", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    const details = await screen.findByTestId("agent-chat-details");
+    expect(details).toHaveAttribute("data-open", "1");
+    fireEvent.click(screen.getByTestId("agent-chat-details-toggle"));
+    expect(details).toHaveAttribute("data-open", "0");
+  });
+});

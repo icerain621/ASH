@@ -1,5 +1,11 @@
-import { describe, expect, it } from "vitest";
-import { eventVisibility } from "./session.api";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { eventVisibility, listAgentSessions } from "./session.api";
+
+const api = vi.fn();
+
+vi.mock("@/services/http/client", () => ({
+  api: (...args: unknown[]) => api(...args),
+}));
 
 describe("eventVisibility", () => {
   it("defaults session.turn to model_visible", () => {
@@ -10,5 +16,17 @@ describe("eventVisibility", () => {
   });
   it("maps gate.waiting_approval", () => {
     expect(eventVisibility({ type: "gate.waiting_approval" })).toBe("ui_only");
+  });
+});
+
+describe("listAgentSessions", () => {
+  beforeEach(() => {
+    api.mockReset();
+    api.mockResolvedValue({ items: [] });
+  });
+
+  it("calls GET /agents/sessions with optional limit", async () => {
+    await listAgentSessions({ limit: 20 });
+    expect(api).toHaveBeenCalledWith("/agents/sessions?limit=20");
   });
 });

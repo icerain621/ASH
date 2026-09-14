@@ -12,7 +12,8 @@ import {
   type DiffComment,
   type DiffFile,
 } from "@/modules/quest/api/quest.api";
-import { AgentSessionPanel } from "@/modules/agent-session/components/AgentSessionPanel";
+import { AgentChatShell } from "@/modules/agent-session/components/AgentChatShell";
+import type { AgentSessionView } from "@/modules/agent-session/api/session.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import {
@@ -43,8 +44,6 @@ const COLUMNS: Array<{ key: string; title: string }> = [
   { key: "waiting_approval", title: "待审批" },
   { key: "finished", title: "已结束" },
 ];
-
-const HISTORY_COLUMNS = ["running", "waiting_approval", "finished", "plans"] as const;
 
 function artifactItems(data: { artifacts?: ArtifactItem[]; manifest?: { artifacts?: ArtifactItem[] } } | undefined) {
   return data?.artifacts ?? data?.manifest?.artifacts ?? [];
@@ -78,22 +77,10 @@ function gateTitle(gate: { gate: string; tool?: string }): string {
   }
 }
 
-function flattenBoardHistory(columns: Record<string, BoardItem[]> | undefined): BoardItem[] {
-  if (!columns) return [];
-  const items: BoardItem[] = [];
-  for (const key of HISTORY_COLUMNS) {
-    items.push(...(columns[key] ?? []));
-  }
-  for (const [key, list] of Object.entries(columns)) {
-    if ((HISTORY_COLUMNS as readonly string[]).includes(key)) continue;
-    items.push(...(list ?? []));
-  }
-  return items;
-}
-
 export function QuestPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
+  const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null);
   const [selectedRunId, setSelectedRunId] = useState<string | null>(null);
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [selectedFile, setSelectedFile] = useState<string>("");
@@ -256,11 +243,6 @@ export function QuestPage() {
     onError: (e: Error) => setMessage(e.message),
   });
 
-  const historyItems = useMemo(
-    () => flattenBoardHistory(boardQuery.data?.columns),
-    [boardQuery.data?.columns],
-  );
-
   const files = diffQuery.data?.files ?? [];
   const artifacts = useMemo(() => artifactItems(artifactsQuery.data), [artifactsQuery.data]);
   const gate = useMemo(() => waitingGate(timelineQuery.data?.items), [timelineQuery.data]);
@@ -287,9 +269,25 @@ export function QuestPage() {
     return map;
   }, [commentsQuery.data]);
 
+  function selectAgentSession(session: AgentSessionView | null) {
+    setSelectedSessionId(session?.id ?? null);
+    setHighlightSeq(null);
+    setSelectedFile("");
+    setArtifactAccess(null);
+    const runId = session?.runId?.trim() || null;
+    setSelectedRunId(runId);
+    if (runId) {
+      setActivePlan(null);
+      setMessage(`会话 ${shortId(session!.id)} · run ${shortId(runId)}`);
+    } else if (session) {
+      setMessage(`空白会话 ${shortId(session.id)}`);
+    }
+  }
+
   async function selectItem(item: BoardItem) {
     if (item.kind === "run" && item.runId) {
       setSelectedRunId(item.runId);
+      setSelectedSessionId(null);
       setHighlightSeq(null);
       setSelectedFile("");
       setActivePlan(null);
@@ -300,6 +298,7 @@ export function QuestPage() {
     const planId = item.planId || (item.kind === "plan" ? item.id : "");
     if (planId) {
       setSelectedRunId(null);
+      setSelectedSessionId(null);
       setHighlightSeq(null);
       setTaskBoardOpen(true);
       try {
@@ -312,13 +311,12 @@ export function QuestPage() {
     }
   }
 
-  function startNewSession() {
-    setSelectedRunId(null);
+  function openGoalCompose() {
     setActivePlan(null);
     setHighlightSeq(null);
     setArtifactAccess(null);
     setTaskBoardOpen(true);
-    setMessage("新建会话：填写目标以生成 Plan");
+    setMessage("从目标创建：填写 Goal 以生成 Plan");
     requestAnimationFrame(() => goalInputRef.current?.focus());
   }
 
@@ -392,309 +390,267 @@ export function QuestPage() {
       {message ? <p className="muted-line">{message}</p> : null}
 
       <div className="agent-home" data-testid="agent-home">
-        <aside className="agent-session-history" data-testid="agent-session-history">
-          <div className="agent-history-header">
-            <h2>历史会话</h2>
-            <button type="button" className="btn mini" onClick={startNewSession} data-testid="agent-history-new">
-              新建
-            </button>
-          </div>
-          <ul className="agent-history-list">
-            {historyItems.map((item) => {
-              const active =
-                (item.kind === "run" && item.runId && item.runId === selectedRunId) ||
-                (item.kind === "plan" && activePlan && (item.planId === activePlan.id || item.id === activePlan.id));
-              return (
-                <li key={item.id}>
+        <AgentChatShell
+          selectedSessionId={selectedSessionId}
+          onSelectSession={selectAgentSession}
+          runStatus={runStatus}
+          gateReason={gate?.reason}
+          onIntentSuccess={() => {
+            void qc.invalidateQueries({ queryKey: ["quest-run", selectedRunId] });
+            void qc.invalidateQueries({ queryKey: ["quest-timeline", selectedRunId] });
+            void qc.invalidateQueries({ queryKey: ["quest-board", spaceId] });
+            void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+          }}
+        />
+      </div>
+
+      {selectedRunId ? (
+        <div className="agent-run-ops" data-testid="agent-run-ops">
+          {runStatus === "waiting_approval" ? (
+            <div className="pane" data-testid="quest-gate-panel" style={{ marginBottom: "1rem" }}>
+              <div className="pane-title">
+                <h2>等待审批</h2>
+                <span>{gate ? gateTitle(gate) : "waiting_approval"}</span>
+              </div>
+              <p className="muted-line" data-testid="quest-gate-detail">
+                {gate?.reason || "Run 处于 waiting_approval，可批准继续或取消。"}
+                {gate?.stepId ? ` · step ${gate.stepId}` : ""}
+              </p>
+              <div className="row-actions">
+                <button
+                  type="button"
+                  className="btn mini ok"
+                  disabled={approveGateMut.isPending || fullRejected}
+                  onClick={() => approveGateMut.mutate()}
+                  data-testid="quest-gate-approve"
+                >
+                  批准并继续
+                </button>
+                <button
+                  type="button"
+                  className="btn mini err"
+                  disabled={!canCancel || cancelMut.isPending}
+                  onClick={() => cancelMut.mutate()}
+                  data-testid="quest-gate-cancel"
+                >
+                  取消 Run
+                </button>
+              </div>
+            </div>
+          ) : null}
+          <div className="split ops-split">
+            <div className="pane" data-testid="quest-run-tree">
+              <div className="pane-title">
+                <h2>Sub-run 树</h2>
+                <span>{treeQuery.data?.rootRunId ? shortId(treeQuery.data.rootRunId) : "—"}</span>
+              </div>
+              {treeQuery.isError ? <p className="error-text">加载树失败</p> : null}
+              {treeQuery.data?.tree ? (
+                <ul style={{ listStyle: "none", padding: 0 }} data-testid="quest-run-tree-list">
+                  {renderTree(treeQuery.data.tree)}
+                </ul>
+              ) : (
+                <p className="muted-line">选择 Run 后显示 spawn 树。</p>
+              )}
+            </div>
+            <div className="pane" data-testid="quest-diff-pane">
+              <div className="pane-title">
+                <h2>Diff 审查</h2>
+                <span>
+                  {shortId(selectedRunId)}
+                  {runStatus ? ` · ${runStatus}` : ""}
+                </span>
+              </div>
+              <div className="row-actions" data-testid="quest-diff-actions" style={{ marginBottom: "0.5rem" }}>
+                <button
+                  type="button"
+                  className="btn mini err"
+                  disabled={!activeFile?.path || fileRejected || fullRejected || rejectDiffMut.isPending}
+                  onClick={() =>
+                    rejectDiffMut.mutate({
+                      scope: "file",
+                      filePath: activeFile!.path,
+                      reason: `reject file ${activeFile!.path}`,
+                    })
+                  }
+                  data-testid="quest-diff-reject-file"
+                >
+                  拒绝当前文件
+                </button>
+                <button
+                  type="button"
+                  className="btn mini err"
+                  disabled={fullRejected || rejectDiffMut.isPending}
+                  onClick={() => rejectDiffMut.mutate({ scope: "all", reason: "reject full diff" })}
+                  data-testid="quest-diff-reject-all"
+                >
+                  拒绝全部 Diff
+                </button>
+                {runStatus === "waiting_approval" ? (
                   <button
                     type="button"
-                    className={active ? "agent-history-item active" : "agent-history-item"}
-                    onClick={() => void selectItem(item)}
-                    data-testid={`agent-history-item-${item.id}`}
+                    className="btn mini ok"
+                    disabled={approveGateMut.isPending || fullRejected}
+                    onClick={() => approveGateMut.mutate()}
+                    data-testid="quest-diff-approve-gate"
                   >
-                    <strong>{item.title}</strong>
-                    <span className="muted-line">
-                      {item.status}
-                      {item.kind ? ` · ${item.kind}` : ""}
-                    </span>
+                    批准并继续
                   </button>
-                </li>
-              );
-            })}
-            {!historyItems.length ? <li className="muted-line">暂无会话，可新建或从目标创建</li> : null}
-          </ul>
-        </aside>
-
-        <div className="agent-chat-column">
-          {selectedRunId ? (
-            <AgentSessionPanel
-              runId={selectedRunId}
-              runStatus={runStatus}
-              gateReason={gate?.reason}
-              onIntentSuccess={() => {
-                void qc.invalidateQueries({ queryKey: ["quest-run", selectedRunId] });
-                void qc.invalidateQueries({ queryKey: ["quest-timeline", selectedRunId] });
-                void qc.invalidateQueries({ queryKey: ["quest-board", spaceId] });
-              }}
-            />
-          ) : (
-            <div className="agent-chat-empty" data-testid="agent-chat-empty">
-              <p>选择左侧会话或从目标创建</p>
-              <button type="button" className="btn mini" onClick={startNewSession}>
-                从目标创建
-              </button>
-            </div>
-          )}
-
-          {selectedRunId ? (
-            <>
-              {runStatus === "waiting_approval" ? (
-                <div className="pane" data-testid="quest-gate-panel" style={{ marginBottom: "1rem" }}>
-                  <div className="pane-title">
-                    <h2>等待审批</h2>
-                    <span>{gate ? gateTitle(gate) : "waiting_approval"}</span>
+                ) : null}
+              </div>
+              {rejectedPaths.length ? (
+                <p className="muted-line" data-testid="quest-diff-rejected">
+                  已拒绝：{rejectedPaths.join(", ")}
+                </p>
+              ) : null}
+              {diffQuery.data?.contextRefs?.length ? (
+                <p className="muted-line">contextRefs: {diffQuery.data.contextRefs.slice(0, 8).join(", ")}</p>
+              ) : (
+                <p className="muted-line">contextRefs: （空或未写入）</p>
+              )}
+              <div className="toolbar">
+                <select
+                  value={activeFile?.path ?? ""}
+                  onChange={(e) => setSelectedFile(e.target.value)}
+                  data-testid="quest-diff-file"
+                >
+                  {files.map((f) => (
+                    <option key={f.path} value={f.path}>
+                      {f.path}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              {!files.length ? <p className="muted-line">无 diff 产物</p> : null}
+              {activeFile?.hunks.map((hunk, hi) => (
+                <div key={`${activeFile.path}-${hi}`} style={{ marginBottom: "0.75rem" }}>
+                  <pre className="code-block compact">{hunk.header}</pre>
+                  <div className="code-block" style={{ padding: 0 }}>
+                    {hunk.lines.map((ln) => {
+                      const key = `${activeFile.path}#${ln.index}`;
+                      const notes = commentsByLine.get(key) ?? [];
+                      const tone = ln.kind === "add" ? "#0a3" : ln.kind === "del" ? "#a30" : "inherit";
+                      return (
+                        <div key={ln.index}>
+                          <button
+                            type="button"
+                            style={{
+                              display: "block",
+                              width: "100%",
+                              textAlign: "left",
+                              background: "transparent",
+                              border: "none",
+                              color: tone,
+                              fontFamily: "inherit",
+                              fontSize: "12px",
+                              padding: "1px 8px",
+                              cursor: "pointer",
+                            }}
+                            onClick={() =>
+                              setAnchor({
+                                filePath: activeFile.path,
+                                lineIndex: ln.index,
+                                side: ln.kind === "del" ? "old" : "new",
+                              })
+                            }
+                            data-testid="quest-diff-line"
+                          >
+                            <span style={{ opacity: 0.5, marginRight: 8 }}>{ln.newNo ?? ln.oldNo ?? ""}</span>
+                            {ln.text || " "}
+                          </button>
+                          {notes.map((n) => (
+                            <div key={n.id} className="muted-line" style={{ paddingLeft: 24 }}>
+                              💬 {n.body}
+                            </div>
+                          ))}
+                        </div>
+                      );
+                    })}
                   </div>
-                  <p className="muted-line" data-testid="quest-gate-detail">
-                    {gate?.reason || "Run 处于 waiting_approval，可批准继续或取消。"}
-                    {gate?.stepId ? ` · step ${gate.stepId}` : ""}
-                  </p>
-                  <div className="row-actions">
-                    <button
-                      type="button"
-                      className="btn mini ok"
-                      disabled={approveGateMut.isPending || fullRejected}
-                      onClick={() => approveGateMut.mutate()}
-                      data-testid="quest-gate-approve"
-                    >
-                      批准并继续
-                    </button>
-                    <button
-                      type="button"
-                      className="btn mini err"
-                      disabled={!canCancel || cancelMut.isPending}
-                      onClick={() => cancelMut.mutate()}
-                      data-testid="quest-gate-cancel"
-                    >
-                      取消 Run
-                    </button>
-                  </div>
+                </div>
+              ))}
+              {anchor ? (
+                <div className="secret-form" data-testid="quest-comment-form">
+                  <label className="wide-field">
+                    批注 · {anchor.filePath}:{anchor.lineIndex}
+                    <textarea value={draftComment} onChange={(e) => setDraftComment(e.target.value)} rows={3} />
+                  </label>
+                  <button
+                    type="button"
+                    className="btn primary"
+                    disabled={!draftComment.trim() || commentMut.isPending}
+                    onClick={() => commentMut.mutate()}
+                  >
+                    <MessageSquarePlus size={14} /> 发表批注
+                  </button>
                 </div>
               ) : null}
-              <div className="split ops-split">
-                <div className="pane" data-testid="quest-run-tree">
-                  <div className="pane-title">
-                    <h2>Sub-run 树</h2>
-                    <span>{treeQuery.data?.rootRunId ? shortId(treeQuery.data.rootRunId) : "—"}</span>
-                  </div>
-                  {treeQuery.isError ? <p className="error-text">加载树失败</p> : null}
-                  {treeQuery.data?.tree ? (
-                    <ul style={{ listStyle: "none", padding: 0 }} data-testid="quest-run-tree-list">
-                      {renderTree(treeQuery.data.tree)}
-                    </ul>
-                  ) : (
-                    <p className="muted-line">选择 Run 后显示 spawn 树。</p>
-                  )}
-                </div>
-                <div className="pane" data-testid="quest-diff-pane">
-                  <div className="pane-title">
-                    <h2>Diff 审查</h2>
-                    <span>
-                      {shortId(selectedRunId)}
-                      {runStatus ? ` · ${runStatus}` : ""}
-                    </span>
-                  </div>
-                  <div className="row-actions" data-testid="quest-diff-actions" style={{ marginBottom: "0.5rem" }}>
-                    <button
-                      type="button"
-                      className="btn mini err"
-                      disabled={!activeFile?.path || fileRejected || fullRejected || rejectDiffMut.isPending}
-                      onClick={() =>
-                        rejectDiffMut.mutate({
-                          scope: "file",
-                          filePath: activeFile!.path,
-                          reason: `reject file ${activeFile!.path}`,
-                        })
-                      }
-                      data-testid="quest-diff-reject-file"
-                    >
-                      拒绝当前文件
-                    </button>
-                    <button
-                      type="button"
-                      className="btn mini err"
-                      disabled={fullRejected || rejectDiffMut.isPending}
-                      onClick={() => rejectDiffMut.mutate({ scope: "all", reason: "reject full diff" })}
-                      data-testid="quest-diff-reject-all"
-                    >
-                      拒绝全部 Diff
-                    </button>
-                    {runStatus === "waiting_approval" ? (
-                      <button
-                        type="button"
-                        className="btn mini ok"
-                        disabled={approveGateMut.isPending || fullRejected}
-                        onClick={() => approveGateMut.mutate()}
-                        data-testid="quest-diff-approve-gate"
-                      >
-                        批准并继续
-                      </button>
-                    ) : null}
-                  </div>
-                  {rejectedPaths.length ? (
-                    <p className="muted-line" data-testid="quest-diff-rejected">
-                      已拒绝：{rejectedPaths.join(", ")}
-                    </p>
-                  ) : null}
-                  {diffQuery.data?.contextRefs?.length ? (
-                    <p className="muted-line">contextRefs: {diffQuery.data.contextRefs.slice(0, 8).join(", ")}</p>
-                  ) : (
-                    <p className="muted-line">contextRefs: （空或未写入）</p>
-                  )}
-                  <div className="toolbar">
-                    <select
-                      value={activeFile?.path ?? ""}
-                      onChange={(e) => setSelectedFile(e.target.value)}
-                      data-testid="quest-diff-file"
-                    >
-                      {files.map((f) => (
-                        <option key={f.path} value={f.path}>
-                          {f.path}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                  {!files.length ? <p className="muted-line">无 diff 产物</p> : null}
-                  {activeFile?.hunks.map((hunk, hi) => (
-                    <div key={`${activeFile.path}-${hi}`} style={{ marginBottom: "0.75rem" }}>
-                      <pre className="code-block compact">{hunk.header}</pre>
-                      <div className="code-block" style={{ padding: 0 }}>
-                        {hunk.lines.map((ln) => {
-                          const key = `${activeFile.path}#${ln.index}`;
-                          const notes = commentsByLine.get(key) ?? [];
-                          const tone = ln.kind === "add" ? "#0a3" : ln.kind === "del" ? "#a30" : "inherit";
-                          return (
-                            <div key={ln.index}>
-                              <button
-                                type="button"
-                                style={{
-                                  display: "block",
-                                  width: "100%",
-                                  textAlign: "left",
-                                  background: "transparent",
-                                  border: "none",
-                                  color: tone,
-                                  fontFamily: "inherit",
-                                  fontSize: "12px",
-                                  padding: "1px 8px",
-                                  cursor: "pointer",
-                                }}
-                                onClick={() =>
-                                  setAnchor({
-                                    filePath: activeFile.path,
-                                    lineIndex: ln.index,
-                                    side: ln.kind === "del" ? "old" : "new",
-                                  })
-                                }
-                                data-testid="quest-diff-line"
-                              >
-                                <span style={{ opacity: 0.5, marginRight: 8 }}>{ln.newNo ?? ln.oldNo ?? ""}</span>
-                                {ln.text || " "}
-                              </button>
-                              {notes.map((n) => (
-                                <div key={n.id} className="muted-line" style={{ paddingLeft: 24 }}>
-                                  💬 {n.body}
-                                </div>
-                              ))}
-                            </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  ))}
-                  {anchor ? (
-                    <div className="secret-form" data-testid="quest-comment-form">
-                      <label className="wide-field">
-                        批注 · {anchor.filePath}:{anchor.lineIndex}
-                        <textarea value={draftComment} onChange={(e) => setDraftComment(e.target.value)} rows={3} />
-                      </label>
-                      <button
-                        type="button"
-                        className="btn primary"
-                        disabled={!draftComment.trim() || commentMut.isPending}
-                        onClick={() => commentMut.mutate()}
-                      >
-                        <MessageSquarePlus size={14} /> 发表批注
-                      </button>
-                    </div>
-                  ) : null}
-                </div>
+            </div>
 
-                <div className="pane" data-testid="quest-timeline-pane">
-                  <div className="pane-title">
-                    <h2>步骤时间线</h2>
-                    <span className="muted">评分请进「评审管控」</span>
-                  </div>
-                  <p className="muted-line">本地步骤评分已从 Agent 使用面移除（GV02 去厚）。</p>
-                  <TimelineMini items={timelineQuery.data?.items ?? []} />
-                  <ThreadTimeline runId={selectedRunId} highlightSeq={highlightSeq} onSelectSeq={setHighlightSeq} />
-                  <MemoryLinkPanel
-                    runId={selectedRunId}
-                    highlightSeq={highlightSeq}
-                    onSelectLinkSeq={setHighlightSeq}
-                  />
-                </div>
-
-                <div className="pane" data-testid="quest-artifacts-pane">
-                  <div className="pane-title">
-                    <h2>产物</h2>
-                    <span>{artifactsQuery.isFetching ? "加载中" : `${artifacts.length} 个`}</span>
-                  </div>
-                  <table className="table compact">
-                    <thead>
-                      <tr>
-                        <th>名称</th>
-                        <th>类型</th>
-                        <th>Digest</th>
-                        <th>操作</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {artifacts.map((artifact) => (
-                        <tr key={`${artifact.type}-${artifact.name}`}>
-                          <td title={artifact.uri}>{artifact.name}</td>
-                          <td>{artifact.type}</td>
-                          <td title={artifact.digest}>{artifact.digest ? shortId(artifact.digest) : "—"}</td>
-                          <td>
-                            <button
-                              type="button"
-                              className="btn icon-btn mini"
-                              data-testid={`quest-artifact-link-${artifact.name}`}
-                              disabled={artifactAccessMut.isPending}
-                              onClick={() => artifactAccessMut.mutate(artifact.name)}
-                            >
-                              <Download size={14} /> 链接
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                      {!artifacts.length ? (
-                        <tr className="empty-row">
-                          <td colSpan={4}>暂无产物。</td>
-                        </tr>
-                      ) : null}
-                    </tbody>
-                  </table>
-                  {artifactAccess ? (
-                    <p className="muted-line" data-testid="quest-artifact-access">
-                      {artifactAccess.name}: <code>{artifactAccess.signedUrl}</code>
-                    </p>
-                  ) : null}
-                </div>
+            <div className="pane" data-testid="quest-timeline-pane">
+              <div className="pane-title">
+                <h2>步骤时间线</h2>
+                <span className="muted">评分请进「评审管控」</span>
               </div>
-            </>
-          ) : null}
+              <p className="muted-line">本地步骤评分已从 Agent 使用面移除（GV02 去厚）。</p>
+              <TimelineMini items={timelineQuery.data?.items ?? []} />
+              <ThreadTimeline runId={selectedRunId} highlightSeq={highlightSeq} onSelectSeq={setHighlightSeq} />
+              <MemoryLinkPanel
+                runId={selectedRunId}
+                highlightSeq={highlightSeq}
+                onSelectLinkSeq={setHighlightSeq}
+              />
+            </div>
+
+            <div className="pane" data-testid="quest-artifacts-pane">
+              <div className="pane-title">
+                <h2>产物</h2>
+                <span>{artifactsQuery.isFetching ? "加载中" : `${artifacts.length} 个`}</span>
+              </div>
+              <table className="table compact">
+                <thead>
+                  <tr>
+                    <th>名称</th>
+                    <th>类型</th>
+                    <th>Digest</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {artifacts.map((artifact) => (
+                    <tr key={`${artifact.type}-${artifact.name}`}>
+                      <td title={artifact.uri}>{artifact.name}</td>
+                      <td>{artifact.type}</td>
+                      <td title={artifact.digest}>{artifact.digest ? shortId(artifact.digest) : "—"}</td>
+                      <td>
+                        <button
+                          type="button"
+                          className="btn icon-btn mini"
+                          data-testid={`quest-artifact-link-${artifact.name}`}
+                          disabled={artifactAccessMut.isPending}
+                          onClick={() => artifactAccessMut.mutate(artifact.name)}
+                        >
+                          <Download size={14} /> 链接
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {!artifacts.length ? (
+                    <tr className="empty-row">
+                      <td colSpan={4}>暂无产物。</td>
+                    </tr>
+                  ) : null}
+                </tbody>
+              </table>
+              {artifactAccess ? (
+                <p className="muted-line" data-testid="quest-artifact-access">
+                  {artifactAccess.name}: <code>{artifactAccess.signedUrl}</code>
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
-      </div>
+      ) : null}
 
       <div className="agent-task-board-section">
         <button
@@ -706,6 +662,17 @@ export function QuestPage() {
         >
           {taskBoardOpen ? "收起任务板" : "展开任务板"} · 看板 / 从目标创建
         </button>
+        {!taskBoardOpen ? (
+          <button
+            type="button"
+            className="btn linkish"
+            style={{ marginLeft: "0.75rem" }}
+            onClick={openGoalCompose}
+            data-testid="agent-open-goal-compose"
+          >
+            从目标创建
+          </button>
+        ) : null}
         {taskBoardOpen ? (
           <div className="agent-task-board" data-testid="agent-task-board">
             <div className="pane" data-testid="quest-wb-compose" style={{ marginBottom: "1rem" }}>

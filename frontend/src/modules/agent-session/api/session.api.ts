@@ -20,13 +20,32 @@ export type AgentSessionView = {
   id: string;
   spaceId: string;
   status: string;
+  goal?: string;
+  planId?: string;
   runId?: string;
   streamUrl?: string;
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
+  createdAt?: number;
+  updatedAt?: number;
 };
 
 export type SessionIntentAction = "prompt" | "approve" | "cancel" | "reject";
+
+export type AgentSessionListResponse = {
+  items: AgentSessionView[];
+};
+
+export async function listAgentSessions(opts?: {
+  spaceId?: string;
+  limit?: number;
+}): Promise<AgentSessionListResponse> {
+  const q = new URLSearchParams();
+  if (opts?.spaceId) q.set("spaceId", opts.spaceId);
+  if (opts?.limit != null) q.set("limit", String(opts.limit));
+  const suffix = q.toString() ? `?${q}` : "";
+  return api<AgentSessionListResponse>(`/agents/sessions${suffix}`);
+}
 
 export async function createAgentSession(body: {
   runId?: string;

@@ -64,11 +64,30 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
   );
   return {
     ...actual,
-    createAgentSession: vi.fn(async () => ({
+    listAgentSessions: vi.fn(async () => ({
+      items: [
+        {
+          id: "sess_quest",
+          spaceId: "local",
+          status: "active",
+          goal: "feature_delivery@1.0.0",
+          runId: "run_1",
+          updatedAt: 2,
+        },
+      ],
+    })),
+    getAgentSession: vi.fn(async () => ({
       id: "sess_quest",
       spaceId: "local",
       status: "active",
+      goal: "feature_delivery@1.0.0",
       runId: "run_1",
+    })),
+    createAgentSession: vi.fn(async () => ({
+      id: "sess_new",
+      spaceId: "local",
+      status: "active",
+      updatedAt: 3,
     })),
     listSessionEvents: vi.fn(async () => ({ sessionId: "sess_quest", runId: "run_1", items: [] })),
     submitSessionIntent: vi.fn(async () => ({
@@ -211,17 +230,28 @@ describe("QuestPage", () => {
     vi.unstubAllGlobals();
   });
 
-  it("renders agent home with session history and settings menu", async () => {
+  it("renders agent chat shell with session history and settings menu", async () => {
     renderQuest();
     expect(await screen.findByTestId("agent-home")).toBeTruthy();
+    expect(await screen.findByTestId("agent-chat-shell")).toBeTruthy();
     expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
     expect(screen.getByTestId("agent-settings-menu")).toBeTruthy();
     expect(screen.getByText("Tools")).toBeTruthy();
     expect(screen.getByText("Skills")).toBeTruthy();
     expect(screen.getByText("MCP")).toBeTruthy();
-    expect(await screen.findByText("Add feature")).toBeTruthy();
-    expect(screen.getByText("feature_delivery@1.0.0")).toBeTruthy();
-    expect(screen.getByText(/选择左侧会话或从目标创建/)).toBeTruthy();
+    expect(await screen.findByText("feature_delivery@1.0.0")).toBeTruthy();
+    expect(screen.getByText(/选择左侧会话，或新建空白会话/)).toBeTruthy();
+  });
+
+  it("creates blank session from New without opening task board", async () => {
+    const { createAgentSession } = await import("@/modules/agent-session/api/session.api");
+    renderQuest();
+    fireEvent.click(await screen.findByTestId("agent-history-new"));
+    await waitFor(() => {
+      expect(createAgentSession).toHaveBeenCalledWith({});
+    });
+    expect(screen.queryByTestId("quest-board")).toBeNull();
   });
 
   it("keeps task board collapsed by default", async () => {
@@ -333,7 +363,8 @@ describe("QuestPage", () => {
       createdAt: 1,
     });
     renderQuest();
-    fireEvent.click(await screen.findByTestId("agent-history-item-gplan_1"));
+    await expandTaskBoard();
+    fireEvent.click(await screen.findByTestId("quest-card-plan"));
     await waitFor(() => {
       expect(getGoalPlan).toHaveBeenCalledWith("gplan_1");
       expect(screen.getByTestId("quest-wb-plan-preview")).toBeTruthy();
@@ -342,9 +373,9 @@ describe("QuestPage", () => {
     expect(screen.queryByText(/在 Runs 页批准/)).toBeNull();
   });
 
-  it("shows sub-run tree after selecting a run", async () => {
+  it("shows sub-run tree after selecting a session with run", async () => {
     renderQuest();
-    (await screen.findByText("feature_delivery@1.0.0")).click();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
     expect(await screen.findByTestId("quest-run-tree")).toBeTruthy();
     expect(await screen.findByTestId("quest-run-tree-list")).toBeTruthy();
   });
@@ -367,7 +398,7 @@ describe("QuestPage", () => {
       status: "waiting_approval",
     });
     renderQuest();
-    (await screen.findByText("feature_delivery@1.0.0")).click();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
     const rejectFileBtn = await screen.findByTestId("quest-diff-reject-file");
     await waitFor(() => {
       expect(rejectFileBtn).not.toBeDisabled();
@@ -384,7 +415,7 @@ describe("QuestPage", () => {
   it("approves waiting gate from Diff actions", async () => {
     vi.mocked(approveRun).mockResolvedValue({ runId: "run_1", ok: true });
     renderQuest();
-    (await screen.findByText("feature_delivery@1.0.0")).click();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
     const approveBtn = await screen.findByTestId("quest-diff-approve-gate");
     await waitFor(() => {
       expect(approveBtn).not.toBeDisabled();
@@ -399,7 +430,7 @@ describe("QuestPage", () => {
     vi.mocked(approveRun).mockResolvedValue({ runId: "run_1", ok: true });
     vi.mocked(cancelRun).mockResolvedValue({ runId: "run_1", status: "canceled" });
     renderQuest();
-    (await screen.findByText("feature_delivery@1.0.0")).click();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
     expect(await screen.findByTestId("quest-gate-panel")).toBeTruthy();
     expect(screen.getByTestId("quest-gate-detail").textContent).toContain("need human review");
     fireEvent.click(screen.getByTestId("quest-gate-approve"));
@@ -422,7 +453,7 @@ describe("QuestPage", () => {
       digest: "sha256:abc",
     });
     renderQuest();
-    (await screen.findByText("feature_delivery@1.0.0")).click();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
     expect(await screen.findByTestId("quest-artifacts-pane")).toBeTruthy();
     await waitFor(() => {
       expect(getRunArtifacts).toHaveBeenCalledWith("run_1");
