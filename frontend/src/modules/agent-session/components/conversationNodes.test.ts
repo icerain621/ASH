@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { eventVisibility, type SessionEventEnvelope } from "../api/session.api";
-import { isThreadVisibleEvent, resolveConversationNode } from "./conversationNodes";
+import {
+  isThreadVisibleEvent,
+  mergeAssistantBubbles,
+  resolveConversationNode,
+} from "./conversationNodes";
 
 function ev(partial: Partial<SessionEventEnvelope> & { type: string }): SessionEventEnvelope {
   return {
@@ -28,6 +32,21 @@ describe("conversationNodes", () => {
     expect(resolveConversationNode(ev({ type: "run.started" })).kind).toBe("default");
   });
 
+  it("resolves assistant.delta and assistant.message as 助手", () => {
+    const delta = resolveConversationNode(
+      ev({ type: "assistant.delta", payload: { turnId: "t1", text: "你好", index: 0 } }),
+    );
+    expect(delta.kind).toBe("assistant");
+    expect(delta.title).toBe("助手");
+    expect(delta.summary).toBe("你好");
+    const msg = resolveConversationNode(
+      ev({ type: "assistant.message", payload: { turnId: "t1", text: "你好世界", source: "echo" } }),
+    );
+    expect(msg.kind).toBe("assistant");
+    expect(msg.title).toBe("助手");
+    expect(msg.summary).toBe("你好世界");
+  });
+
   it("resolves tool and step events", () => {
     const called = resolveConversationNode(
       ev({ type: "tool.called", payload: { name: "git.status", args: "{}" } }),
@@ -49,5 +68,59 @@ describe("conversationNodes", () => {
     const item = ev({ type: "gate.waiting_approval" });
     expect(eventVisibility(item)).toBe("ui_only");
     expect(isThreadVisibleEvent(item)).toBe(true);
+  });
+
+  it("merges assistant.delta by turnId and completes on assistant.message", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({ id: "u1", seq: 1, type: "session.turn", payload: { prompt: "hi", turnId: "turn_1" } }),
+      ev({
+        id: "d0",
+        seq: 2,
+        type: "assistant.delta",
+        payload: { turnId: "turn_1", text: "已收", index: 0 },
+      }),
+      ev({
+        id: "d1",
+        seq: 3,
+        type: "assistant.delta",
+        payload: { turnId: "turn_1", text: "到：hi", index: 1 },
+      }),
+      ev({
+        id: "m1",
+        seq: 4,
+        type: "assistant.message",
+        payload: { turnId: "turn_1", text: "已收到：hi", source: "echo", stopped: false },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(2);
+    expect(bubbles[0].role).toBe("user");
+    expect(bubbles[0].summary).toBe("hi");
+    expect(bubbles[1].role).toBe("assistant");
+    expect(bubbles[1].title).toBe("助手");
+    expect(bubbles[1].summary).toBe("已收到：hi");
+    expect(bubbles[1].streaming).toBe(false);
+    expect(bubbles[1].type).toBe("assistant.message");
+    expect(bubbles[1].id).toBe("assistant:turn_1");
+  });
+
+  it("keeps a streaming bubble when only deltas arrived", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "d0",
+        seq: 1,
+        type: "assistant.delta",
+        payload: { turnId: "t2", text: "A", index: 0 },
+      }),
+      ev({
+        id: "d1",
+        seq: 2,
+        type: "assistant.delta",
+        payload: { turnId: "t2", text: "B", index: 1 },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].summary).toBe("AB");
+    expect(bubbles[0].streaming).toBe(true);
+    expect(bubbles[0].role).toBe("assistant");
   });
 });

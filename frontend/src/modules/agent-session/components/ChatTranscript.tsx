@@ -1,5 +1,5 @@
 import type { SessionEventEnvelope } from "../api/session.api";
-import { isThreadVisibleEvent, resolveConversationNode } from "./conversationNodes";
+import { mergeAssistantBubbles, type MergedChatBubble } from "./conversationNodes";
 
 export type ChatBubbleSelection = {
   id: string;
@@ -16,64 +16,54 @@ type Props = {
   onSelect?: (node: ChatBubbleSelection) => void;
 };
 
-function bubbleRole(type: string, kind: string): "user" | "gate" | "tool" | "other" {
-  if (type === "session.turn" || kind === "session.turn") return "user";
-  if (type === "gate.waiting_approval" || kind === "gate.waiting_approval") return "gate";
-  if (
-    kind === "tool.called" ||
-    kind === "tool.result" ||
-    kind === "tool" ||
-    kind === "step" ||
-    type.startsWith("tool.") ||
-    type.startsWith("step.")
-  ) {
-    return "tool";
-  }
-  return "other";
+function testIdForRole(role: MergedChatBubble["role"]): string {
+  if (role === "tool") return "agent-chat-bubble-tool";
+  if (role === "assistant") return "agent-chat-bubble-assistant";
+  return "agent-chat-bubble";
 }
 
-/** Bubble transcript for Chat tab (DSH-aligned). */
+/** Bubble transcript for Chat tab (DSH-aligned). Merges assistant.delta by turnId. */
 export function ChatTranscript({ events, selectedId, onSelect }: Props) {
-  const visible = events.filter(isThreadVisibleEvent);
+  const bubbles = mergeAssistantBubbles(events);
 
   return (
     <div className="agent-chat-transcript" data-testid="agent-chat-transcript">
-      {visible.length === 0 ? (
+      {bubbles.length === 0 ? (
         <p className="muted-line" data-testid="agent-chat-transcript-empty">
           暂无消息。在下方输入意图开始对话。
         </p>
       ) : (
         <ul className="agent-chat-bubbles">
-          {visible.map((item) => {
-            const node = resolveConversationNode(item);
-            const role = bubbleRole(item.type, node.kind);
-            const id = item.id || `${item.seq}-${item.type}`;
-            const active = selectedId === id;
+          {bubbles.map((item) => {
+            const active = selectedId === item.id;
             return (
-              <li key={id} className={`agent-chat-bubble-row role-${role}`}>
+              <li key={item.id} className={`agent-chat-bubble-row role-${item.role}`}>
                 <button
                   type="button"
-                  className={`agent-chat-bubble role-${role}${active ? " active" : ""}`}
-                  data-testid={role === "tool" ? "agent-chat-bubble-tool" : "agent-chat-bubble"}
-                  data-role={role}
-                  data-node-kind={node.kind}
+                  className={`agent-chat-bubble role-${item.role}${active ? " active" : ""}${
+                    item.streaming ? " streaming" : ""
+                  }`}
+                  data-testid={testIdForRole(item.role)}
+                  data-role={item.role}
+                  data-node-kind={item.kind}
+                  data-streaming={item.streaming ? "1" : "0"}
                   data-active={active ? "1" : "0"}
                   onClick={() =>
                     onSelect?.({
-                      id,
+                      id: item.id,
                       type: item.type,
-                      kind: node.kind,
-                      title: node.title,
-                      summary: node.summary,
+                      kind: item.kind,
+                      title: item.title,
+                      summary: item.summary,
                       payload: item.payload,
                     })
                   }
                 >
                   <div className="agent-chat-bubble-meta">
-                    <strong>{node.title}</strong>
+                    <strong>{item.title}</strong>
                     <span className="muted">{item.type}</span>
                   </div>
-                  <div className="agent-chat-bubble-body">{node.summary}</div>
+                  <div className="agent-chat-bubble-body">{item.summary}</div>
                 </button>
               </li>
             );

@@ -1494,6 +1494,7 @@ main {
 
 .agent-chat-bubble-row.role-gate,
 .agent-chat-bubble-row.role-tool,
+.agent-chat-bubble-row.role-assistant,
 .agent-chat-bubble-row.role-other {
   justify-content: flex-start;
 }
@@ -1527,6 +1528,25 @@ main {
   border-bottom-left-radius: 4px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.85rem;
+}
+
+.agent-chat-bubble.role-assistant {
+  background: color-mix(in srgb, var(--surface-raised) 70%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--border) 80%, var(--accent));
+  border-bottom-left-radius: 4px;
+}
+
+.agent-chat-bubble.role-assistant.streaming .agent-chat-bubble-body::after {
+  content: "▍";
+  animation: agent-chat-caret 1s steps(1) infinite;
+  margin-left: 0.1em;
+  opacity: 0.55;
+}
+
+@keyframes agent-chat-caret {
+  50% {
+    opacity: 0;
+  }
 }
 
 .agent-chat-bubble.role-other {

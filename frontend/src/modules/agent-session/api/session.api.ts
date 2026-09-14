@@ -27,6 +27,14 @@ export type AgentSessionView = {
   streamUrl?: string;
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
+  replies?: Array<{
+    turnId: string;
+    text: string;
+    source?: string;
+    stopped?: boolean;
+    chunks?: string[];
+    createdAt?: number;
+  }>;
   createdAt?: number;
   updatedAt?: number;
 };
