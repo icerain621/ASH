@@ -1295,3 +1295,145 @@ main {
   margin-top: 1.5rem;
   text-align: center;
 }
+
+.agent-home {
+  display: flex;
+  flex-direction: row;
+  align-items: stretch;
+  gap: 0.85rem;
+  min-height: min(70vh, 720px);
+  margin-bottom: 1rem;
+}
+
+.agent-session-history {
+  flex: 0 0 260px;
+  width: 260px;
+  max-width: 260px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  min-height: 0;
+}
+
+.agent-history-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.agent-history-header h2 {
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+.agent-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow: auto;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.agent-history-item {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.15rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.55rem 0.65rem;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.agent-history-item:hover {
+  background: var(--surface-soft);
+}
+
+.agent-history-item.active {
+  border-color: var(--border);
+  background: var(--surface-raised);
+}
+
+.agent-chat-column {
+  flex: 1;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.agent-chat-column [data-testid="agent-session-panel"],
+.agent-session-panel {
+  flex: 1;
+  margin-bottom: 0;
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+}
+
+.agent-session-body {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.agent-chat-empty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 0.75rem;
+  min-height: 280px;
+  padding: 1.25rem;
+  border: 1px dashed var(--border);
+  border-radius: 12px;
+  background: var(--surface-soft);
+}
+
+.agent-chat-empty p {
+  margin: 0;
+  color: var(--muted);
+}
+
+.agent-task-board-section {
+  margin-top: 0.5rem;
+}
+
+.agent-task-board {
+  margin-top: 0.75rem;
+}
+
+.nav-dropdown-item.muted,
+.nav-dropdown-item[aria-disabled="true"] {
+  opacity: 0.55;
+  cursor: default;
+  pointer-events: none;
+}
+
+@media (max-width: 900px) {
+  .agent-home {
+    flex-direction: column;
+    min-height: 0;
+  }
+
+  .agent-session-history {
+    flex: none;
+    width: 100%;
+    max-width: none;
+    max-height: 220px;
+  }
+}

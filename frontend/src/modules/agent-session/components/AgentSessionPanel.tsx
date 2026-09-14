@@ -65,7 +65,7 @@ export function AgentSessionPanel({ runId, runStatus, gateReason, onIntentSucces
   const bindError = sessionQuery.error instanceof Error ? sessionQuery.error.message : "";
 
   return (
-    <div className="pane" data-testid="agent-session-panel" style={{ marginBottom: "1rem" }}>
+    <div className="pane agent-session-panel" data-testid="agent-session-panel" style={{ marginBottom: "1rem" }}>
       <div className="pane-title">
         <h2>薄会话</h2>
         <span>{sessionId ? sessionId.slice(0, 12) : sessionQuery.isPending ? "绑定中…" : "—"}</span>
@@ -76,8 +76,10 @@ export function AgentSessionPanel({ runId, runStatus, gateReason, onIntentSucces
           {bindError || error}
         </p>
       ) : null}
-      <ConversationThread events={events} />
-      {sessionId ? <SessionThreadsList sessionId={sessionId} /> : null}
+      <div className="agent-session-body">
+        <ConversationThread events={events} />
+        {sessionId ? <SessionThreadsList sessionId={sessionId} /> : null}
+      </div>
       <div style={{ marginTop: "0.75rem" }}>
         <IntentBar
           mode={mode}

@@ -64,6 +64,12 @@ const questRoute = createRoute({
   component: QuestPage,
 });
 
+const agentRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/agent",
+  component: QuestPage,
+});
+
 const knowledgeRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/knowledge",
@@ -143,6 +149,7 @@ const routeTree = rootRoute.addChildren([
   reviewsRoute,
   mobileReviewsRoute,
   questRoute,
+  agentRoute,
   knowledgeRoute,
 	automationRoute,
 	feedbackRoute,

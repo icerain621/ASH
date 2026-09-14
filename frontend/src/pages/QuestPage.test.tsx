@@ -1,5 +1,6 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QuestPage } from "./QuestPage";
 import {
@@ -155,6 +156,14 @@ vi.mock("@/services/http/client", () => ({
   getCurrentSpaceId: () => "local",
 }));
 
+vi.mock("@tanstack/react-router", () => ({
+  Link: ({ children, ...props }: { children: ReactNode; to?: string; className?: string }) => (
+    <a href={props.to ?? "#"} className={props.className} data-to={props.to}>
+      {children}
+    </a>
+  ),
+}));
+
 class MockEventSource {
   static instances: MockEventSource[] = [];
   url: string;
@@ -178,6 +187,11 @@ function renderQuest() {
   );
 }
 
+async function expandTaskBoard() {
+  fireEvent.click(await screen.findByTestId("agent-task-board-toggle"));
+  expect(await screen.findByTestId("quest-board")).toBeTruthy();
+}
+
 describe("QuestPage", () => {
   beforeEach(() => {
     MockEventSource.instances = [];
@@ -197,16 +211,38 @@ describe("QuestPage", () => {
     vi.unstubAllGlobals();
   });
 
+  it("renders agent home with session history and settings menu", async () => {
+    renderQuest();
+    expect(await screen.findByTestId("agent-home")).toBeTruthy();
+    expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(screen.getByTestId("agent-settings-menu")).toBeTruthy();
+    expect(screen.getByText("Tools")).toBeTruthy();
+    expect(screen.getByText("Skills")).toBeTruthy();
+    expect(screen.getByText("MCP")).toBeTruthy();
+    expect(await screen.findByText("Add feature")).toBeTruthy();
+    expect(screen.getByText("feature_delivery@1.0.0")).toBeTruthy();
+    expect(screen.getByText(/选择左侧会话或从目标创建/)).toBeTruthy();
+  });
+
+  it("keeps task board collapsed by default", async () => {
+    renderQuest();
+    expect(await screen.findByTestId("agent-task-board-toggle")).toBeTruthy();
+    expect(screen.queryByTestId("quest-board")).toBeNull();
+    expect(screen.queryByTestId("quest-wb-compose")).toBeNull();
+  });
+
   it("renders kanban board", async () => {
     renderQuest();
     expect(await screen.findByTestId("quest-page")).toBeTruthy();
+    await expandTaskBoard();
     expect(await screen.findByTestId("quest-board")).toBeTruthy();
-    expect(await screen.findByText("Add feature")).toBeTruthy();
+    expect(screen.getAllByText("Add feature").length).toBeGreaterThanOrEqual(1);
     expect(await screen.findByTestId("quest-stream-status")).toBeTruthy();
   });
 
   it("shows compose pane for Goal→Plan", async () => {
     renderQuest();
+    await expandTaskBoard();
     expect(await screen.findByTestId("quest-wb-compose")).toBeTruthy();
     expect(screen.getByTestId("quest-wb-goal-input")).toBeTruthy();
     expect(screen.getByTestId("quest-wb-route")).toBeTruthy();
@@ -227,6 +263,7 @@ describe("QuestPage", () => {
       createdAt: 1,
     });
     renderQuest();
+    await expandTaskBoard();
     fireEvent.change(await screen.findByTestId("quest-wb-goal-input"), {
       target: { value: "Add dark mode" },
     });
@@ -266,6 +303,7 @@ describe("QuestPage", () => {
       createdAt: 1,
     });
     renderQuest();
+    await expandTaskBoard();
     fireEvent.change(await screen.findByTestId("quest-wb-goal-input"), {
       target: { value: "Add dark mode" },
     });
@@ -295,7 +333,7 @@ describe("QuestPage", () => {
       createdAt: 1,
     });
     renderQuest();
-    fireEvent.click(await screen.findByText("Add feature"));
+    fireEvent.click(await screen.findByTestId("agent-history-item-gplan_1"));
     await waitFor(() => {
       expect(getGoalPlan).toHaveBeenCalledWith("gplan_1");
       expect(screen.getByTestId("quest-wb-plan-preview")).toBeTruthy();
