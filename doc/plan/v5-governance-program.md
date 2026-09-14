@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 SLA UI + `reviews:assign` 分配闸门已落地**（queue `slaBreach` · 仅逾期筛选 · Observability `review_sla`）；下一优先级 **Mobile Reviews** 或 **Policy Doctor**  
+> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 SLA UI + `reviews:assign` 分配闸门已落地**；**FE-16 Mobile Reviews 已落地**（薄批准面：第二签/逾期/负责人 · 仅逾期筛选 · 紧凑 rubric · 分配闸门）；下一优先级 **Policy Doctor** 或 **score_appeal**  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
@@ -80,3 +80,4 @@
 | 2026-09-13 | **P0 完成**：GV02 ConversationNode/意图条/Quest 去厚；GV03 DeriveModelVisible |
 | 2026-09-13 | **GV04**：interaction_threads · FoldThread · MemoryLink · by-run/threads API |
 | 2026-09-13 | **P2 + Task 11**：Registry/Policy/Rubric/Workbench · multi_sign · TR3-12 · `make v5-signoff` |
+| 2026-09-14 | **FE-16**：Mobile Reviews 薄批准面同步徽章/逾期筛选/rubric/分配闸门 |
