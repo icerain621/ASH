@@ -163,4 +163,16 @@ describe("SpacePage", () => {
       expect(screen.getByTestId("space-rules-editor")).toBeInTheDocument();
     });
   });
+
+  it("renders Registry assets panel and EffectivePolicy summary", async () => {
+    renderPage(<SpacePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("registry-assets-panel")).toBeInTheDocument();
+      expect(screen.getByText("管控登记 / 策略")).toBeInTheDocument();
+      expect(screen.getByTestId("effective-policy-summary")).toHaveTextContent("生效策略");
+      expect(screen.getByTestId("effective-policy-summary")).toHaveTextContent("引用=required");
+      expect(screen.getByTestId("agent-assets-list")).toBeInTheDocument();
+      expect(screen.getByTestId("memory-assets-list")).toBeInTheDocument();
+    });
+  });
 });

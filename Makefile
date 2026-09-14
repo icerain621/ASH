@@ -284,7 +284,10 @@ worker-production-gate:
 	bash scripts/worker-production-gate.sh
 
 web-build:
-	cd frontend && npm install && npm run build
+	# Prefer npx over `npm run build`: under GNU make on Win/Git Bash/MSYS,
+	# npm-script exit codes are often 1 even when tsc+vite succeed (same class of
+	# issue as vitest via `npm test` in v5-signoff-gate).
+	cd frontend && npm install --no-audit --no-fund && npx tsc -b && npx vite build
 
 web-lint:
 	cd frontend && npm install && npm run lint
