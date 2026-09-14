@@ -26,5 +26,14 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "approve", reason: "approved from IntentBar" });
     fireEvent.click(screen.getByTestId("agent-intent-cancel"));
     expect(onIntent).toHaveBeenCalledWith({ action: "cancel" });
+    fireEvent.click(screen.getByTestId("agent-intent-stop"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
+  });
+
+  it("shows stop in prompt mode when canStop", () => {
+    const onIntent = vi.fn();
+    render(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
+    fireEvent.click(screen.getByTestId("agent-intent-stop"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
   });
 });

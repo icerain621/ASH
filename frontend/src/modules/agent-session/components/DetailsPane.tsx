@@ -5,8 +5,20 @@ type Props = {
   selection: ChatBubbleSelection | null;
 };
 
+function readablePayload(payload: unknown): unknown {
+  if (typeof payload !== "string") return payload ?? null;
+  const trimmed = payload.trim();
+  if (!trimmed) return payload;
+  try {
+    return JSON.parse(trimmed) as unknown;
+  } catch {
+    return payload;
+  }
+}
+
 /** Right details pane for selected chat/trajectory node. */
 export function DetailsPane({ open, selection }: Props) {
+  const payload = selection ? readablePayload(selection.payload) : null;
   return (
     <aside
       className={`agent-chat-details${open ? " open" : ""}`}
@@ -32,7 +44,7 @@ export function DetailsPane({ open, selection }: Props) {
                 id: selection.id,
                 type: selection.type,
                 kind: selection.kind,
-                payload: selection.payload ?? null,
+                payload,
               },
               null,
               2,

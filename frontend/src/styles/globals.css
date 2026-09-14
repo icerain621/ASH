@@ -1392,6 +1392,31 @@ main {
   background: var(--surface-raised);
 }
 
+.agent-history-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.agent-history-actions {
+  display: flex;
+  gap: 0.25rem;
+  padding-left: 0.35rem;
+}
+
+.agent-history-rename {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  align-items: center;
+  padding: 0.35rem;
+}
+
+.agent-history-rename input {
+  flex: 1;
+  min-width: 8rem;
+}
+
 .agent-chat-main {
   min-width: 0;
   min-height: 0;
@@ -1468,6 +1493,7 @@ main {
 }
 
 .agent-chat-bubble-row.role-gate,
+.agent-chat-bubble-row.role-tool,
 .agent-chat-bubble-row.role-other {
   justify-content: flex-start;
 }
@@ -1492,6 +1518,15 @@ main {
 .agent-chat-bubble.role-gate {
   background: color-mix(in srgb, var(--warn) 12%, var(--surface));
   border-color: color-mix(in srgb, var(--warn) 40%, var(--border));
+}
+
+.agent-chat-bubble.role-tool {
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-soft));
+  border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
+  border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--border));
+  border-bottom-left-radius: 4px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.85rem;
 }
 
 .agent-chat-bubble.role-other {

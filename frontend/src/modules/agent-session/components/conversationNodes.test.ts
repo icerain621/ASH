@@ -28,6 +28,23 @@ describe("conversationNodes", () => {
     expect(resolveConversationNode(ev({ type: "run.started" })).kind).toBe("default");
   });
 
+  it("resolves tool and step events", () => {
+    const called = resolveConversationNode(
+      ev({ type: "tool.called", payload: { name: "git.status", args: "{}" } }),
+    );
+    expect(called.kind).toBe("tool.called");
+    expect(called.title).toContain("git.status");
+    const result = resolveConversationNode(
+      ev({ type: "tool.result", payload: { name: "git.status", output: "clean" } }),
+    );
+    expect(result.kind).toBe("tool.result");
+    expect(result.summary).toContain("clean");
+    expect(resolveConversationNode(ev({ type: "tool.progress" })).kind).toBe("tool");
+    expect(resolveConversationNode(ev({ type: "step.started", payload: { name: "plan" } })).kind).toBe(
+      "step",
+    );
+  });
+
   it("uses eventVisibility when visibility field is missing", () => {
     const item = ev({ type: "gate.waiting_approval" });
     expect(eventVisibility(item)).toBe("ui_only");

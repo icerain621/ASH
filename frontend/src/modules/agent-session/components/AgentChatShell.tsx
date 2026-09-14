@@ -1,14 +1,17 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useMemo, useState } from "react";
 import {
+  closeAgentSession,
   createAgentSession,
   getAgentSession,
   listAgentSessions,
   listSessionEvents,
+  patchAgentSession,
   submitSessionIntent,
   type AgentSessionView,
   type SessionEventEnvelope,
 } from "../api/session.api";
+import { useRunStream, type StreamLine } from "@/services/sse/runStream";
 import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript, type ChatBubbleSelection } from "./ChatTranscript";
 import { DetailsPane } from "./DetailsPane";
@@ -26,6 +29,72 @@ export type AgentChatShellProps = {
 };
 
 type CenterTab = "chat" | "trajectory";
+
+function parseStreamPayload(raw: string): unknown {
+  if (!raw) return undefined;
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch {
+    return raw;
+  }
+}
+
+function streamLinesToEvents(lines: StreamLine[], runId: string): SessionEventEnvelope[] {
+  const out: SessionEventEnvelope[] = [];
+  for (const line of lines) {
+    if (!line.type || line.type === "sse" || line.type === "message") continue;
+    const payload = parseStreamPayload(line.payload);
+    let seq = 0;
+    if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+      const s = (payload as { seq?: unknown }).seq;
+      if (typeof s === "number") seq = s;
+    }
+    out.push({
+      id: line.id,
+      runId,
+      seq,
+      ts: Date.now(),
+      type: line.type,
+      severity: "info",
+      visibility: line.type.startsWith("tool.") || line.type.startsWith("step.") ? "ui_only" : undefined,
+      payload,
+    });
+  }
+  return out;
+}
+
+function mergeEvents(
+  base: SessionEventEnvelope[],
+  streamed: SessionEventEnvelope[],
+): SessionEventEnvelope[] {
+  const byKey = new Map<string, SessionEventEnvelope>();
+  for (const ev of base) {
+    const key = ev.id || `${ev.seq}:${ev.type}`;
+    byKey.set(key, ev);
+  }
+  for (const ev of streamed) {
+    const key = ev.seq > 0 ? `seq:${ev.seq}` : ev.id || `${ev.type}:${JSON.stringify(ev.payload)}`;
+    // Prefer seq-keyed merge when available
+    if (ev.seq > 0) {
+      let replaced = false;
+      for (const [k, existing] of byKey) {
+        if (existing.seq === ev.seq) {
+          byKey.delete(k);
+          byKey.set(`seq:${ev.seq}`, { ...existing, ...ev, id: existing.id || ev.id });
+          replaced = true;
+          break;
+        }
+      }
+      if (!replaced) byKey.set(key, ev);
+    } else if (!byKey.has(key)) {
+      byKey.set(key, ev);
+    }
+  }
+  return Array.from(byKey.values()).sort((a, b) => {
+    if (a.seq && b.seq && a.seq !== b.seq) return a.seq - b.seq;
+    return (a.ts || 0) - (b.ts || 0);
+  });
+}
 
 /** DSH-aligned three-column Agent Chat shell. */
 export function AgentChatShell({
@@ -53,12 +122,27 @@ export function AgentChatShell({
     enabled: Boolean(selectedSessionId),
   });
 
+  const activeSession: AgentSessionView | null =
+    sessionQuery.data ??
+    listQuery.data?.items?.find((s) => s.id === selectedSessionId) ??
+    null;
+
+  const runId = activeSession?.runId || "";
+  const pollEvents = !runId;
+
   const eventsQuery = useQuery({
     queryKey: ["agent-session-events", selectedSessionId],
     queryFn: () => listSessionEvents(selectedSessionId!, { limit: 100 }),
     enabled: Boolean(selectedSessionId),
-    refetchInterval: 4000,
+    refetchInterval: pollEvents ? 4000 : false,
   });
+
+  const { lines: streamLines } = useRunStream(runId || null);
+
+  useEffect(() => {
+    if (!selectedSessionId || !runId || streamLines.length === 0) return;
+    void qc.invalidateQueries({ queryKey: ["agent-session-events", selectedSessionId] });
+  }, [streamLines.length, selectedSessionId, runId, qc]);
 
   const createMut = useMutation({
     mutationFn: () => createAgentSession({}),
@@ -92,20 +176,49 @@ export function AgentChatShell({
     onError: (e: Error) => setError(e.message),
   });
 
-  const events: SessionEventEnvelope[] = useMemo(
+  const renameMut = useMutation({
+    mutationFn: ({ sessionId, title }: { sessionId: string; title: string }) =>
+      patchAgentSession(sessionId, { title }),
+    onSuccess: (session) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+      void qc.invalidateQueries({ queryKey: ["agent-session", session.id] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const closeMut = useMutation({
+    mutationFn: (sessionId: string) => closeAgentSession(sessionId),
+    onSuccess: (session) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+      if (selectedSessionId === session.id) {
+        onSelectSession(null);
+      }
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const baseEvents: SessionEventEnvelope[] = useMemo(
     () => eventsQuery.data?.items ?? [],
     [eventsQuery.data?.items],
   );
+  const streamedEvents = useMemo(
+    () => (runId ? streamLinesToEvents(streamLines, runId) : []),
+    [streamLines, runId],
+  );
+  const events = useMemo(
+    () => mergeEvents(baseEvents, streamedEvents),
+    [baseEvents, streamedEvents],
+  );
 
-  const activeSession: AgentSessionView | null =
-    sessionQuery.data ??
-    listQuery.data?.items?.find((s) => s.id === selectedSessionId) ??
-    null;
-
-  const runId = activeSession?.runId || eventsQuery.data?.runId || "";
   const mode = runStatus === "waiting_approval" ? "gate" : "prompt";
+  const runBusy =
+    runStatus === "running" || runStatus === "waiting_approval" || intentMut.isPending;
   const headerTitle = activeSession
-    ? (activeSession.goal || "").trim() || shortId(activeSession.id)
+    ? (activeSession.title || "").trim() ||
+      (activeSession.goal || "").trim() ||
+      shortId(activeSession.id)
     : "选择或新建会话";
 
   useEffect(() => {
@@ -124,11 +237,15 @@ export function AgentChatShell({
         selectedSessionId={selectedSessionId}
         loading={listQuery.isLoading}
         creating={createMut.isPending}
+        renamingId={renameMut.isPending ? renameMut.variables?.sessionId : null}
+        closingId={closeMut.isPending ? closeMut.variables ?? null : null}
         onSelect={(session) => {
           setError("");
           onSelectSession(session);
         }}
         onNew={() => createMut.mutate()}
+        onRename={(sessionId, title) => renameMut.mutate({ sessionId, title })}
+        onClose={(sessionId) => closeMut.mutate(sessionId)}
       />
 
       <div className="agent-chat-main">
@@ -215,6 +332,7 @@ export function AgentChatShell({
             <ChatComposer
               mode={mode}
               busy={intentMut.isPending || !selectedSessionId}
+              canStop={runBusy}
               gateReason={gateReason}
               onIntent={(payload) => intentMut.mutate(payload)}
             />

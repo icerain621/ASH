@@ -10,12 +10,14 @@ export type IntentPayload = {
 type Props = {
   mode: "prompt" | "gate";
   busy?: boolean;
+  /** Show Stop when run is generating / waiting. */
+  canStop?: boolean;
   gateReason?: string;
   onIntent: (payload: IntentPayload) => void;
 };
 
 /** Thin composer: prompt input or gate takeover (DSH-aligned). */
-export function IntentBar({ mode, busy = false, gateReason, onIntent }: Props) {
+export function IntentBar({ mode, busy = false, canStop = false, gateReason, onIntent }: Props) {
   const [prompt, setPrompt] = useState("");
 
   if (mode === "gate") {
@@ -47,6 +49,15 @@ export function IntentBar({ mode, busy = false, gateReason, onIntent }: Props) {
             type="button"
             className="btn mini"
             disabled={busy}
+            data-testid="agent-intent-stop"
+            onClick={() => onIntent({ action: "stop" })}
+          >
+            停止
+          </button>
+          <button
+            type="button"
+            className="btn mini"
+            disabled={busy}
             data-testid="agent-intent-cancel"
             onClick={() => onIntent({ action: "cancel" })}
           >
@@ -71,6 +82,17 @@ export function IntentBar({ mode, busy = false, gateReason, onIntent }: Props) {
         />
       </label>
       <div className="row-actions">
+        {canStop ? (
+          <button
+            type="button"
+            className="btn mini err"
+            disabled={busy}
+            data-testid="agent-intent-stop"
+            onClick={() => onIntent({ action: "stop" })}
+          >
+            停止
+          </button>
+        ) : null}
         <button
           type="button"
           className="btn mini ok"

@@ -16,9 +16,19 @@ type Props = {
   onSelect?: (node: ChatBubbleSelection) => void;
 };
 
-function bubbleRole(type: string, kind: string): "user" | "gate" | "other" {
+function bubbleRole(type: string, kind: string): "user" | "gate" | "tool" | "other" {
   if (type === "session.turn" || kind === "session.turn") return "user";
   if (type === "gate.waiting_approval" || kind === "gate.waiting_approval") return "gate";
+  if (
+    kind === "tool.called" ||
+    kind === "tool.result" ||
+    kind === "tool" ||
+    kind === "step" ||
+    type.startsWith("tool.") ||
+    type.startsWith("step.")
+  ) {
+    return "tool";
+  }
   return "other";
 }
 
@@ -44,7 +54,7 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                 <button
                   type="button"
                   className={`agent-chat-bubble role-${role}${active ? " active" : ""}`}
-                  data-testid="agent-chat-bubble"
+                  data-testid={role === "tool" ? "agent-chat-bubble-tool" : "agent-chat-bubble"}
                   data-role={role}
                   data-node-kind={node.kind}
                   data-active={active ? "1" : "0"}

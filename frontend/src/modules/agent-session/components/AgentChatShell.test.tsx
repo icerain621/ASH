@@ -9,6 +9,8 @@ const createAgentSession = vi.fn();
 const listSessionEvents = vi.fn();
 const submitSessionIntent = vi.fn();
 const getAgentSession = vi.fn();
+const patchAgentSession = vi.fn();
+const closeAgentSession = vi.fn();
 
 vi.mock("@/modules/agent-session/api/session.api", async () => {
   const actual = await vi.importActual<typeof import("../api/session.api")>("../api/session.api");
@@ -19,8 +21,14 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
     listSessionEvents: (...args: unknown[]) => listSessionEvents(...args),
     submitSessionIntent: (...args: unknown[]) => submitSessionIntent(...args),
     getAgentSession: (...args: unknown[]) => getAgentSession(...args),
+    patchAgentSession: (...args: unknown[]) => patchAgentSession(...args),
+    closeAgentSession: (...args: unknown[]) => closeAgentSession(...args),
   };
 });
+
+vi.mock("@/services/sse/runStream", () => ({
+  useRunStream: vi.fn(() => ({ lines: [], status: "idle" as const })),
+}));
 
 vi.mock("@/modules/interactions/api/interactions.api", () => ({
   getInteractionByRun: vi.fn(async () => ({
@@ -109,6 +117,19 @@ describe("AgentChatShell", () => {
       status: "active",
       runId: "run_1",
     });
+    patchAgentSession.mockResolvedValue({
+      id: "sess_a",
+      spaceId: "local",
+      status: "active",
+      title: "Renamed",
+      runId: "run_1",
+    });
+    closeAgentSession.mockResolvedValue({
+      id: "sess_a",
+      spaceId: "local",
+      status: "closed",
+      title: "Ship chat",
+    });
   });
 
   it("renders three-column shell with session list", async () => {
@@ -147,5 +168,34 @@ describe("AgentChatShell", () => {
     expect(details).toHaveAttribute("data-open", "1");
     fireEvent.click(screen.getByTestId("agent-chat-details-toggle"));
     expect(details).toHaveAttribute("data-open", "0");
+  });
+
+  it("shows stop when run is running and submits stop intent", async () => {
+    renderShell({ selectedSessionId: "sess_a", runStatus: "running" });
+    fireEvent.click(await screen.findByTestId("agent-intent-stop"));
+    await waitFor(() => {
+      expect(submitSessionIntent).toHaveBeenCalledWith(
+        "sess_a",
+        expect.objectContaining({ action: "stop" }),
+      );
+    });
+  });
+
+  it("renames and closes sessions from history list", async () => {
+    const onSelectSession = vi.fn();
+    renderShell({ selectedSessionId: "sess_a", onSelectSession });
+    fireEvent.click(await screen.findByTestId("agent-history-rename-btn-sess_a"));
+    fireEvent.change(screen.getByTestId("agent-history-rename-input-sess_a"), {
+      target: { value: "Renamed" },
+    });
+    fireEvent.click(screen.getByTestId("agent-history-rename-save-sess_a"));
+    await waitFor(() => {
+      expect(patchAgentSession).toHaveBeenCalledWith("sess_a", { title: "Renamed" });
+    });
+    fireEvent.click(screen.getByTestId("agent-history-close-sess_a"));
+    await waitFor(() => {
+      expect(closeAgentSession).toHaveBeenCalledWith("sess_a");
+      expect(onSelectSession).toHaveBeenCalledWith(null);
+    });
   });
 });

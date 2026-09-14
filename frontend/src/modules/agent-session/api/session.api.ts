@@ -20,6 +20,7 @@ export type AgentSessionView = {
   id: string;
   spaceId: string;
   status: string;
+  title?: string;
   goal?: string;
   planId?: string;
   runId?: string;
@@ -30,7 +31,7 @@ export type AgentSessionView = {
   updatedAt?: number;
 };
 
-export type SessionIntentAction = "prompt" | "approve" | "cancel" | "reject";
+export type SessionIntentAction = "prompt" | "approve" | "cancel" | "stop" | "reject";
 
 export type AgentSessionListResponse = {
   items: AgentSessionView[];
@@ -39,10 +40,12 @@ export type AgentSessionListResponse = {
 export async function listAgentSessions(opts?: {
   spaceId?: string;
   limit?: number;
+  includeClosed?: boolean;
 }): Promise<AgentSessionListResponse> {
   const q = new URLSearchParams();
   if (opts?.spaceId) q.set("spaceId", opts.spaceId);
   if (opts?.limit != null) q.set("limit", String(opts.limit));
+  if (opts?.includeClosed) q.set("includeClosed", "1");
   const suffix = q.toString() ? `?${q}` : "";
   return api<AgentSessionListResponse>(`/agents/sessions${suffix}`);
 }
@@ -61,6 +64,22 @@ export async function createAgentSession(body: {
 
 export async function getAgentSession(sessionId: string): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}`);
+}
+
+export async function patchAgentSession(
+  sessionId: string,
+  body: { title: string },
+): Promise<AgentSessionView> {
+  return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  });
+}
+
+export async function closeAgentSession(sessionId: string): Promise<AgentSessionView> {
+  return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}`, {
+    method: "DELETE",
+  });
 }
 
 export async function submitSessionIntent(
@@ -92,5 +111,6 @@ export function eventVisibility(ev: { type?: string; visibility?: string }): Eve
     return "audit";
   }
   if ((ev.type || "").startsWith("ui.") || ev.type === "gate.waiting_approval") return "ui_only";
+  if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.")) return "ui_only";
   return "model_visible";
 }
