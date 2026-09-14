@@ -1,9 +1,10 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**hardening 已完成**；**控制台三主题 IA Tasks 1–4 已落地**；**下一步 = 可选 UI 打磨** 或 **v5 freeze / v4.1**  
+> 状态：**hardening 已完成**；**控制台三主题 IA Tasks 1–4 已落地**；**Agent Chat DSH 对标已落地**；**下一步 = 可选 UI 打磨** 或 **v5 freeze / v4.1**  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > IA 升级：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md)（Agent · 记忆 · 评审管控）  
+> Agent Chat 对标：[`../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md)（**landed**：`874b0ce` · `6e88718`）  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
 > 前置：不打断现行 [`v4.x-program.md`](v4.x-program.md)；**业务代码默认等 v4.0 签字后再开 v5.0 Sprint**
 
@@ -66,9 +67,10 @@
 
 1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
 2. **控制台三主题 IA**：Tasks 1–4 **已落地**（壳层 `e0a8680` · Agent `bd0e60c` · 记忆 `1322bbb` · 评审 `bcb19a0`/`66fda66`）；规格 [`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md) 状态 **landed**
-3. **可选 polish**：Agent 真会话列表 API、`/agent` 别名文案、更多抽屉 vs 下拉、评审子路由深链细化
-4. 并行可选：v5 **freeze**（`v5-release-scope`）或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
-5. 门禁：`make v5-signoff`
+3. **Agent Chat DSH 对标**：**已落地**（BE `874b0ce` · FE `6e88718`）；规格 [`../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md) 状态 **landed**（三栏壳、真会话列表、气泡 Chat、sticky composer、Chat|Trajectory、Details）
+4. **可选 polish**：`/agent` 别名文案、更多抽屉 vs 下拉、评审子路由深链细化、DSH slash/流式等 out-of-scope 项
+5. 并行可选：v5 **freeze**（`v5-release-scope`）或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
+6. 门禁：`make v5-signoff`
 
 ## 6. 修订记录
 
@@ -92,3 +94,4 @@
 | 2026-09-14 | **hardening + BE-49**：evaluation 排除 voided；HLD/附录 K / Doctor 水位 ALL60·TR3 13；verify-local 纳入 v5 包；下一步=freeze 或 v4.1 |
 | 2026-09-14 | **三主题 IA 规格确认**：Agent/记忆/评审管控卡片切换；默认大 Chat+左历史；更多+账号下拉；保留 v5 能力 |
 | 2026-09-15 | **三主题 IA Tasks 1–4 落地**：主导航三主题+更多/账号；Agent 大 Chat；记忆多视角+知识 Tab；评审子导航；下一步=可选 polish 或 freeze/v4.1 |
+| 2026-09-15 | **Agent Chat DSH 对标落地**：ListSessions + 空白事件投影 `874b0ce`；三栏 FE 壳 `6e88718`；下一步=可选 polish 或 freeze/v4.1 |

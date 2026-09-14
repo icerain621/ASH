@@ -1,6 +1,6 @@
 # ASH Agent Chat × DSH 视觉/交互对标 — 设计规格
 
-> Status: **approved for implementation** (2026-09-15；用户确认按对标验收推进)  
+> Status: **landed** (2026-09-15；Task 1 `874b0ce` · Task 2 `6e88718`)  
 > Prior: [`2026-09-14-console-three-pillar-ia-design.md`](./2026-09-14-console-three-pillar-ia-design.md) · DSH 源码 `deepseek-harness` `ui-layout` / `ui-conversation` / `ui-workspace` / `ui-trajectory`  
 > Non-goal: **不引入 Cordis、不嵌入 `dsh web`**（G1/D2）；Goal→Plan 看板保留为次级
 
@@ -56,14 +56,14 @@
 
 ## 6. Acceptance
 
-- [ ] 默认 Agent：三栏 Chat 壳（Details 默认可开或可关，但入口存在）
-- [ ] 新建 → 空白会话 → 直接发送意图，不强制打开 Goal 表单
-- [ ] 左栏为真 session 列表（刷新后仍在）
-- [ ] Chat 为气泡流（非纯 event-line 运维列表）
-- [ ] Chat \| Trajectory 页内 Tab
-- [ ] Composer sticky；gate takeover
-- [ ] 任务板默认折叠且可达
-- [ ] 不引入 Cordis / dsh web iframe
+- [x] 默认 Agent：三栏 Chat 壳（Details 默认可开或可关，但入口存在）
+- [x] 新建 → 空白会话 → 直接发送意图，不强制打开 Goal 表单
+- [x] 左栏为真 session 列表（刷新后仍在）
+- [x] Chat 为气泡流（非纯 event-line 运维列表）
+- [x] Chat \| Trajectory 页内 Tab
+- [x] Composer sticky；gate takeover
+- [x] 任务板默认折叠且可达
+- [x] 不引入 Cordis / dsh web iframe
 
 ## 7. Out of scope (本轮)
 
@@ -77,3 +77,4 @@
 | 日期 | 说明 |
 |------|------|
 | 2026-09-15 | 初稿：对标验收 + 空白会话默认 + API/FE 切面 |
+| 2026-09-15 | **落地**：BE ListSessions + 空白事件投影 `874b0ce`；FE 三栏壳 `6e88718`；验收项全部勾选 |

@@ -21,11 +21,11 @@
 
 **Files:** `internal/session/service.go`, `list` tests, `internal/api/session.go`, `handlers.go`, openapi/swagger
 
-- [ ] `List(spaceID, limit) ([]View, error)` — query audit_log `event_type=agent.session` AND space_id
-- [ ] `GET /api/v1/agents/sessions` query spaceId/limit
-- [ ] `ListEvents`: if no runId, synthesize items from `view.Turns` as `session.turn` envelopes (so Chat 有内容)
-- [ ] Tests + swagger + openapi-check
-- [ ] Commit `feat(session): 列出 Agent Session 并支持空白会话事件投影`
+- [x] `List(spaceID, limit) ([]View, error)` — query audit_log `event_type=agent.session` AND space_id
+- [x] `GET /api/v1/agents/sessions` query spaceId/limit
+- [x] `ListEvents`: if no runId, synthesize items from `view.Turns` as `session.turn` envelopes (so Chat 有内容)
+- [x] Tests + swagger + openapi-check
+- [x] Commit `feat(session): 列出 Agent Session 并支持空白会话事件投影`
 
 ---
 
@@ -33,24 +33,24 @@
 
 **Files:** `session.api.ts`, new components under `modules/agent-session/`, `QuestPage.tsx`, CSS, tests
 
-- [ ] `listAgentSessions()`
-- [ ] `AgentChatShell`: 左 SessionHistoryList（API）+ 中 Chat|Trajectory + 右 Details（可关）
-- [ ] 新建：`createAgentSession({})` → 选中新 id，不打开任务板
-- [ ] `ChatTranscript`：user 右气泡 / assistant·tool·gate 左卡片（从 turns+events 映射）
-- [ ] sticky composer 样式；gate takeover 保留
-- [ ] TrajectoryTab：ThreadTimeline 或 event list
-- [ ] Details：点击节点显示 JSON/摘要
-- [ ] QuestPage：默认 shell；任务板仍折叠
-- [ ] vitest + Commit `feat(fe): Agent Chat 三栏对标 DSH`
+- [x] `listAgentSessions()`
+- [x] `AgentChatShell`: 左 SessionHistoryList（API）+ 中 Chat|Trajectory + 右 Details（可关）
+- [x] 新建：`createAgentSession({})` → 选中新 id，不打开任务板
+- [x] `ChatTranscript`：user 右气泡 / assistant·tool·gate 左卡片（从 turns+events 映射）
+- [x] sticky composer 样式；gate takeover 保留
+- [x] TrajectoryTab：ThreadTimeline 或 event list
+- [x] Details：点击节点显示 JSON/摘要
+- [x] QuestPage：默认 shell；任务板仍折叠
+- [x] vitest + Commit `feat(fe): Agent Chat 三栏对标 DSH`
 
 ---
 
 ### Task 3: Docs + web-build + push
 
-- [ ] 更新三主题规格指针 / v5 program
-- [ ] `make web-build`；硬刷新说明
-- [ ] Push
+- [x] 更新三主题规格指针 / v5 program
+- [x] `make web-build`；硬刷新说明
+- [x] Push
 
 ---
 
-执行：用户已要求推进 → Subagent-Driven，连续 Task 1→3。
+执行：用户已要求推进 → Subagent-Driven，连续 Task 1→3。落地 commit：`874b0ce` · `6e88718`。
