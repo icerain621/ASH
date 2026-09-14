@@ -1,42 +1,18 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import {
-  Activity,
-  BarChart3,
-  Brain,
-  Building2,
-  ClipboardCheck,
-  ClipboardList,
-  Gauge,
-  HeartPulse,
-  KanbanSquare,
-  BookOpen,
-  MessageSquarePlus,
-  GitBranch,
-  RadioTower,
-  ShieldCheck,
-  ShieldAlert,
-  Workflow,
-} from "lucide-react";
+import { RadioTower } from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { persistWorkMode, workModeFromPath } from "./workMode";
 
-const tabs = [
-  { to: "/runs", label: "运行", icon: Activity },
-  { to: "/memory", label: "记忆", icon: Brain },
-  { to: "/reviews", label: "评审", icon: ClipboardList },
-  { to: "/quest", label: "Quest", icon: KanbanSquare },
-  { to: "/knowledge", label: "知识", icon: BookOpen },
-  { to: "/automation", label: "自动化", icon: Workflow },
-  { to: "/feedback", label: "反馈", icon: MessageSquarePlus },
-  { to: "/ci", label: "CI", icon: GitBranch },
-  { to: "/metrics", label: "指标", icon: BarChart3 },
-  { to: "/observability", label: "观测", icon: ShieldAlert },
-  { to: "/releases", label: "发布", icon: ClipboardCheck },
-  { to: "/space", label: "空间", icon: Building2 },
-  { to: "/compliance", label: "合规", icon: ShieldCheck },
-  { to: "/scale", label: "规模化", icon: Gauge },
-  { to: "/doctor", label: "诊断", icon: HeartPulse },
-];
+const moreLinks = [
+  { to: "/runs", label: "运行" },
+  { to: "/automation", label: "自动化" },
+  { to: "/feedback", label: "反馈" },
+  { to: "/ci", label: "CI" },
+  { to: "/releases", label: "发布" },
+  { to: "/compliance", label: "合规" },
+  { to: "/scale", label: "规模化" },
+  { to: "/doctor", label: "诊断" },
+] as const;
 
 export function AppLayout() {
   const activeSpaceId = getCurrentSpaceId();
@@ -66,7 +42,7 @@ export function AppLayout() {
         <div
           className="work-mode"
           role="tablist"
-          aria-label="Agent 使用与评审管控切换"
+          aria-label="三大主题切换"
           data-testid="work-mode-switch"
         >
           <Link
@@ -77,7 +53,17 @@ export function AppLayout() {
             data-testid="work-mode-agent"
             onClick={() => persistWorkMode("agent")}
           >
-            Agent 使用
+            Agent
+          </Link>
+          <Link
+            to="/memory"
+            role="tab"
+            aria-selected={workMode === "memory"}
+            className={workMode === "memory" ? "work-mode-btn active" : "work-mode-btn"}
+            data-testid="work-mode-memory"
+            onClick={() => persistWorkMode("memory")}
+          >
+            记忆
           </Link>
           <Link
             to="/reviews"
@@ -90,28 +76,35 @@ export function AppLayout() {
             评审管控
           </Link>
         </div>
-        <nav className="tabs">
-          {tabs.map((tab) => {
-            const Icon = tab.icon;
-            return (
-              <Link
-                key={tab.to}
-                to={tab.to}
-                className="tab"
-                activeProps={{ className: "tab active" }}
-              >
-                <Icon size={16} strokeWidth={1.8} />
-                {tab.label}
+        <div className="header-actions">
+          <details className="nav-dropdown" data-testid="nav-more">
+            <summary className="nav-dropdown-trigger">更多</summary>
+            <div className="nav-dropdown-menu" role="menu">
+              {moreLinks.map((item) => (
+                <Link key={item.to} to={item.to} className="nav-dropdown-item" role="menuitem">
+                  {item.label}
+                </Link>
+              ))}
+            </div>
+          </details>
+          <details className="nav-dropdown" data-testid="nav-account">
+            <summary className="nav-dropdown-trigger">账号</summary>
+            <div className="nav-dropdown-menu" role="menu">
+              <div className="nav-dropdown-meta" data-testid="nav-account-space">
+                当前 Space · {activeSpaceId}
+              </div>
+              <Link to="/login" className="nav-dropdown-item" role="menuitem" data-testid="nav-login">
+                登录
               </Link>
-            );
-          })}
-        </nav>
-        <div className="status">
-          <RadioTower size={15} strokeWidth={1.8} />
-          /api/v1 · {activeSpaceId}
-          <Link to="/login" className="inline-link" style={{ marginLeft: "0.75rem" }} data-testid="nav-login">
-            登录
-          </Link>
+              <Link to="/space" className="nav-dropdown-item" role="menuitem" data-testid="nav-space">
+                Space 设置
+              </Link>
+            </div>
+          </details>
+          <div className="status">
+            <RadioTower size={15} strokeWidth={1.8} />
+            /api/v1
+          </div>
         </div>
       </header>
       <main>
