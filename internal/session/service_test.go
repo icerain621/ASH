@@ -47,20 +47,142 @@ func TestCreateBindRunAndPromptTurn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
+	foundTurn, foundMsg := false, false
 	for _, item := range items {
-		if item.Type == "session.turn" {
-			found = true
-			break
+		switch item.Type {
+		case "session.turn":
+			foundTurn = true
+		case "assistant.message":
+			foundMsg = true
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["source"] != "echo" || payload["text"] != "已收到：continue with tests" {
+				t.Fatalf("assistant.message payload=%v", payload)
+			}
 		}
 	}
-	if !found {
-		t.Fatalf("events=%+v want session.turn", items)
+	if !foundTurn || !foundMsg {
+		t.Fatalf("events=%+v want session.turn + assistant.message", items)
 	}
 
 	got, err := svc.Get(view.ID)
 	if err != nil || got.ID != view.ID {
 		t.Fatalf("get=%+v err=%v", got, err)
+	}
+}
+
+func TestBlankPromptTurnSynthesizesAssistantStream(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, turn, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "ping"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if turn == nil || len(view.Replies) != 1 {
+		t.Fatalf("view=%+v turn=%+v", view, turn)
+	}
+	if view.Replies[0].Source != "echo" || view.Replies[0].Text != "已收到：ping" {
+		t.Fatalf("reply=%+v", view.Replies[0])
+	}
+	if n := len(view.Replies[0].Chunks); n < 2 || n > 4 {
+		t.Fatalf("chunks=%d want 2–4", n)
+	}
+
+	evResp, err := svc.ListEvents(blank.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	types := make([]string, 0, len(evResp.Items))
+	for _, item := range evResp.Items {
+		types = append(types, item.Type)
+	}
+	if len(types) < 3 || types[0] != "session.turn" {
+		t.Fatalf("types=%v", types)
+	}
+	sawDelta, sawMsg := false, false
+	for _, typ := range types[1:] {
+		switch typ {
+		case "assistant.delta":
+			sawDelta = true
+		case "assistant.message":
+			sawMsg = true
+		}
+	}
+	if !sawDelta || !sawMsg {
+		t.Fatalf("types=%v want deltas + message after turn", types)
+	}
+}
+
+func TestBoundPromptTurnAppendsAssistantMessage(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := NewService(db, nil, ev)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_asst_1", TraceID: "trace_asst_1",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	view, err := svc.Create(CreateRequest{RunID: run.ID, SpaceID: "local", CreatedBy: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = svc.PromptTurn(view.ID, TurnRequest{Prompt: "bound hello"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	resp, err := svc.ListEvents(view.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range resp.Items {
+		if item.Type == "assistant.message" {
+			found = true
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["text"] != "已收到：bound hello" || payload["source"] != "echo" {
+				t.Fatalf("payload=%v", payload)
+			}
+			if payload["stopped"] != false {
+				t.Fatalf("stopped=%v", payload["stopped"])
+			}
+		}
+	}
+	if !found {
+		t.Fatalf("events=%+v want assistant.message", resp.Items)
+	}
+}
+
+func TestSplitReplyChunksRange(t *testing.T) {
+	chunks := splitReplyChunks("short")
+	if len(chunks) < 2 || len(chunks) > 4 {
+		t.Fatalf("chunks=%v", chunks)
+	}
+	joined := strings.Join(chunks, "")
+	if joined != "short" {
+		t.Fatalf("joined=%q", joined)
+	}
+	long := strings.Repeat("字", 100)
+	chunks = splitReplyChunks(long)
+	if len(chunks) != 4 {
+		t.Fatalf("long chunks=%d want 4", len(chunks))
+	}
+	if strings.Join(chunks, "") != long {
+		t.Fatal("long join mismatch")
 	}
 }
 
@@ -233,19 +355,39 @@ func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if len(evResp.Items) != 1 {
-		t.Fatalf("events=%+v want 1 synthesized turn", evResp.Items)
+	if len(evResp.Items) < 2 {
+		t.Fatalf("events=%+v want session.turn + assistant.message (and deltas)", evResp.Items)
 	}
-	item := evResp.Items[0]
-	if item.Type != "session.turn" || item.Seq != 1 || item.Visibility != events.VisibilityModelVisible {
-		t.Fatalf("item=%+v", item)
+	var sawTurn, sawMsg, sawDelta bool
+	for _, item := range evResp.Items {
+		switch item.Type {
+		case "session.turn":
+			sawTurn = true
+			if item.Seq != 1 || item.Visibility != events.VisibilityModelVisible {
+				t.Fatalf("turn item=%+v", item)
+			}
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["prompt"] != "hello blank" {
+				t.Fatalf("payload=%v", payload)
+			}
+		case "assistant.delta":
+			sawDelta = true
+		case "assistant.message":
+			sawMsg = true
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["source"] != "echo" || payload["text"] != "已收到：hello blank" {
+				t.Fatalf("assistant.message payload=%v", payload)
+			}
+		}
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(item.Payload, &payload); err != nil {
-		t.Fatal(err)
-	}
-	if payload["prompt"] != "hello blank" {
-		t.Fatalf("payload=%v", payload)
+	if !sawTurn || !sawMsg || !sawDelta {
+		t.Fatalf("events=%+v want turn+delta+message", evResp.Items)
 	}
 
 	// Bound-run create still works and lists alongside blank.

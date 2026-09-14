@@ -2739,6 +2739,24 @@ definitions:
       source:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_session.AssistantReply:
+    properties:
+      chunks:
+        items:
+          type: string
+        type: array
+      createdAt:
+        type: integer
+      source:
+        description: '"echo" | "acp"'
+        type: string
+      stopped:
+        type: boolean
+      text:
+        type: string
+      turnId:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_session.CreateRequest:
     properties:
       actorRole:
@@ -2835,6 +2853,11 @@ definitions:
         type: string
       providerReason:
         type: string
+      replies:
+        description: blank-session assistant prose (no runId)
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.AssistantReply'
+        type: array
       repoRoot:
         type: string
       runId:

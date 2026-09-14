@@ -186,16 +186,30 @@ func TestAgentSessionAPIListBlankAndEvents(t *testing.T) {
 	if err := json.Unmarshal(evW.Body.Bytes(), &evResp); err != nil {
 		t.Fatal(err)
 	}
-	if len(evResp.Items) != 1 || evResp.Items[0].Type != "session.turn" ||
-		evResp.Items[0].Visibility != "model_visible" || evResp.Items[0].Seq != 1 {
-		t.Fatalf("events=%+v", evResp.Items)
+	if len(evResp.Items) < 2 {
+		t.Fatalf("events=%+v want turn + assistant", evResp.Items)
 	}
-	var payload map[string]any
-	if err := json.Unmarshal(evResp.Items[0].Payload, &payload); err != nil {
-		t.Fatal(err)
+	var sawTurn, sawMsg bool
+	for _, item := range evResp.Items {
+		switch item.Type {
+		case "session.turn":
+			sawTurn = true
+			if item.Visibility != "model_visible" || item.Seq != 1 {
+				t.Fatalf("turn=%+v", item)
+			}
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["prompt"] != "blank turn" {
+				t.Fatalf("payload=%v", payload)
+			}
+		case "assistant.message":
+			sawMsg = true
+		}
 	}
-	if payload["prompt"] != "blank turn" {
-		t.Fatalf("payload=%v", payload)
+	if !sawTurn || !sawMsg {
+		t.Fatalf("events=%+v want session.turn + assistant.message", evResp.Items)
 	}
 }
 

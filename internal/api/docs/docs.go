@@ -12556,6 +12556,33 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_session.AssistantReply": {
+            "type": "object",
+            "properties": {
+                "chunks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "createdAt": {
+                    "type": "integer"
+                },
+                "source": {
+                    "description": "\"echo\" | \"acp\"",
+                    "type": "string"
+                },
+                "stopped": {
+                    "type": "boolean"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "turnId": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_session.CreateRequest": {
             "type": "object",
             "properties": {
@@ -12702,6 +12729,13 @@ const docTemplate = `{
                 },
                 "providerReason": {
                     "type": "string"
+                },
+                "replies": {
+                    "description": "blank-session assistant prose (no runId)",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.AssistantReply"
+                    }
                 },
                 "repoRoot": {
                     "type": "string"

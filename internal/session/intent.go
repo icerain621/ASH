@@ -103,6 +103,9 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 	return view, nil
 }
 
+// intentCancel cancels the bound run. Echo/ACP assistant replies complete synchronously in
+// PromptTurn today, so stop does not mark assistant.message stopped:true; that flag is for
+// a future mid-flight stream.
 func (s *Service) intentCancel(sessionID string, req IntentRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {

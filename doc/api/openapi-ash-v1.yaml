@@ -1663,6 +1663,18 @@ components:
         id: { type: string }
         prompt: { type: string }
         createdAt: { type: integer, format: int64 }
+    AgentSessionAssistantReply:
+      type: object
+      description: "Blank-session assistant prose (no runId); bound runs use ledger events instead"
+      properties:
+        turnId: { type: string }
+        text: { type: string }
+        source: { type: string, description: "echo | acp" }
+        stopped: { type: boolean }
+        chunks:
+          type: array
+          items: { type: string }
+        createdAt: { type: integer, format: int64 }
     AgentSessionView:
       type: object
       properties:
@@ -1683,6 +1695,10 @@ components:
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }
+        replies:
+          type: array
+          description: "Assistant replies for sessions without runId (echo/acp stub until real LLM stream)"
+          items: { $ref: "#/components/schemas/AgentSessionAssistantReply" }
         createdBy: { type: string }
         createdAt: { type: integer, format: int64 }
         updatedAt: { type: integer, format: int64 }

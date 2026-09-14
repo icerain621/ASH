@@ -39,11 +39,12 @@ type View struct {
 	ProviderAdapter  string         `json:"providerAdapter,omitempty"`
 	ProviderFallback bool           `json:"providerFallback,omitempty"`
 	ProviderReason   string         `json:"providerReason,omitempty"`
-	Turns            []Turn         `json:"turns"`
-	CreatedBy        string         `json:"createdBy,omitempty"`
-	CreatedAt        int64          `json:"createdAt"`
-	UpdatedAt        int64          `json:"updatedAt"`
-	Meta             map[string]any `json:"meta,omitempty"`
+	Turns            []Turn           `json:"turns"`
+	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
+	CreatedBy        string           `json:"createdBy,omitempty"`
+	CreatedAt        int64            `json:"createdAt"`
+	UpdatedAt        int64            `json:"updatedAt"`
+	Meta             map[string]any   `json:"meta,omitempty"`
 }
 
 // PatchRequest updates mutable session fields (title).
@@ -140,7 +141,7 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 		ID: id, SpaceID: space, Status: StatusActive,
 		RepoRoot:  strings.TrimSpace(req.RepoRoot),
 		CreatedBy: strings.TrimSpace(req.CreatedBy),
-		Turns:     []Turn{}, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+		Turns:     []Turn{}, Replies: []AssistantReply{}, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 	}
 
 	runID := strings.TrimSpace(req.RunID)
@@ -298,6 +299,10 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 		}
 		_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 	}
+
+	replyText, replySource := resolveAssistantText(prompt, acpPayload)
+	s.emitAssistantReply(view, turn, replyText, replySource)
+
 	if err := s.save(view); err != nil {
 		return nil, nil, err
 	}
@@ -373,20 +378,26 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 	if view == nil || len(view.Turns) == 0 {
 		return []events.Envelope{}
 	}
-	out := make([]events.Envelope, 0, len(view.Turns))
-	for i, turn := range view.Turns {
-		seq := int64(i + 1)
+	repliesByTurn := make(map[string]AssistantReply, len(view.Replies))
+	for _, r := range view.Replies {
+		repliesByTurn[r.TurnID] = r
+	}
+	out := make([]events.Envelope, 0, len(view.Turns)*4)
+	var seq int64
+	appendEv := func(id, typ string, ts int64, payload map[string]any) bool {
+		seq++
 		if seq <= afterSeq {
-			continue
+			return false
 		}
-		payload, _ := json.Marshal(map[string]any{"prompt": turn.Prompt})
-		ts := turn.CreatedAt
+		if len(out) >= limit {
+			return true
+		}
+		raw, _ := json.Marshal(payload)
 		if ts > 0 && ts < 1_000_000_000_000 {
 			ts = ts * 1000
 		}
-		id := turn.ID
 		if id == "" {
-			id = fmt.Sprintf("turn_seq_%d", seq)
+			id = fmt.Sprintf("%s_seq_%d", typ, seq)
 		}
 		out = append(out, events.Envelope{
 			ID:         id,
@@ -394,12 +405,44 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 			RunID:      view.RunID,
 			Seq:        seq,
 			TS:         ts,
-			Type:       "session.turn",
+			Type:       typ,
 			Severity:   "info",
 			Visibility: events.VisibilityModelVisible,
-			Payload:    payload,
+			Payload:    raw,
 		})
-		if len(out) >= limit {
+		return len(out) >= limit
+	}
+	for _, turn := range view.Turns {
+		ts := turn.CreatedAt
+		id := turn.ID
+		if appendEv(id, "session.turn", ts, map[string]any{"prompt": turn.Prompt, "turnId": turn.ID}) {
+			break
+		}
+		reply, ok := repliesByTurn[turn.ID]
+		if !ok {
+			continue
+		}
+		chunks := reply.Chunks
+		if len(chunks) == 0 {
+			chunks = splitReplyChunks(reply.Text)
+		}
+		full := false
+		for i, chunk := range chunks {
+			deltaID := fmt.Sprintf("%s_delta_%d", turn.ID, i)
+			if appendEv(deltaID, "assistant.delta", ts, map[string]any{
+				"turnId": turn.ID, "text": chunk, "index": i,
+			}) {
+				full = true
+				break
+			}
+		}
+		if full {
+			break
+		}
+		msgID := turn.ID + "_assistant"
+		if appendEv(msgID, "assistant.message", ts, map[string]any{
+			"turnId": turn.ID, "text": reply.Text, "stopped": reply.Stopped, "source": reply.Source,
+		}) {
 			break
 		}
 	}
@@ -459,6 +502,9 @@ func decodeView(row store.AuditLog) (*View, error) {
 	}
 	if view.Turns == nil {
 		view.Turns = []Turn{}
+	}
+	if view.Replies == nil {
+		view.Replies = []AssistantReply{}
 	}
 	return &view, nil
 }

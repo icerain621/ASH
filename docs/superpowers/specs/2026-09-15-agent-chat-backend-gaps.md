@@ -29,8 +29,10 @@
 
 | 缺口 | 现状 | 建议 |
 |------|------|------|
-| Token/文本增量 | 多为 step/tool 事件，无 assistant prose stream | `assistant.delta` `{turnId,text,index}` + `assistant.message` `{turnId,text,stopped?}` 写入 ledger + SSE |
-| 空白会话助手回复 | Prompt 只记 user turn；无绑定 run 时无模型回包 | 可选 echo/provider 路径或绑定轻量 run；否则 Chat 长期「仅用户气泡」 |
+| Token/文本增量 | ✅ `assistant.delta` `{turnId,text,index}` + `assistant.message` `{turnId,text,stopped,source}`；有 runId 时写入 run ledger（model_visible） | 完成（形状已落地；真 LLM token 流仍后置） |
+| 空白会话助手回复 | ✅ 无 runId 时 echo stub `已收到：{prompt}`（`source:"echo"`）存 `View.replies`，`ListEvents`/`synthesizeTurnEvents` 投影 delta+message；有 ACP `acpMessage` 则 `source:"acp"` | echo stub 直至真 LLM stream |
+
+**Stop 说明**：Intent `stop`/`cancel` 仅取消绑定 run；当前 echo/ACP 回包同步完成，故 `stopped:true` 预留给未来 mid-flight 流。
 
 ## P3 — Workspace 分组（非 Cordis）
 
@@ -65,3 +67,4 @@
 |------|------|
 | 2026-09-15 | 初稿：P0–P5 缺口与建议形状 |
 | 2026-09-15 | 落地 P0 FE（SSE/工具卡/Stop）+ P1 title/PATCH/DELETE/`stop` 别名；P2–P5 仍开 |
+| 2026-09-15 | 落地 P2：`assistant.delta`/`assistant.message` + 空白会话 echo stub；真 LLM 流仍开 |
