@@ -1,6 +1,6 @@
 # ASH 控制台三大主题 IA — 设计规格
 
-> Status: **approved for planning** (2026-09-14；壳层 §1–§4 已口头确认)  
+> Status: **landed** (2026-09-15；Tasks 1–4 已合入 `main`：`e0a8680` 壳层 · `bd0e60c` Agent · `1322bbb` 记忆 · `bcb19a0`/`66fda66` 评审管控)  
 > Program: [`doc/plan/v5-governance-program.md`](../../../doc/plan/v5-governance-program.md)  
 > Prior: [`2026-09-13-v5-dual-core-governance-design.md`](./2026-09-13-v5-dual-core-governance-design.md) §7.4 / §8（双模式顶栏 → 本规格升级为三主题）  
 > Non-goal: 不引入 Cordis / 不替换为 dsh web（决议 D2 / G1 仍有效）
@@ -156,14 +156,14 @@ Space 策略编辑：可从「启停登记」或账号下拉「Space 设置」�
 
 ## 10. Acceptance
 
-- [ ] 顶栏主视线只有三主题（+ 更多 + 账号），无长平铺 Tab  
-- [ ] 默认进入 Agent：左侧历史会话 + 大 Chat composer  
-- [ ] Tools / Skills / MCP 菜单位可达  
-- [ ] 记忆主题可切换分层/场景等视角；知识不再独立顶栏  
-- [ ] 评审管控默认 Workbench；监控/启停/编排可从子导航到达  
-- [ ] 登录与 Space 设置仅在账号下拉（或等价右上入口）  
-- [ ] 旧 URL 深链仍可用；Mobile `/m/reviews` 仍可用  
-- [ ] 既有 v5 API/门禁行为不回退  
+- [x] 顶栏主视线只有三主题（+ 更多 + 账号），无长平铺 Tab  
+- [x] 默认进入 Agent：左侧历史会话 + 大 Chat composer  
+- [x] Tools / Skills / MCP 菜单位可达  
+- [x] 记忆主题可切换分层/场景等视角；知识不再独立顶栏  
+- [x] 评审管控默认 Workbench；监控/启停/编排可从子导航到达  
+- [x] 登录与 Space 设置仅在账号下拉（或等价右上入口）  
+- [x] 旧 URL 深链仍可用；Mobile `/m/reviews` 仍可用  
+- [x] 既有 v5 API/门禁行为不回退  
 
 ## 11. Open points (non-blocking)
 
@@ -176,3 +176,4 @@ Space 策略编辑：可从「启停登记」或账号下拉「Space 设置」�
 | 日期 | 说明 |
 |------|------|
 | 2026-09-14 | 初稿：三主题 IA；默认 Agent 大 Chat + 左历史；更多 + 账号下拉；保留 v5 |
+| 2026-09-15 | **landed**：Tasks 1–4 合入；验收项勾选；vitest layout/Quest/Memory/Reviews/Knowledge + `make web-build` 通过 |

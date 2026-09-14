@@ -34,11 +34,11 @@
 **Interfaces:**
 - Produces: `WorkMode = "agent" | "memory" | "review"`；`workModeFromPath` 识别三主题路径；`persistWorkMode` / `readPersistedWorkMode` 支持三态
 
-- [ ] **Step 1:** 扩展 `workMode.ts` + 单测（agent/memory/review 路径映射；旧 `"review"` 持久化兼容）
-- [ ] **Step 2:** 重写 `AppLayout`：三主题分段（链接 `/quest` `/memory` `/reviews`）；「更多」下拉含运行/自动化/反馈/CI/发布/合规/规模化/诊断；右上「账号」下拉含登录、Space 设置（`/space`）、当前 spaceId 展示；**移除**顶栏长 Tab 列表
-- [ ] **Step 3:** `indexRoute` 改为 `Navigate to="/quest"`
-- [ ] **Step 4:** vitest：`workMode.test.ts` + layout 冒烟（三主题 testid、无平铺 tabs）
-- [ ] **Step 5:** Commit `feat(fe): 控制台三主题壳层与账号/更多下拉`
+- [x] **Step 1:** 扩展 `workMode.ts` + 单测（agent/memory/review 路径映射；旧 `"review"` 持久化兼容）
+- [x] **Step 2:** 重写 `AppLayout`：三主题分段（链接 `/quest` `/memory` `/reviews`）；「更多」下拉含运行/自动化/反馈/CI/发布/合规/规模化/诊断；右上「账号」下拉含登录、Space 设置（`/space`）、当前 spaceId 展示；**移除**顶栏长 Tab 列表
+- [x] **Step 3:** `indexRoute` 改为 `Navigate to="/quest"`
+- [x] **Step 4:** vitest：`workMode.test.ts` + layout 冒烟（三主题 testid、无平铺 tabs）
+- [x] **Step 5:** Commit `feat(fe): 控制台三主题壳层与账号/更多下拉`
 
 **Verify:**
 ```bash
@@ -60,11 +60,11 @@ cd frontend && npx vitest run src/app/layout/workMode.test.ts src/app/layout/App
 - Consumes: `getQuestBoard` 作为历史会话数据源（runId/plan 条目）；`AgentSessionPanel({ runId })`
 - Produces: 左栏选中 `selectedRunId`；无选中时显示空态「选择或新建会话」+ 保留「从目标创建」入口
 
-- [ ] **Step 1:** Quest 默认视图：`data-testid="agent-home"`；左栏 `agent-session-history` 列出看板各列条目（标题+状态）；点击绑定右侧 `AgentSessionPanel`
-- [ ] **Step 2:** 右侧为大 Chat 区（现有 ConversationThread + IntentBar）；Tools/Skills/MCP：顶栏或右上菜单链到现有 skills/相关页或占位菜单项（`data-testid="agent-settings-menu"`，含 Tools/Skills/MCP 三项；Skills 可链 `/automation` 或文档说明——优先链已有技能相关路由若存在，否则按钮 + toast/muted「在会话侧栏配置」占位但三项可见）
-- [ ] **Step 3:** 看板与「从目标创建」收入可折叠「任务板」次级区（默认折叠，`data-testid="agent-task-board-toggle"`）
-- [ ] **Step 4:** vitest：渲染左历史 + 大 Chat 壳；任务板默认折叠
-- [ ] **Step 5:** Commit `feat(fe): Agent 首页大 Chat 与左侧历史会话`
+- [x] **Step 1:** Quest 默认视图：`data-testid="agent-home"`；左栏 `agent-session-history` 列出看板各列条目（标题+状态）；点击绑定右侧 `AgentSessionPanel`
+- [x] **Step 2:** 右侧为大 Chat 区（现有 ConversationThread + IntentBar）；Tools/Skills/MCP：顶栏或右上菜单链到现有 skills/相关页或占位菜单项（`data-testid="agent-settings-menu"`，含 Tools/Skills/MCP 三项；Skills 可链 `/automation` 或文档说明——优先链已有技能相关路由若存在，否则按钮 + toast/muted「在会话侧栏配置」占位但三项可见）
+- [x] **Step 3:** 看板与「从目标创建」收入可折叠「任务板」次级区（默认折叠，`data-testid="agent-task-board-toggle"`）
+- [x] **Step 4:** vitest：渲染左历史 + 大 Chat 壳；任务板默认折叠
+- [x] **Step 5:** Commit `feat(fe): Agent 首页大 Chat 与左侧历史会话`
 
 **Verify:**
 ```bash
@@ -82,10 +82,10 @@ cd frontend && npx vitest run src/pages/QuestPage.test.tsx src/modules/agent-ses
 - Modify: `frontend/src/pages/MemoryPage.test.tsx`（若有）或新建
 - Reuse: `KnowledgePage` 组件嵌入或抽取共享内容
 
-- [ ] **Step 1:** Memory 顶加 Tab：`记忆体 | 知识`（`data-testid="memory-pillar-tabs"`）；知识 Tab 渲染现有 Knowledge 页面内容（import 组件或 iframe 式复用 export）
-- [ ] **Step 2:** 视角切换：`分层 | 场景 | Skill | Tools | 项目`（`data-testid="memory-perspective"`）；分层为默认；其它视角先做过滤器 UI（按现有 list 字段能滤则滤，否则显示提示但仍切换高亮）
-- [ ] **Step 3:** 深链「去评审」按钮指向 `/reviews`（候选批准）
-- [ ] **Step 4:** vitest + Commit `feat(fe): 记忆板块多视角与知识并入`
+- [x] **Step 1:** Memory 顶加 Tab：`记忆体 | 知识`（`data-testid="memory-pillar-tabs"`）；知识 Tab 渲染现有 Knowledge 页面内容（import 组件或 iframe 式复用 export）
+- [x] **Step 2:** 视角切换：`分层 | 场景 | Skill | Tools | 项目`（`data-testid="memory-perspective"`）；分层为默认；其它视角先做过滤器 UI（按现有 list 字段能滤则滤，否则显示提示但仍切换高亮）
+- [x] **Step 3:** 深链「去评审」按钮指向 `/reviews`（候选批准）
+- [x] **Step 4:** vitest + Commit `feat(fe): 记忆板块多视角与知识并入`
 
 ---
 
@@ -96,10 +96,10 @@ cd frontend && npx vitest run src/pages/QuestPage.test.tsx src/modules/agent-ses
 - Modify: `frontend/src/app/router.tsx`（可选：`/reviews/metrics` 等子路径；或页内 state 切换）
 - Reuse: MetricsPage / ObservabilityPage / RegistryAssetsPanel
 
-- [ ] **Step 1:** Reviews 顶加子导航：`队列评审 | 启停登记 | 监控观测 | 编排流程`（`data-testid="review-pillar-nav"`）
-- [ ] **Step 2:** 默认队列评审 = 现有 Workbench 全文保留
-- [ ] **Step 3:** 启停登记 = 嵌入 `RegistryAssetsPanel` + EffectivePolicy 摘要（从 Space API）；监控观测 = 嵌入或 Link 到 Metrics/Observability 内容；编排流程 = 链到 `/runs` `/automation` 的内嵌说明+按钮
-- [ ] **Step 4:** vitest + Commit `feat(fe): 评审管控板块子导航`
+- [x] **Step 1:** Reviews 顶加子导航：`队列评审 | 启停登记 | 监控观测 | 编排流程`（`data-testid="review-pillar-nav"`）
+- [x] **Step 2:** 默认队列评审 = 现有 Workbench 全文保留
+- [x] **Step 3:** 启停登记 = 嵌入 `RegistryAssetsPanel` + EffectivePolicy 摘要（从 Space API）；监控观测 = 嵌入或 Link 到 Metrics/Observability 内容；编排流程 = 链到 `/runs` `/automation` 的内嵌说明+按钮
+- [x] **Step 4:** vitest + Commit `feat(fe): 评审管控板块子导航`
 
 ---
 
@@ -110,9 +110,9 @@ cd frontend && npx vitest run src/pages/QuestPage.test.tsx src/modules/agent-ses
 - Modify: spec status → `approved / implementing`
 - Optional: v5 规格 §7.4 加指针到三主题规格
 
-- [ ] **Step 1:** `cd frontend && npx vitest run src/app/layout src/pages/QuestPage.test.tsx src/pages/ReviewsPage.test.tsx src/pages/MemoryPage.test.tsx`（按实际文件调整）
-- [ ] **Step 2:** `make web-build`
-- [ ] **Step 3:** 更新程序状态；Commit docs；`git push origin HEAD`
+- [x] **Step 1:** `cd frontend && npx vitest run src/app/layout src/pages/QuestPage.test.tsx src/pages/ReviewsPage.test.tsx src/pages/MemoryPage.test.tsx`（按实际文件调整）
+- [x] **Step 2:** `make web-build`
+- [x] **Step 3:** 更新程序状态；Commit docs；`git push origin HEAD`
 
 ---
 
