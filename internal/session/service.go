@@ -34,6 +34,7 @@ type View struct {
 	RunID            string         `json:"runId,omitempty"`
 	TraceID          string         `json:"traceId,omitempty"`
 	RepoRoot         string         `json:"repoRoot,omitempty"`
+	WorkspaceID      string         `json:"workspaceId,omitempty"`
 	StreamURL        string         `json:"streamUrl,omitempty"`
 	ProviderKind     string         `json:"providerKind,omitempty"`
 	ProviderAdapter  string         `json:"providerAdapter,omitempty"`
@@ -64,6 +65,7 @@ type CreateRequest struct {
 	Goal         string `json:"goal"`
 	RunID        string `json:"runId"`
 	RepoRoot     string `json:"repoRoot"`
+	WorkspaceID  string `json:"workspaceId"`
 	SpaceID      string `json:"spaceId"`
 	ActorRole    string `json:"actorRole"`
 	CreatedBy    string `json:"createdBy"`
@@ -139,9 +141,10 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 	id := "sess_" + uuid.NewString()
 	view := &View{
 		ID: id, SpaceID: space, Status: StatusActive,
-		RepoRoot:  strings.TrimSpace(req.RepoRoot),
-		CreatedBy: strings.TrimSpace(req.CreatedBy),
-		Turns:     []Turn{}, Replies: []AssistantReply{}, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
+		RepoRoot:    strings.TrimSpace(req.RepoRoot),
+		WorkspaceID: strings.TrimSpace(req.WorkspaceID),
+		CreatedBy:   strings.TrimSpace(req.CreatedBy),
+		Turns:       []Turn{}, Replies: []AssistantReply{}, CreatedAt: now.Unix(), UpdatedAt: now.Unix(),
 	}
 
 	runID := strings.TrimSpace(req.RunID)
@@ -319,6 +322,21 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	if req.Title != nil {
 		view.Title = truncateTitle(strings.TrimSpace(*req.Title), maxTitleRunes)
 	}
+	view.UpdatedAt = time.Now().UTC().Unix()
+	if err := s.save(view); err != nil {
+		return nil, err
+	}
+	view.StreamURL = streamURL(view.RunID)
+	return view, nil
+}
+
+// SetWorkspaceID records the workspace membership on the session document.
+func (s *Service) SetWorkspaceID(sessionID, workspaceID string) (*View, error) {
+	view, err := s.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	view.WorkspaceID = strings.TrimSpace(workspaceID)
 	view.UpdatedAt = time.Now().UTC().Unix()
 	if err := s.save(view); err != nil {
 		return nil, err

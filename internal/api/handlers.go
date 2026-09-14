@@ -10,6 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/alerts"
+	"github.com/ash-repwiki/ash/internal/agentworkspace"
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/diffreview"
@@ -64,6 +65,7 @@ type Handler struct {
 	knowledge     *knowledge.Service
 	spaceRules    *spacerules.Service
 	session       *session.Service
+	workspaces    *agentworkspace.Service
 	interaction   *interaction.Service
 	registry      *registry.Service
 	spacePolicy   *spacepolicy.Service
@@ -90,6 +92,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	goalSvc := goal.NewService(db, scenarios, runsSvc, ev)
 	sessionSvc := session.NewService(db, goalSvc, ev).WithRunControl(sessionRunControl{runs: runsSvc})
 	runsSvc.WithSessionService(sessionRunLinker{svc: sessionSvc})
+	workspaceSvc := agentworkspace.NewService(db)
 	interactionSvc := interaction.NewService(db, ev)
 	h := &Handler{
 		db:          db,
@@ -113,6 +116,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		knowledge:   knowledge.NewService(db, memSvc),
 		spaceRules:  spacerules.NewService(db),
 		session:     sessionSvc,
+		workspaces:  workspaceSvc,
 		interaction: interactionSvc,
 		registry:    registry.NewService(db),
 		spacePolicy: spacepolicy.NewService(db),
@@ -164,6 +168,11 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
 		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)
 		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)
+		v1.GET("/agent-workspaces", h.listAgentWorkspaces)
+		v1.POST("/agent-workspaces", h.createAgentWorkspace)
+		v1.PATCH("/agent-workspaces/:workspaceId", h.patchAgentWorkspace)
+		v1.POST("/agent-workspaces/:workspaceId/sessions", h.attachAgentWorkspaceSession)
+		v1.DELETE("/agent-workspaces/:workspaceId", h.closeAgentWorkspace)
 		v1.GET("/agents/assets", h.listAgentAssets)
 		v1.POST("/agents/assets", h.createAgentAsset)
 		v1.PATCH("/agents/assets/:id", h.patchAgentAssetStatus)

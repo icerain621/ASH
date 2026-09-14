@@ -38,6 +38,9 @@ func (h *Handler) listAgentSessions(c *gin.Context) {
 	if items == nil {
 		items = []session.View{}
 	}
+	for i := range items {
+		h.enrichSessionWorkspace(c, &items[i])
+	}
 	c.JSON(http.StatusOK, session.ListResponse{Items: items})
 }
 
@@ -76,10 +79,20 @@ func (h *Handler) createAgentSession(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("SESSION_CREATE_FAILED", err.Error()))
 		return
 	}
+	if wsID := strings.TrimSpace(req.WorkspaceID); wsID != "" {
+		if _, attachErr := h.agentWorkspaceFor(c).Attach(wsID, view.ID); attachErr != nil {
+			c.JSON(http.StatusBadRequest, errorBody("SESSION_WORKSPACE_ATTACH_FAILED", attachErr.Error()))
+			return
+		}
+		view.WorkspaceID = wsID
+		if saved, setErr := h.sessionFor(c).SetWorkspaceID(view.ID, wsID); setErr == nil {
+			view = saved
+		}
+	}
 	_ = h.dbFor(c).Create(auditRow(req.SpaceID, currentActor(c), "agent.session_created", map[string]any{
 		"sessionId": view.ID, "runId": view.RunID, "planId": view.PlanID, "goal": view.Goal,
 		"providerKind": view.ProviderKind, "providerAdapter": view.ProviderAdapter,
-		"providerFallback": view.ProviderFallback,
+		"providerFallback": view.ProviderFallback, "workspaceId": view.WorkspaceID,
 	})).Error
 	c.JSON(http.StatusCreated, view)
 }
@@ -101,6 +114,7 @@ func (h *Handler) getAgentSession(c *gin.Context) {
 	if !h.requireRequestSpace(c, view.SpaceID) {
 		return
 	}
+	h.enrichSessionWorkspace(c, view)
 	c.JSON(http.StatusOK, view)
 }
 

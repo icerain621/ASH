@@ -13,6 +13,64 @@ definitions:
       ok:
         type: boolean
     type: object
+  github_com_ash-repwiki_ash_internal_agentworkspace.AttachRequest:
+    properties:
+      sessionId:
+        type: string
+    required:
+    - sessionId
+    type: object
+  github_com_ash-repwiki_ash_internal_agentworkspace.CreateRequest:
+    properties:
+      createdBy:
+        type: string
+      repoRoot:
+        type: string
+      spaceId:
+        type: string
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_agentworkspace.ListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_agentworkspace.PatchRequest:
+    properties:
+      repoRoot:
+        type: string
+      sessionIds:
+        items:
+          type: string
+        type: array
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_agentworkspace.View:
+    properties:
+      createdAt:
+        type: integer
+      id:
+        type: string
+      repoRoot:
+        type: string
+      sessionIds:
+        items:
+          type: string
+        type: array
+      spaceId:
+        type: string
+      status:
+        description: active|closed
+        type: string
+      title:
+        type: string
+      updatedAt:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_alerts.EvaluationResult:
     properties:
       evaluatedAt:
@@ -2775,6 +2833,8 @@ definitions:
         type: string
       spaceId:
         type: string
+      workspaceId:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_session.EventsResponse:
     properties:
@@ -2878,6 +2938,8 @@ definitions:
         type: array
       updatedAt:
         type: integer
+      workspaceId:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_skills.CatalogItem:
     properties:
@@ -5312,6 +5374,159 @@ info:
   title: ASH Worker API
   version: "0.1"
 paths:
+  /api/v1/agent-workspaces:
+    get:
+      description: List active agent.workspace audit documents for a space, newest
+        updatedAt first.
+      parameters:
+      - description: 'space id (default: current space)'
+        in: query
+        name: spaceId
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.ListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List agent workspaces
+      tags:
+      - agents
+    post:
+      consumes:
+      - application/json
+      description: Persist a workspace grouping document in audit_log (event_type=agent.workspace).
+      parameters:
+      - description: workspace create
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.CreateRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Create an agent workspace
+      tags:
+      - agents
+  /api/v1/agent-workspaces/{workspaceId}:
+    delete:
+      description: Sets status=closed. List excludes closed workspaces.
+      parameters:
+      - description: workspace id
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Soft-close agent workspace
+      tags:
+      - agents
+    patch:
+      consumes:
+      - application/json
+      description: Rename, update repoRoot, and/or replace sessionIds order/membership.
+      parameters:
+      - description: workspace id
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.PatchRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Patch agent workspace
+      tags:
+      - agents
+  /api/v1/agent-workspaces/{workspaceId}/sessions:
+    post:
+      consumes:
+      - application/json
+      description: Append sessionId to workspace.sessionIds when missing.
+      parameters:
+      - description: workspace id
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: attach
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.AttachRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Attach a session to an agent workspace
+      tags:
+      - agents
   /api/v1/agents/assets:
     get:
       parameters:

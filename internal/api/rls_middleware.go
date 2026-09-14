@@ -7,6 +7,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/alerts"
+	"github.com/ash-repwiki/ash/internal/agentworkspace"
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/improve"
@@ -137,6 +138,13 @@ func (h *Handler) sessionFor(c *gin.Context) *session.Service {
 		return h.session
 	}
 	return h.session.WithContext(c.Request.Context())
+}
+
+func (h *Handler) agentWorkspaceFor(c *gin.Context) *agentworkspace.Service {
+	if h == nil || h.workspaces == nil {
+		return h.workspaces
+	}
+	return h.workspaces.WithContext(c.Request.Context())
 }
 
 func (h *Handler) interactionFor(c *gin.Context) *interaction.Service {

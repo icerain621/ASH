@@ -1647,6 +1647,7 @@ components:
         goal: { type: string }
         runId: { type: string }
         repoRoot: { type: string }
+        workspaceId: { type: string, description: "Optional agent workspace id to attach on create" }
         spaceId: { type: string }
         actorRole: { type: string }
         createdBy: { type: string }
@@ -1687,6 +1688,7 @@ components:
         runId: { type: string }
         traceId: { type: string }
         repoRoot: { type: string }
+        workspaceId: { type: string, description: "Owning agent workspace when known" }
         streamUrl: { type: string }
         providerKind: { type: string }
         providerAdapter: { type: string }
@@ -1716,6 +1718,47 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionView" }
+    CreateAgentWorkspaceRequest:
+      type: object
+      properties:
+        title: { type: string }
+        repoRoot: { type: string }
+        spaceId: { type: string }
+        createdBy: { type: string }
+    AgentWorkspacePatchRequest:
+      type: object
+      properties:
+        title: { type: string }
+        repoRoot: { type: string }
+        sessionIds:
+          type: array
+          items: { type: string }
+          description: When set, replaces session membership/order
+    AgentWorkspaceAttachRequest:
+      type: object
+      required: [sessionId]
+      properties:
+        sessionId: { type: string }
+    AgentWorkspaceView:
+      type: object
+      properties:
+        id: { type: string }
+        spaceId: { type: string }
+        title: { type: string }
+        repoRoot: { type: string }
+        sessionIds:
+          type: array
+          items: { type: string }
+        createdAt: { type: integer, format: int64 }
+        updatedAt: { type: integer, format: int64 }
+        status: { type: string, description: "active|closed" }
+    AgentWorkspaceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AgentWorkspaceView" }
     AgentSessionEventsResponse:
       type: object
       properties:
@@ -3892,6 +3935,96 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AgentSessionEventsResponse" }
+  /api/v1/agent-workspaces:
+    get:
+      tags: [Agents]
+      summary: List agent workspaces
+      description: List active agent.workspace documents for a space (newest updatedAt first).
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentWorkspaceListResponse" }
+    post:
+      tags: [Agents]
+      summary: Create agent workspace
+      description: Persist workspace grouping in audit_log (event_type=agent.workspace; no new table).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateAgentWorkspaceRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentWorkspaceView" }
+  /api/v1/agent-workspaces/{workspaceId}:
+    patch:
+      tags: [Agents]
+      summary: Patch agent workspace
+      description: Rename, update repoRoot, and/or replace sessionIds.
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentWorkspacePatchRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentWorkspaceView" }
+    delete:
+      tags: [Agents]
+      summary: Soft-close agent workspace
+      description: Sets status=closed. List excludes closed by default.
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentWorkspaceView" }
+  /api/v1/agent-workspaces/{workspaceId}/sessions:
+    post:
+      tags: [Agents]
+      summary: Attach session to workspace
+      description: Append sessionId to workspace.sessionIds when missing.
+      parameters:
+        - in: path
+          name: workspaceId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/AgentWorkspaceAttachRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentWorkspaceView" }
 
   /api/v1/agents/assets:
     get:
