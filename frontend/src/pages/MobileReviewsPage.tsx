@@ -135,7 +135,7 @@ export function MobileReviewsPage() {
       </ul>
       {items.length === 0 && !queueQuery.isLoading ? (
         <p className="muted-line" data-testid="mobile-reviews-empty">
-          队列为空
+          {overdueOnly ? "当前无逾期评审" : "待办评审为空"}
         </p>
       ) : null}
 
@@ -236,7 +236,11 @@ function MobileReviewCard({
                 分配
               </button>
             </div>
-          ) : null}
+          ) : (
+            <p className="muted-line" data-testid="mobile-reviews-assign-denied">
+              需要 reviews:assign 才能分配
+            </p>
+          )}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "0.4rem" }}>
             {rubricDims.map(([key, label]) => (
               <label key={key} className="muted-line" style={{ display: "flex", flexDirection: "column", gap: 4 }}>

@@ -59,8 +59,8 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
 
       {eff ? (
         <div className="muted-line" data-testid="effective-policy-summary">
-          Effective：citation={eff.citationMode} · multiSign={String(eff.multiSign)} · SLA={eff.reviewSlaHours}h
-          <div>sources: {(eff.sources ?? []).join(" → ")}</div>
+          生效策略：引用={eff.citationMode} · 多签={String(eff.multiSign)} · 评审 SLA={eff.reviewSlaHours}h
+          <div>来源：{(eff.sources ?? []).join(" → ")}</div>
         </div>
       ) : null}
 
@@ -82,13 +82,13 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
       </div>
 
       <AssetTable
-        title="Agent assets"
+        title="Agent 资产"
         items={agentsQuery.data?.items ?? []}
         onToggle={(id, status) => patchAgent.mutate({ id, status: status === "active" ? "disabled" : "active" })}
         testId="agent-assets-list"
       />
       <AssetTable
-        title="Memory assets"
+        title="Memory 资产"
         items={memoryQuery.data?.items ?? []}
         onToggle={(id, status) => patchMemory.mutate({ id, status: status === "active" ? "disabled" : "active" })}
         testId="memory-assets-list"
@@ -114,9 +114,9 @@ function AssetTable({
       <table className="table" data-testid={testId}>
         <thead>
           <tr>
-            <th>Name</th>
-            <th>Kind</th>
-            <th>Status</th>
+            <th>名称</th>
+            <th>类型</th>
+            <th>状态</th>
             <th />
           </tr>
         </thead>

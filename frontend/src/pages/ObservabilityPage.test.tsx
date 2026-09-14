@@ -194,7 +194,9 @@ describe("ObservabilityPage", () => {
     renderPage(<ObservabilityPage />);
     await waitFor(() => {
       expect(screen.getAllByTestId("obs-review-sla-badge").length).toBeGreaterThanOrEqual(1);
-      expect(screen.getByTestId("obs-review-sla-alert")).toHaveTextContent("评审 SLA");
+      expect(screen.getByTestId("obs-review-sla-alert")).toHaveTextContent(
+        "评审 SLA 告警：近期 duty 已标记逾期（告警 2）",
+      );
     });
   });
 

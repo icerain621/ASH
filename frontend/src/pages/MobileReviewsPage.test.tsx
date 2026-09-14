@@ -1,8 +1,8 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileReviewsPage } from "./MobileReviewsPage";
 import { renderPage } from "@/test/renderPage";
-import { assignReview, decideReview } from "@/modules/reviews/api/reviews.api";
+import { assignReview, decideReview, listReviewsQueue } from "@/modules/reviews/api/reviews.api";
 import { getAuthMe } from "@/modules/platform/api/platform.api";
 
 vi.mock("@tanstack/react-router", async () => {
@@ -56,6 +56,44 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
 }));
 
 describe("MobileReviewsPage", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(getAuthMe).mockResolvedValue({
+      user: { id: "u1", displayName: "Reviewer" },
+      space: { id: "local", name: "local" },
+      role: "reviewer",
+      permissions: ["reviews:assign", "memory:review"],
+    });
+    vi.mocked(listReviewsQueue).mockResolvedValue({
+      items: [
+        {
+          id: "harness_profile:hp1",
+          queue: "orchestration",
+          targetType: "harness_profile",
+          targetId: "hp1",
+          title: "default v3",
+          summary: "sandbox isolated",
+          diff: "+ defaultMode: isolated",
+          status: "pending_second",
+          spaceId: "local",
+          createdAt: 1,
+          assigneeId: "u1",
+          slaBreach: true,
+        },
+        {
+          id: "harness_profile:hp2",
+          queue: "orchestration",
+          targetType: "memory_candidate",
+          targetId: "mc1",
+          title: "other v1",
+          status: "in_review",
+          spaceId: "local",
+          createdAt: 2,
+        },
+      ],
+    });
+  });
+
   it("renders compact queue with approve/reject", async () => {
     renderPage(<MobileReviewsPage />);
     expect(await screen.findByText("default v3")).toBeInTheDocument();
@@ -108,5 +146,26 @@ describe("MobileReviewsPage", () => {
     await waitFor(() => {
       expect(assignReview).toHaveBeenCalledWith("harness_profile:hp1", expect.objectContaining({ assigneeId: "op_x" }));
     });
+  });
+
+  it("shows assign-denied copy without reviews:assign", async () => {
+    vi.mocked(getAuthMe).mockResolvedValue({
+      user: { id: "u2", displayName: "Viewer" },
+      space: { id: "local", name: "local" },
+      role: "viewer",
+      permissions: ["artifact:read"],
+    });
+    renderPage(<MobileReviewsPage />);
+    fireEvent.click(await screen.findByText("default v3"));
+    expect(screen.getByTestId("mobile-reviews-assign-denied")).toHaveTextContent("reviews:assign");
+    expect(screen.queryByTestId("mobile-review-assign")).toBeNull();
+  });
+
+  it("shows empty copy for overdue and default queues", async () => {
+    vi.mocked(listReviewsQueue).mockResolvedValue({ items: [] });
+    renderPage(<MobileReviewsPage />);
+    expect(await screen.findByTestId("mobile-reviews-empty")).toHaveTextContent("待办评审为空");
+    fireEvent.click(screen.getByTestId("mobile-reviews-filter-overdue"));
+    expect(screen.getByTestId("mobile-reviews-empty")).toHaveTextContent("当前无逾期评审");
   });
 });

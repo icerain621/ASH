@@ -203,6 +203,8 @@ describe("ReviewsPage", () => {
       permissions: ["artifact:read"],
     });
     renderReviews();
+    expect(await screen.findByTestId("reviews-decide-hint")).toHaveTextContent("请先选择左侧队列项再决定");
+    fireEvent.click(await screen.findByText("default@v1"));
     expect(await screen.findByTestId("reviews-assign-denied")).toHaveTextContent("reviews:assign");
     expect(screen.queryByTestId("review-assign")).toBeNull();
     expect(screen.queryByTestId("reviews-assignee-input")).toBeNull();
@@ -222,11 +224,19 @@ describe("ReviewsPage", () => {
     await waitFor(() => {
       expect(decideReview).toHaveBeenCalledWith(
         "score_appeal:score_1",
-        expect.objectContaining({ decision: "approve", reason: "reviewed from UI" }),
+        expect.objectContaining({ decision: "approve", reason: "控制台评审" }),
       );
     });
     const call = vi.mocked(decideReview).mock.calls.at(-1)?.[1] as { rubric?: unknown };
     expect(call.rubric).toBeUndefined();
+  });
+
+  it("shows empty queue copy for overdue filter", async () => {
+    vi.mocked(listReviewsQueue).mockResolvedValueOnce({ items: [] });
+    renderReviews();
+    expect(await screen.findByTestId("reviews-empty")).toHaveTextContent("待审队列为空");
+    fireEvent.click(screen.getByTestId("reviews-filter-overdue"));
+    expect(screen.getByTestId("reviews-empty")).toHaveTextContent("当前无逾期评审");
   });
 
   it("submits compact create-appeal form", async () => {

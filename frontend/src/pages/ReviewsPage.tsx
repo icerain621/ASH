@@ -35,7 +35,7 @@ export function ReviewsPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
   const [queue, setQueue] = useState<"all" | "orchestration" | "memory" | "appeal">("orchestration");
-  const [reason, setReason] = useState("reviewed from UI");
+  const [reason, setReason] = useState("控制台评审");
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<ReviewItem | null>(null);
   const [rubric, setRubric] = useState<RubricForm>(defaultRubric);
@@ -200,8 +200,8 @@ export function ReviewsPage() {
           <table className="table" data-testid="reviews-queue-list">
             <thead>
               <tr>
-                <th>Item</th>
-                <th>Type</th>
+                <th>项</th>
+                <th>类型</th>
               </tr>
             </thead>
             <tbody>
@@ -240,7 +240,9 @@ export function ReviewsPage() {
               ))}
               {items.length === 0 && !queueQuery.isLoading && (
                 <tr className="empty-row">
-                  <td colSpan={2}>队列为空</td>
+                  <td colSpan={2} data-testid="reviews-empty">
+                    {overdueOnly ? "当前无逾期评审" : "待审队列为空"}
+                  </td>
                 </tr>
               )}
             </tbody>
@@ -364,86 +366,94 @@ export function ReviewsPage() {
                   : "决定 + Rubric"}
             </h2>
           </div>
-          <label className="scenario-picker">
-            原因
-            <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
-          </label>
-          {canAssign ? (
+          {!selected ? (
+            <p className="muted-line" data-testid="reviews-decide-hint">
+              请先选择左侧队列项再决定
+            </p>
+          ) : (
             <>
               <label className="scenario-picker">
-                分配给
-                <input
-                  value={assigneeInput}
-                  onChange={(e) => setAssigneeInput(e.target.value)}
-                  placeholder="assigneeId"
-                  data-testid="reviews-assignee-input"
-                />
+                原因
+                <input value={reason} onChange={(e) => setReason(e.target.value)} data-testid="reviews-reason" />
               </label>
-              <div className="row-actions" style={{ marginBottom: 8 }}>
+              {canAssign ? (
+                <>
+                  <label className="scenario-picker">
+                    分配给
+                    <input
+                      value={assigneeInput}
+                      onChange={(e) => setAssigneeInput(e.target.value)}
+                      placeholder="assigneeId"
+                      data-testid="reviews-assignee-input"
+                    />
+                  </label>
+                  <div className="row-actions" style={{ marginBottom: 8 }}>
+                    <button
+                      type="button"
+                      className="btn mini"
+                      disabled={assignMut.isPending || !assigneeInput.trim()}
+                      onClick={() =>
+                        selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
+                      }
+                      data-testid="review-assign"
+                    >
+                      分配
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <p className="muted-line" data-testid="reviews-assign-denied">
+                  需要 reviews:assign 权限才能分配责任人
+                </p>
+              )}
+              {!isAppealItem
+                ? (
+                    [
+                      ["correctness", "正确性"],
+                      ["safety", "安全性"],
+                      ["citable", "可引用"],
+                      ["efficiency", "效率"],
+                    ] as const
+                  ).map(([key, label]) => (
+                    <label key={key} className="scenario-picker">
+                      {label}
+                      <input
+                        type="number"
+                        min={1}
+                        max={5}
+                        value={rubric[key]}
+                        onChange={(e) => setRubric((r) => ({ ...r, [key]: Number(e.target.value) }))}
+                        data-testid={`rubric-${key}`}
+                      />
+                    </label>
+                  ))
+                : (
+                  <p className="muted-line" data-testid="reviews-appeal-no-rubric">
+                    评分申诉决定无需 Rubric：批准=保持，拒绝=作废评分
+                  </p>
+                )}
+              <div className="row-actions">
                 <button
                   type="button"
-                  className="btn mini"
-                  disabled={assignMut.isPending || !selected || !assigneeInput.trim()}
-                  onClick={() =>
-                    selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
-                  }
-                  data-testid="review-assign"
+                  className="btn mini ok"
+                  disabled={decideMut.isPending}
+                  onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
+                  data-testid="review-approve"
                 >
-                  分配
+                  {isAppealItem ? "保持评分" : secondSign ? "第二签批准" : "批准"}
+                </button>
+                <button
+                  type="button"
+                  className="btn mini err"
+                  disabled={decideMut.isPending}
+                  onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
+                  data-testid="review-reject"
+                >
+                  {isAppealItem ? "作废评分" : secondSign ? "第二签拒绝" : "拒绝"}
                 </button>
               </div>
             </>
-          ) : (
-            <p className="muted-line" data-testid="reviews-assign-denied">
-              需要 reviews:assign 权限才能分配责任人
-            </p>
           )}
-          {!isAppealItem
-            ? (
-                [
-                  ["correctness", "正确性"],
-                  ["safety", "安全性"],
-                  ["citable", "可引用"],
-                  ["efficiency", "效率"],
-                ] as const
-              ).map(([key, label]) => (
-                <label key={key} className="scenario-picker">
-                  {label}
-                  <input
-                    type="number"
-                    min={1}
-                    max={5}
-                    value={rubric[key]}
-                    onChange={(e) => setRubric((r) => ({ ...r, [key]: Number(e.target.value) }))}
-                    data-testid={`rubric-${key}`}
-                  />
-                </label>
-              ))
-            : (
-              <p className="muted-line" data-testid="reviews-appeal-no-rubric">
-                评分申诉决定无需 Rubric：批准=保持，拒绝=作废评分
-              </p>
-            )}
-          <div className="row-actions">
-            <button
-              type="button"
-              className="btn mini ok"
-              disabled={decideMut.isPending || !selected}
-              onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
-              data-testid="review-approve"
-            >
-              {isAppealItem ? "保持评分" : secondSign ? "第二签批准" : "批准"}
-            </button>
-            <button
-              type="button"
-              className="btn mini err"
-              disabled={decideMut.isPending || !selected}
-              onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
-              data-testid="review-reject"
-            >
-              {isAppealItem ? "作废评分" : secondSign ? "第二签拒绝" : "拒绝"}
-            </button>
-          </div>
         </div>
       </div>
 
@@ -453,7 +463,7 @@ export function ReviewsPage() {
         </div>
         <div className="row-actions" style={{ gap: 8, flexWrap: "wrap" }}>
           <label className="scenario-picker">
-            scoreEventId
+            评分事件 ID
             <input
               value={appealScoreEventId}
               onChange={(e) => setAppealScoreEventId(e.target.value)}

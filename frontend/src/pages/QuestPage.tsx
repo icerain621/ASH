@@ -37,10 +37,10 @@ import { useQuestBoardStream } from "@/services/sse/questBoardStream";
 import { shortId } from "@/shared/utils/format";
 
 const COLUMNS: Array<{ key: string; title: string }> = [
-  { key: "plans", title: "Plans" },
-  { key: "running", title: "Running" },
-  { key: "waiting_approval", title: "Waiting" },
-  { key: "finished", title: "Finished" },
+  { key: "plans", title: "计划" },
+  { key: "running", title: "运行中" },
+  { key: "waiting_approval", title: "待审批" },
+  { key: "finished", title: "已结束" },
 ];
 
 function artifactItems(data: { artifacts?: ArtifactItem[]; manifest?: { artifacts?: ArtifactItem[] } } | undefined) {
@@ -436,6 +436,9 @@ export function QuestPage() {
                   </button>
                 </li>
               ))}
+              {(boardQuery.data?.columns?.[col.key] ?? []).length === 0 ? (
+                <li className="muted-line">暂无</li>
+              ) : null}
             </ul>
           </div>
         ))}

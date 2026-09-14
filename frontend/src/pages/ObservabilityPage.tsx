@@ -365,12 +365,12 @@ export function ObservabilityPage() {
                 : `${wakerDuties.filter((d) => d.enabled).length} enabled`}
             {wakerStatusQuery.data?.probesAvailable ? " · probes seeded" : ""}
             {probeAlertCount > 0 ? ` · ${probeAlertCount} probe alerts` : ""}
-            {hasReviewSlaSignal ? " · review_sla" : ""}
+            {hasReviewSlaSignal ? " · 评审 SLA" : ""}
           </span>
         </div>
         {showReviewSlaAlert ? (
           <p className="muted-line" data-testid="obs-review-sla-alert">
-            评审 SLA 告警：近期 duty 已标记逾期项（alertCount={probeAlertCount}）
+            评审 SLA 告警：近期 duty 已标记逾期（告警 {probeAlertCount}）
           </p>
         ) : null}
         <div className="toolbar metrics-toolbar">
