@@ -1,8 +1,9 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**hardening**（evaluation 排除 `score.voided`）· **BE-49 文档同步已完成**；P2/FE-45 / score_appeal / v5-signoff 已落地；**下一步 = freeze 或开 v4.1**  
+> 状态：**hardening 已完成**；**下一步 = 控制台三主题 IA**（规格已批）或 **v5 freeze / v4.1**  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
+> IA 升级：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md)（Agent · 记忆 · 评审管控）  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
 > 前置：不打断现行 [`v4.x-program.md`](v4.x-program.md)；**业务代码默认等 v4.0 签字后再开 v5.0 Sprint**
 
@@ -63,9 +64,10 @@
 
 ## 5. 下一步
 
-1. **hardening**：evaluation 排除作废分 + BE-49 HLD/附录 K 同步 — **已完成**
-2. **下一步**：backlog **freeze**，或切回 / 并行 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
-3. 门禁回归：`make v5-signoff`；本地 `scripts/verify-local.sh` 已纳入 v5 Go 包测试
+1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
+2. **控制台三主题 IA**（已确认规格）：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md) — 待写实现计划后开工；默认 Agent 大 Chat + 左历史会话
+3. 并行可选：v5 **freeze**（`v5-release-scope`）或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
+4. 门禁：`make v5-signoff`
 
 ## 6. 修订记录
 
@@ -87,3 +89,4 @@
 | 2026-09-14 | **v5-signoff**：自动门禁通过；checklist 勾选 FE-44 / score_appeal；门禁 FE 改为 `npx vitest` |
 | 2026-09-14 | **FE-45 closeout**：`web-build` 入门禁；vitest 扩 Improve/Mobile；手工项改挂自动证据；下一步=可选人工扫一眼或 backlog freeze |
 | 2026-09-14 | **hardening + BE-49**：evaluation 排除 voided；HLD/附录 K / Doctor 水位 ALL60·TR3 13；verify-local 纳入 v5 包；下一步=freeze 或 v4.1 |
+| 2026-09-14 | **三主题 IA 规格确认**：Agent/记忆/评审管控卡片切换；默认大 Chat+左历史；更多+账号下拉；保留 v5 能力 |
