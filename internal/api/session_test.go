@@ -111,3 +111,90 @@ func TestAgentSessionAPIBindRunTurnEvents(t *testing.T) {
 		t.Fatalf("intent prompt status=%d body=%s", promptW.Code, promptW.Body.String())
 	}
 }
+
+func TestAgentSessionAPIListBlankAndEvents(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, _ := newPlatformTestRouter(t)
+
+	createW := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions", bytes.NewReader([]byte(`{}`)))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create blank status=%d body=%s", createW.Code, createW.Body.String())
+	}
+	var sess struct {
+		ID    string `json:"id"`
+		RunID string `json:"runId"`
+	}
+	if err := json.Unmarshal(createW.Body.Bytes(), &sess); err != nil {
+		t.Fatal(err)
+	}
+	if sess.ID == "" || sess.RunID != "" {
+		t.Fatalf("sess=%+v want blank", sess)
+	}
+
+	listW := httptest.NewRecorder()
+	listReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions?limit=50", nil)
+	r.ServeHTTP(listW, listReq)
+	if listW.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", listW.Code, listW.Body.String())
+	}
+	var listResp struct {
+		Items []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(listW.Body.Bytes(), &listResp); err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range listResp.Items {
+		if item.ID == sess.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("list=%+v want %s", listResp.Items, sess.ID)
+	}
+
+	turnW := httptest.NewRecorder()
+	turnReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/turns",
+		bytes.NewReader([]byte(`{"prompt":"blank turn"}`)))
+	turnReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(turnW, turnReq)
+	if turnW.Code != http.StatusOK {
+		t.Fatalf("turn status=%d body=%s", turnW.Code, turnW.Body.String())
+	}
+
+	evW := httptest.NewRecorder()
+	evReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions/"+sess.ID+"/events", nil)
+	r.ServeHTTP(evW, evReq)
+	if evW.Code != http.StatusOK {
+		t.Fatalf("events status=%d body=%s", evW.Code, evW.Body.String())
+	}
+	var evResp struct {
+		Items []struct {
+			Type       string          `json:"type"`
+			Seq        int64           `json:"seq"`
+			Visibility string          `json:"visibility"`
+			Payload    json.RawMessage `json:"payload"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(evW.Body.Bytes(), &evResp); err != nil {
+		t.Fatal(err)
+	}
+	if len(evResp.Items) != 1 || evResp.Items[0].Type != "session.turn" ||
+		evResp.Items[0].Visibility != "model_visible" || evResp.Items[0].Seq != 1 {
+		t.Fatalf("events=%+v", evResp.Items)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(evResp.Items[0].Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["prompt"] != "blank turn" {
+		t.Fatalf("payload=%v", payload)
+	}
+}

@@ -192,3 +192,89 @@ func TestEnsureForRunIdempotent(t *testing.T) {
 		t.Fatalf("second=%v created=%v err=%v", v2, created2, err)
 	}
 }
+
+func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := NewService(db, nil, ev)
+
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blank.RunID != "" {
+		t.Fatalf("blank session should have empty runId: %+v", blank)
+	}
+
+	listed, err := svc.List("local", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range listed {
+		if item.ID == blank.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatalf("list=%+v want blank session %s", listed, blank.ID)
+	}
+
+	_, turn, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "hello blank"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if turn == nil || turn.Prompt != "hello blank" {
+		t.Fatalf("turn=%+v", turn)
+	}
+
+	evResp, err := svc.ListEvents(blank.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(evResp.Items) != 1 {
+		t.Fatalf("events=%+v want 1 synthesized turn", evResp.Items)
+	}
+	item := evResp.Items[0]
+	if item.Type != "session.turn" || item.Seq != 1 || item.Visibility != events.VisibilityModelVisible {
+		t.Fatalf("item=%+v", item)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(item.Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["prompt"] != "hello blank" {
+		t.Fatalf("payload=%v", payload)
+	}
+
+	// Bound-run create still works and lists alongside blank.
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_list_1", TraceID: "trace_list_1",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	bound, err := svc.Create(CreateRequest{RunID: run.ID, SpaceID: "local", CreatedBy: "test"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if bound.RunID != run.ID {
+		t.Fatalf("bound=%+v", bound)
+	}
+	listed, err = svc.List("local", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ids := map[string]bool{}
+	for _, item := range listed {
+		ids[item.ID] = true
+	}
+	if !ids[blank.ID] || !ids[bound.ID] {
+		t.Fatalf("list ids=%v want blank+bound", ids)
+	}
+}

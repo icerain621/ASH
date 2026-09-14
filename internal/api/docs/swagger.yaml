@@ -2784,6 +2784,13 @@ definitions:
     required:
     - action
     type: object
+  github_com_ash-repwiki_ash_internal_session.ListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
+        type: array
+    type: object
   github_com_ash-repwiki_ash_internal_session.Turn:
     properties:
       createdAt:
@@ -5343,6 +5350,37 @@ paths:
       tags:
       - registry
   /api/v1/agents/sessions:
+    get:
+      description: List agent.session audit documents for a space, newest updatedAt
+        first.
+      parameters:
+      - description: 'space id (default: current space)'
+        in: query
+        name: spaceId
+        type: string
+      - default: 50
+        description: max items
+        in: query
+        name: limit
+        type: integer
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.ListResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List agent sessions
+      tags:
+      - agents
     post:
       consumes:
       - application/json
@@ -5436,6 +5474,8 @@ paths:
       - agents
   /api/v1/agents/sessions/{sessionId}/events:
     get:
+      description: When the session has a runId, returns run ledger events. Blank
+        sessions project turns as session.turn envelopes.
       parameters:
       - description: session id
         in: path
@@ -5462,7 +5502,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: List session events (bound run events + streamUrl)
+      summary: List session events (bound run events or synthesized turns)
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/turns:

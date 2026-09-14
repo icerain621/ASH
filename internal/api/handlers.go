@@ -157,6 +157,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/skills/:skillId", h.getSkill)
 		v1.GET("/providers/agent", h.getAgentProviderStatus)
 		v1.POST("/agents/sessions", h.createAgentSession)
+		v1.GET("/agents/sessions", h.listAgentSessions)
 		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
 		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)

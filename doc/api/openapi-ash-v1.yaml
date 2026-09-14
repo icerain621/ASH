@@ -1687,6 +1687,13 @@ components:
         meta:
           type: object
           additionalProperties: true
+    AgentSessionListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AgentSessionView" }
     AgentSessionEventsResponse:
       type: object
       properties:
@@ -3709,6 +3716,23 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/agents/sessions:
+    get:
+      tags: [Agents]
+      summary: List agent sessions
+      description: List agent.session documents for a space (newest updatedAt first).
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+        - in: query
+          name: limit
+          schema: { type: integer, default: 50 }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentSessionListResponse" }
     post:
       tags: [Agents]
       summary: Create agent session
@@ -3788,7 +3812,8 @@ paths:
   /api/v1/agents/sessions/{sessionId}/events:
     get:
       tags: [Agents]
-      summary: List session events (bound run) + streamUrl
+      summary: List session events (bound run or synthesized turns)
+      description: Blank sessions project turns as session.turn envelopes; bound sessions return run ledger events + streamUrl.
       parameters:
         - in: path
           name: sessionId

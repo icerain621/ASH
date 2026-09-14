@@ -11,6 +11,34 @@ import (
 	"github.com/ash-repwiki/ash/internal/session"
 )
 
+// ListAgentSessions godoc
+// @Summary List agent sessions
+// @Description List agent.session audit documents for a space, newest updatedAt first.
+// @Tags agents
+// @Produce json
+// @Param spaceId query string false "space id (default: current space)"
+// @Param limit query int false "max items" default(50)
+// @Success 200 {object} session.ListResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/agents/sessions [get]
+func (h *Handler) listAgentSessions(c *gin.Context) {
+	spaceID := firstNonEmptyAPI(strings.TrimSpace(c.Query("spaceId")), currentSpace(c))
+	if !h.requireRequestSpace(c, spaceID) {
+		return
+	}
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "50"))
+	items, err := h.sessionFor(c).List(spaceID, limit)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("SESSION_LIST_FAILED", err.Error()))
+		return
+	}
+	if items == nil {
+		items = []session.View{}
+	}
+	c.JSON(http.StatusOK, session.ListResponse{Items: items})
+}
+
 // CreateAgentSession godoc
 // @Summary Create an agent session
 // @Description Bind an existing runId or route a goal (optional autoApprove) into a long-lived session document.
@@ -154,7 +182,8 @@ func (h *Handler) agentSessionIntent(c *gin.Context) {
 }
 
 // ListAgentSessionEvents godoc
-// @Summary List session events (bound run events + streamUrl)
+// @Summary List session events (bound run events or synthesized turns)
+// @Description When the session has a runId, returns run ledger events. Blank sessions project turns as session.turn envelopes.
 // @Tags agents
 // @Produce json
 // @Param sessionId path string true "session id"

@@ -125,6 +125,51 @@ const docTemplate = `{
             }
         },
         "/api/v1/agents/sessions": {
+            "get": {
+                "description": "List agent.session audit documents for a space, newest updatedAt first.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "List agent sessions",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id (default: current space)",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "default": 50,
+                        "description": "max items",
+                        "name": "limit",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.ListResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "description": "Bind an existing runId or route a goal (optional autoApprove) into a long-lived session document.",
                 "consumes": [
@@ -265,13 +310,14 @@ const docTemplate = `{
         },
         "/api/v1/agents/sessions/{sessionId}/events": {
             "get": {
+                "description": "When the session has a runId, returns run ledger events. Blank sessions project turns as session.turn envelopes.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "agents"
                 ],
-                "summary": "List session events (bound run events + streamUrl)",
+                "summary": "List session events (bound run events or synthesized turns)",
                 "parameters": [
                     {
                         "type": "string",
@@ -12486,6 +12532,17 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_session.ListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.View"
+                    }
                 }
             }
         },

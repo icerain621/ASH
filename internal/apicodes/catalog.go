@@ -184,6 +184,7 @@ var Catalog = map[string]Entry{
 
 	// agents / session
 	"SESSION_CREATE_FAILED":    {Domain: "agents", Summary: "Failed to create agent session"},
+	"SESSION_LIST_FAILED":      {Domain: "agents", Summary: "Failed to list agent sessions"},
 	"SESSION_NOT_FOUND":        {Domain: "agents", Summary: "Agent session id not found"},
 	"SESSION_TURN_FAILED":      {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
 	"SESSION_INTENT_FAILED":    {Domain: "agents", Summary: "Failed to apply thin session intent"},
