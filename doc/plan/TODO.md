@@ -10,7 +10,7 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **57/57** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 10/10 |
+| Doctor | ALL **60/60** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 **13/13** |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 

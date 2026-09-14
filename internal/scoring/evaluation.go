@@ -3,6 +3,7 @@ package scoring
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -151,20 +152,110 @@ func (s *Service) Evaluate(req EvaluationRequest) (Evaluation, error) {
 	if err != nil {
 		return out, err
 	}
+	scoreAgg, err := s.aggregateScoreEvents(gdb, req)
+	if err != nil {
+		return out, err
+	}
 	out.Dimensions = buildDimensions(agg)
+	applyScoreEventBlend(&out.Dimensions, scoreAgg)
 	out.Health = agg.health
 	out.Scenarios = s.buildScenarios(gdb, runs)
-	out.DataQuality = []DataQualityNote{{
-		MetricID: "rubric",
-		Status:   "partial",
-		Message:  "score_events absent; composite from run/event/thread proxies (GV06 MVP)",
-	}}
+	out.DataQuality = scoreEventDataQuality(scoreAgg)
 	if len(runs) == 0 {
 		out.DataQuality = append(out.DataQuality, DataQualityNote{
 			MetricID: "runs", Status: "empty", Message: "no runs in evaluation window",
 		})
 	}
 	return out, nil
+}
+
+// scoreEventAgg summarizes non-voided rubric scores in the evaluation window.
+type scoreEventAgg struct {
+	total, active, voided int64
+	avgComposite          float64 // 1–5 mean of non-voided composites
+}
+
+func (s *Service) aggregateScoreEvents(gdb *gorm.DB, req EvaluationRequest) (scoreEventAgg, error) {
+	var out scoreEventAgg
+	if gdb == nil {
+		return out, nil
+	}
+	voided, err := VoidedIDs(gdb, req.SpaceID)
+	if err != nil {
+		return out, err
+	}
+	var rows []store.ScoreEvent
+	if err := gdb.Where("space_id = ? AND created_at >= ? AND created_at <= ?",
+		req.SpaceID, req.From, req.To).Find(&rows).Error; err != nil {
+		return out, err
+	}
+	var sum float64
+	for _, row := range rows {
+		out.total++
+		if _, ok := voided[row.ID]; ok {
+			out.voided++
+			continue
+		}
+		out.active++
+		sum += row.Composite
+	}
+	if out.active > 0 {
+		out.avgComposite = sum / float64(out.active)
+	}
+	return out, nil
+}
+
+func applyScoreEventBlend(dims *[]DimensionScore, agg scoreEventAgg) {
+	if dims == nil || agg.active <= 0 {
+		return
+	}
+	rubric01 := clamp01((agg.avgComposite - 1) / 4)
+	sig := SignalMetric{
+		ID: "rubric_composite_avg", Label: "量纲合成分均值（排除作废）",
+		Value: round4(agg.avgComposite), Unit: "score",
+		Numerator: agg.active, Denominator: agg.total,
+	}
+	for i := range *dims {
+		if (*dims)[i].ID != "quality" {
+			continue
+		}
+		blended := clamp01(0.5*(*dims)[i].Score + 0.5*rubric01)
+		(*dims)[i].Score = round4(blended)
+		(*dims)[i].Signals = append((*dims)[i].Signals, sig)
+		if (*dims)[i].Status == "empty" {
+			(*dims)[i].Status = "ok"
+		}
+		return
+	}
+}
+
+func scoreEventDataQuality(agg scoreEventAgg) []DataQualityNote {
+	switch {
+	case agg.active > 0:
+		return []DataQualityNote{{
+			MetricID: "rubric",
+			Status:   "ok",
+			Message: fmt.Sprintf(
+				"score_events active=%d voided_excluded=%d avg_composite=%.2f (blended into quality)",
+				agg.active, agg.voided, agg.avgComposite,
+			),
+		}}
+	case agg.voided > 0:
+		return []DataQualityNote{{
+			MetricID: "rubric",
+			Status:   "empty",
+			Message: fmt.Sprintf(
+				"all score_events voided (%d excluded); composite from run/event/thread proxies",
+				agg.voided,
+			),
+		}}
+	default:
+		return []DataQualityNote{{
+			MetricID: "rubric",
+			Status:   "partial",
+			Message:  "score_events absent; composite from run/event/thread proxies (GV06 MVP)",
+		}}
+	}
 }
 
 type signalAgg struct {

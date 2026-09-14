@@ -1,7 +1,7 @@
 # ASH 文档归属索引
 
 > 更新：2026-09-10  
-> 代码水位：**v4.0 Auth 已冻结**（DX61–DX66）· Doctor ALL **57/57** · M4 **10/10** · SQL rev **32** · RLS **51** · tag `v4.0.0` 待人工；下一轨 **v4.1**（见 [`plan/v4.x-program.md`](plan/v4.x-program.md)）
+> 代码水位：**v4.0 Auth 已冻结**（DX61–DX66）· Doctor ALL **60/60** · TR3 **13/13** · M4 **10/10** · SQL rev **32** · RLS **51** · tag `v4.0.0` 待人工；下一轨 **v4.1**（见 [`plan/v4.x-program.md`](plan/v4.x-program.md)）
 
 文档按**归属**分三类；契约与门禁路径保持稳定，避免打断脚本。
 

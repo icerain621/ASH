@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**P2 GV07–10 + Task 11 硬化已落地**；**FE-42 / FE-16 / BE-46 已落地**；**score_appeal（BE-18 remainder）已落地**；**FE-44 已落地**；**FE-45 + v5-signoff closeout 已落地**（原手工项改挂自动/单测证据；可选人工扫一眼或 backlog freeze）  
+> 状态：**hardening**（evaluation 排除 `score.voided`）· **BE-49 文档同步已完成**；P2/FE-45 / score_appeal / v5-signoff 已落地；**下一步 = freeze 或开 v4.1**  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
@@ -63,9 +63,9 @@
 
 ## 5. 下一步
 
-1. **FE-45 + signoff closeout 已落地**（见 [`../checklists/v5.0-signoff.md`](../checklists/v5.0-signoff.md)）
-2. **下一步（可选）**：真实 Worker 下人工扫一眼 Space/Reviews/Mobile/Improve；或 backlog freeze / 开下一程序轨
-3. 门禁回归：`make v5-signoff`（含 Doctor TR3 + 扩容 vitest + FE-45 web-build）
+1. **hardening**：evaluation 排除作废分 + BE-49 HLD/附录 K 同步 — **已完成**
+2. **下一步**：backlog **freeze**，或切回 / 并行 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
+3. 门禁回归：`make v5-signoff`；本地 `scripts/verify-local.sh` 已纳入 v5 Go 包测试
 
 ## 6. 修订记录
 
@@ -86,3 +86,4 @@
 | 2026-09-14 | **FE-44**：评审/移动/可观测/登记/Quest 中文空态与权限提示落地；signoff 进行中 |
 | 2026-09-14 | **v5-signoff**：自动门禁通过；checklist 勾选 FE-44 / score_appeal；门禁 FE 改为 `npx vitest` |
 | 2026-09-14 | **FE-45 closeout**：`web-build` 入门禁；vitest 扩 Improve/Mobile；手工项改挂自动证据；下一步=可选人工扫一眼或 backlog freeze |
+| 2026-09-14 | **hardening + BE-49**：evaluation 排除 voided；HLD/附录 K / Doctor 水位 ALL60·TR3 13；verify-local 纳入 v5 包；下一步=freeze 或 v4.1 |

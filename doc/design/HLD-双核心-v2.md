@@ -403,8 +403,26 @@ Harness / 沙盒细节见 [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md)�
 
 ---
 
-## 9. 修订记录
+## 9. v5 管控增量（BE-49）
+
+相对本节双核骨架，v5 落地以下管控面（细节见规格与附录 K）：
+
+| 主题 | 要点 |
+|------|------|
+| Space kind | `user\|team` 扩展；不新建 Team 表 |
+| Registry | Agent/Memory 资产登记（可版本、可引用） |
+| PolicyPack | Space 生效策略合并（merge）；Doctor TR3-13 一致性 |
+| Rubric / score_events | 四维 1–5 量纲评分事件；禁止 UI 私算 |
+| Appeal keep/void | `score_appeal`：approve=keep；reject 写 `score.voided`（不改行） |
+| Evaluation | 空间测评；**聚合排除作废分**；无事件时仍可用 run/event 代理 |
+| Thin intent | 薄交互意图 API / ConversationNode；Quest 去厚 |
+| Human promote | Improve / harness / memory 升格仍须人工闸门 |
+
+---
+
+## 10. 修订记录
 
 | 日期 | 说明 |
 |------|------|
 | 2026-08-28 | 初稿：双核架构图、主流程、契约、与 Harness/演进交界 |
+| 2026-09-14 | BE-49：增补 v5 Space/Registry/Policy/Rubric/appeal/evaluation/thin intent/promote |

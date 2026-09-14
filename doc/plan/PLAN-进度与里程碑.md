@@ -3,7 +3,7 @@
 > **状态**：现行排期真相源（2026-08-28）  
 > **当前版本**：**v1**（`v0.1.0-mvp` → `v1.0.0`）  
 > **下一版本**：**v2**（见 [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md)）  
-> **代码锚点**：Doctor ALL **57/57** · M3 **11/11** · M4 **10/10** · M5 **4/4** · TR3 **10/10** · SQL rev **32** · RLS **51**（… / **v3.0–v3.2 已冻结**；下一程序 **v4.x** 见 [`v4.x-program.md`](v4.x-program.md)；tag 待人工）  
+> **代码锚点**：Doctor ALL **60/60** · M3 **11/11** · M4 **10/10** · M5 **4/4** · TR3 **13/13** · SQL rev **32** · RLS **51**（… / **v3.0–v3.2 已冻结**；下一程序 **v4.x** 见 [`v4.x-program.md`](v4.x-program.md)；tag 待人工）  
 > **归属**：[`plan/`](README.md)  
 > **关联**：短待办 [`TODO.md`](TODO.md) · 范围 [`mvp-release-scope.md`](mvp-release-scope.md) · v2.1 [`v2.1-release-scope.md`](v2.1-release-scope.md) · v2.3 [`v2.3-release-scope.md`](v2.3-release-scope.md) · v2.4 [`v2.4-release-scope.md`](v2.4-release-scope.md)（已冻结） · v2.5 [`v2.5-release-scope.md`](v2.5-release-scope.md)（已冻结） · v2.6 [`v2.6-release-scope.md`](v2.6-release-scope.md)（已冻结） · v2.7 [`v2.7-release-scope.md`](v2.7-release-scope.md)（已冻结） · v2.8 [`v2.8-release-scope.md`](v2.8-release-scope.md)（已冻结） · v2.9 [`v2.9-release-scope.md`](v2.9-release-scope.md)（已冻结） · v3.0 [`v3.0-release-scope.md`](v3.0-release-scope.md)（已冻结） · v3.1 [`v3.1-release-scope.md`](v3.1-release-scope.md)（已冻结） · 风险 [`risk-register.md`](risk-register.md) · 设计 [`../design/`](../design/README.md)
 

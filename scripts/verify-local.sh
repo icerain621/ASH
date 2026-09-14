@@ -13,6 +13,9 @@ go test ./internal/authz ./internal/doctor ./internal/api ./internal/security ./
 go test ./internal/pluginhealth ./internal/alerts ./internal/opsenv -count=1
 go test ./internal/authz ./internal/doctor ./internal/api ./internal/security -count=1
 
+echo "== go test (v5: registry / spacepolicy / scoring / evolve / orgtemplates / interaction) =="
+go test ./internal/registry/... ./internal/spacepolicy/... ./internal/scoring/... ./internal/evolve/... ./internal/orgtemplates/... ./internal/interaction/... -count=1
+
 echo "== regression-short =="
 make regression-short
 

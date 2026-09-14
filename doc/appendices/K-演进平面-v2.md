@@ -274,8 +274,23 @@ flowchart TB
 
 ---
 
-## 10. 修订记录
+## 10. v5 演进增量（BE-49）
+
+| 主题 | 要点 |
+|------|------|
+| Space kind | 管控与测评按 `kind=user\|team` 作用域 |
+| Registry / PolicyPack | 登记资产 + 空间策略包；生效策略可 Doctor 探测 |
+| Rubric / score_events | Decide 可写量纲分；`score_events` 为评分真相源 |
+| Appeal keep/void | 申诉队列：keep 保留；void → `audit_log.score.voided`，行不删 |
+| Evaluation | 空间 Evaluation 聚合 **排除 voided**；有活跃分则 blend quality |
+| Thin intent | 交互面只投影意图/线程；厚评审在 Workbench |
+| Human promote | Improve promote 必须人工签名；失败可提案 rollback |
+
+---
+
+## 11. 修订记录
 
 | 日期 | 说明 |
 |------|------|
 | 2026-08-28 | 初稿：统一 Feedback、双评审、Improve 状态机与流程图 |
+| 2026-09-14 | BE-49：v5 Registry/Policy/Rubric/appeal/evaluation/thin intent/promote |

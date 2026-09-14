@@ -8,7 +8,7 @@
 |---|---|
 | **栈** | Go **1.26** Worker/CLI · Vite + React 控制台 · SQLite 本地 / Postgres+RLS 规模化 |
 | **模块** | `github.com/ash-repwiki/ash` |
-| **当前水位** | **v4.0 Auth 已冻结**（DX61–DX66）· Doctor ALL **57** / M4 **10** · SQL rev **34** · RLS **51** |
+| **当前水位** | **v4.0 Auth 已冻结**（DX61–DX66）· Doctor ALL **60** / TR3 **13** / M4 **10** · SQL rev **34** · RLS **51** |
 | **下一轨** | **v5 双核管控**（P0 薄交互已落地 · P1 GV04 Thread/MemoryLink → GV05 seal/replay） |
 | **Tag** | 门禁绿后 **人工**打标（不自动）；`v4.0.0` 待签字后切 |
 
