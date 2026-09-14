@@ -2,7 +2,7 @@ import { api } from "@/services/http/client";
 
 export type ReviewItem = {
   id: string;
-  queue: "memory" | "orchestration";
+  queue: "memory" | "orchestration" | "appeal";
   targetType: string;
   targetId: string;
   title: string;
@@ -57,6 +57,13 @@ export function decideReview(
   },
 ) {
   return api(`/reviews/${encodeURIComponent(reviewId)}/decide`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
+export function createScoreAppeal(scoreEventId: string, body: { reason: string; actorId?: string }) {
+  return api<ReviewItem>(`/scores/${encodeURIComponent(scoreEventId)}/appeal`, {
     method: "POST",
     body: JSON.stringify(body),
   });

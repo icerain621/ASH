@@ -5088,7 +5088,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "memory|orchestration|all",
+                        "description": "memory|orchestration|appeal|all",
                         "name": "queue",
                         "in": "query"
                     },
@@ -6657,6 +6657,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_scoring.RubricSchema"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/scores/{scoreEventId}/appeal": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "scores"
+                ],
+                "summary": "Open a score appeal review queue item",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "score event id",
+                        "name": "scoreEventId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "appeal reason",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.createScoreAppealRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_evolve.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
                     }
                 }
@@ -15647,6 +15693,20 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.createScoreAppealRequest": {
+            "type": "object",
+            "required": [
+                "reason"
+            ],
+            "properties": {
+                "actorId": {
+                    "type": "string"
+                },
+                "reason": {
                     "type": "string"
                 }
             }

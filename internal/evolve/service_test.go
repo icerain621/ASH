@@ -237,3 +237,117 @@ func TestLowScoreCreatesImproveDraft(t *testing.T) {
 		t.Fatalf("proposal=%+v", row)
 	}
 }
+
+func TestScoreAppealCreateListDecide(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	mem := memory.NewService(db, ev)
+	har := harness.NewService(db)
+	svc := evolve.NewService(db, mem, har, nil)
+	scoreSvc := scoring.NewService(db)
+
+	score, err := scoreSvc.RecordScore("local", "memory", "mem_appeal", "", scoring.ReviewRubric{
+		Correctness: 2, Safety: 2, Citable: 2, Efficiency: 2,
+	}, "scorer", "weak score")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	item, err := svc.CreateAppeal("local", score.ID, "appealer", "please reconsider")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if item.Queue != evolve.QueueAppeal || item.TargetType != evolve.TargetScoreAppeal {
+		t.Fatalf("item=%+v", item)
+	}
+	if item.ID != evolve.ItemID(evolve.TargetScoreAppeal, score.ID) {
+		t.Fatalf("id=%s", item.ID)
+	}
+
+	if _, err := svc.CreateAppeal("local", score.ID, "appealer", "dup"); err == nil {
+		t.Fatal("duplicate open appeal should fail")
+	}
+	if _, err := svc.CreateAppeal("local", "score_missing", "appealer", "nope"); err == nil {
+		t.Fatal("missing score should fail")
+	}
+
+	appealQ, err := svc.ListQueue("local", evolve.QueueAppeal, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(appealQ.Items) != 1 || appealQ.Items[0].TargetID != score.ID {
+		t.Fatalf("appeal queue=%+v", appealQ.Items)
+	}
+	allQ, err := svc.ListQueue("local", "all", 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, it := range allQ.Items {
+		if it.ID == item.ID {
+			found = true
+			break
+		}
+	}
+	if !found {
+		t.Fatal("expected appeal in all queue")
+	}
+
+	if err := svc.Assign("local", item.ID, "op1", "rev_appeal"); err != nil {
+		t.Fatal(err)
+	}
+
+	keep, err := svc.Decide("local", item.ID, evolve.DecideRequest{
+		Decision: "approve", Reason: "keep original", ActorID: "rev",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if keep.Status != evolve.StatusApproved {
+		t.Fatalf("keep status=%s", keep.Status)
+	}
+	afterKeep, err := svc.ListQueue("local", evolve.QueueAppeal, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(afterKeep.Items) != 0 {
+		t.Fatalf("expected empty after keep, got %+v", afterKeep.Items)
+	}
+
+	score2, err := scoreSvc.RecordScore("local", "memory", "mem_void", "", scoring.ReviewRubric{
+		Correctness: 1, Safety: 1, Citable: 1, Efficiency: 1,
+	}, "scorer", "void me")
+	if err != nil {
+		t.Fatal(err)
+	}
+	voidItem, err := svc.CreateAppeal("local", score2.ID, "appealer", "void this")
+	if err != nil {
+		t.Fatal(err)
+	}
+	voided, err := svc.Decide("local", voidItem.ID, evolve.DecideRequest{
+		Decision: "reject", Reason: "void score", ActorID: "rev",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if voided.Status != evolve.StatusRejected {
+		t.Fatalf("void status=%s", voided.Status)
+	}
+	var voidAudit, resolvedAudit int64
+	if err := db.Model(&store.AuditLog{}).Where("event_type = ? AND payload_json LIKE ?", "score.voided", "%"+score2.ID+"%").Count(&voidAudit).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Model(&store.AuditLog{}).Where("event_type = ? AND payload_json LIKE ?", "score.appeal_resolved", "%\"decision\":\"void\"%").Count(&resolvedAudit).Error; err != nil {
+		t.Fatal(err)
+	}
+	if voidAudit != 1 || resolvedAudit < 1 {
+		t.Fatalf("voidAudit=%d resolvedAudit=%d", voidAudit, resolvedAudit)
+	}
+	afterVoid, err := svc.ListQueue("local", evolve.QueueAppeal, 20)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(afterVoid.Items) != 0 {
+		t.Fatalf("expected empty after void, got %+v", afterVoid.Items)
+	}
+}

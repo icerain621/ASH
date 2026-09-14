@@ -1915,6 +1915,12 @@ components:
         multiSign: { type: boolean }
         reviewSlaHours: { type: integer }
         bodyJson: { type: string }
+    CreateScoreAppealRequest:
+      type: object
+      required: [reason]
+      properties:
+        reason: { type: string }
+        actorId: { type: string }
     RubricSchema:
       type: object
       properties:
@@ -7038,6 +7044,32 @@ paths:
               schema: { $ref: "#/components/schemas/RubricSchema" }
         "500":
           description: server error
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+
+  /api/v1/scores/{scoreEventId}/appeal:
+    post:
+      tags: [Scores]
+      summary: Open a score appeal review queue item
+      parameters:
+        - in: path
+          name: scoreEventId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/CreateScoreAppealRequest" }
+      responses:
+        "201":
+          description: created
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ReviewsQueueItem" }
+        "400":
+          description: bad request
           content:
             application/json:
               schema: { $ref: "#/components/schemas/APIErrorResponse" }

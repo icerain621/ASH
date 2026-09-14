@@ -4892,6 +4892,15 @@ definitions:
     required:
     - scenario
     type: object
+  internal_api.createScoreAppealRequest:
+    properties:
+      actorId:
+        type: string
+      reason:
+        type: string
+    required:
+    - reason
+    type: object
   internal_api.createSecretRequest:
     properties:
       description:
@@ -8617,7 +8626,7 @@ paths:
   /api/v1/reviews/queue:
     get:
       parameters:
-      - description: memory|orchestration|all
+      - description: memory|orchestration|appeal|all
         in: query
         name: queue
         type: string
@@ -9577,6 +9586,36 @@ paths:
       summary: Validate scenario DSL (raw YAML body)
       tags:
       - scenarios
+  /api/v1/scores/{scoreEventId}/appeal:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: score event id
+        in: path
+        name: scoreEventId
+        required: true
+        type: string
+      - description: appeal reason
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.createScoreAppealRequest'
+      produces:
+      - application/json
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_evolve.Item'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Open a score appeal review queue item
+      tags:
+      - scores
   /api/v1/scores/rubrics:
     get:
       produces:

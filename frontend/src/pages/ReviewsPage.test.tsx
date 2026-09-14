@@ -2,7 +2,7 @@ import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ReviewsPage } from "./ReviewsPage";
-import { decideReview, listReviewsQueue, assignReview } from "@/modules/reviews/api/reviews.api";
+import { decideReview, listReviewsQueue, assignReview, createScoreAppeal } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
 import { getAuthMe } from "@/modules/platform/api/platform.api";
 
@@ -32,6 +32,17 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
         spaceId: "local",
         createdAt: 2,
       },
+      {
+        id: "score_appeal:score_1",
+        queue: "appeal",
+        targetType: "score_appeal",
+        targetId: "score_1",
+        title: "Appeal score_1",
+        summary: "please reconsider",
+        status: "pending",
+        spaceId: "local",
+        createdAt: 3,
+      },
     ],
   })),
   listScenarioPatches: vi.fn(async () => ({ items: [] })),
@@ -39,6 +50,7 @@ vi.mock("@/modules/reviews/api/reviews.api", () => ({
   assignReview: vi.fn().mockResolvedValue({ ok: true, reviewId: "harness_profile:hprof_1", assigneeId: "op_x" }),
   createScenarioPatch: vi.fn(),
   submitScenarioPatchReview: vi.fn(),
+  createScoreAppeal: vi.fn().mockResolvedValue({ id: "score_appeal:score_x" }),
 }));
 
 vi.mock("@/modules/registry/api/registry.api", () => ({
@@ -194,5 +206,38 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("reviews-assign-denied")).toHaveTextContent("reviews:assign");
     expect(screen.queryByTestId("review-assign")).toBeNull();
     expect(screen.queryByTestId("reviews-assignee-input")).toBeNull();
+  });
+
+  it("offers appeal queue filter and decides appeal without rubric", async () => {
+    renderReviews();
+    const filter = await screen.findByTestId("reviews-queue-filter");
+    expect(filter.querySelector('option[value="appeal"]')).toBeTruthy();
+
+    fireEvent.click(await screen.findByText("Appeal score_1"));
+    expect(screen.getByTestId("reviews-appeal-no-rubric")).toBeTruthy();
+    expect(screen.queryByTestId("rubric-correctness")).toBeNull();
+    expect(screen.getByTestId("review-approve")).toHaveTextContent("保持评分");
+
+    fireEvent.click(screen.getByTestId("review-approve"));
+    await waitFor(() => {
+      expect(decideReview).toHaveBeenCalledWith(
+        "score_appeal:score_1",
+        expect.objectContaining({ decision: "approve", reason: "reviewed from UI" }),
+      );
+    });
+    const call = vi.mocked(decideReview).mock.calls.at(-1)?.[1] as { rubric?: unknown };
+    expect(call.rubric).toBeUndefined();
+  });
+
+  it("submits compact create-appeal form", async () => {
+    renderReviews();
+    fireEvent.change(await screen.findByTestId("appeal-score-event-id"), {
+      target: { value: "score_abc" },
+    });
+    fireEvent.change(screen.getByTestId("appeal-reason"), { target: { value: "too harsh" } });
+    fireEvent.click(screen.getByTestId("appeal-create"));
+    await waitFor(() => {
+      expect(createScoreAppeal).toHaveBeenCalledWith("score_abc", { reason: "too harsh" });
+    });
   });
 });

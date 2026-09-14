@@ -8,6 +8,7 @@ var AllowedTargetTypes = map[string]struct{}{
 	"run": {}, "run_step": {},
 	"plan": {}, "artifact": {},
 	"skill": {}, "harness_profile": {}, "scenario_patch": {},
+	"score_appeal": {},
 	// v1 compatibility
 	"ci_diagnosis": {}, "release": {},
 }
@@ -19,15 +20,18 @@ func NormalizeTargetType(v string) (string, bool) {
 }
 
 const (
-	QueueMemory        = "memory"
-	QueueOrchestration = "orchestration"
-	StatusPending      = "pending"
+	QueueMemory         = "memory"
+	QueueOrchestration  = "orchestration"
+	QueueAppeal         = "appeal"
+	StatusPending       = "pending"
 	StatusPendingSecond = "pending_second"
-	StatusApproved     = "approved"
-	StatusRejected     = "rejected"
+	StatusApproved      = "approved"
+	StatusRejected      = "rejected"
 
 	DecisionApprove = "approve"
 	DecisionReject  = "reject"
+
+	TargetScoreAppeal = "score_appeal"
 )
 
 // ItemID encodes queue item identity: "memory:<id>" | "harness_profile:<id>"

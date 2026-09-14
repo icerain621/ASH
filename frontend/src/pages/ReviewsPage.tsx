@@ -4,6 +4,7 @@ import { useState } from "react";
 import {
   assignReview,
   createScenarioPatch,
+  createScoreAppeal,
   decideReview,
   listReviewsQueue,
   listScenarioPatches,
@@ -33,7 +34,7 @@ function isPendingSecond(status: string | undefined) {
 export function ReviewsPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
-  const [queue, setQueue] = useState<"all" | "orchestration" | "memory">("orchestration");
+  const [queue, setQueue] = useState<"all" | "orchestration" | "memory" | "appeal">("orchestration");
   const [reason, setReason] = useState("reviewed from UI");
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<ReviewItem | null>(null);
@@ -42,6 +43,8 @@ export function ReviewsPage() {
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [assigneeInput, setAssigneeInput] = useState("");
   const [overdueOnly, setOverdueOnly] = useState(false);
+  const [appealScoreEventId, setAppealScoreEventId] = useState("");
+  const [appealReason, setAppealReason] = useState("申诉评分");
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -60,11 +63,33 @@ export function ReviewsPage() {
     queryFn: getAuthMe,
   });
 
+  const isAppealItem = selected?.targetType === "score_appeal";
+
   const decideMut = useMutation({
-    mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) =>
-      decideReview(id, { decision, reason, policyProfile: "default", rubric }),
+    mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) => {
+      const body: {
+        decision: string;
+        reason: string;
+        policyProfile?: string;
+        rubric?: RubricForm;
+      } = { decision, reason, policyProfile: "default" };
+      if (!isAppealItem) {
+        body.rubric = rubric;
+      }
+      return decideReview(id, body);
+    },
     onSuccess: () => {
       setMessage("评审已提交");
+      qc.invalidateQueries({ queryKey: ["reviews-queue"] });
+    },
+    onError: (e: Error) => setMessage(e.message),
+  });
+
+  const appealMut = useMutation({
+    mutationFn: () => createScoreAppeal(appealScoreEventId.trim(), { reason: appealReason.trim() }),
+    onSuccess: () => {
+      setMessage("评分申诉已创建");
+      setAppealScoreEventId("");
       qc.invalidateQueries({ queryKey: ["reviews-queue"] });
     },
     onError: (e: Error) => setMessage(e.message),
@@ -144,6 +169,7 @@ export function ReviewsPage() {
             <select value={queue} onChange={(e) => setQueue(e.target.value as typeof queue)} data-testid="reviews-queue-filter">
               <option value="orchestration">编排</option>
               <option value="memory">记忆</option>
+              <option value="appeal">申诉</option>
               <option value="all">全部</option>
             </select>
           </label>
@@ -330,7 +356,13 @@ export function ReviewsPage() {
 
         <div className="pane" data-testid="reviews-decide-form">
           <div className="pane-title">
-            <h2>{secondSign ? "第二签决定 + Rubric" : "决定 + Rubric"}</h2>
+            <h2>
+              {isAppealItem
+                ? "申诉决定（保持 / 作废）"
+                : secondSign
+                  ? "第二签决定 + Rubric"
+                  : "决定 + Rubric"}
+            </h2>
           </div>
           <label className="scenario-picker">
             原因
@@ -366,26 +398,32 @@ export function ReviewsPage() {
               需要 reviews:assign 权限才能分配责任人
             </p>
           )}
-          {(
-            [
-              ["correctness", "正确性"],
-              ["safety", "安全性"],
-              ["citable", "可引用"],
-              ["efficiency", "效率"],
-            ] as const
-          ).map(([key, label]) => (
-            <label key={key} className="scenario-picker">
-              {label}
-              <input
-                type="number"
-                min={1}
-                max={5}
-                value={rubric[key]}
-                onChange={(e) => setRubric((r) => ({ ...r, [key]: Number(e.target.value) }))}
-                data-testid={`rubric-${key}`}
-              />
-            </label>
-          ))}
+          {!isAppealItem
+            ? (
+                [
+                  ["correctness", "正确性"],
+                  ["safety", "安全性"],
+                  ["citable", "可引用"],
+                  ["efficiency", "效率"],
+                ] as const
+              ).map(([key, label]) => (
+                <label key={key} className="scenario-picker">
+                  {label}
+                  <input
+                    type="number"
+                    min={1}
+                    max={5}
+                    value={rubric[key]}
+                    onChange={(e) => setRubric((r) => ({ ...r, [key]: Number(e.target.value) }))}
+                    data-testid={`rubric-${key}`}
+                  />
+                </label>
+              ))
+            : (
+              <p className="muted-line" data-testid="reviews-appeal-no-rubric">
+                评分申诉决定无需 Rubric：批准=保持，拒绝=作废评分
+              </p>
+            )}
           <div className="row-actions">
             <button
               type="button"
@@ -394,7 +432,7 @@ export function ReviewsPage() {
               onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
               data-testid="review-approve"
             >
-              {secondSign ? "第二签批准" : "批准"}
+              {isAppealItem ? "保持评分" : secondSign ? "第二签批准" : "批准"}
             </button>
             <button
               type="button"
@@ -403,9 +441,43 @@ export function ReviewsPage() {
               onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
               data-testid="review-reject"
             >
-              {secondSign ? "第二签拒绝" : "拒绝"}
+              {isAppealItem ? "作废评分" : secondSign ? "第二签拒绝" : "拒绝"}
             </button>
           </div>
+        </div>
+      </div>
+
+      <div className="pane" data-testid="reviews-create-appeal" style={{ marginTop: 16 }}>
+        <div className="pane-title">
+          <h2>申诉评分</h2>
+        </div>
+        <div className="row-actions" style={{ gap: 8, flexWrap: "wrap" }}>
+          <label className="scenario-picker">
+            scoreEventId
+            <input
+              value={appealScoreEventId}
+              onChange={(e) => setAppealScoreEventId(e.target.value)}
+              placeholder="score_…"
+              data-testid="appeal-score-event-id"
+            />
+          </label>
+          <label className="scenario-picker">
+            原因
+            <input
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              data-testid="appeal-reason"
+            />
+          </label>
+          <button
+            type="button"
+            className="btn mini"
+            disabled={appealMut.isPending || !appealScoreEventId.trim() || !appealReason.trim()}
+            onClick={() => appealMut.mutate()}
+            data-testid="appeal-create"
+          >
+            提交申诉
+          </button>
         </div>
       </div>
     </section>

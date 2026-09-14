@@ -156,7 +156,12 @@ func (s *Service) ListQueue(spaceID, queue string, limit int) (*ListResponse, er
 		if err != nil {
 			return nil, err
 		}
+		appealItems, err := s.listAppeals(space, limit)
+		if err != nil {
+			return nil, err
+		}
 		items = append(memItems, orchItems...)
+		items = append(items, appealItems...)
 	case QueueMemory:
 		var err error
 		items, err = s.listMemory(space, limit)
@@ -169,8 +174,14 @@ func (s *Service) ListQueue(spaceID, queue string, limit int) (*ListResponse, er
 		if err != nil {
 			return nil, err
 		}
+	case QueueAppeal:
+		var err error
+		items, err = s.listAppeals(space, limit)
+		if err != nil {
+			return nil, err
+		}
 	default:
-		return nil, fmt.Errorf("queue must be memory|orchestration|all")
+		return nil, fmt.Errorf("queue must be memory|orchestration|appeal|all")
 	}
 	if len(items) > limit {
 		items = items[:limit]
@@ -369,6 +380,8 @@ func (s *Service) Decide(spaceID, itemID string, req DecideRequest) (*DecideResp
 		resp, err = s.decideHarness(space, tid, decision, req)
 	case "scenario_patch":
 		resp, err = s.decideScenarioPatch(space, tid, decision, req)
+	case TargetScoreAppeal:
+		resp, err = s.decideAppeal(space, tid, decision, req)
 	default:
 		return nil, fmt.Errorf("unsupported targetType %q", tt)
 	}
@@ -703,6 +716,190 @@ func (s *Service) clearPendingApprover(targetType, targetID string) {
 	_ = s.db.Where("event_type = ? AND payload_json LIKE ?", "review.pending_second", "%\"targetId\":\""+targetID+"\"%").
 		Delete(&store.AuditLog{}).Error
 	_ = targetType
+}
+
+// CreateAppeal opens an audit-backed score appeal queue item (one open per scoreEventId).
+func (s *Service) CreateAppeal(spaceID, scoreEventID, actorID, reason string) (*Item, error) {
+	space := strings.TrimSpace(spaceID)
+	if space == "" {
+		space = "local"
+	}
+	scoreEventID = strings.TrimSpace(scoreEventID)
+	if scoreEventID == "" {
+		return nil, fmt.Errorf("scoreEventId is required")
+	}
+	reason = strings.TrimSpace(reason)
+	if reason == "" {
+		return nil, fmt.Errorf("reason is required")
+	}
+	if s.scoring == nil {
+		return nil, fmt.Errorf("scoring service unavailable")
+	}
+	ev, err := s.scoring.GetScore(scoreEventID)
+	if err != nil {
+		return nil, fmt.Errorf("score event not found")
+	}
+	if ev.SpaceID != "" && ev.SpaceID != space {
+		return nil, fmt.Errorf("score event space mismatch")
+	}
+	if _, ok := s.loadOpenAppeal(scoreEventID); ok {
+		return nil, fmt.Errorf("open appeal already exists for score event")
+	}
+	actor := strings.TrimSpace(actorID)
+	s.saveOpenAppeal(space, scoreEventID, actor, reason)
+	now := time.Now().UTC()
+	item := Item{
+		ID:         ItemID(TargetScoreAppeal, scoreEventID),
+		Queue:      QueueAppeal,
+		TargetType: TargetScoreAppeal,
+		TargetID:   scoreEventID,
+		Title:      fmt.Sprintf("Appeal %s", scoreEventID),
+		Summary:    truncate(reason, 200),
+		Status:     StatusPending,
+		SpaceID:    space,
+		CreatedAt:  now.UnixMilli(),
+	}
+	applySLABreach(&item, s.reviewSLAHours(space), now)
+	return &item, nil
+}
+
+func (s *Service) listAppeals(spaceID string, limit int) ([]Item, error) {
+	if s.db == nil {
+		return nil, nil
+	}
+	var rows []store.AuditLog
+	err := s.db.Where("space_id = ? AND event_type = ?", spaceID, "score.appeal_opened").
+		Order("created_at desc").Limit(limit).Find(&rows).Error
+	if err != nil {
+		return nil, err
+	}
+	hours := s.reviewSLAHours(spaceID)
+	now := time.Now().UTC()
+	out := make([]Item, 0, len(rows))
+	seen := map[string]struct{}{}
+	for _, row := range rows {
+		scoreEventID := payloadString(row.PayloadJSON, "scoreEventId")
+		if scoreEventID == "" {
+			scoreEventID = payloadString(row.PayloadJSON, "targetId")
+		}
+		if scoreEventID == "" {
+			continue
+		}
+		if _, ok := seen[scoreEventID]; ok {
+			continue
+		}
+		seen[scoreEventID] = struct{}{}
+		reason := payloadString(row.PayloadJSON, "reason")
+		item := Item{
+			ID:         ItemID(TargetScoreAppeal, scoreEventID),
+			Queue:      QueueAppeal,
+			TargetType: TargetScoreAppeal,
+			TargetID:   scoreEventID,
+			Title:      fmt.Sprintf("Appeal %s", scoreEventID),
+			Summary:    truncate(reason, 200),
+			Status:     StatusPending,
+			SpaceID:    spaceID,
+			CreatedAt:  row.CreatedAt.UTC().UnixMilli(),
+		}
+		if aid, ok := s.loadAssignee(TargetScoreAppeal, scoreEventID); ok {
+			item.AssigneeID = aid
+		}
+		applySLABreach(&item, hours, now)
+		out = append(out, item)
+		if len(out) >= limit {
+			break
+		}
+	}
+	return out, nil
+}
+
+func (s *Service) decideAppeal(spaceID, scoreEventID, decision string, req DecideRequest) (*DecideResponse, error) {
+	scoreEventID = strings.TrimSpace(scoreEventID)
+	if _, ok := s.loadOpenAppeal(scoreEventID); !ok {
+		return nil, fmt.Errorf("open appeal not found")
+	}
+	if s.scoring == nil {
+		return nil, fmt.Errorf("scoring service unavailable")
+	}
+	ev, err := s.scoring.GetScore(scoreEventID)
+	if err != nil {
+		return nil, fmt.Errorf("score event not found")
+	}
+	if ev.SpaceID != "" && spaceID != "" && ev.SpaceID != spaceID {
+		return nil, fmt.Errorf("score event space mismatch")
+	}
+	actor := strings.TrimSpace(req.ActorID)
+	if decision == DecisionApprove {
+		s.writeAudit(spaceID, actor, "score.appeal_resolved", map[string]string{
+			"targetType": TargetScoreAppeal, "targetId": scoreEventID,
+			"scoreEventId": scoreEventID, "decision": "keep", "reason": strings.TrimSpace(req.Reason),
+		})
+		s.clearOpenAppeal(scoreEventID)
+		return &DecideResponse{
+			ID: ItemID(TargetScoreAppeal, scoreEventID), Queue: QueueAppeal,
+			TargetType: TargetScoreAppeal, TargetID: scoreEventID,
+			Decision: decision, Status: StatusApproved,
+		}, nil
+	}
+	s.writeAudit(spaceID, actor, "score.voided", map[string]string{
+		"scoreEventId": scoreEventID, "targetType": ev.TargetType, "targetId": ev.TargetID,
+		"reason": strings.TrimSpace(req.Reason),
+	})
+	s.writeAudit(spaceID, actor, "score.appeal_resolved", map[string]string{
+		"targetType": TargetScoreAppeal, "targetId": scoreEventID,
+		"scoreEventId": scoreEventID, "decision": "void", "reason": strings.TrimSpace(req.Reason),
+	})
+	s.clearOpenAppeal(scoreEventID)
+	return &DecideResponse{
+		ID: ItemID(TargetScoreAppeal, scoreEventID), Queue: QueueAppeal,
+		TargetType: TargetScoreAppeal, TargetID: scoreEventID,
+		Decision: decision, Status: StatusRejected,
+	}, nil
+}
+
+func (s *Service) saveOpenAppeal(spaceID, scoreEventID, actorID, reason string) {
+	if s.db == nil || scoreEventID == "" {
+		return
+	}
+	s.writeAudit(spaceID, actorID, "score.appeal_opened", map[string]string{
+		"targetType": TargetScoreAppeal, "targetId": scoreEventID,
+		"scoreEventId": scoreEventID, "reason": reason,
+	})
+}
+
+func (s *Service) loadOpenAppeal(scoreEventID string) (store.AuditLog, bool) {
+	if s.db == nil || strings.TrimSpace(scoreEventID) == "" {
+		return store.AuditLog{}, false
+	}
+	var row store.AuditLog
+	err := s.db.Where("event_type = ? AND payload_json LIKE ?", "score.appeal_opened", "%\"scoreEventId\":\""+scoreEventID+"\"%").
+		Order("created_at desc").First(&row).Error
+	if err != nil {
+		return store.AuditLog{}, false
+	}
+	return row, true
+}
+
+func (s *Service) clearOpenAppeal(scoreEventID string) {
+	if s.db == nil || strings.TrimSpace(scoreEventID) == "" {
+		return
+	}
+	_ = s.db.Where("event_type = ? AND payload_json LIKE ?", "score.appeal_opened", "%\"scoreEventId\":\""+scoreEventID+"\"%").
+		Delete(&store.AuditLog{}).Error
+}
+
+func payloadString(payloadJSON, key string) string {
+	marker := `"` + key + `":"`
+	i := strings.Index(payloadJSON, marker)
+	if i < 0 {
+		return ""
+	}
+	rest := payloadJSON[i+len(marker):]
+	j := strings.IndexByte(rest, '"')
+	if j < 0 {
+		return ""
+	}
+	return rest[:j]
 }
 
 func firstNonEmpty(vals ...string) string {

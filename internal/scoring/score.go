@@ -57,3 +57,29 @@ func (s *Service) RecordScore(spaceID, targetType, targetID, runID string, rubri
 		Reason: row.Reason, CreatedAt: now.UnixMilli(),
 	}, nil
 }
+
+// GetScore loads a score event by id.
+func (s *Service) GetScore(id string) (*ScoreEventView, error) {
+	id = strings.TrimSpace(id)
+	if id == "" {
+		return nil, fmt.Errorf("score event id is required")
+	}
+	gdb := s.gdb()
+	if gdb == nil {
+		return nil, fmt.Errorf("scoring service unavailable")
+	}
+	var row store.ScoreEvent
+	if err := gdb.First(&row, "id = ?", id).Error; err != nil {
+		return nil, err
+	}
+	return &ScoreEventView{
+		ID: row.ID, SpaceID: row.SpaceID, TargetType: row.TargetType, TargetID: row.TargetID,
+		RunID: row.RunID,
+		Rubric: ReviewRubric{
+			Correctness: row.Correctness, Safety: row.Safety,
+			Citable: row.Citable, Efficiency: row.Efficiency,
+		},
+		Composite: row.Composite, ActorID: row.ActorID, Reason: row.Reason,
+		CreatedAt: row.CreatedAt.UTC().UnixMilli(),
+	}, nil
+}

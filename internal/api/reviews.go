@@ -18,7 +18,7 @@ type reviewsQueueResponse struct {
 // @Summary List unified review queue (memory + orchestration)
 // @Tags reviews
 // @Produce json
-// @Param queue query string false "memory|orchestration|all"
+// @Param queue query string false "memory|orchestration|appeal|all"
 // @Param limit query int false "max items" default(50)
 // @Success 200 {object} reviewsQueueResponse
 // @Router /api/v1/reviews/queue [get]
@@ -73,6 +73,10 @@ func (h *Handler) decideReview(c *gin.Context) {
 			return
 		}
 	case "scenario_patch":
+		if !h.requirePermission(c, permFeedbackWrite, space) {
+			return
+		}
+	case evolve.TargetScoreAppeal:
 		if !h.requirePermission(c, permFeedbackWrite, space) {
 			return
 		}
