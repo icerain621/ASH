@@ -11,6 +11,8 @@ const submitSessionIntent = vi.fn();
 const getAgentSession = vi.fn();
 const patchAgentSession = vi.fn();
 const closeAgentSession = vi.fn();
+const listAgentWorkspaces = vi.fn();
+const createAgentWorkspace = vi.fn();
 
 vi.mock("@/modules/agent-session/api/session.api", async () => {
   const actual = await vi.importActual<typeof import("../api/session.api")>("../api/session.api");
@@ -25,6 +27,14 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
     closeAgentSession: (...args: unknown[]) => closeAgentSession(...args),
   };
 });
+
+vi.mock("@/modules/agent-session/api/workspace.api", () => ({
+  listAgentWorkspaces: (...args: unknown[]) => listAgentWorkspaces(...args),
+  createAgentWorkspace: (...args: unknown[]) => createAgentWorkspace(...args),
+  patchAgentWorkspace: vi.fn(),
+  attachAgentWorkspaceSession: vi.fn(),
+  closeAgentWorkspace: vi.fn(),
+}));
 
 vi.mock("@/services/sse/runStream", () => ({
   useRunStream: vi.fn(() => ({ lines: [], status: "idle" as const })),
@@ -64,6 +74,24 @@ function renderShell(props: Partial<ComponentProps<typeof AgentChatShell>> = {})
 describe("AgentChatShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    listAgentWorkspaces.mockResolvedValue({
+      items: [
+        {
+          id: "aw_1",
+          spaceId: "local",
+          title: "Feat ship",
+          sessionIds: ["sess_a"],
+          status: "active",
+        },
+      ],
+    });
+    createAgentWorkspace.mockResolvedValue({
+      id: "aw_new",
+      spaceId: "local",
+      title: "新工作区",
+      sessionIds: [],
+      status: "active",
+    });
     listAgentSessions.mockResolvedValue({
       items: [
         {
@@ -72,6 +100,7 @@ describe("AgentChatShell", () => {
           status: "active",
           goal: "Ship chat",
           runId: "run_1",
+          workspaceId: "aw_1",
           updatedAt: 2,
         },
         {
@@ -94,6 +123,7 @@ describe("AgentChatShell", () => {
       status: "active",
       runId: "run_1",
       goal: "Ship chat",
+      workspaceId: "aw_1",
     });
     listSessionEvents.mockResolvedValue({
       sessionId: "sess_a",
@@ -136,6 +166,7 @@ describe("AgentChatShell", () => {
     renderShell();
     expect(await screen.findByTestId("agent-chat-shell")).toBeTruthy();
     expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(screen.getByTestId("agent-workspace-list")).toBeTruthy();
     expect(await screen.findByText("Ship chat")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-details")).toBeTruthy();
@@ -149,6 +180,28 @@ describe("AgentChatShell", () => {
       expect(createAgentSession).toHaveBeenCalledWith({});
       expect(onSelectSession).toHaveBeenCalledWith(
         expect.objectContaining({ id: "sess_new" }),
+      );
+    });
+  });
+
+  it("creates workspace and new session under active workspace", async () => {
+    const onSelectSession = vi.fn();
+    createAgentSession.mockResolvedValue({
+      id: "sess_ws",
+      spaceId: "local",
+      status: "active",
+      workspaceId: "aw_new",
+    });
+    renderShell({ onSelectSession });
+    fireEvent.click(await screen.findByTestId("agent-workspace-new"));
+    await waitFor(() => {
+      expect(createAgentWorkspace).toHaveBeenCalledWith({ title: "新工作区" });
+    });
+    fireEvent.click(screen.getByTestId("agent-history-new"));
+    await waitFor(() => {
+      expect(createAgentSession).toHaveBeenCalledWith({ workspaceId: "aw_new" });
+      expect(onSelectSession).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "sess_ws", workspaceId: "aw_new" }),
       );
     });
   });

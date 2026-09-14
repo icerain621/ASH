@@ -25,6 +25,7 @@ export type AgentSessionView = {
   planId?: string;
   runId?: string;
   streamUrl?: string;
+  workspaceId?: string;
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
   replies?: Array<{
@@ -63,6 +64,7 @@ export async function createAgentSession(body: {
   goal?: string;
   spaceId?: string;
   providerKind?: string;
+  workspaceId?: string;
 }): Promise<AgentSessionView> {
   return api<AgentSessionView>("/agents/sessions", {
     method: "POST",

@@ -11,6 +11,10 @@ import {
   type AgentSessionView,
   type SessionEventEnvelope,
 } from "../api/session.api";
+import {
+  createAgentWorkspace,
+  listAgentWorkspaces,
+} from "../api/workspace.api";
 import { useRunStream, type StreamLine } from "@/services/sse/runStream";
 import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript, type ChatBubbleSelection } from "./ChatTranscript";
@@ -110,10 +114,16 @@ export function AgentChatShell({
   const [selection, setSelection] = useState<ChatBubbleSelection | null>(null);
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [error, setError] = useState("");
+  const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
 
   const listQuery = useQuery({
     queryKey: ["agent-sessions"],
     queryFn: () => listAgentSessions({ limit: 50 }),
+  });
+
+  const workspaceQuery = useQuery({
+    queryKey: ["agent-workspaces"],
+    queryFn: () => listAgentWorkspaces({ limit: 50 }),
   });
 
   const sessionQuery = useQuery({
@@ -144,18 +154,35 @@ export function AgentChatShell({
     void qc.invalidateQueries({ queryKey: ["agent-session-events", selectedSessionId] });
   }, [streamLines.length, selectedSessionId, runId, qc]);
 
+  useEffect(() => {
+    const ws = activeSession?.workspaceId;
+    if (ws) setActiveWorkspaceId(ws);
+  }, [activeSession?.workspaceId]);
+
   const createMut = useMutation({
-    mutationFn: () => createAgentSession({}),
+    mutationFn: () =>
+      createAgentSession(activeWorkspaceId ? { workspaceId: activeWorkspaceId } : {}),
     onSuccess: (session) => {
       setError("");
       setSelection(null);
       setViewTab("chat");
+      if (session.workspaceId) setActiveWorkspaceId(session.workspaceId);
       void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
       onSelectSession(session);
     },
     onError: (e: Error) => setError(e.message),
   });
 
+  const createWorkspaceMut = useMutation({
+    mutationFn: () => createAgentWorkspace({ title: "新工作区" }),
+    onSuccess: (ws) => {
+      setError("");
+      setActiveWorkspaceId(ws.id);
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
   const intentMut = useMutation({
     mutationFn: (payload: IntentPayload) => {
       if (!selectedSessionId) throw new Error("session not ready");
@@ -234,16 +261,22 @@ export function AgentChatShell({
     >
       <SessionHistoryList
         items={listQuery.data?.items ?? []}
+        workspaces={workspaceQuery.data?.items ?? []}
         selectedSessionId={selectedSessionId}
-        loading={listQuery.isLoading}
+        activeWorkspaceId={activeWorkspaceId}
+        loading={listQuery.isLoading || workspaceQuery.isLoading}
         creating={createMut.isPending}
+        creatingWorkspace={createWorkspaceMut.isPending}
         renamingId={renameMut.isPending ? renameMut.variables?.sessionId : null}
         closingId={closeMut.isPending ? closeMut.variables ?? null : null}
         onSelect={(session) => {
           setError("");
+          if (session.workspaceId) setActiveWorkspaceId(session.workspaceId);
           onSelectSession(session);
         }}
+        onSelectWorkspace={setActiveWorkspaceId}
         onNew={() => createMut.mutate()}
+        onNewWorkspace={() => createWorkspaceMut.mutate()}
         onRename={(sessionId, title) => renameMut.mutate({ sessionId, title })}
         onClose={(sessionId) => closeMut.mutate(sessionId)}
       />
