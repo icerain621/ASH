@@ -61,7 +61,9 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                 >
                   <div className="agent-chat-bubble-meta">
                     <strong>{item.title}</strong>
-                    <span className="muted">{item.type}</span>
+                    {item.role === "tool" || item.role === "gate" ? (
+                      <span className="muted agent-chat-bubble-type">{item.type}</span>
+                    ) : null}
                   </div>
                   <div className="agent-chat-bubble-body">{item.summary}</div>
                 </button>

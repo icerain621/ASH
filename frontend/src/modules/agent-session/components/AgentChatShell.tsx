@@ -345,7 +345,7 @@ export function AgentChatShell({
         ) : null}
 
         {!selectedSessionId ? (
-          <div className="agent-chat-empty" data-testid="agent-chat-empty">
+          <div className="agent-chat-empty hero" data-testid="agent-chat-empty">
             <p>选择左侧会话，或新建空白会话直接对话</p>
             <button
               type="button"

@@ -14,6 +14,8 @@
   --err: #d14343;
   --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
   --sans: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --ash-chat-content-width: 748px;
+  --ash-chat-composer-width: calc(var(--ash-chat-content-width) + 32px);
 }
 
 * {
@@ -1336,8 +1338,8 @@ main {
 .agent-session-history {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  padding: 0.75rem;
+  gap: 0.4rem;
+  padding: 0.55rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1389,14 +1391,16 @@ main {
 .agent-workspace-toggle {
   display: flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   width: 100%;
   text-align: left;
-  padding: 0.35rem 0.45rem;
+  padding: 0.25rem 0.4rem;
   border: none;
   border-radius: 6px;
   background: transparent;
-  color: inherit;
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 500;
   cursor: pointer;
 }
 
@@ -1412,20 +1416,20 @@ main {
 .agent-history-list {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 0.35rem;
+  padding: 0 0 0 0.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 
 .agent-history-item {
   display: flex;
   flex-direction: column;
   align-items: flex-start;
-  gap: 0.15rem;
+  gap: 0.1rem;
   width: 100%;
   text-align: left;
-  padding: 0.55rem 0.65rem;
+  padding: 0.4rem 0.5rem;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -1472,8 +1476,8 @@ main {
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.65rem;
-  padding: 0.75rem;
+  gap: 0.5rem;
+  padding: 0.65rem 0.5rem 0.5rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 12px;
@@ -1486,6 +1490,11 @@ main {
   justify-content: space-between;
   gap: 0.75rem;
   flex-wrap: wrap;
+  max-width: var(--ash-chat-composer-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px;
+  box-sizing: border-box;
 }
 
 .agent-chat-header-title h2 {
@@ -1519,10 +1528,16 @@ main {
   flex: 1;
   min-height: 0;
   overflow: auto;
+  padding-bottom: 5.5rem;
 }
 
 .agent-chat-transcript {
   min-height: 12rem;
+  max-width: var(--ash-chat-content-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: 0 16px 1rem;
+  box-sizing: border-box;
 }
 
 .agent-chat-bubbles {
@@ -1531,7 +1546,7 @@ main {
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.65rem;
 }
 
 .agent-chat-bubble-row {
@@ -1552,8 +1567,8 @@ main {
 .agent-chat-bubble {
   max-width: min(92%, 36rem);
   text-align: left;
-  padding: 0.65rem 0.8rem;
-  border-radius: 12px;
+  padding: 0.7rem 0.9rem;
+  border-radius: 16px;
   border: 1px solid var(--border);
   background: var(--surface-raised);
   color: inherit;
@@ -1561,9 +1576,11 @@ main {
 }
 
 .agent-chat-bubble.role-user {
+  max-width: min(525px, 82%);
   background: color-mix(in srgb, var(--accent) 14%, var(--surface));
   border-color: color-mix(in srgb, var(--accent) 35%, var(--border));
-  border-bottom-right-radius: 4px;
+  border-radius: 18px;
+  border-bottom-right-radius: 6px;
 }
 
 .agent-chat-bubble.role-gate {
@@ -1575,15 +1592,17 @@ main {
   background: color-mix(in srgb, var(--accent) 8%, var(--surface-soft));
   border-color: color-mix(in srgb, var(--accent) 28%, var(--border));
   border-left: 3px solid color-mix(in srgb, var(--accent) 55%, var(--border));
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
   font-size: 0.85rem;
 }
 
 .agent-chat-bubble.role-assistant {
+  max-width: min(100%, var(--ash-chat-content-width));
   background: color-mix(in srgb, var(--surface-raised) 70%, var(--surface-soft));
-  border-color: color-mix(in srgb, var(--border) 80%, var(--accent));
-  border-bottom-left-radius: 4px;
+  border-color: color-mix(in srgb, var(--border) 88%, transparent);
+  border-radius: 16px;
+  border-bottom-left-radius: 6px;
 }
 
 .agent-chat-bubble.role-assistant.streaming .agent-chat-bubble-body::after {
@@ -1601,7 +1620,7 @@ main {
 
 .agent-chat-bubble.role-other {
   background: var(--surface-soft);
-  border-bottom-left-radius: 4px;
+  border-bottom-left-radius: 6px;
 }
 
 .agent-chat-bubble.active {
@@ -1613,45 +1632,70 @@ main {
   align-items: baseline;
   gap: 0.45rem;
   margin-bottom: 0.25rem;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
+}
+
+.agent-chat-bubble-meta .agent-chat-bubble-type {
+  display: none;
+}
+
+.agent-chat-bubble.role-tool .agent-chat-bubble-type,
+.agent-chat-bubble.role-gate .agent-chat-bubble-type {
+  display: inline;
 }
 
 .agent-chat-bubble-body {
   white-space: pre-wrap;
   word-break: break-word;
-  font-size: 0.92rem;
-  line-height: 1.45;
+  font-size: 0.95rem;
+  line-height: 1.5;
 }
 
 .agent-chat-composer {
   position: sticky;
   bottom: 0;
   z-index: 2;
-  margin-top: auto;
-  padding: 0.7rem 0.75rem;
+  margin: auto 16px 0;
+  max-width: var(--ash-chat-composer-width);
+  width: calc(100% - 32px);
+  align-self: center;
+  padding: 0.85rem 1rem 1rem;
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 12px;
-  box-shadow: 0 -6px 18px color-mix(in srgb, var(--text) 6%, transparent);
+  border-radius: 16px;
+  box-shadow:
+    0 -18px 28px color-mix(in srgb, var(--bg) 88%, transparent),
+    0 -4px 14px color-mix(in srgb, var(--text) 5%, transparent);
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
+  gap: 0.45rem;
+}
+
+.agent-chat-composer::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 100%;
+  height: 28px;
+  pointer-events: none;
+  background: linear-gradient(to top, color-mix(in srgb, var(--surface) 92%, transparent), transparent);
 }
 
 .agent-chat-seats {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.55rem 0.75rem;
+  gap: 0.35rem 0.55rem;
   align-items: end;
 }
 
 .agent-chat-seat {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  font-size: 0.75rem;
+  gap: 0.12rem;
+  font-size: 0.68rem;
   color: var(--muted);
-  min-width: 7.5rem;
+  min-width: 6.5rem;
 }
 
 .agent-chat-seat select,
@@ -1661,8 +1705,9 @@ main {
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 8px;
-  padding: 0.28rem 0.45rem;
-  min-height: 1.85rem;
+  padding: 0.22rem 0.4rem;
+  min-height: 1.7rem;
+  font-size: 0.82rem;
 }
 
 .agent-chat-seat-plan {
@@ -1739,19 +1784,30 @@ main {
   flex: 1;
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
+  align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.85rem;
   min-height: 280px;
-  padding: 1.25rem;
-  border: 1px dashed var(--border);
-  border-radius: 12px;
-  background: var(--surface-soft);
+  max-width: var(--ash-chat-composer-width);
+  width: calc(100% - 32px);
+  margin: auto;
+  padding: 1.75rem 1.5rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--text) 4%, transparent);
+  text-align: center;
+}
+
+.agent-chat-empty.hero {
+  min-height: 320px;
 }
 
 .agent-chat-empty p {
   margin: 0;
   color: var(--muted);
+  max-width: 28rem;
+  line-height: 1.5;
 }
 
 .agent-trajectory-flat {
