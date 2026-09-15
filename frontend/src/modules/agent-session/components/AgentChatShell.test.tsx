@@ -44,6 +44,9 @@ vi.mock("@/modules/agent-session/api/workspace.api", () => ({
 
 vi.mock("@/services/sse/runStream", () => ({
   useRunStream: vi.fn(() => ({ lines: [], status: "idle" as const })),
+  useSessionStream: vi.fn(() => ({ lines: [], status: "idle" as const })),
+  sessionStreamPath: (id: string, url?: string | null) =>
+    url || `/api/v1/agents/sessions/${id}/stream`,
 }));
 
 vi.mock("@/modules/interactions/api/interactions.api", () => ({

@@ -17,6 +17,12 @@ export type UseRunStreamOptions = {
   maxReconnectAttempts?: number;
   pollIntervalMs?: number;
   pollTimeline?: TimelinePollFn;
+  /** Override EventSource URL (e.g. session stream). */
+  streamUrl?: string | null;
+  /** Extra SSE event type names to subscribe to. */
+  extraEventTypes?: readonly string[];
+  /** Disable timeline polling fallback (session streams have no run timeline). */
+  disablePollFallback?: boolean;
 };
 
 const STREAM_EVENT_TYPES = [
@@ -34,6 +40,10 @@ const STREAM_EVENT_TYPES = [
   "memory.review_requested",
   "memory.reviewed",
   "memory.deprecated",
+  "assistant.delta",
+  "assistant.message",
+  "session.turn",
+  "session.command",
 ] as const;
 
 const BASE_BACKOFF_MS = 1000;
@@ -67,6 +77,13 @@ function timelineToLines(items: TimelineItem[], afterSeq: number): { lines: Stre
   return { lines, maxSeq };
 }
 
+function resolveStreamUrl(runId: string | null, streamUrl?: string | null): string | null {
+  const override = (streamUrl ?? "").trim();
+  if (override) return override;
+  if (runId) return `/api/v1/runs/${runId}/stream`;
+  return null;
+}
+
 export function useRunStream(
   runId: string | null,
   options: UseRunStreamOptions = {},
@@ -83,8 +100,10 @@ export function useRunStream(
   const optionsRef = useRef(options);
   optionsRef.current = options;
 
+  const streamUrlKey = resolveStreamUrl(runId, options.streamUrl);
+
   useEffect(() => {
-    if (!runId) {
+    if (!streamUrlKey) {
       setLines([]);
       setStatus("idle");
       return;
@@ -127,6 +146,10 @@ export function useRunStream(
 
     const startPolling = () => {
       if (closedRef.current || pollTimerRef.current != null) return;
+      if (optionsRef.current.disablePollFallback || !runId) {
+        setStatus("closed");
+        return;
+      }
       closeSource();
       clearReconnectTimer();
       setStatus("polling");
@@ -160,9 +183,10 @@ export function useRunStream(
       if (closedRef.current) return;
       closeSource();
 
-      let url = `/api/v1/runs/${runId}/stream`;
+      let url = streamUrlKey;
       if (lastEventIdRef.current) {
-        url += `?Last-Event-ID=${encodeURIComponent(lastEventIdRef.current)}`;
+        const join = url.includes("?") ? "&" : "?";
+        url += `${join}Last-Event-ID=${encodeURIComponent(lastEventIdRef.current)}`;
       }
 
       const es = new EventSource(url);
@@ -188,7 +212,8 @@ export function useRunStream(
         setStatus("open");
       };
       es.onmessage = onAny;
-      for (const t of STREAM_EVENT_TYPES) {
+      const types = new Set<string>([...STREAM_EVENT_TYPES, ...(optionsRef.current.extraEventTypes ?? [])]);
+      for (const t of types) {
         es.addEventListener(t, onAny as EventListener);
       }
       es.onerror = () => {
@@ -217,7 +242,26 @@ export function useRunStream(
       closeSource();
       setStatus("closed");
     };
-  }, [runId]);
+  }, [streamUrlKey, runId]);
 
   return { lines, status };
+}
+
+/** Prefer session.streamUrl; always fall back to session-scoped SSE path. */
+export function sessionStreamPath(sessionId: string, streamUrl?: string | null): string {
+  const override = (streamUrl ?? "").trim();
+  if (override) return override;
+  return `/api/v1/agents/sessions/${sessionId}/stream`;
+}
+
+/** Live updates via GET /agents/sessions/{id}/stream (bound run or blank). */
+export function useSessionStream(
+  sessionId: string | null,
+  streamUrl?: string | null,
+): UseRunStreamResult {
+  const url = sessionId ? sessionStreamPath(sessionId, streamUrl) : null;
+  return useRunStream(null, {
+    streamUrl: url,
+    disablePollFallback: true,
+  });
 }

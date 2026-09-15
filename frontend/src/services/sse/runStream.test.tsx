@@ -5,6 +5,7 @@ import {
   DEFAULT_POLL_INTERVAL_MS,
   nextReconnectDelayMs,
   useRunStream,
+  useSessionStream,
 } from "./runStream";
 
 type Handler = ((ev: MessageEvent) => void) | null;
@@ -171,5 +172,41 @@ describe("useRunStream", () => {
       vi.advanceTimersByTime(5000);
     });
     expect(MockEventSource.instances).toHaveLength(1);
+  });
+});
+
+describe("useSessionStream", () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    MockEventSource.instances = [];
+    vi.stubGlobal("EventSource", MockEventSource as unknown as typeof EventSource);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it("connects to session stream path and listens for assistant events", () => {
+    const { result } = renderHook(() => useSessionStream("sess_1"));
+    expect(MockEventSource.instances).toHaveLength(1);
+    expect(MockEventSource.instances[0].url).toBe("/api/v1/agents/sessions/sess_1/stream");
+
+    act(() => {
+      MockEventSource.instances[0].emitOpen();
+      MockEventSource.instances[0].emitMessage(
+        "assistant.message",
+        '{"seq":1,"text":"hi"}',
+        "evt-a",
+      );
+    });
+
+    expect(result.current.status).toBe("open");
+    expect(result.current.lines[0]?.type).toBe("assistant.message");
+  });
+
+  it("prefers provided streamUrl", () => {
+    renderHook(() => useSessionStream("sess_1", "/api/v1/agents/sessions/sess_1/stream?x=1"));
+    expect(MockEventSource.instances[0].url).toBe("/api/v1/agents/sessions/sess_1/stream?x=1");
   });
 });

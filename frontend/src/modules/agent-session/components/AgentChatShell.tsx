@@ -15,7 +15,7 @@ import {
   createAgentWorkspace,
   listAgentWorkspaces,
 } from "../api/workspace.api";
-import { useRunStream, type StreamLine } from "@/services/sse/runStream";
+import { useSessionStream, type StreamLine } from "@/services/sse/runStream";
 import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript, type ChatBubbleSelection } from "./ChatTranscript";
 import { DetailsPane } from "./DetailsPane";
@@ -138,7 +138,11 @@ export function AgentChatShell({
     null;
 
   const runId = activeSession?.runId || "";
-  const pollEvents = !runId;
+  const streamUrl =
+    activeSession?.streamUrl ||
+    (selectedSessionId ? `/api/v1/agents/sessions/${selectedSessionId}/stream` : "");
+  // Prefer session-level SSE (covers blank + bound); keep light events poll as cold-start only.
+  const pollEvents = Boolean(selectedSessionId) && !streamUrl;
 
   const eventsQuery = useQuery({
     queryKey: ["agent-session-events", selectedSessionId],
@@ -147,12 +151,15 @@ export function AgentChatShell({
     refetchInterval: pollEvents ? 4000 : false,
   });
 
-  const { lines: streamLines } = useRunStream(runId || null);
+  const { lines: streamLines } = useSessionStream(
+    selectedSessionId,
+    activeSession?.streamUrl || streamUrl || null,
+  );
 
   useEffect(() => {
-    if (!selectedSessionId || !runId || streamLines.length === 0) return;
+    if (!selectedSessionId || streamLines.length === 0) return;
     void qc.invalidateQueries({ queryKey: ["agent-session-events", selectedSessionId] });
-  }, [streamLines.length, selectedSessionId, runId, qc]);
+  }, [streamLines.length, selectedSessionId, qc]);
 
   useEffect(() => {
     const ws = activeSession?.workspaceId;
@@ -233,8 +240,11 @@ export function AgentChatShell({
     [eventsQuery.data?.items],
   );
   const streamedEvents = useMemo(
-    () => (runId ? streamLinesToEvents(streamLines, runId) : []),
-    [streamLines, runId],
+    () =>
+      streamLines.length
+        ? streamLinesToEvents(streamLines, runId || selectedSessionId || "")
+        : [],
+    [streamLines, runId, selectedSessionId],
   );
   const events = useMemo(
     () => mergeEvents(baseEvents, streamedEvents),
