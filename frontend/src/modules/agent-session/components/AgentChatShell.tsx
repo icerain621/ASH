@@ -13,7 +13,9 @@ import {
   type SessionEventEnvelope,
 } from "../api/session.api";
 import {
+  attachAgentWorkspaceSession,
   createAgentWorkspace,
+  detachAgentWorkspaceSession,
   listAgentWorkspaces,
   patchAgentWorkspace,
 } from "../api/workspace.api";
@@ -22,10 +24,11 @@ import { ChatComposer } from "./ChatComposer";
 import { ChatTranscript, type ChatBubbleSelection } from "./ChatTranscript";
 import { DetailsPane } from "./DetailsPane";
 import { type IntentPayload } from "./IntentBar";
-import { SessionHistoryList } from "./SessionHistoryList";
+import { SessionHistoryList, type SessionMoveRequest } from "./SessionHistoryList";
 import { TrajectoryPane } from "./TrajectoryPane";
 import { useChatColumnWidths } from "./useChatColumnWidths";
 import { shortId } from "@/shared/utils/format";
+import { reorderSessionIds } from "./reorderSessionIds";
 
 export type AgentChatShellProps = {
   selectedSessionId: string | null;
@@ -262,6 +265,32 @@ export function AgentChatShell({
     onError: (e: Error) => setError(e.message),
   });
 
+  const moveMut = useMutation({
+    mutationFn: async (req: SessionMoveRequest) => {
+      const { sessionId, fromWorkspaceId, toWorkspaceId, beforeSessionId } = req;
+      if (fromWorkspaceId && fromWorkspaceId !== toWorkspaceId) {
+        await detachAgentWorkspaceSession(fromWorkspaceId, sessionId);
+      }
+      if (toWorkspaceId) {
+        await attachAgentWorkspaceSession(toWorkspaceId, sessionId);
+        const wsList = workspaceQuery.data?.items ?? [];
+        const target = wsList.find((w) => w.id === toWorkspaceId);
+        const base = (target?.sessionIds ?? []).filter((id) => id !== sessionId);
+        let next = [...base, sessionId];
+        if (beforeSessionId) {
+          next = reorderSessionIds([...base, sessionId], sessionId, beforeSessionId);
+        }
+        await patchAgentWorkspace(toWorkspaceId, { sessionIds: next });
+      }
+    },
+    onSuccess: () => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const baseEvents: SessionEventEnvelope[] = useMemo(
     () => eventsQuery.data?.items ?? [],
     [eventsQuery.data?.items],
@@ -324,6 +353,7 @@ export function AgentChatShell({
         onReorderSessions={(workspaceId, sessionIds) =>
           reorderMut.mutate({ workspaceId, sessionIds })
         }
+        onMoveSession={(req) => moveMut.mutate(req)}
       />
 
       <div

@@ -175,6 +175,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agent-workspaces", h.createAgentWorkspace)
 		v1.PATCH("/agent-workspaces/:workspaceId", h.patchAgentWorkspace)
 		v1.POST("/agent-workspaces/:workspaceId/sessions", h.attachAgentWorkspaceSession)
+		v1.DELETE("/agent-workspaces/:workspaceId/sessions/:sessionId", h.detachAgentWorkspaceSession)
 		v1.DELETE("/agent-workspaces/:workspaceId", h.closeAgentWorkspace)
 		v1.GET("/agents/assets", h.listAgentAssets)
 		v1.POST("/agents/assets", h.createAgentAsset)

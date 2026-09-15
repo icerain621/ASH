@@ -124,6 +124,22 @@ func TestAgentWorkspaceAPILifecycleAndSessionLink(t *testing.T) {
 		t.Fatalf("patched=%+v", patched)
 	}
 
+	detachW := httptest.NewRecorder()
+	detachReq := httptest.NewRequest(http.MethodDelete, "/api/v1/agent-workspaces/"+ws.ID+"/sessions/sess_extra", nil)
+	r.ServeHTTP(detachW, detachReq)
+	if detachW.Code != http.StatusOK {
+		t.Fatalf("detach status=%d body=%s", detachW.Code, detachW.Body.String())
+	}
+	var detached struct {
+		SessionIDs []string `json:"sessionIds"`
+	}
+	if err := json.Unmarshal(detachW.Body.Bytes(), &detached); err != nil {
+		t.Fatal(err)
+	}
+	if len(detached.SessionIDs) != 1 || detached.SessionIDs[0] != sess.ID {
+		t.Fatalf("detached=%+v want only %s", detached, sess.ID)
+	}
+
 	delW := httptest.NewRecorder()
 	delReq := httptest.NewRequest(http.MethodDelete, "/api/v1/agent-workspaces/"+ws.ID, nil)
 	r.ServeHTTP(delW, delReq)

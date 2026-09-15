@@ -1969,6 +1969,10 @@ main {
   font-size: 0.8rem;
 }
 
+.agent-mcp-row.deny {
+  border-color: color-mix(in srgb, var(--err, #c44) 45%, var(--border));
+}
+
 @media (max-width: 1100px) {
   .agent-chat-shell {
     grid-template-columns:

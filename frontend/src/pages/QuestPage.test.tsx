@@ -188,6 +188,7 @@ vi.mock("@/modules/agent-session/api/workspace.api", () => ({
     status: "active",
   })),
   attachAgentWorkspaceSession: vi.fn(),
+  detachAgentWorkspaceSession: vi.fn(),
   closeAgentWorkspace: vi.fn(),
 }));
 
@@ -195,6 +196,10 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   listMCPTools: vi.fn(async () => ({ items: [] })),
   registerMCPTool: vi.fn(),
   patchMCPTool: vi.fn(),
+  listToolRiskCatalog: vi.fn(async () => ({
+    items: [{ name: "shell.exec", risk: "danger", defaultDeny: true, label: "Shell" }],
+    docRef: "ARCH",
+  })),
 }));
 
 vi.mock("@/services/http/client", () => ({
@@ -266,6 +271,9 @@ describe("QuestPage", () => {
     expect(screen.getByText("Tools")).toBeTruthy();
     expect(screen.getByText("Skills")).toBeTruthy();
     expect(screen.getByText("MCP")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-settings-tools"));
+    expect(await screen.findByTestId("agent-tools-panel")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-tools-close"));
     fireEvent.click(screen.getByTestId("agent-settings-mcp"));
     expect(await screen.findByTestId("agent-mcp-panel")).toBeTruthy();
     expect(await screen.findByText("feature_delivery@1.0.0")).toBeTruthy();

@@ -60,6 +60,16 @@ export async function attachAgentWorkspaceSession(
   );
 }
 
+export async function detachAgentWorkspaceSession(
+  workspaceId: string,
+  sessionId: string,
+): Promise<AgentWorkspaceView> {
+  return api<AgentWorkspaceView>(
+    `/agent-workspaces/${encodeURIComponent(workspaceId)}/sessions/${encodeURIComponent(sessionId)}`,
+    { method: "DELETE" },
+  );
+}
+
 export async function closeAgentWorkspace(workspaceId: string): Promise<AgentWorkspaceView> {
   return api<AgentWorkspaceView>(`/agent-workspaces/${encodeURIComponent(workspaceId)}`, {
     method: "DELETE",

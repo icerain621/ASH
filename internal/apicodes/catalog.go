@@ -200,6 +200,7 @@ var Catalog = map[string]Entry{
 	"WORKSPACE_NOT_FOUND":      {Domain: "agents", Summary: "Agent workspace id not found"},
 	"WORKSPACE_UPDATE_FAILED":  {Domain: "agents", Summary: "Failed to patch agent workspace"},
 	"WORKSPACE_ATTACH_FAILED":  {Domain: "agents", Summary: "Failed to attach session to workspace"},
+	"WORKSPACE_DETACH_FAILED":  {Domain: "agents", Summary: "Failed to detach session from workspace"},
 	"WORKSPACE_CLOSE_FAILED":   {Domain: "agents", Summary: "Failed to soft-close agent workspace"},
 	"INTERACTION_NOT_FOUND":    {Domain: "interactions", Summary: "Interaction session/thread not found for run"},
 	"THREAD_NOT_FOUND":         {Domain: "interactions", Summary: "Interaction thread id not found"},

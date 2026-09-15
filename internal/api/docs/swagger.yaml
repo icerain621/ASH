@@ -5582,6 +5582,35 @@ paths:
       summary: Attach a session to an agent workspace
       tags:
       - agents
+  /api/v1/agent-workspaces/{workspaceId}/sessions/{sessionId}:
+    delete:
+      description: Remove sessionId from workspace.sessionIds and clear session.workspaceId
+        when matching.
+      parameters:
+      - description: workspace id
+        in: path
+        name: workspaceId
+        required: true
+        type: string
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Detach a session from an agent workspace
+      tags:
+      - agents
   /api/v1/agents/assets:
     get:
       parameters:

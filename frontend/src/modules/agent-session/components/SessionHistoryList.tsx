@@ -5,6 +5,14 @@ import { shortId } from "@/shared/utils/format";
 import { reorderSessionIds } from "./reorderSessionIds";
 import { groupSessionsByWorkspace } from "./workspaceGroups";
 
+export type SessionMoveRequest = {
+  sessionId: string;
+  fromWorkspaceId: string | null;
+  toWorkspaceId: string | null;
+  /** Insert before this session within the target workspace; omit to append. */
+  beforeSessionId?: string | null;
+};
+
 type Props = {
   items: AgentSessionView[];
   workspaces: AgentWorkspaceView[];
@@ -23,8 +31,10 @@ type Props = {
   onRename?: (sessionId: string, title: string) => void;
   onClose?: (sessionId: string) => void;
   onPurge?: (sessionId: string) => void;
-  /** Reorder sessions inside a workspace (PATCH sessionIds). */
+  /** Same-workspace reorder. */
   onReorderSessions?: (workspaceId: string, sessionIds: string[]) => void;
+  /** Cross-workspace (or unassigned) move. */
+  onMoveSession?: (req: SessionMoveRequest) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -57,16 +67,20 @@ export function SessionHistoryList({
   onClose,
   onPurge,
   onReorderSessions,
+  onMoveSession,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragId, setDragId] = useState<string | null>(null);
+  const [dragFromWs, setDragFromWs] = useState<string | null>(null);
 
   const groups = useMemo(
     () => groupSessionsByWorkspace(items, workspaces),
     [items, workspaces],
   );
+
+  const canDragAny = Boolean(onReorderSessions || onMoveSession);
 
   function startRename(session: AgentSessionView) {
     setEditingId(session.id);
@@ -84,40 +98,75 @@ export function SessionHistoryList({
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
+  function handleDropOnSession(targetWsId: string | null, targetSessionId: string) {
+    const fromId = dragId;
+    const fromWs = dragFromWs;
+    setDragId(null);
+    setDragFromWs(null);
+    if (!fromId || fromId === targetSessionId) return;
+
+    if (fromWs && targetWsId && fromWs === targetWsId && onReorderSessions) {
+      const group = groups.find((g) => g.workspace?.id === targetWsId);
+      if (!group) return;
+      const ids = group.sessions.map((s) => s.id);
+      const next = reorderSessionIds(ids, fromId, targetSessionId);
+      if (next.join(",") === ids.join(",")) return;
+      onReorderSessions(targetWsId, next);
+      return;
+    }
+
+    onMoveSession?.({
+      sessionId: fromId,
+      fromWorkspaceId: fromWs,
+      toWorkspaceId: targetWsId,
+      beforeSessionId: targetSessionId,
+    });
+  }
+
+  function handleDropOnGroup(targetWsId: string | null) {
+    const fromId = dragId;
+    const fromWs = dragFromWs;
+    setDragId(null);
+    setDragFromWs(null);
+    if (!fromId) return;
+    if (fromWs === targetWsId) return;
+    onMoveSession?.({
+      sessionId: fromId,
+      fromWorkspaceId: fromWs,
+      toWorkspaceId: targetWsId,
+      beforeSessionId: null,
+    });
+  }
+
   function renderSessionRow(item: AgentSessionView, workspaceId: string | null) {
     const active = item.id === selectedSessionId;
     const editing = editingId === item.id;
-    const canDrag = Boolean(workspaceId && onReorderSessions);
     return (
       <li
         key={item.id}
         className={`agent-history-row${dragId === item.id ? " dragging" : ""}`}
-        draggable={canDrag && !editing}
+        draggable={canDragAny && !editing}
         data-testid={`agent-history-row-${item.id}`}
         onDragStart={(e) => {
-          if (!canDrag) return;
+          if (!canDragAny) return;
           setDragId(item.id);
+          setDragFromWs(workspaceId);
           e.dataTransfer.setData("text/plain", item.id);
           e.dataTransfer.effectAllowed = "move";
         }}
-        onDragEnd={() => setDragId(null)}
+        onDragEnd={() => {
+          setDragId(null);
+          setDragFromWs(null);
+        }}
         onDragOver={(e) => {
-          if (!canDrag || !dragId || dragId === item.id) return;
+          if (!dragId || dragId === item.id) return;
           e.preventDefault();
           e.dataTransfer.dropEffect = "move";
         }}
         onDrop={(e) => {
           e.preventDefault();
-          if (!workspaceId || !onReorderSessions) return;
-          const fromId = e.dataTransfer.getData("text/plain") || dragId;
-          setDragId(null);
-          if (!fromId || fromId === item.id) return;
-          const group = groups.find((g) => g.workspace?.id === workspaceId);
-          if (!group) return;
-          const ids = group.sessions.map((s) => s.id);
-          const next = reorderSessionIds(ids, fromId, item.id);
-          if (next.join(",") === ids.join(",")) return;
-          onReorderSessions(workspaceId, next);
+          e.stopPropagation();
+          handleDropOnSession(workspaceId, item.id);
         }}
       >
         {editing ? (
@@ -239,6 +288,7 @@ export function SessionHistoryList({
       <div className="agent-workspace-list" data-testid="agent-workspace-list">
         {groups.map((group) => {
           const key = group.workspace?.id ?? "unassigned";
+          const wsId = group.workspace?.id ?? null;
           const isOpen = !collapsed[key];
           const selectedWs = group.workspace
             ? activeWorkspaceId === group.workspace.id
@@ -250,6 +300,15 @@ export function SessionHistoryList({
               data-testid={
                 group.workspace ? `agent-workspace-${group.workspace.id}` : "agent-workspace-unassigned"
               }
+              onDragOver={(e) => {
+                if (!dragId || !onMoveSession) return;
+                e.preventDefault();
+                e.dataTransfer.dropEffect = "move";
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                handleDropOnGroup(wsId);
+              }}
             >
               <button
                 type="button"
@@ -266,11 +325,9 @@ export function SessionHistoryList({
               </button>
               {isOpen ? (
                 <ul className="agent-history-list">
-                  {group.sessions.map((item) =>
-                    renderSessionRow(item, group.workspace?.id ?? null),
-                  )}
+                  {group.sessions.map((item) => renderSessionRow(item, wsId))}
                   {!group.sessions.length ? (
-                    <li className="muted-line">暂无会话</li>
+                    <li className="muted-line">暂无会话 · 可拖入</li>
                   ) : null}
                 </ul>
               ) : null}

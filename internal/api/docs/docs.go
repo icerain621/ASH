@@ -250,6 +250,48 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/agent-workspaces/{workspaceId}/sessions/{sessionId}": {
+            "delete": {
+                "description": "Remove sessionId from workspace.sessionIds and clear session.workspaceId when matching.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Detach a session from an agent workspace",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "workspace id",
+                        "name": "workspaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "session id",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agentworkspace.View"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/agents/assets": {
             "get": {
                 "produces": [

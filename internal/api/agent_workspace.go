@@ -161,6 +161,46 @@ func (h *Handler) attachAgentWorkspaceSession(c *gin.Context) {
 	c.JSON(http.StatusOK, updated)
 }
 
+// DetachAgentWorkspaceSession godoc
+// @Summary Detach a session from an agent workspace
+// @Description Remove sessionId from workspace.sessionIds and clear session.workspaceId when matching.
+// @Tags agents
+// @Produce json
+// @Param workspaceId path string true "workspace id"
+// @Param sessionId path string true "session id"
+// @Success 200 {object} agentworkspace.View
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agent-workspaces/{workspaceId}/sessions/{sessionId} [delete]
+func (h *Handler) detachAgentWorkspaceSession(c *gin.Context) {
+	workspaceID := c.Param("workspaceId")
+	sessionID := c.Param("sessionId")
+	view, err := h.agentWorkspaceFor(c).Get(workspaceID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("WORKSPACE_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, view.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permRunCreate, view.SpaceID) {
+		return
+	}
+	updated, err := h.agentWorkspaceFor(c).Detach(workspaceID, sessionID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("WORKSPACE_DETACH_FAILED", err.Error()))
+		return
+	}
+	if sess, err := h.sessionFor(c).Get(sessionID); err == nil {
+		if strings.TrimSpace(sess.WorkspaceID) == workspaceID || strings.TrimSpace(sess.WorkspaceID) == "" {
+			_, _ = h.sessionFor(c).SetWorkspaceID(sessionID, "")
+		}
+	}
+	_ = h.dbFor(c).Create(auditRow(updated.SpaceID, currentActor(c), "agent.workspace_session_detached", map[string]any{
+		"workspaceId": updated.ID, "sessionId": sessionID,
+	})).Error
+	c.JSON(http.StatusOK, updated)
+}
+
 // CloseAgentWorkspace godoc
 // @Summary Soft-close agent workspace
 // @Description Sets status=closed. List excludes closed workspaces.
