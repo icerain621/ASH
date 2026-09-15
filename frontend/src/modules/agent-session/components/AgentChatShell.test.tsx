@@ -13,6 +13,9 @@ const patchAgentSession = vi.fn();
 const closeAgentSession = vi.fn();
 const listAgentWorkspaces = vi.fn();
 const createAgentWorkspace = vi.fn();
+const listAgentCommands = vi.fn();
+const listAgentModels = vi.fn();
+const updateSession = vi.fn();
 
 vi.mock("@/modules/agent-session/api/session.api", async () => {
   const actual = await vi.importActual<typeof import("../api/session.api")>("../api/session.api");
@@ -25,6 +28,9 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
     getAgentSession: (...args: unknown[]) => getAgentSession(...args),
     patchAgentSession: (...args: unknown[]) => patchAgentSession(...args),
     closeAgentSession: (...args: unknown[]) => closeAgentSession(...args),
+    listAgentCommands: (...args: unknown[]) => listAgentCommands(...args),
+    listAgentModels: (...args: unknown[]) => listAgentModels(...args),
+    updateSession: (...args: unknown[]) => updateSession(...args),
   };
 });
 
@@ -92,6 +98,25 @@ describe("AgentChatShell", () => {
       sessionIds: [],
       status: "active",
     });
+    listAgentCommands.mockResolvedValue({
+      items: [
+        { name: "/help", description: "列出可用命令", source: "builtin" },
+        { name: "/clear", description: "清空", source: "builtin" },
+      ],
+    });
+    listAgentModels.mockResolvedValue({
+      items: [
+        { id: "static", label: "static", providerKind: "static" },
+        { id: "execgo", label: "execgo", providerKind: "execgo" },
+        { id: "acp_sdk", label: "acp_sdk", providerKind: "acp_sdk" },
+      ],
+    });
+    updateSession.mockImplementation(async (id: string, body: Record<string, unknown>) => ({
+      id,
+      spaceId: "local",
+      status: "active",
+      ...body,
+    }));
     listAgentSessions.mockResolvedValue({
       items: [
         {

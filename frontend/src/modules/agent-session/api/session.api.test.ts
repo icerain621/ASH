@@ -2,8 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   closeAgentSession,
   eventVisibility,
+  listAgentCommands,
+  listAgentModels,
   listAgentSessions,
   patchAgentSession,
+  updateSession,
 } from "./session.api";
 
 const api = vi.fn();
@@ -45,6 +48,23 @@ describe("listAgentSessions", () => {
   });
 });
 
+describe("commands and models", () => {
+  beforeEach(() => {
+    api.mockReset();
+    api.mockResolvedValue({ items: [] });
+  });
+
+  it("GETs /agents/commands", async () => {
+    await listAgentCommands();
+    expect(api).toHaveBeenCalledWith("/agents/commands");
+  });
+
+  it("GETs /agents/models", async () => {
+    await listAgentModels();
+    expect(api).toHaveBeenCalledWith("/agents/models");
+  });
+});
+
 describe("patch/close session", () => {
   beforeEach(() => {
     api.mockReset();
@@ -56,6 +76,14 @@ describe("patch/close session", () => {
     expect(api).toHaveBeenCalledWith("/agents/sessions/sess_1", {
       method: "PATCH",
       body: JSON.stringify({ title: "Renamed" }),
+    });
+  });
+
+  it("updateSession aliases PATCH seats", async () => {
+    await updateSession("sess_1", { providerKind: "static", permissionMode: "full" });
+    expect(api).toHaveBeenCalledWith("/agents/sessions/sess_1", {
+      method: "PATCH",
+      body: JSON.stringify({ providerKind: "static", permissionMode: "full" }),
     });
   });
 

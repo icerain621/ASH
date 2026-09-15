@@ -16,6 +16,8 @@ export type SessionEventEnvelope = {
   payload?: unknown;
 };
 
+export type PermissionMode = "read-only" | "workspace-write" | "full";
+
 export type AgentSessionView = {
   id: string;
   spaceId: string;
@@ -26,6 +28,8 @@ export type AgentSessionView = {
   runId?: string;
   streamUrl?: string;
   workspaceId?: string;
+  providerKind?: string;
+  permissionMode?: PermissionMode | string;
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
   replies?: Array<{
@@ -40,10 +44,30 @@ export type AgentSessionView = {
   updatedAt?: number;
 };
 
-export type SessionIntentAction = "prompt" | "approve" | "cancel" | "stop" | "reject";
+export type SessionIntentAction = "prompt" | "approve" | "cancel" | "stop" | "reject" | "command";
 
 export type AgentSessionListResponse = {
   items: AgentSessionView[];
+};
+
+export type AgentCommandItem = {
+  name: string;
+  description: string;
+  source: "builtin" | "skill" | "mcp" | string;
+};
+
+export type AgentCommandsResponse = {
+  items: AgentCommandItem[];
+};
+
+export type AgentModelItem = {
+  id: string;
+  label: string;
+  providerKind: string;
+};
+
+export type AgentModelsResponse = {
+  items: AgentModelItem[];
 };
 
 export async function listAgentSessions(opts?: {
@@ -65,6 +89,8 @@ export async function createAgentSession(body: {
   spaceId?: string;
   providerKind?: string;
   workspaceId?: string;
+  permissionMode?: PermissionMode | string;
+  planId?: string;
 }): Promise<AgentSessionView> {
   return api<AgentSessionView>("/agents/sessions", {
     method: "POST",
@@ -78,12 +104,30 @@ export async function getAgentSession(sessionId: string): Promise<AgentSessionVi
 
 export async function patchAgentSession(
   sessionId: string,
-  body: { title: string },
+  body: {
+    title?: string;
+    providerKind?: string;
+    planId?: string;
+    permissionMode?: PermissionMode | string;
+  },
 ): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}`, {
     method: "PATCH",
     body: JSON.stringify(body),
   });
+}
+
+/** Alias for seat updates (title / providerKind / planId / permissionMode). */
+export async function updateSession(
+  sessionId: string,
+  body: {
+    title?: string;
+    providerKind?: string;
+    planId?: string;
+    permissionMode?: PermissionMode | string;
+  },
+): Promise<AgentSessionView> {
+  return patchAgentSession(sessionId, body);
 }
 
 export async function closeAgentSession(sessionId: string): Promise<AgentSessionView> {
@@ -94,12 +138,37 @@ export async function closeAgentSession(sessionId: string): Promise<AgentSession
 
 export async function submitSessionIntent(
   sessionId: string,
-  body: { action: SessionIntentAction; prompt?: string; reason?: string; actorId?: string },
+  body: {
+    action: SessionIntentAction;
+    prompt?: string;
+    reason?: string;
+    actorId?: string;
+    command?: string;
+    args?: string;
+  },
 ): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}/actions`, {
     method: "POST",
     body: JSON.stringify(body),
   });
+}
+
+export async function listAgentCommands(opts?: {
+  spaceId?: string;
+  repoRoot?: string;
+}): Promise<AgentCommandsResponse> {
+  const q = new URLSearchParams();
+  if (opts?.spaceId) q.set("spaceId", opts.spaceId);
+  if (opts?.repoRoot) q.set("repoRoot", opts.repoRoot);
+  const suffix = q.toString() ? `?${q}` : "";
+  return api<AgentCommandsResponse>(`/agents/commands${suffix}`);
+}
+
+export async function listAgentModels(opts?: { spaceId?: string }): Promise<AgentModelsResponse> {
+  const q = new URLSearchParams();
+  if (opts?.spaceId) q.set("spaceId", opts.spaceId);
+  const suffix = q.toString() ? `?${q}` : "";
+  return api<AgentModelsResponse>(`/agents/models${suffix}`);
 }
 
 export async function listSessionEvents(

@@ -190,6 +190,8 @@ export function AgentChatShell({
         action: payload.action,
         prompt: payload.prompt,
         reason: payload.reason,
+        command: payload.command,
+        args: payload.args,
         actorId: "console",
       });
     },
@@ -367,6 +369,7 @@ export function AgentChatShell({
               busy={intentMut.isPending || !selectedSessionId}
               canStop={runBusy}
               gateReason={gateReason}
+              session={activeSession}
               onIntent={(payload) => intentMut.mutate(payload)}
             />
           </>
