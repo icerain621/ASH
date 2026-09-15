@@ -326,3 +326,106 @@ func TestAgentSessionAPIPatchCloseAndStopAlias(t *testing.T) {
 		t.Fatalf("includeClosed list missing %s", sess.ID)
 	}
 }
+
+func TestAgentCommandsAndModelsAndPatchSeats(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, _ := newPlatformTestRouter(t)
+
+	cmdW := httptest.NewRecorder()
+	cmdReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/commands", nil)
+	r.ServeHTTP(cmdW, cmdReq)
+	if cmdW.Code != http.StatusOK {
+		t.Fatalf("commands status=%d body=%s", cmdW.Code, cmdW.Body.String())
+	}
+	var cmdResp struct {
+		Items []struct {
+			Name   string `json:"name"`
+			Source string `json:"source"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(cmdW.Body.Bytes(), &cmdResp); err != nil {
+		t.Fatal(err)
+	}
+	hasHelp := false
+	for _, it := range cmdResp.Items {
+		if it.Name == "/help" && it.Source == "builtin" {
+			hasHelp = true
+		}
+	}
+	if !hasHelp {
+		t.Fatalf("commands=%+v", cmdResp.Items)
+	}
+
+	modW := httptest.NewRecorder()
+	modReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/models", nil)
+	r.ServeHTTP(modW, modReq)
+	if modW.Code != http.StatusOK {
+		t.Fatalf("models status=%d body=%s", modW.Code, modW.Body.String())
+	}
+	var modResp struct {
+		Items []struct {
+			ID           string `json:"id"`
+			ProviderKind string `json:"providerKind"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(modW.Body.Bytes(), &modResp); err != nil {
+		t.Fatal(err)
+	}
+	if len(modResp.Items) < 3 {
+		t.Fatalf("models=%+v", modResp.Items)
+	}
+
+	createW := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions",
+		bytes.NewReader([]byte(`{}`)))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createW.Code, createW.Body.String())
+	}
+	var sess struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createW.Body.Bytes(), &sess); err != nil {
+		t.Fatal(err)
+	}
+
+	patchW := httptest.NewRecorder()
+	patchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/agents/sessions/"+sess.ID,
+		bytes.NewReader([]byte(`{"providerKind":"static","planId":"plan_x","permissionMode":"full"}`)))
+	patchReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(patchW, patchReq)
+	if patchW.Code != http.StatusOK {
+		t.Fatalf("patch seats status=%d body=%s", patchW.Code, patchW.Body.String())
+	}
+	var patched struct {
+		ProviderKind   string `json:"providerKind"`
+		PlanID         string `json:"planId"`
+		PermissionMode string `json:"permissionMode"`
+	}
+	if err := json.Unmarshal(patchW.Body.Bytes(), &patched); err != nil {
+		t.Fatal(err)
+	}
+	if patched.ProviderKind != "static" || patched.PlanID != "plan_x" || patched.PermissionMode != "full" {
+		t.Fatalf("patched=%+v", patched)
+	}
+
+	helpW := httptest.NewRecorder()
+	helpReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/actions",
+		bytes.NewReader([]byte(`{"action":"command","command":"/help"}`)))
+	helpReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(helpW, helpReq)
+	if helpW.Code != http.StatusOK {
+		t.Fatalf("help status=%d body=%s", helpW.Code, helpW.Body.String())
+	}
+
+	unkW := httptest.NewRecorder()
+	unkReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/actions",
+		bytes.NewReader([]byte(`{"action":"command","command":"/unknown-xyz"}`)))
+	unkReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(unkW, unkReq)
+	if unkW.Code != http.StatusConflict {
+		t.Fatalf("unknown command status=%d want 409 body=%s", unkW.Code, unkW.Body.String())
+	}
+}

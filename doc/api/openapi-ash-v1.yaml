@@ -1137,11 +1137,13 @@ components:
       properties:
         action:
           type: string
-          enum: [prompt, approve, cancel, stop, reject]
-          description: "stop is an alias of cancel"
+          enum: [prompt, approve, cancel, stop, reject, command]
+          description: "stop is an alias of cancel; command runs slash commands fail-closed"
         prompt: { type: string }
         reason: { type: string }
         actorId: { type: string }
+        command: { type: string, description: "Slash command name (leading / optional)" }
+        args: { type: string, description: "Optional command arguments" }
     InteractionThread:
       type: object
       properties:
@@ -1694,6 +1696,10 @@ components:
         providerAdapter: { type: string }
         providerFallback: { type: boolean }
         providerReason: { type: string }
+        permissionMode:
+          type: string
+          description: "Seat permission: read-only | workspace-write | full"
+          enum: [read-only, workspace-write, full]
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }
@@ -1711,6 +1717,42 @@ components:
       type: object
       properties:
         title: { type: string, description: "Session display title (truncated ~48 runes)" }
+        providerKind: { type: string, description: "Provider seat: static | acp_sdk | execgo" }
+        planId: { type: string, description: "Optional Goal/Plan id seat" }
+        permissionMode:
+          type: string
+          description: "Permission seat"
+          enum: [read-only, workspace-write, full]
+    AgentCommandItem:
+      type: object
+      required: [name, description, source]
+      properties:
+        name: { type: string }
+        description: { type: string }
+        source:
+          type: string
+          enum: [builtin, skill, mcp]
+    AgentCommandsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AgentCommandItem" }
+    AgentModelItem:
+      type: object
+      required: [id, label, providerKind]
+      properties:
+        id: { type: string }
+        label: { type: string }
+        providerKind: { type: string }
+    AgentModelsResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/AgentModelItem" }
     AgentSessionListResponse:
       type: object
       required: [items]
@@ -3780,6 +3822,39 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+  /api/v1/agents/commands:
+    get:
+      tags: [Agents]
+      summary: List agent slash/skill commands
+      description: Builtin /help /clear plus best-effort skills from repo ScanRepo. Unknown command execution is fail-closed.
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+        - in: query
+          name: repoRoot
+          schema: { type: string, default: "." }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentCommandsResponse" }
+  /api/v1/agents/models:
+    get:
+      tags: [Agents]
+      summary: List agent provider model seats
+      description: Builtin provider kinds used by session applyProviderKind (static, acp_sdk, execgo).
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AgentModelsResponse" }
   /api/v1/agents/sessions:
     get:
       tags: [Agents]
@@ -3834,8 +3909,8 @@ paths:
               schema: { $ref: "#/components/schemas/AgentSessionView" }
     patch:
       tags: [Agents]
-      summary: Patch agent session (rename title)
-      description: Partial update; currently supports title.
+      summary: Patch agent session seats
+      description: Partial update for title, providerKind, planId, permissionMode.
       parameters:
         - in: path
           name: sessionId
@@ -3891,7 +3966,7 @@ paths:
     post:
       tags: [Agents]
       summary: Apply thin session intent
-      description: prompt|approve|cancel|stop|reject. stop is an alias of cancel. Approve without an approvable gate fails closed (409).
+      description: prompt|approve|cancel|stop|reject|command. stop is an alias of cancel. Unknown slash commands fail closed (409). Approve without an approvable gate fails closed (409).
       parameters:
         - in: path
           name: sessionId

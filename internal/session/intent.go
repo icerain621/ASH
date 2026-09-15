@@ -15,6 +15,7 @@ const (
 	IntentApprove = "approve"
 	IntentCancel  = "cancel"
 	IntentReject  = "reject"
+	IntentCommand = "command"
 )
 
 // ErrIntentRejected is returned when an intent cannot be applied (fail-closed).
@@ -32,6 +33,8 @@ type IntentRequest struct {
 	Prompt  string `json:"prompt,omitempty"`
 	Reason  string `json:"reason,omitempty"`
 	ActorID string `json:"actorId,omitempty"`
+	Command string `json:"command,omitempty"`
+	Args    string `json:"args,omitempty"`
 }
 
 // WithRunControl returns a shallow copy with run gate control wired.
@@ -55,6 +58,8 @@ func (s *Service) Intent(sessionID string, req IntentRequest) (*View, error) {
 		return s.intentApprove(sessionID, req, action)
 	case IntentCancel, "stop": // stop is a UX alias of cancel
 		return s.intentCancel(sessionID, req)
+	case IntentCommand:
+		return s.intentCommand(sessionID, req)
 	default:
 		return nil, fmt.Errorf("%w: unknown action %q", ErrIntentRejected, req.Action)
 	}

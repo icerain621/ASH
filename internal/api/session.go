@@ -119,8 +119,8 @@ func (h *Handler) getAgentSession(c *gin.Context) {
 }
 
 // PatchAgentSession godoc
-// @Summary Patch agent session (rename title)
-// @Description Partial update; currently supports { "title": "..." }. Empty title clears auto-title.
+// @Summary Patch agent session seats
+// @Description Partial update: title, providerKind, planId, permissionMode.
 // @Tags agents
 // @Accept json
 // @Produce json
@@ -154,6 +154,8 @@ func (h *Handler) patchAgentSession(c *gin.Context) {
 	}
 	_ = h.dbFor(c).Create(auditRow(updated.SpaceID, currentActor(c), "agent.session_updated", map[string]any{
 		"sessionId": updated.ID, "title": updated.Title, "runId": updated.RunID,
+		"providerKind": updated.ProviderKind, "planId": updated.PlanID,
+		"permissionMode": updated.PermissionMode,
 	})).Error
 	c.JSON(http.StatusOK, updated)
 }
@@ -226,8 +228,8 @@ func (h *Handler) promptAgentSessionTurn(c *gin.Context) {
 }
 
 // AgentSessionIntent godoc
-// @Summary Apply a thin session intent (prompt|approve|cancel|stop|reject)
-// @Description Fail-closed: approve without an approvable run gate returns 409. action "stop" is an alias of "cancel".
+// @Summary Apply a thin session intent (prompt|approve|cancel|stop|reject|command)
+// @Description Fail-closed: approve without an approvable run gate returns 409. action "stop" is an alias of "cancel". Unknown slash commands return 409.
 // @Tags agents
 // @Accept json
 // @Produce json
@@ -297,6 +299,42 @@ func (h *Handler) listAgentSessionEvents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// ListAgentCommands godoc
+// @Summary List agent slash/skill commands
+// @Description Builtin /help /clear plus best-effort skills from repo ScanRepo.
+// @Tags agents
+// @Produce json
+// @Param spaceId query string false "space id (default: current space)"
+// @Param repoRoot query string false "skills scan root" default(.)
+// @Success 200 {object} session.CommandsResponse
+// @Failure 403 {object} APIErrorResponse
+// @Router /api/v1/agents/commands [get]
+func (h *Handler) listAgentCommands(c *gin.Context) {
+	spaceID := firstNonEmptyAPI(strings.TrimSpace(c.Query("spaceId")), currentSpace(c))
+	if !h.requireRequestSpace(c, spaceID) {
+		return
+	}
+	repoRoot := c.DefaultQuery("repoRoot", ".")
+	c.JSON(http.StatusOK, session.ListCommands(repoRoot))
+}
+
+// ListAgentModels godoc
+// @Summary List agent provider model seats
+// @Description Builtin provider kinds: static, acp_sdk, execgo.
+// @Tags agents
+// @Produce json
+// @Param spaceId query string false "space id (default: current space)"
+// @Success 200 {object} session.ModelsResponse
+// @Failure 403 {object} APIErrorResponse
+// @Router /api/v1/agents/models [get]
+func (h *Handler) listAgentModels(c *gin.Context) {
+	spaceID := firstNonEmptyAPI(strings.TrimSpace(c.Query("spaceId")), currentSpace(c))
+	if !h.requireRequestSpace(c, spaceID) {
+		return
+	}
+	c.JSON(http.StatusOK, session.ListModels())
 }
 
 func queryTruthy(v string) bool {

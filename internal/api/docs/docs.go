@@ -354,6 +354,81 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/agents/commands": {
+            "get": {
+                "description": "Builtin /help /clear plus best-effort skills from repo ScanRepo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "List agent slash/skill commands",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id (default: current space)",
+                        "name": "spaceId",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "default": ".",
+                        "description": "skills scan root",
+                        "name": "repoRoot",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.CommandsResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agents/models": {
+            "get": {
+                "description": "Builtin provider kinds: static, acp_sdk, execgo.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "List agent provider model seats",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id (default: current space)",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.ModelsResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/agents/sessions": {
             "get": {
                 "description": "List agent.session audit documents for a space, newest updatedAt first. Closed sessions are excluded unless includeClosed=1.",
@@ -518,7 +593,7 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Partial update; currently supports { \"title\": \"...\" }. Empty title clears auto-title.",
+                "description": "Partial update: title, providerKind, planId, permissionMode.",
                 "consumes": [
                     "application/json"
                 ],
@@ -528,7 +603,7 @@ const docTemplate = `{
                 "tags": [
                     "agents"
                 ],
-                "summary": "Patch agent session (rename title)",
+                "summary": "Patch agent session seats",
                 "parameters": [
                     {
                         "type": "string",
@@ -571,7 +646,7 @@ const docTemplate = `{
         },
         "/api/v1/agents/sessions/{sessionId}/actions": {
             "post": {
-                "description": "Fail-closed: approve without an approvable run gate returns 409. action \"stop\" is an alias of \"cancel\".",
+                "description": "Fail-closed: approve without an approvable run gate returns 409. action \"stop\" is an alias of \"cancel\". Unknown slash commands return 409.",
                 "consumes": [
                     "application/json"
                 ],
@@ -581,7 +656,7 @@ const docTemplate = `{
                 "tags": [
                     "agents"
                 ],
-                "summary": "Apply a thin session intent (prompt|approve|cancel|stop|reject)",
+                "summary": "Apply a thin session intent (prompt|approve|cancel|stop|reject|command)",
                 "parameters": [
                     {
                         "type": "string",
@@ -12902,6 +12977,32 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_session.CommandItem": {
+            "type": "object",
+            "properties": {
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "source": {
+                    "description": "builtin | skill | mcp",
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_session.CommandsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.CommandItem"
+                    }
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_session.CreateRequest": {
             "type": "object",
             "properties": {
@@ -12966,6 +13067,12 @@ const docTemplate = `{
                 "actorId": {
                     "type": "string"
                 },
+                "args": {
+                    "type": "string"
+                },
+                "command": {
+                    "type": "string"
+                },
                 "prompt": {
                     "type": "string"
                 },
@@ -12985,9 +13092,43 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_session.ModelItem": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "label": {
+                    "type": "string"
+                },
+                "providerKind": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_session.ModelsResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_session.ModelItem"
+                    }
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_session.PatchRequest": {
             "type": "object",
             "properties": {
+                "permissionMode": {
+                    "type": "string"
+                },
+                "planId": {
+                    "type": "string"
+                },
+                "providerKind": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 }
@@ -13036,6 +13177,10 @@ const docTemplate = `{
                 "meta": {
                     "type": "object",
                     "additionalProperties": {}
+                },
+                "permissionMode": {
+                    "description": "read-only | workspace-write | full",
+                    "type": "string"
                 },
                 "planId": {
                     "type": "string"

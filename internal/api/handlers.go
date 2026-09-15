@@ -162,6 +162,8 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/providers/agent", h.getAgentProviderStatus)
 		v1.POST("/agents/sessions", h.createAgentSession)
 		v1.GET("/agents/sessions", h.listAgentSessions)
+		v1.GET("/agents/commands", h.listAgentCommands)
+		v1.GET("/agents/models", h.listAgentModels)
 		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
 		v1.PATCH("/agents/sessions/:sessionId", h.patchAgentSession)
 		v1.DELETE("/agents/sessions/:sessionId", h.closeAgentSession)

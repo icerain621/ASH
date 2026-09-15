@@ -2815,6 +2815,23 @@ definitions:
       turnId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_session.CommandItem:
+    properties:
+      description:
+        type: string
+      name:
+        type: string
+      source:
+        description: builtin | skill | mcp
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.CommandsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.CommandItem'
+        type: array
+    type: object
   github_com_ash-repwiki_ash_internal_session.CreateRequest:
     properties:
       actorRole:
@@ -2855,6 +2872,10 @@ definitions:
         type: string
       actorId:
         type: string
+      args:
+        type: string
+      command:
+        type: string
       prompt:
         type: string
       reason:
@@ -2869,8 +2890,30 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.View'
         type: array
     type: object
+  github_com_ash-repwiki_ash_internal_session.ModelItem:
+    properties:
+      id:
+        type: string
+      label:
+        type: string
+      providerKind:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_session.ModelsResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.ModelItem'
+        type: array
+    type: object
   github_com_ash-repwiki_ash_internal_session.PatchRequest:
     properties:
+      permissionMode:
+        type: string
+      planId:
+        type: string
+      providerKind:
+        type: string
       title:
         type: string
     type: object
@@ -2903,6 +2946,9 @@ definitions:
       meta:
         additionalProperties: {}
         type: object
+      permissionMode:
+        description: read-only | workspace-write | full
+        type: string
       planId:
         type: string
       providerAdapter:
@@ -5594,6 +5640,55 @@ paths:
       summary: Enable/disable agent asset
       tags:
       - registry
+  /api/v1/agents/commands:
+    get:
+      description: Builtin /help /clear plus best-effort skills from repo ScanRepo.
+      parameters:
+      - description: 'space id (default: current space)'
+        in: query
+        name: spaceId
+        type: string
+      - default: .
+        description: skills scan root
+        in: query
+        name: repoRoot
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.CommandsResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List agent slash/skill commands
+      tags:
+      - agents
+  /api/v1/agents/models:
+    get:
+      description: 'Builtin provider kinds: static, acp_sdk, execgo.'
+      parameters:
+      - description: 'space id (default: current space)'
+        in: query
+        name: spaceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.ModelsResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List agent provider model seats
+      tags:
+      - agents
   /api/v1/agents/sessions:
     get:
       description: List agent.session audit documents for a space, newest updatedAt
@@ -5707,8 +5802,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: 'Partial update; currently supports { "title": "..." }. Empty title
-        clears auto-title.'
+      description: 'Partial update: title, providerKind, planId, permissionMode.'
       parameters:
       - description: session id
         in: path
@@ -5736,7 +5830,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Patch agent session (rename title)
+      summary: Patch agent session seats
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/actions:
@@ -5744,7 +5838,7 @@ paths:
       consumes:
       - application/json
       description: 'Fail-closed: approve without an approvable run gate returns 409.
-        action "stop" is an alias of "cancel".'
+        action "stop" is an alias of "cancel". Unknown slash commands return 409.'
       parameters:
       - description: session id
         in: path
@@ -5776,7 +5870,7 @@ paths:
           description: Conflict
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Apply a thin session intent (prompt|approve|cancel|stop|reject)
+      summary: Apply a thin session intent (prompt|approve|cancel|stop|reject|command)
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/events:

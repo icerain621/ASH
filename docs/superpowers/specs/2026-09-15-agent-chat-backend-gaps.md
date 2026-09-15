@@ -2,7 +2,7 @@
 
 > Status: **living backlog**（2026-09-15）  
 > Spec: [`2026-09-15-agent-chat-dsh-parity-design.md`](./2026-09-15-agent-chat-dsh-parity-design.md)  
-> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流 · P3 Workspace `f711d93` / FE `7c29e5f`
+> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流 · P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats  
 > 原则：不引入 Cordis / 不嵌入 `dsh web`
 
 本文记录 **相对 DSH Agent Chat 仍缺的后端能力**，供续推复刻时排期；FE 可先用现有 API 做近似体验的项另标。
@@ -42,18 +42,18 @@
 
 ## P4 — Slash / Skills 命令面
 
-| 缺口 | 建议 |
-|------|------|
-| 命令目录 | `GET /agents/commands` → `{ items: [{ name, description, source }] }` |
-| 执行命令 | `actions` `{ action:"command", command:"/foo", args }`；未知命令 fail-closed |
+| 缺口 | 现状 | 建议 |
+|------|------|------|
+| 命令目录 | ✅ `GET /agents/commands` → `{ items: [{ name, description, source }] }`（builtin `/help` `/clear` + best-effort skills） | 完成 |
+| 执行命令 | ✅ `action:"command"` + `command`/`args`；未知 fail-closed 409；`/clear` 清空 Turns/Replies；`/help` 列表 | 完成（skill/mcp 执行仍后置） |
 
 ## P5 — Model / Plan / Permission seats
 
-| 缺口 | 建议 |
-|------|------|
-| 座位字段 | PATCH：`providerKind` / `planId` / `permissionMode` |
-| 模型列表 | `GET /agents/models` 或复用 harness profile |
-| Plan seat | 挂现有 Goal/Plan id，不做 DSH Cordis plan 面板 |
+| 缺口 | 现状 | 建议 |
+|------|------|------|
+| 座位字段 | ✅ PATCH：`providerKind` / `planId` / `permissionMode`；View.`permissionMode` | 完成 |
+| 模型列表 | ✅ `GET /agents/models`（static / acp_sdk / execgo） | 完成 |
+| Plan seat | ✅ 挂 `planId` 文本座位；不做 DSH Cordis plan 面板 | 完成 |
 
 ## 明确不做（仍）
 
@@ -69,3 +69,4 @@
 | 2026-09-15 | 落地 P0 FE（SSE/工具卡/Stop）+ P1 title/PATCH/DELETE/`stop` 别名；P2–P5 仍开 |
 | 2026-09-15 | 落地 P2：`assistant.delta`/`assistant.message` + 空白会话 echo stub；真 LLM 流仍开 |
 | 2026-09-15 | 落地 P3：Agent Workspace API `f711d93` + Chat 侧栏按 Workspace 分组 `7c29e5f` |
+| 2026-09-15 | 落地 P4/P5：`/agents/commands` + Intent `command`；`/agents/models` + PATCH seats；FE 命令菜单与座位行；真 LLM 流仍开 |

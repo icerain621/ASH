@@ -40,6 +40,7 @@ type View struct {
 	ProviderAdapter  string         `json:"providerAdapter,omitempty"`
 	ProviderFallback bool           `json:"providerFallback,omitempty"`
 	ProviderReason   string         `json:"providerReason,omitempty"`
+	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
 	CreatedBy        string           `json:"createdBy,omitempty"`
@@ -48,9 +49,12 @@ type View struct {
 	Meta             map[string]any   `json:"meta,omitempty"`
 }
 
-// PatchRequest updates mutable session fields (title).
+// PatchRequest updates mutable session seat fields.
 type PatchRequest struct {
-	Title *string `json:"title"`
+	Title          *string `json:"title"`
+	ProviderKind   *string `json:"providerKind"`
+	PlanID         *string `json:"planId"`
+	PermissionMode *string `json:"permissionMode"`
 }
 
 const maxTitleRunes = 48
@@ -313,7 +317,7 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	return view, &turn, nil
 }
 
-// Update applies a partial patch (currently title only).
+// Update applies a partial patch (title / providerKind / planId / permissionMode).
 func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
@@ -321,6 +325,27 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	}
 	if req.Title != nil {
 		view.Title = truncateTitle(strings.TrimSpace(*req.Title), maxTitleRunes)
+	}
+	if req.ProviderKind != nil {
+		s.applyProviderKind(view, *req.ProviderKind)
+	}
+	if req.PlanID != nil {
+		view.PlanID = strings.TrimSpace(*req.PlanID)
+	}
+	if req.PermissionMode != nil {
+		mode, err := normalizePermissionMode(*req.PermissionMode)
+		if err != nil {
+			return nil, err
+		}
+		view.PermissionMode = mode
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		if mode != "" {
+			view.Meta["permissionMode"] = mode
+		} else {
+			delete(view.Meta, "permissionMode")
+		}
 	}
 	view.UpdatedAt = time.Now().UTC().Unix()
 	if err := s.save(view); err != nil {
