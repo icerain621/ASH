@@ -416,8 +416,8 @@ func (h *Handler) streamBlankSessionSSE(c *gin.Context, sessionID string) {
 }
 
 // ListAgentCommands godoc
-// @Summary List agent slash/skill commands
-// @Description Builtin /help /clear plus best-effort skills from repo ScanRepo.
+// @Summary List agent slash/skill/MCP commands
+// @Description Builtin /help /clear plus best-effort skills and active MCP tools for the space.
 // @Tags agents
 // @Produce json
 // @Param spaceId query string false "space id (default: current space)"
@@ -431,7 +431,7 @@ func (h *Handler) listAgentCommands(c *gin.Context) {
 		return
 	}
 	repoRoot := c.DefaultQuery("repoRoot", ".")
-	c.JSON(http.StatusOK, session.ListCommands(repoRoot))
+	c.JSON(http.StatusOK, session.ListCommandsForSpace(h.db.BindContext(c.Request.Context()), spaceID, repoRoot))
 }
 
 // ListAgentModels godoc

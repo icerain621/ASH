@@ -1,16 +1,21 @@
 package session
 
 import (
+	"encoding/json"
 	"fmt"
 	"sort"
 	"strings"
 	"time"
+	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/skills"
+	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
 // Command source labels for GET /agents/commands.
@@ -61,6 +66,11 @@ func BuiltinCommands() []CommandItem {
 
 // ListCommands builds the command catalog (builtin + best-effort skills).
 func ListCommands(repoRoot string) CommandsResponse {
+	return ListCommandsForSpace(nil, "", repoRoot)
+}
+
+// ListCommandsForSpace builds builtin + skills + active MCP tools for a space.
+func ListCommandsForSpace(db *store.DB, spaceID, repoRoot string) CommandsResponse {
 	items := append([]CommandItem{}, BuiltinCommands()...)
 	root := strings.TrimSpace(repoRoot)
 	if root == "" {
@@ -87,6 +97,7 @@ func ListCommands(repoRoot string) CommandsResponse {
 			})
 		}
 	}
+	items = append(items, listMCPCommandItems(db, spaceID)...)
 	sort.SliceStable(items, func(i, j int) bool {
 		if items[i].Source != items[j].Source {
 			return items[i].Source < items[j].Source
@@ -94,6 +105,123 @@ func ListCommands(repoRoot string) CommandsResponse {
 		return items[i].Name < items[j].Name
 	})
 	return CommandsResponse{Items: items}
+}
+
+func listMCPCommandItems(db *store.DB, spaceID string) []CommandItem {
+	if db == nil || strings.TrimSpace(spaceID) == "" {
+		return nil
+	}
+	var rows []store.MCPTool
+	q := db.Where("space_id = ?", spaceID).
+		Where("status <> '' AND LOWER(status) <> ?", "disabled").
+		Order("name asc")
+	if err := q.Find(&rows).Error; err != nil {
+		return nil
+	}
+	out := make([]CommandItem, 0, len(rows))
+	for _, tool := range rows {
+		name := strings.TrimSpace(tool.Name)
+		if name == "" {
+			continue
+		}
+		if !strings.HasPrefix(name, "/") {
+			name = "/" + name
+		}
+		server := strings.TrimSpace(tool.Server)
+		desc := "MCP"
+		if server != "" {
+			desc = "MCP · " + server
+		}
+		out = append(out, CommandItem{
+			Name: name, Description: desc, Source: CommandSourceMCP,
+		})
+	}
+	return out
+}
+
+func findMCPToolByName(db *store.DB, spaceID, cmd string) (*store.MCPTool, error) {
+	if db == nil || strings.TrimSpace(spaceID) == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	want := strings.ToLower(strings.TrimPrefix(strings.TrimSpace(cmd), "/"))
+	if want == "" {
+		return nil, gorm.ErrRecordNotFound
+	}
+	var rows []store.MCPTool
+	if err := db.Where("space_id = ?", spaceID).
+		Where("status <> '' AND LOWER(status) <> ?", "disabled").
+		Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	for i := range rows {
+		name := strings.ToLower(strings.TrimSpace(rows[i].Name))
+		if name == want || strings.TrimPrefix(name, "mcp__") == want {
+			return &rows[i], nil
+		}
+	}
+	return nil, gorm.ErrRecordNotFound
+}
+
+func parseMCPArguments(args string) map[string]any {
+	args = strings.TrimSpace(args)
+	if args == "" {
+		return map[string]any{}
+	}
+	var obj map[string]any
+	if err := json.Unmarshal([]byte(args), &obj); err == nil && obj != nil {
+		return obj
+	}
+	return map[string]any{}
+}
+
+func formatMCPResultText(res toolbus.Result) string {
+	if !res.OK {
+		msg := strings.TrimSpace(res.Error)
+		if msg == "" {
+			msg = "MCP tool call failed"
+		}
+		return "MCP 调用失败：" + msg
+	}
+	payload := any(res.Output)
+	if res.Output != nil {
+		if r, ok := res.Output["result"]; ok {
+			payload = r
+		}
+	}
+	b, err := json.MarshalIndent(payload, "", "  ")
+	if err != nil {
+		return fmt.Sprintf("%v", payload)
+	}
+	text := string(b)
+	const maxRunes = 4000
+	if utf8.RuneCountInString(text) > maxRunes {
+		runes := []rune(text)
+		text = string(runes[:maxRunes]) + "…"
+	}
+	return text
+}
+
+func (s *Service) emitMCPToolEvents(view *View, tool *store.MCPTool, args map[string]any, res toolbus.Result) {
+	if view == nil || tool == nil || strings.TrimSpace(view.RunID) == "" || s.events == nil {
+		return
+	}
+	trace := firstNonEmpty(view.TraceID, view.RunID)
+	_, _ = s.events.Append(view.RunID, trace, "tool.called", "info", map[string]any{
+		"tool": "mcp.call", "name": tool.Name, "server": tool.Server, "arguments": args,
+	}, events.WithVisibility(events.VisibilityUIOnly))
+	payload := map[string]any{
+		"tool": "mcp.call", "name": tool.Name, "ok": res.OK, "durationMs": res.DurationMs,
+	}
+	if res.OK {
+		payload["output"] = res.Output
+	} else {
+		payload["error"] = res.Error
+		if res.FailureClass != "" {
+			payload["failureClass"] = res.FailureClass
+		}
+	}
+	_, _ = s.events.Append(view.RunID, trace, "tool.result", "info", payload,
+		events.WithVisibility(events.VisibilityUIOnly))
 }
 
 // ListModels returns builtin provider kinds used by applyProviderKind.
@@ -179,7 +307,8 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 	case "/help":
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
-		s.emitAssistantReply(view, turn, formatHelpText(ListCommands(view.RepoRoot)), "command")
+		catalog := ListCommandsForSpace(s.db, view.SpaceID, view.RepoRoot)
+		s.emitAssistantReply(view, turn, formatHelpText(catalog), "command")
 	case "/clear":
 		view.Turns = []Turn{}
 		view.Replies = []AssistantReply{}
@@ -188,14 +317,35 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		s.emitAssistantReply(view, turn, "已清空会话", "command")
 	default:
 		sk, lookupErr := lookupSkillCommand(view.RepoRoot, cmd)
-		if lookupErr != nil || sk == nil {
+		if lookupErr == nil && sk != nil {
+			view.Turns = append(view.Turns, turn)
+			view.UpdatedAt = now
+			if !s.replyViaSkillLLM(view, turn, sk, args) {
+				s.emitAssistantReply(view, turn, formatSkillLoadedReply(sk), "skill")
+			}
+			break
+		}
+		mcpTool, mcpErr := findMCPToolByName(s.db, view.SpaceID, cmd)
+		if mcpErr != nil || mcpTool == nil {
 			return nil, fmt.Errorf("%w: unknown command %q", ErrIntentRejected, cmd)
 		}
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
-		if !s.replyViaSkillLLM(view, turn, sk, args) {
-			s.emitAssistantReply(view, turn, formatSkillLoadedReply(sk), "skill")
-		}
+		parsed := parseMCPArguments(args)
+		res := toolbus.DefaultBus().Call(toolbus.Context{
+			RunID:    view.RunID,
+			TraceID:  view.TraceID,
+			RepoRoot: view.RepoRoot,
+		}, toolbus.CallRequest{
+			Tool: "mcp.call",
+			Args: map[string]any{
+				"serverURL": mcpTool.Server,
+				"name":      mcpTool.Name,
+				"arguments": parsed,
+			},
+		})
+		s.emitMCPToolEvents(view, mcpTool, parsed, res)
+		s.emitAssistantReply(view, turn, formatMCPResultText(res), "mcp")
 	}
 
 	if err := s.save(view); err != nil {

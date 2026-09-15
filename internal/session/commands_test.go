@@ -1,11 +1,15 @@
 package session_test
 
 import (
+	"encoding/json"
 	"errors"
+	"net/http"
+	"net/http/httptest"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/session"
@@ -129,6 +133,112 @@ func TestUpdate_seats(t *testing.T) {
 	_, err = svc.Update(view.ID, session.PatchRequest{PermissionMode: &bad})
 	if err == nil {
 		t.Fatal("expected invalid permissionMode")
+	}
+}
+
+func TestListCommandsForSpace_includesMCP(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	now := time.Now().UTC()
+	tool := store.MCPTool{
+		ID: "mcp_list_1", SpaceID: "local", Name: "echo.tool",
+		Server: "http://127.0.0.1:9", SchemaJSON: "{}", Risk: "medium",
+		Status: "registered", CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&tool).Error; err != nil {
+		t.Fatal(err)
+	}
+	disabled := store.MCPTool{
+		ID: "mcp_list_off", SpaceID: "local", Name: "hidden.tool",
+		Server: "http://127.0.0.1:9", SchemaJSON: "{}", Risk: "medium",
+		Status: "disabled", CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&disabled).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	out := session.ListCommandsForSpace(db, "local", ".")
+	found := false
+	for _, it := range out.Items {
+		if it.Source == session.CommandSourceMCP && it.Name == "/echo.tool" {
+			found = true
+			if !strings.Contains(it.Description, "MCP") {
+				t.Fatalf("description=%q", it.Description)
+			}
+		}
+		if it.Name == "/hidden.tool" {
+			t.Fatalf("disabled MCP tool should be excluded")
+		}
+	}
+	if !found {
+		t.Fatalf("expected mcp /echo.tool in %+v", out.Items)
+	}
+}
+
+func TestIntent_commandMCPExec(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := session.NewService(db, nil, ev)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req map[string]any
+		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			t.Fatal(err)
+		}
+		if req["method"] != "tools/call" {
+			t.Fatalf("method=%v", req["method"])
+		}
+		params, _ := req["params"].(map[string]any)
+		if params["name"] != "demo.echo" {
+			t.Fatalf("tool name=%v", params["name"])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"jsonrpc": "2.0",
+			"id":      req["id"],
+			"result":  map[string]any{"content": []any{map[string]any{"type": "text", "text": "pong"}}},
+		})
+	}))
+	defer srv.Close()
+
+	now := time.Now().UTC()
+	tool := store.MCPTool{
+		ID: "mcp_exec_1", SpaceID: "local", Name: "demo.echo",
+		Server: srv.URL, SchemaJSON: "{}", Risk: "medium",
+		Status: "registered", CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&tool).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	view, err := svc.Create(session.CreateRequest{SpaceID: "local", CreatedBy: "actor1", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := svc.Intent(view.ID, session.IntentRequest{
+		Action: "command", Command: "/demo.echo", Args: `{"message":"hi"}`, ActorID: "actor1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Replies) == 0 {
+		t.Fatal("expected mcp reply")
+	}
+	reply := out.Replies[len(out.Replies)-1]
+	if reply.Source != "mcp" {
+		t.Fatalf("source=%q want mcp", reply.Source)
+	}
+	if !strings.Contains(reply.Text, "pong") {
+		t.Fatalf("reply=%q want pong", reply.Text)
+	}
+
+	_, err = svc.Intent(view.ID, session.IntentRequest{
+		Action: "command", Command: "/nope-mcp", ActorID: "actor1",
+	})
+	if err == nil {
+		t.Fatal("expected unknown command reject")
+	}
+	if !errors.Is(err, session.ErrIntentRejected) {
+		t.Fatalf("err=%v want ErrIntentRejected", err)
 	}
 }
 

@@ -350,14 +350,14 @@
         },
         "/api/v1/agents/commands": {
             "get": {
-                "description": "Builtin /help /clear plus best-effort skills from repo ScanRepo.",
+                "description": "Builtin /help /clear plus best-effort skills and active MCP tools for the space.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "agents"
                 ],
-                "summary": "List agent slash/skill commands",
+                "summary": "List agent slash/skill/MCP commands",
                 "parameters": [
                     {
                         "type": "string",
@@ -738,6 +738,59 @@
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agents/sessions/{sessionId}/stream": {
+            "get": {
+                "description": "Bound sessions stream the run ledger; blank sessions poll ListEvents (assistant.* / session.turn).",
+                "produces": [
+                    "text/event-stream"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Agent session live SSE",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "session id",
+                        "name": "sessionId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "integer",
+                        "description": "resume after this seq",
+                        "name": "afterSeq",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "last received event id",
+                        "name": "Last-Event-ID",
+                        "in": "header"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "SSE stream",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -12957,7 +13010,7 @@
                     "type": "integer"
                 },
                 "source": {
-                    "description": "\"echo\" | \"acp\"",
+                    "description": "\"echo\" | \"llm\" | adapter name",
                     "type": "string"
                 },
                 "stopped": {

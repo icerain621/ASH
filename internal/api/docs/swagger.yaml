@@ -2806,7 +2806,7 @@ definitions:
       createdAt:
         type: integer
       source:
-        description: '"echo" | "acp"'
+        description: '"echo" | "llm" | adapter name'
         type: string
       stopped:
         type: boolean
@@ -5642,7 +5642,8 @@ paths:
       - registry
   /api/v1/agents/commands:
     get:
-      description: Builtin /help /clear plus best-effort skills from repo ScanRepo.
+      description: Builtin /help /clear plus best-effort skills and active MCP tools
+        for the space.
       parameters:
       - description: 'space id (default: current space)'
         in: query
@@ -5664,7 +5665,7 @@ paths:
           description: Forbidden
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: List agent slash/skill commands
+      summary: List agent slash/skill/MCP commands
       tags:
       - agents
   /api/v1/agents/models:
@@ -5904,6 +5905,42 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: List session events (bound run events or synthesized turns)
+      tags:
+      - agents
+  /api/v1/agents/sessions/{sessionId}/stream:
+    get:
+      description: Bound sessions stream the run ledger; blank sessions poll ListEvents
+        (assistant.* / session.turn).
+      parameters:
+      - description: session id
+        in: path
+        name: sessionId
+        required: true
+        type: string
+      - description: resume after this seq
+        in: query
+        name: afterSeq
+        type: integer
+      - description: last received event id
+        in: header
+        name: Last-Event-ID
+        type: string
+      produces:
+      - text/event-stream
+      responses:
+        "200":
+          description: SSE stream
+          schema:
+            type: string
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Agent session live SSE
       tags:
       - agents
   /api/v1/agents/sessions/{sessionId}/turns:

@@ -2,7 +2,7 @@
 
 > Status: **living backlog**（2026-09-15）  
 > Spec: [`2026-09-15-agent-chat-dsh-parity-design.md`](./2026-09-15-agent-chat-dsh-parity-design.md)  
-> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流（**真 LLM / Provider**）· P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats · **session stream SSE** + **skill 命令执行**  
+> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流（**真 LLM / Provider**）· P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats · **session stream SSE** + **skill 命令执行** · **MCP slash 目录+执行** · **FE 视觉密度贴合 DSH**  
 > 原则：不引入 Cordis / 不嵌入 `dsh web`
 
 本文记录 **相对 DSH Agent Chat 仍缺的后端能力**，供续推复刻时排期；FE 可先用现有 API 做近似体验的项另标。
@@ -52,12 +52,12 @@
 |------|------|
 | ASH 原生 workspace | ✅ `GET/POST /agent-workspaces`；`PATCH` 改名/`sessionIds`；Create session 接受 `workspaceId`；`repoRoot`≈ cwd；FE 侧栏按 Workspace 分组 |
 
-## P4 — Slash / Skills 命令面
+## P4 — Slash / Skills / MCP 命令面
 
 | 缺口 | 现状 | 建议 |
 |------|------|------|
-| 命令目录 | ✅ `GET /agents/commands` → `{ items: [{ name, description, source }] }`（builtin `/help` `/clear` + best-effort skills） | 完成 |
-| 执行命令 | ✅ `action:"command"`：`/help` `/clear` + **skill 执行**（`skills.Get` / ScanRepo；LLM 时 system=skill.Body，否则摘要 `source:"skill"`）；未知仍 409；**MCP 执行仍开** | skill 完成；MCP 仍后置 |
+| 命令目录 | ✅ `GET /agents/commands` → `{ items: [{ name, description, source }] }`（builtin + skills + space `mcp_tools`，status 非空且非 `disabled`） | 完成 |
+| 执行命令 | ✅ `action:"command"`：`/help` `/clear` + skill + **MCP**（`toolbus` `mcp.call`；成功/失败均 chat 可见，`source:"mcp"`；有 runId 时 `tool.called`/`tool.result` ui_only）；未知仍 409 | 完成 |
 
 ## P5 — Model / Plan / Permission seats
 
@@ -67,17 +67,25 @@
 | 模型列表 | ✅ `GET /agents/models`（static / acp_sdk / execgo） | 完成 |
 | Plan seat | ✅ 挂 `planId` 文本座位；不做 DSH Cordis plan 面板 | 完成 |
 
+## FE 视觉密度（DSH-aligned，无 Cordis）
+
+| 项 | 现状 |
+|----|------|
+| 中栏内容宽 | ✅ `--ash-chat-content-width: 748px` 居中；composer ≈ content+32px，侧边 16px |
+| 气泡 / 空态 | ✅ user pill 右对齐；assistant 更软边框 + line-height 1.5；默认隐藏 raw event type；空态 hero 居中 |
+| 侧栏 / sticky | ✅ 更密行；transcript 底 padding 避挡 sticky composer |
+
 ## 明确不做（仍）
 
 - Cordis / `dsh web` iframe  
 - 完整 slash 目录一比一  
-- 栏宽拖拽 / workspace DnD（纯 FE 可后补）
 
 ## 仍开（高价值）
 
 | 缺口 | 说明 |
 |------|------|
-| MCP slash 执行 | 目录可列出 mcp 源；Intent `command` 对未知非 skill 仍 fail-closed；无 MCP tool invoke 桥 |
+| 硬删除 / purge | soft-close only；物理 purge 仍不做 |
+| 栏宽拖拽 / workspace DnD | 纯 FE 可后补 |
 
 ## 修订
 
@@ -90,3 +98,4 @@
 | 2026-09-15 | 落地 P4/P5：`/agents/commands` + Intent `command`；`/agents/models` + PATCH seats；FE 命令菜单与座位行；真 LLM 流仍开 |
 | 2026-09-15 | 落地 P2 余量：`internal/llmchat` + PromptTurn LLM→Provider→echo；gaps 标注真流已落地；session stream 路由仍可选 |
 | 2026-09-15 | 落地 session stream SSE + skill 命令执行；FE 优先会话级 SSE；MCP exec 仍开 |
+| 2026-09-15 | 落地 MCP slash 目录+执行；FE Agent Chat 视觉密度贴合 DSH；仍开 = 硬 purge / 栏宽拖拽 |
