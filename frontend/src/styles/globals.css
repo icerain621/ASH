@@ -1718,6 +1718,58 @@ main {
   white-space: pre;
 }
 
+.agent-chat-bubble-body .ash-md-table-wrap {
+  overflow: auto;
+  margin: 0.45em 0;
+}
+
+.agent-chat-bubble-body .ash-md-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+}
+
+.agent-chat-bubble-body .ash-md-table th,
+.agent-chat-bubble-body .ash-md-table td {
+  border: 1px solid var(--border);
+  padding: 0.35rem 0.5rem;
+  text-align: left;
+  vertical-align: top;
+}
+
+.agent-chat-bubble-body .ash-md-table th {
+  background: color-mix(in srgb, var(--surface-soft, var(--surface)) 80%, var(--border));
+  font-weight: 600;
+}
+
+.agent-chat-bubble-body .ash-md-list,
+.agent-chat-bubble-body .ash-md-task-list {
+  margin: 0.35em 0 0.55em;
+  padding-left: 1.2rem;
+}
+
+.agent-chat-bubble-body .ash-md-task-list {
+  list-style: none;
+  padding-left: 0.15rem;
+}
+
+.agent-chat-bubble-body .ash-md-task-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.4rem;
+  margin: 0.2em 0;
+}
+
+.agent-chat-bubble-body .ash-md-task-list li.checked span {
+  opacity: 0.72;
+  text-decoration: line-through;
+}
+
+.agent-chat-bubble-body .ash-md-task-list input[type="checkbox"] {
+  margin-top: 0.2em;
+  flex-shrink: 0;
+}
+
 .agent-chat-composer {
   position: sticky;
   bottom: 0;
