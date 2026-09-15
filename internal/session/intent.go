@@ -108,35 +108,41 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 	return view, nil
 }
 
-// intentCancel cancels the bound run. Echo/ACP assistant replies complete synchronously in
-// PromptTurn today, so stop does not mark assistant.message stopped:true; that flag is for
-// a future mid-flight stream.
+// intentCancel cancels the bound run when present, and/or cancels an in-flight PromptTurn
+// (blank or bound) so LLM/provider generation can stop with assistant.message stopped:true.
 func (s *Service) intentCancel(sessionID string, req IntentRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
 		return nil, err
 	}
-	if strings.TrimSpace(view.RunID) == "" {
-		return nil, fmt.Errorf("%w: session has no bound run", ErrIntentRejected)
+	cancelledFlight := false
+	if s.flights != nil {
+		cancelledFlight = s.flights.cancel(sessionID)
 	}
-	if s.runs == nil {
-		return nil, fmt.Errorf("%w: run control is not configured", ErrIntentRejected)
-	}
-	if err := s.runs.CancelRun(view.RunID); err != nil {
-		return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
-	}
-	actor := firstNonEmpty(strings.TrimSpace(req.ActorID), view.CreatedBy, "session")
-	if s.events != nil {
-		trace := firstNonEmpty(view.TraceID, view.RunID)
-		_, _ = s.events.Append(view.RunID, trace, "session.intent", "info", map[string]any{
-			"sessionId": view.ID, "action": IntentCancel, "actorId": actor,
-			"threadId": metaString(view.Meta, interaction.MetaThreadID),
-		}, events.WithVisibility(events.VisibilityUIOnly))
+	hasRun := strings.TrimSpace(view.RunID) != ""
+	if hasRun {
+		if s.runs == nil {
+			return nil, fmt.Errorf("%w: run control is not configured", ErrIntentRejected)
+		}
+		if err := s.runs.CancelRun(view.RunID); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
+		}
+		actor := firstNonEmpty(strings.TrimSpace(req.ActorID), view.CreatedBy, "session")
+		if s.events != nil {
+			trace := firstNonEmpty(view.TraceID, view.RunID)
+			_, _ = s.events.Append(view.RunID, trace, "session.intent", "info", map[string]any{
+				"sessionId": view.ID, "action": IntentCancel, "actorId": actor,
+				"threadId": metaString(view.Meta, interaction.MetaThreadID),
+			}, events.WithVisibility(events.VisibilityUIOnly))
+		}
+	} else if !cancelledFlight {
+		return nil, fmt.Errorf("%w: nothing to stop (no bound run or in-flight turn)", ErrIntentRejected)
 	}
 	view, err = s.Get(sessionID)
 	if err != nil {
 		return nil, err
 	}
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 

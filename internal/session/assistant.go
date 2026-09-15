@@ -84,21 +84,17 @@ func splitReplyChunks(text string) []string {
 
 // emitAssistantReply writes streaming assistant.delta + final assistant.message.
 // With runId: Append to the run ledger. Without runId: store on view.Replies for synthesizeTurnEvents.
-//
-// Note: echo/provider replies complete synchronously today. Intent stop/cancel only cancels the bound
-// run; stopped:true is reserved for a future mid-flight stream cancel.
 func (s *Service) emitAssistantReply(view *View, turn Turn, text, source string) {
-	s.emitAssistantReplyChunks(view, turn, text, source, splitReplyChunks(text))
+	s.emitAssistantReplyChunks(view, turn, text, source, splitReplyChunks(text), false)
 }
 
-func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source string, chunks []string) {
+func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source string, chunks []string, stopped bool) {
 	if view == nil {
 		return
 	}
 	if len(chunks) == 0 {
 		chunks = []string{text}
 	}
-	stopped := false
 
 	if strings.TrimSpace(view.RunID) != "" && s.events != nil {
 		trace := firstNonEmpty(view.TraceID, view.RunID)

@@ -1674,6 +1674,42 @@ main {
   line-height: 1.5;
 }
 
+.agent-chat-bubble-body .ash-md {
+  white-space: normal;
+}
+
+.agent-chat-bubble-body .ash-md-block p {
+  margin: 0 0 0.55em;
+}
+
+.agent-chat-bubble-body .ash-md-block p:last-child {
+  margin-bottom: 0;
+}
+
+.agent-chat-bubble-body .ash-md-code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.88em;
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--border) 55%, transparent);
+}
+
+.agent-chat-bubble-body .ash-md-pre {
+  margin: 0.45em 0 0;
+  padding: 0.65rem 0.75rem;
+  overflow: auto;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--surface-soft, var(--surface)) 70%, #111);
+  border: 1px solid var(--border);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+.agent-chat-bubble-body .ash-md-pre code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  white-space: pre;
+}
+
 .agent-chat-composer {
   position: sticky;
   bottom: 0;

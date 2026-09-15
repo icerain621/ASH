@@ -186,15 +186,21 @@ func (h *Handler) closeAgentSession(c *gin.Context) {
 		return
 	}
 	purgeQ := strings.TrimSpace(strings.ToLower(c.Query("purge")))
-	if purgeQ == "1" || purgeQ == "true" || purgeQ == "yes" {
+	if purgeQ == "1" || purgeQ == "true" || purgeQ == "yes" || queryTruthy(c.Query("purge")) {
 		spaceID, runID, sessionID := view.SpaceID, view.RunID, view.ID
+		wsID := strings.TrimSpace(view.WorkspaceID)
 		result, err := h.sessionFor(c).Purge(sessionID)
 		if err != nil {
 			c.JSON(http.StatusBadRequest, errorBody("SESSION_PURGE_FAILED", err.Error()))
 			return
 		}
+		if wsID != "" {
+			_, _ = h.agentWorkspaceFor(c).Detach(wsID, sessionID)
+		} else if found, ok := h.agentWorkspaceFor(c).FindIDBySession(spaceID, sessionID); ok {
+			_, _ = h.agentWorkspaceFor(c).Detach(found, sessionID)
+		}
 		_ = h.dbFor(c).Create(auditRow(spaceID, currentActor(c), "agent.session_purged", map[string]any{
-			"sessionId": sessionID, "runId": runID, "purged": true,
+			"sessionId": sessionID, "runId": runID, "purged": true, "workspaceId": wsID,
 		})).Error
 		c.JSON(http.StatusOK, result)
 		return

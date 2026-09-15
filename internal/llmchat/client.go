@@ -131,7 +131,8 @@ func (c *Client) Complete(ctx context.Context, messages []Message) (string, erro
 }
 
 // Stream posts stream:true and invokes onDelta for each content chunk.
-// On stream failure it falls back to Complete.
+// On stream failure it falls back to Complete, except when ctx is canceled/deadline exceeded
+// (mid-flight stop must not restart a non-streaming completion).
 func (c *Client) Stream(ctx context.Context, messages []Message, onDelta func(string)) (string, error) {
 	if c == nil || c.client == nil {
 		return "", fmt.Errorf("llmchat client is nil")
@@ -140,9 +141,12 @@ func (c *Client) Stream(ctx context.Context, messages []Message, onDelta func(st
 	if err == nil {
 		return full, nil
 	}
+	if ctx != nil && ctx.Err() != nil {
+		return full, ctx.Err()
+	}
 	text, cerr := c.Complete(ctx, messages)
 	if cerr != nil {
-		return "", fmt.Errorf("stream failed (%v); complete failed: %w", err, cerr)
+		return full, fmt.Errorf("stream failed (%v); complete failed: %w", err, cerr)
 	}
 	if onDelta != nil && text != "" {
 		onDelta(text)
@@ -187,6 +191,9 @@ func (c *Client) streamOnce(ctx context.Context, messages []Message, onDelta fun
 	// Allow larger SSE frames (default 64K is usually enough; bump for safety).
 	sc.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for sc.Scan() {
+		if ctx != nil && ctx.Err() != nil {
+			return b.String(), ctx.Err()
+		}
 		line := sc.Text()
 		if !strings.HasPrefix(line, "data:") {
 			continue
@@ -212,6 +219,12 @@ func (c *Client) streamOnce(ctx context.Context, messages []Message, onDelta fun
 		}
 	}
 	if err := sc.Err(); err != nil {
+		if ctx != nil && ctx.Err() != nil {
+			return b.String(), ctx.Err()
+		}
+		if b.Len() > 0 {
+			return b.String(), err
+		}
 		return "", err
 	}
 	full := b.String()

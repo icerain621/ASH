@@ -593,6 +593,72 @@ func TestPromptTurnLLMStreamBlank(t *testing.T) {
 	}
 }
 
+func TestPromptTurnStopMidFlightBlank(t *testing.T) {
+	started := make(chan struct{})
+	release := make(chan struct{})
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		flusher, _ := w.(http.Flusher)
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"partial\"}}]}\n\n"))
+		if flusher != nil {
+			flusher.Flush()
+		}
+		close(started)
+		<-release
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\" more\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("ASH_LLM_BASE_URL", srv.URL)
+	t.Setenv("ASH_LLM_API_KEY", "sk-test")
+	t.Setenv("ASH_LLM_MODEL", "gpt-4o-mini")
+
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan *View, 1)
+	go func() {
+		view, _, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "slow"})
+		if err != nil {
+			t.Errorf("PromptTurn: %v", err)
+			done <- nil
+			return
+		}
+		done <- view
+	}()
+
+	select {
+	case <-started:
+	case <-time.After(3 * time.Second):
+		t.Fatal("llm stream did not start")
+	}
+
+	if _, err := svc.Intent(blank.ID, IntentRequest{Action: "stop"}); err != nil {
+		t.Fatalf("stop: %v", err)
+	}
+	close(release)
+
+	var view *View
+	select {
+	case view = <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("PromptTurn did not finish after stop")
+	}
+	if view == nil {
+		t.Fatal("PromptTurn failed")
+	}
+	if len(view.Replies) != 1 || !view.Replies[0].Stopped {
+		t.Fatalf("want stopped reply, got %+v", view.Replies)
+	}
+	if !strings.Contains(view.Replies[0].Text, "partial") {
+		t.Fatalf("want partial text, got %q", view.Replies[0].Text)
+	}
+}
+
 func TestPromptTurnProviderStatic(t *testing.T) {
 	t.Setenv("ASH_LLM_BASE_URL", "")
 	db := store.OpenTest(t, t.TempDir())

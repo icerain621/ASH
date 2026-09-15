@@ -36,6 +36,15 @@ func TestWorkspaceLifecycle(t *testing.T) {
 		t.Fatalf("reattach=%+v err=%v", again, err)
 	}
 
+	detached, err := svc.Detach(ws.ID, "sess_a")
+	if err != nil || len(detached.SessionIDs) != 0 {
+		t.Fatalf("detach=%+v err=%v", detached, err)
+	}
+	noop, err := svc.Detach(ws.ID, "sess_missing")
+	if err != nil || len(noop.SessionIDs) != 0 {
+		t.Fatalf("detach missing=%+v err=%v", noop, err)
+	}
+
 	title := "Renamed WS"
 	patched, err := svc.Patch(ws.ID, PatchRequest{Title: &title})
 	if err != nil || patched.Title != title {

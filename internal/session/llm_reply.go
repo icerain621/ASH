@@ -2,6 +2,7 @@ package session
 
 import (
 	"context"
+	"errors"
 	"strings"
 	"time"
 
@@ -12,13 +13,24 @@ import (
 // replyViaLLM streams (or completes) an OpenAI-compatible chat reply.
 // emitTurn is invoked once before the first delta (bound run) so session.turn precedes assistant.*.
 // Returns false when the LLM call fails so the caller can fall through to provider/echo.
-func (s *Service) replyViaLLM(view *View, turn Turn, prompt string, emitTurn func(map[string]any)) bool {
+// On context cancel, persists any partial text with stopped:true and returns true.
+func (s *Service) replyViaLLM(
+	ctx context.Context,
+	flight *flight,
+	view *View,
+	turn Turn,
+	prompt string,
+	emitTurn func(map[string]any),
+) bool {
 	if view == nil || !llmchat.Configured() {
 		return false
 	}
+	if ctx == nil {
+		ctx = context.Background()
+	}
 	client := llmchat.NewFromEnv()
 	messages := buildChatMessages(view, prompt)
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 90*time.Second)
 	defer cancel()
 
 	bound := strings.TrimSpace(view.RunID) != "" && s.events != nil
@@ -33,17 +45,42 @@ func (s *Service) replyViaLLM(view *View, turn Turn, prompt string, emitTurn fun
 
 	var chunks []string
 	index := 0
+	var acc strings.Builder
 	full, err := client.Stream(ctx, messages, func(delta string) {
 		if delta == "" {
 			return
 		}
 		ensureTurn()
 		chunks = append(chunks, delta)
+		acc.WriteString(delta)
+		if flight != nil {
+			flight.setPartial(turn.ID, acc.String())
+		}
 		if bound {
 			s.emitAssistantDelta(view, turn, delta, index)
 			index++
 		}
 	})
+	stopped := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil
+	if strings.TrimSpace(full) == "" && acc.Len() > 0 {
+		full = acc.String()
+	}
+	if stopped {
+		if strings.TrimSpace(full) == "" {
+			full = "（已停止）"
+			chunks = []string{full}
+		}
+		if bound {
+			ensureTurn()
+			s.emitAssistantMessageFinal(view, turn, full, "llm", true)
+			return true
+		}
+		if len(chunks) == 0 {
+			chunks = splitReplyChunks(full)
+		}
+		s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, true)
+		return true
+	}
 	if err != nil || strings.TrimSpace(full) == "" {
 		return false
 	}
@@ -57,7 +94,7 @@ func (s *Service) replyViaLLM(view *View, turn Turn, prompt string, emitTurn fun
 	if len(chunks) == 0 {
 		chunks = splitReplyChunks(full)
 	}
-	s.emitAssistantReplyChunks(view, turn, full, "llm", chunks)
+	s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, false)
 	return true
 }
 
@@ -82,7 +119,11 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 		{Role: "system", Content: system},
 		{Role: "user", Content: userMsg},
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 90*time.Second)
+	parent := context.Background()
+	if s != nil && s.ctx != nil {
+		parent = s.ctx
+	}
+	ctx, cancel := context.WithTimeout(parent, 90*time.Second)
 	defer cancel()
 
 	bound := strings.TrimSpace(view.RunID) != "" && s.events != nil
@@ -98,6 +139,22 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 			index++
 		}
 	})
+	stopped := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil
+	if stopped {
+		if strings.TrimSpace(full) == "" {
+			full = "（已停止）"
+			chunks = []string{full}
+		}
+		if bound {
+			s.emitAssistantMessageFinal(view, turn, full, "skill", true)
+			return true
+		}
+		if len(chunks) == 0 {
+			chunks = splitReplyChunks(full)
+		}
+		s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, true)
+		return true
+	}
 	if err != nil || strings.TrimSpace(full) == "" {
 		return false
 	}
@@ -108,6 +165,6 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 	if len(chunks) == 0 {
 		chunks = splitReplyChunks(full)
 	}
-	s.emitAssistantReplyChunks(view, turn, full, "skill", chunks)
+	s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, false)
 	return true
 }

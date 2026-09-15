@@ -1,4 +1,5 @@
 import type { SessionEventEnvelope } from "../api/session.api";
+import { BubbleMarkdown } from "./BubbleMarkdown";
 import { mergeAssistantBubbles, type MergedChatBubble } from "./conversationNodes";
 
 export type ChatBubbleSelection = {
@@ -65,7 +66,13 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                       <span className="muted agent-chat-bubble-type">{item.type}</span>
                     ) : null}
                   </div>
-                  <div className="agent-chat-bubble-body">{item.summary}</div>
+                  <div className="agent-chat-bubble-body">
+                    {item.role === "assistant" || item.role === "user" ? (
+                      <BubbleMarkdown text={item.summary} />
+                    ) : (
+                      item.summary
+                    )}
+                  </div>
                 </button>
               </li>
             );

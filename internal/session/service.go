@@ -95,15 +95,16 @@ type ListResponse struct {
 }
 
 type Service struct {
-	db     *store.DB
-	goal   *goal.Service
-	events *events.Service
-	runs   RunControl
-	ctx    context.Context
+	db      *store.DB
+	goal    *goal.Service
+	events  *events.Service
+	runs    RunControl
+	ctx     context.Context
+	flights *flightRegistry
 }
 
 func NewService(db *store.DB, goalSvc *goal.Service, ev *events.Service) *Service {
-	return &Service{db: db, goal: goalSvc, events: ev}
+	return &Service{db: db, goal: goalSvc, events: ev, flights: newFlightRegistry()}
 }
 
 func (s *Service) WithContext(ctx context.Context) *Service {
@@ -295,20 +296,32 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 		view.Title = truncateTitle(prompt, maxTitleRunes)
 	}
 
+	flightCtx, flight := s.flights.begin(sessionID)
+	defer s.flights.end(sessionID, flight)
+	flight.turnID = turn.ID
+
 	usedLLM := false
 	var providerPayload map[string]any
 
 	if llmchat.Configured() {
-		usedLLM = s.replyViaLLM(view, turn, prompt, func(extra map[string]any) {
+		usedLLM = s.replyViaLLM(flightCtx, flight, view, turn, prompt, func(extra map[string]any) {
 			s.emitSessionTurn(view, turn, prompt, extra)
 		})
 	}
 
 	if !usedLLM {
-		providerPayload = s.forwardTurnProvider(view, turn)
-		s.emitSessionTurn(view, turn, prompt, providerPayload)
-		replyText, replySource := resolveAssistantText(prompt, providerPayload)
-		s.emitAssistantReply(view, turn, replyText, replySource)
+		if err := flightCtx.Err(); err != nil {
+			s.emitAssistantReplyChunks(view, turn, "（已停止）", "echo", []string{"（已停止）"}, true)
+		} else {
+			providerPayload = s.forwardTurnProvider(view, turn)
+			s.emitSessionTurn(view, turn, prompt, providerPayload)
+			replyText, replySource := resolveAssistantText(prompt, providerPayload)
+			if err := flightCtx.Err(); err != nil {
+				s.emitAssistantReplyChunks(view, turn, replyText, replySource, splitReplyChunks(replyText), true)
+			} else {
+				s.emitAssistantReply(view, turn, replyText, replySource)
+			}
+		}
 	}
 
 	if err := s.save(view); err != nil {
@@ -438,6 +451,11 @@ func (s *Service) ListEvents(sessionID string, afterSeq int64, limit int) (Event
 	}
 	if view.RunID == "" {
 		out.Items = synthesizeTurnEvents(view, afterSeq, limit)
+		if s.flights != nil {
+			if turnID, text, ok := s.flights.partial(sessionID); ok {
+				out.Items = appendLivePartial(out.Items, view, turnID, text, afterSeq)
+			}
+		}
 		return out, nil
 	}
 	if s.events == nil {
@@ -524,6 +542,31 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 		}
 	}
 	return out
+}
+
+// appendLivePartial overlays an in-flight assistant.delta for blank-session SSE polling.
+func appendLivePartial(items []events.Envelope, view *View, turnID, text string, afterSeq int64) []events.Envelope {
+	if view == nil || strings.TrimSpace(text) == "" {
+		return items
+	}
+	var maxSeq int64
+	for _, ev := range items {
+		if ev.Seq > maxSeq {
+			maxSeq = ev.Seq
+		}
+	}
+	seq := maxSeq + 1
+	if seq <= afterSeq {
+		return items
+	}
+	raw, _ := json.Marshal(map[string]any{"turnId": turnID, "text": text, "index": 0, "streaming": true})
+	ts := time.Now().UTC().UnixMilli()
+	items = append(items, events.Envelope{
+		ID: turnID + "_live", RunID: "", Seq: seq, TS: ts,
+		Type: "assistant.delta", Severity: "info", Visibility: events.VisibilityModelVisible,
+		Payload: raw,
+	})
+	return items
 }
 
 func (s *Service) loadRow(sessionID string) (store.AuditLog, error) {

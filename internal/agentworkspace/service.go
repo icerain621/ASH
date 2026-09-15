@@ -227,6 +227,36 @@ func (s *Service) Attach(workspaceID, sessionID string) (*View, error) {
 	return view, nil
 }
 
+// Detach removes sessionID from the workspace membership list (no-op if absent).
+func (s *Service) Detach(workspaceID, sessionID string) (*View, error) {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return nil, fmt.Errorf("sessionId is required")
+	}
+	view, err := s.Get(workspaceID)
+	if err != nil {
+		return nil, err
+	}
+	next := make([]string, 0, len(view.SessionIDs))
+	changed := false
+	for _, id := range view.SessionIDs {
+		if id == sessionID {
+			changed = true
+			continue
+		}
+		next = append(next, id)
+	}
+	if !changed {
+		return view, nil
+	}
+	view.SessionIDs = next
+	view.UpdatedAt = time.Now().UTC().Unix()
+	if err := s.save(view, "workspace"); err != nil {
+		return nil, err
+	}
+	return view, nil
+}
+
 // Close soft-closes a workspace (status=closed). List excludes closed.
 func (s *Service) Close(workspaceID string) (*View, error) {
 	view, err := s.Get(workspaceID)
