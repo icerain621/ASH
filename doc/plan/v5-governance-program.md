@@ -1,6 +1,6 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**hardening 已完成**；**三主题 IA 已落地**；**Agent Chat DSH 对标续推**（SSE/工具卡/Stop/标题 + P2 助手 echo 流）；下一步 = P3 workspace 或 v5 freeze / v4.1  
+> 状态：**hardening 已完成**；**三主题 IA 已落地**；**Agent Chat DSH 对标续推**（SSE/工具卡/Stop/标题 + P2 助手 LLM/Provider/echo 流）；下一步 = v5 freeze / v4.1  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > IA 升级：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md)  
@@ -69,7 +69,7 @@
 1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
 2. **控制台三主题 IA**：Tasks 1–4 **已落地**（壳层 `e0a8680` · Agent `bd0e60c` · 记忆 `1322bbb` · 评审 `bcb19a0`/`66fda66`）；规格 [`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md) 状态 **landed**
 3. **Agent Chat DSH 对标**：壳层已落地；**第二波** SSE 直播 · 工具卡 · Stop · 标题/关闭（`122b4c4` · `437e5d4`）
-4. **后端缺口清单**（P2 助手 echo 流已落地；P3–P5 仍开）：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md) — 真 LLM stream / workspace 仍后置
+4. **后端缺口清单**（P2–P5 已落地；可选 session stream 仍开）：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md) — 真 LLM：`ASH_LLM_BASE_URL` 等
 5. 并行可选：v5 **freeze** 或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
 6. 门禁：`make v5-signoff`
 

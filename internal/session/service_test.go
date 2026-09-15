@@ -74,6 +74,7 @@ func TestCreateBindRunAndPromptTurn(t *testing.T) {
 }
 
 func TestBlankPromptTurnSynthesizesAssistantStream(t *testing.T) {
+	t.Setenv("ASH_LLM_BASE_URL", "")
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db, nil, events.NewService(db))
 
@@ -121,6 +122,7 @@ func TestBlankPromptTurnSynthesizesAssistantStream(t *testing.T) {
 }
 
 func TestBoundPromptTurnAppendsAssistantMessage(t *testing.T) {
+	t.Setenv("ASH_LLM_BASE_URL", "")
 	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)
 	svc := NewService(db, nil, ev)
@@ -515,5 +517,103 @@ func TestTruncateTitleRunes(t *testing.T) {
 	got = truncateTitle(s, 48)
 	if len([]rune(got)) != 48 {
 		t.Fatalf("len=%d got=%q", len([]rune(got)), got)
+	}
+}
+
+func TestPromptTurnLLMStreamBlank(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"LL\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"M ok\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("ASH_LLM_BASE_URL", srv.URL)
+	t.Setenv("ASH_LLM_API_KEY", "sk-test")
+	t.Setenv("ASH_LLM_MODEL", "gpt-4o-mini")
+
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	view, _, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "ping llm"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(view.Replies) != 1 || view.Replies[0].Source != "llm" || view.Replies[0].Text != "LLM ok" {
+		t.Fatalf("reply=%+v", view.Replies)
+	}
+	evResp, err := svc.ListEvents(blank.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sawDelta, sawMsg := false, false
+	for _, item := range evResp.Items {
+		switch item.Type {
+		case "assistant.delta":
+			sawDelta = true
+		case "assistant.message":
+			sawMsg = true
+			var payload map[string]any
+			if err := json.Unmarshal(item.Payload, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if payload["source"] != "llm" || payload["text"] != "LLM ok" {
+				t.Fatalf("payload=%v", payload)
+			}
+		}
+	}
+	if !sawDelta || !sawMsg {
+		t.Fatalf("events=%+v", evResp.Items)
+	}
+}
+
+func TestPromptTurnProviderStatic(t *testing.T) {
+	t.Setenv("ASH_LLM_BASE_URL", "")
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+	blank, err := svc.Create(CreateRequest{
+		SpaceID: "local", CreatedBy: "test", RepoRoot: ".", ProviderKind: "static",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if blank.ProviderKind != "static" || blank.ProviderAdapter != "static" {
+		t.Fatalf("view=%+v", blank)
+	}
+	view, _, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "run static"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(view.Replies) != 1 {
+		t.Fatalf("replies=%+v", view.Replies)
+	}
+	if view.Replies[0].Source != "static" {
+		t.Fatalf("source=%q want static", view.Replies[0].Source)
+	}
+	if !strings.Contains(view.Replies[0].Text, "static") {
+		t.Fatalf("text=%q", view.Replies[0].Text)
+	}
+	evResp, err := svc.ListEvents(blank.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range evResp.Items {
+		if item.Type != "assistant.message" {
+			continue
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(item.Payload, &payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["source"] == "static" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("events=%+v want source=static", evResp.Items)
 	}
 }

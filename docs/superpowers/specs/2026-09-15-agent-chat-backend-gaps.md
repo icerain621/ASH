@@ -2,7 +2,7 @@
 
 > Status: **living backlog**（2026-09-15）  
 > Spec: [`2026-09-15-agent-chat-dsh-parity-design.md`](./2026-09-15-agent-chat-dsh-parity-design.md)  
-> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流 · P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats  
+> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流（**真 LLM / Provider**）· P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats  
 > 原则：不引入 Cordis / 不嵌入 `dsh web`
 
 本文记录 **相对 DSH Agent Chat 仍缺的后端能力**，供续推复刻时排期；FE 可先用现有 API 做近似体验的项另标。
@@ -13,7 +13,7 @@
 
 | 缺口 | 现状 | 建议 API / 行为 |
 |------|------|-----------------|
-| Session 级 live 流 | ✅ FE：有 `runId` 时 `useRunStream` 合并 transcript；无 run 仍轮询 events。可选 session stream 代理仍未做 | FE 优先 SSE；可选 `GET /agents/sessions/{id}/stream` 代理（无 runId 时 404，空白会话仍靠 turns 轮询） |
+| Session 级 live 流 | ✅ FE：有 `runId` 时 `useRunStream` 合并 transcript；无 run 仍轮询 events。可选 session stream 代理仍未做 | FE 优先 SSE；可选 `GET /agents/sessions/{id}/stream` 代理（无 runId 时 404，空白会话仍靠 turns 轮询）— **仍可选** |
 | Stop 生成 | ✅ `action:"stop"` 别名 `cancel`；FE IntentBar/Composer 运行中显示停止 | 完成 |
 | Tool 事件可见性 | ✅ FE `conversationNodes` + tool bubble；仍依赖 run ledger 事件质量 | 保证 `tool.called`/`tool.result`/`step.*` 对 UI 可见（`ui_only`/`model_visible`）；无新表 |
 
@@ -29,10 +29,22 @@
 
 | 缺口 | 现状 | 建议 |
 |------|------|------|
-| Token/文本增量 | ✅ `assistant.delta` `{turnId,text,index}` + `assistant.message` `{turnId,text,stopped,source}`；有 runId 时写入 run ledger（model_visible） | 完成（形状已落地；真 LLM token 流仍后置） |
-| 空白会话助手回复 | ✅ 无 runId 时 echo stub `已收到：{prompt}`（`source:"echo"`）存 `View.replies`，`ListEvents`/`synthesizeTurnEvents` 投影 delta+message；有 ACP `acpMessage` 则 `source:"acp"` | echo stub 直至真 LLM stream |
+| Token/文本增量 | ✅ `assistant.delta` `{turnId,text,index}` + `assistant.message` `{turnId,text,stopped,source}`；有 runId 时写入 run ledger（model_visible） | 完成 |
+| 真 LLM / Provider | ✅ 优先级：`ASH_LLM_*` OpenAI 兼容 Chat Completions（SSE `stream:true`，失败回落非流式）→ `agentexec.Resolve` Provider（static / acp_sdk / execgo）`StdoutSummary` → echo stub | 完成 |
+| 空白会话助手回复 | ✅ 无 runId 时：LLM/`source:"llm"`、Provider/`source:<adapter>`、或 echo `已收到：{prompt}`（`source:"echo"`）存 `View.replies`，`ListEvents` 投影 delta+message | 完成 |
 
-**Stop 说明**：Intent `stop`/`cancel` 仅取消绑定 run；当前 echo/ACP 回包同步完成，故 `stopped:true` 预留给未来 mid-flight 流。
+### 启用真 LLM（`internal/llmchat`）
+
+| 环境变量 | 说明 |
+|----------|------|
+| `ASH_LLM_BASE_URL` | **必填**才走 LLM；可为 origin、`.../v1` 或完整 `.../chat/completions` |
+| `ASH_LLM_API_KEY` | 可选；设置则带 `Authorization: Bearer` |
+| `ASH_LLM_MODEL` | 默认 `gpt-4o-mini` |
+| `ASH_LLM_TIMEOUT` | Go duration，默认 `60s` |
+
+未设置 `ASH_LLM_BASE_URL` 时：有 `providerKind` 则跑 generalized provider；否则 echo。
+
+**Stop 说明**：Intent `stop`/`cancel` 仅取消绑定 run；当前 LLM/provider/echo 回包仍在 PromptTurn 内同步完成，故 `stopped:true` 预留给未来 mid-flight cancel。可选 `GET /agents/sessions/{id}/stream` 仍未做（有 runId 时 FE 已用 run SSE）。
 
 ## P3 — Workspace 分组（非 Cordis）
 
@@ -70,3 +82,4 @@
 | 2026-09-15 | 落地 P2：`assistant.delta`/`assistant.message` + 空白会话 echo stub；真 LLM 流仍开 |
 | 2026-09-15 | 落地 P3：Agent Workspace API `f711d93` + Chat 侧栏按 Workspace 分组 `7c29e5f` |
 | 2026-09-15 | 落地 P4/P5：`/agents/commands` + Intent `command`；`/agents/models` + PATCH seats；FE 命令菜单与座位行；真 LLM 流仍开 |
+| 2026-09-15 | 落地 P2 余量：`internal/llmchat` + PromptTurn LLM→Provider→echo；gaps 标注真流已落地；session stream 路由仍可选 |

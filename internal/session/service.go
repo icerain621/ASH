@@ -13,6 +13,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/goal"
+	"github.com/ash-repwiki/ash/internal/llmchat"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -272,7 +273,7 @@ func (s *Service) List(spaceID string, limit int, includeClosed bool) ([]View, e
 }
 
 // PromptTurn records a turn and emits session.turn on the bound run when present.
-// When providerKind=acp_sdk and ACP is healthy, best-effort forwards the prompt to ACP (DX4).
+// Reply priority: OpenAI-compatible LLM (ASH_LLM_BASE_URL) → provider executor → echo stub.
 func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, error) {
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
@@ -294,27 +295,41 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 		view.Title = truncateTitle(prompt, maxTitleRunes)
 	}
 
-	acpPayload := s.forwardTurnACP(view, turn)
+	usedLLM := false
+	var providerPayload map[string]any
 
-	if view.RunID != "" && s.events != nil {
-		trace := firstNonEmpty(view.TraceID, view.RunID)
-		payload := map[string]any{
-			"sessionId": view.ID, "turnId": turn.ID, "prompt": prompt,
-		}
-		for k, v := range acpPayload {
-			payload[k] = v
-		}
-		_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
+	if llmchat.Configured() {
+		usedLLM = s.replyViaLLM(view, turn, prompt, func(extra map[string]any) {
+			s.emitSessionTurn(view, turn, prompt, extra)
+		})
 	}
 
-	replyText, replySource := resolveAssistantText(prompt, acpPayload)
-	s.emitAssistantReply(view, turn, replyText, replySource)
+	if !usedLLM {
+		providerPayload = s.forwardTurnProvider(view, turn)
+		s.emitSessionTurn(view, turn, prompt, providerPayload)
+		replyText, replySource := resolveAssistantText(prompt, providerPayload)
+		s.emitAssistantReply(view, turn, replyText, replySource)
+	}
 
 	if err := s.save(view); err != nil {
 		return nil, nil, err
 	}
 	view.StreamURL = streamURL(view.RunID)
 	return view, &turn, nil
+}
+
+func (s *Service) emitSessionTurn(view *View, turn Turn, prompt string, extra map[string]any) {
+	if view == nil || strings.TrimSpace(view.RunID) == "" || s.events == nil {
+		return
+	}
+	trace := firstNonEmpty(view.TraceID, view.RunID)
+	payload := map[string]any{
+		"sessionId": view.ID, "turnId": turn.ID, "prompt": prompt,
+	}
+	for k, v := range extra {
+		payload[k] = v
+	}
+	_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 }
 
 // Update applies a partial patch (title / providerKind / planId / permissionMode).

@@ -19,6 +19,10 @@ function readablePayload(payload: unknown): unknown {
 /** Right details pane for selected chat/trajectory node. */
 export function DetailsPane({ open, selection }: Props) {
   const payload = selection ? readablePayload(selection.payload) : null;
+  const source =
+    payload && typeof payload === "object" && payload !== null && "source" in payload
+      ? String((payload as Record<string, unknown>).source ?? "")
+      : "";
   return (
     <aside
       className={`agent-chat-details${open ? " open" : ""}`}
@@ -37,6 +41,11 @@ export function DetailsPane({ open, selection }: Props) {
           <p>
             <strong>{selection.title}</strong>
           </p>
+          {source ? (
+            <p className="muted-line" data-testid="agent-chat-details-source">
+              source: {source}
+            </p>
+          ) : null}
           <p className="muted-line">{selection.summary}</p>
           <pre className="code-block compact">
             {JSON.stringify(
