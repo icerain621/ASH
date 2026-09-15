@@ -665,6 +665,28 @@ export function listMCPTools() {
   }));
 }
 
+export function registerMCPTool(body: {
+  name: string;
+  server: string;
+  risk?: string;
+  spaceId?: string;
+}) {
+  return api<RawRecord>("/mcp/tools", {
+    method: "POST",
+    body: JSON.stringify(body),
+  }).then(normalizeMCPTool);
+}
+
+export function patchMCPTool(
+  toolId: string,
+  body: { status?: string; risk?: string; server?: string },
+) {
+  return api<RawRecord>(`/mcp/tools/${encodeURIComponent(toolId)}`, {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  }).then(normalizeMCPTool);
+}
+
 export function listPlugins() {
   return api<{ items?: RawRecord[]; Items?: RawRecord[] }>("/plugins").then((res) => ({
     items: itemsFrom(res).map(normalizePlugin),

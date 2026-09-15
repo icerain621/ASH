@@ -39,6 +39,12 @@ type registerMCPToolRequest struct {
 	SpaceID string         `json:"spaceId,omitempty"`
 }
 
+type patchMCPToolRequest struct {
+	Status *string `json:"status,omitempty"`
+	Risk   *string `json:"risk,omitempty"`
+	Server *string `json:"server,omitempty"`
+}
+
 type createFeedbackRequest struct {
 	TargetType string `json:"targetType" binding:"required"`
 	TargetID   string `json:"targetId" binding:"required"`
@@ -284,6 +290,78 @@ func (h *Handler) registerMCPTool(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusCreated, row)
+}
+
+// PatchMCPTool godoc
+// @Summary Patch MCP tool (enable/disable / risk / server)
+// @Tags mcp
+// @Accept json
+// @Produce json
+// @Param toolId path string true "tool id"
+// @Param body body patchMCPToolRequest true "patch"
+// @Success 200 {object} store.MCPTool
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/mcp/tools/{toolId} [patch]
+func (h *Handler) patchMCPTool(c *gin.Context) {
+	var req patchMCPToolRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	var row store.MCPTool
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("toolId")).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireTargetSpace(c, row.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permMCPWrite, row.SpaceID) {
+		return
+	}
+	updates := map[string]any{"updated_at": time.Now().UTC()}
+	if req.Status != nil {
+		status := strings.ToLower(strings.TrimSpace(*req.Status))
+		switch status {
+		case "registered", "disabled", "error":
+			updates["status"] = status
+		case "enabled", "active":
+			updates["status"] = "registered"
+		default:
+			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "status must be registered|disabled|error"))
+			return
+		}
+	}
+	if req.Risk != nil {
+		risk := strings.TrimSpace(*req.Risk)
+		if risk == "" {
+			risk = "medium"
+		}
+		updates["risk"] = risk
+	}
+	if req.Server != nil {
+		server := strings.TrimSpace(*req.Server)
+		if server == "" {
+			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "server cannot be empty"))
+			return
+		}
+		updates["server"] = server
+	}
+	if len(updates) == 1 {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "no patch fields"))
+		return
+	}
+	if err := h.dbFor(c).Model(&row).Updates(updates).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MCP_TOOL_UPDATE_FAILED", err.Error()))
+		return
+	}
+	if err := h.dbFor(c).First(&row, "id = ?", row.ID).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MCP_TOOL_UPDATE_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, row)
 }
 
 // CreateFeedback godoc

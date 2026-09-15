@@ -1475,6 +1475,14 @@ main {
   gap: 0.25rem;
 }
 
+.agent-history-row[draggable="true"] {
+  cursor: grab;
+}
+
+.agent-history-row.dragging {
+  opacity: 0.55;
+}
+
 .agent-history-actions {
   display: flex;
   gap: 0.25rem;
@@ -1895,6 +1903,70 @@ main {
   opacity: 0.55;
   cursor: default;
   pointer-events: none;
+}
+
+.agent-mcp-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  padding: 4.5rem 1.25rem 1.25rem;
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
+}
+
+.agent-mcp-panel {
+  width: min(420px, 100%);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px color-mix(in srgb, var(--text) 12%, transparent);
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
+.agent-mcp-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.4rem;
+}
+
+.agent-mcp-form select,
+.agent-mcp-form button {
+  grid-column: span 1;
+}
+
+.agent-mcp-form button[type="submit"] {
+  grid-column: 1 / -1;
+}
+
+.agent-mcp-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.agent-mcp-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.agent-mcp-row .muted-line {
+  display: block;
+  font-size: 0.8rem;
 }
 
 @media (max-width: 1100px) {

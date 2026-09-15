@@ -387,6 +387,23 @@ func TestRegisterMCPToolUsesMemberPermission(t *testing.T) {
 	if tool.SpaceID != space.ID || tool.Name != "repo.scan" {
 		t.Fatalf("tool=%+v want target space repo.scan", tool)
 	}
+
+	patchBody := []byte(`{"status":"disabled"}`)
+	w2 := httptest.NewRecorder()
+	req2 := httptest.NewRequest(http.MethodPatch, "/api/v1/mcp/tools/"+tool.ID, bytes.NewReader(patchBody))
+	req2.Header.Set("Authorization", "Bearer "+token)
+	req2.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w2, req2)
+	if w2.Code != http.StatusOK {
+		t.Fatalf("patch status=%d body=%s", w2.Code, w2.Body.String())
+	}
+	var patched store.MCPTool
+	if err := json.Unmarshal(w2.Body.Bytes(), &patched); err != nil {
+		t.Fatal(err)
+	}
+	if patched.Status != "disabled" {
+		t.Fatalf("patched=%+v", patched)
+	}
 }
 
 func TestCreateAuditExportUsesOrgMemberPermission(t *testing.T) {

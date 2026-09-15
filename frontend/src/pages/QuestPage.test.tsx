@@ -171,6 +171,32 @@ vi.mock("@/modules/runs/api/runs.api", () => ({
   cancelRun: vi.fn(),
 }));
 
+vi.mock("@/modules/agent-session/api/workspace.api", () => ({
+  listAgentWorkspaces: vi.fn(async () => ({ items: [] })),
+  createAgentWorkspace: vi.fn(async () => ({
+    id: "ws_1",
+    spaceId: "local",
+    title: "Default",
+    sessionIds: [],
+    status: "active",
+  })),
+  patchAgentWorkspace: vi.fn(async (id: string, body: { sessionIds?: string[] }) => ({
+    id,
+    spaceId: "local",
+    title: "Default",
+    sessionIds: body.sessionIds ?? [],
+    status: "active",
+  })),
+  attachAgentWorkspaceSession: vi.fn(),
+  closeAgentWorkspace: vi.fn(),
+}));
+
+vi.mock("@/modules/platform/api/platform.api", () => ({
+  listMCPTools: vi.fn(async () => ({ items: [] })),
+  registerMCPTool: vi.fn(),
+  patchMCPTool: vi.fn(),
+}));
+
 vi.mock("@/services/http/client", () => ({
   getCurrentSpaceId: () => "local",
 }));
@@ -240,6 +266,8 @@ describe("QuestPage", () => {
     expect(screen.getByText("Tools")).toBeTruthy();
     expect(screen.getByText("Skills")).toBeTruthy();
     expect(screen.getByText("MCP")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-settings-mcp"));
+    expect(await screen.findByTestId("agent-mcp-panel")).toBeTruthy();
     expect(await screen.findByText("feature_delivery@1.0.0")).toBeTruthy();
     expect(screen.getByText(/选择左侧会话，或新建空白会话/)).toBeTruthy();
   });

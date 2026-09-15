@@ -5514,6 +5514,32 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MCPToolItem" }
 
+  /api/v1/mcp/tools/{toolId}:
+    patch:
+      tags: [Mcp]
+      summary: Patch MCP tool (enable/disable)
+      parameters:
+        - in: path
+          name: toolId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, description: "registered|disabled|error" }
+                risk: { type: string }
+                server: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MCPToolItem" }
+
   /api/v1/memory/candidates:
     get:
       tags: [Memory]

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import type { AgentSessionView } from "../api/session.api";
 import type { AgentWorkspaceView } from "../api/workspace.api";
 import { shortId } from "@/shared/utils/format";
+import { reorderSessionIds } from "./reorderSessionIds";
 import { groupSessionsByWorkspace } from "./workspaceGroups";
 
 type Props = {
@@ -22,6 +23,8 @@ type Props = {
   onRename?: (sessionId: string, title: string) => void;
   onClose?: (sessionId: string) => void;
   onPurge?: (sessionId: string) => void;
+  /** Reorder sessions inside a workspace (PATCH sessionIds). */
+  onReorderSessions?: (workspaceId: string, sessionIds: string[]) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -53,10 +56,12 @@ export function SessionHistoryList({
   onRename,
   onClose,
   onPurge,
+  onReorderSessions,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [dragId, setDragId] = useState<string | null>(null);
 
   const groups = useMemo(
     () => groupSessionsByWorkspace(items, workspaces),
@@ -79,11 +84,42 @@ export function SessionHistoryList({
     setCollapsed((prev) => ({ ...prev, [key]: !prev[key] }));
   }
 
-  function renderSessionRow(item: AgentSessionView) {
+  function renderSessionRow(item: AgentSessionView, workspaceId: string | null) {
     const active = item.id === selectedSessionId;
     const editing = editingId === item.id;
+    const canDrag = Boolean(workspaceId && onReorderSessions);
     return (
-      <li key={item.id} className="agent-history-row">
+      <li
+        key={item.id}
+        className={`agent-history-row${dragId === item.id ? " dragging" : ""}`}
+        draggable={canDrag && !editing}
+        data-testid={`agent-history-row-${item.id}`}
+        onDragStart={(e) => {
+          if (!canDrag) return;
+          setDragId(item.id);
+          e.dataTransfer.setData("text/plain", item.id);
+          e.dataTransfer.effectAllowed = "move";
+        }}
+        onDragEnd={() => setDragId(null)}
+        onDragOver={(e) => {
+          if (!canDrag || !dragId || dragId === item.id) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+        }}
+        onDrop={(e) => {
+          e.preventDefault();
+          if (!workspaceId || !onReorderSessions) return;
+          const fromId = e.dataTransfer.getData("text/plain") || dragId;
+          setDragId(null);
+          if (!fromId || fromId === item.id) return;
+          const group = groups.find((g) => g.workspace?.id === workspaceId);
+          if (!group) return;
+          const ids = group.sessions.map((s) => s.id);
+          const next = reorderSessionIds(ids, fromId, item.id);
+          if (next.join(",") === ids.join(",")) return;
+          onReorderSessions(workspaceId, next);
+        }}
+      >
         {editing ? (
           <div className="agent-history-rename" data-testid={`agent-history-rename-${item.id}`}>
             <input
@@ -230,7 +266,9 @@ export function SessionHistoryList({
               </button>
               {isOpen ? (
                 <ul className="agent-history-list">
-                  {group.sessions.map((item) => renderSessionRow(item))}
+                  {group.sessions.map((item) =>
+                    renderSessionRow(item, group.workspace?.id ?? null),
+                  )}
                   {!group.sessions.length ? (
                     <li className="muted-line">暂无会话</li>
                   ) : null}

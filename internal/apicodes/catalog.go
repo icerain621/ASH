@@ -102,6 +102,8 @@ var Catalog = map[string]Entry{
 	// tool / mcp
 	"MCP_TOOL_LIST_FAILED":   {Domain: "tool", Summary: "Failed to list MCP tools"},
 	"MCP_TOOL_CREATE_FAILED": {Domain: "tool", Summary: "Failed to register MCP tool"},
+	"MCP_TOOL_NOT_FOUND":     {Domain: "tool", Summary: "MCP tool id not found"},
+	"MCP_TOOL_UPDATE_FAILED": {Domain: "tool", Summary: "Failed to patch MCP tool"},
 
 	// improve
 	"BASELINE_NOT_READY":        {Domain: "improve", Summary: "Baseline run not finished for proposal"},

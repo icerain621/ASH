@@ -15,6 +15,7 @@ import {
 import {
   createAgentWorkspace,
   listAgentWorkspaces,
+  patchAgentWorkspace,
 } from "../api/workspace.api";
 import { useSessionStream, type StreamLine } from "@/services/sse/runStream";
 import { ChatComposer } from "./ChatComposer";
@@ -251,6 +252,16 @@ export function AgentChatShell({
     onError: (e: Error) => setError(e.message),
   });
 
+  const reorderMut = useMutation({
+    mutationFn: ({ workspaceId, sessionIds }: { workspaceId: string; sessionIds: string[] }) =>
+      patchAgentWorkspace(workspaceId, { sessionIds }),
+    onSuccess: () => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const baseEvents: SessionEventEnvelope[] = useMemo(
     () => eventsQuery.data?.items ?? [],
     [eventsQuery.data?.items],
@@ -310,6 +321,9 @@ export function AgentChatShell({
         onRename={(sessionId, title) => renameMut.mutate({ sessionId, title })}
         onClose={(sessionId) => closeMut.mutate(sessionId)}
         onPurge={(sessionId) => purgeMut.mutate(sessionId)}
+        onReorderSessions={(workspaceId, sessionIds) =>
+          reorderMut.mutate({ workspaceId, sessionIds })
+        }
       />
 
       <div

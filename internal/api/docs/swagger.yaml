@@ -5188,6 +5188,15 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.Template'
         type: array
     type: object
+  internal_api.patchMCPToolRequest:
+    properties:
+      risk:
+        type: string
+      server:
+        type: string
+      status:
+        type: string
+    type: object
   internal_api.patchReleaseChecklistRequest:
     properties:
       items:
@@ -7612,6 +7621,44 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Register an MCP tool
+      tags:
+      - mcp
+  /api/v1/mcp/tools/{toolId}:
+    patch:
+      consumes:
+      - application/json
+      parameters:
+      - description: tool id
+        in: path
+        name: toolId
+        required: true
+        type: string
+      - description: patch
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.patchMCPToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.MCPTool'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Patch MCP tool (enable/disable / risk / server)
       tags:
       - mcp
   /api/v1/memory/assets:

@@ -3366,6 +3366,64 @@
                 }
             }
         },
+        "/api/v1/mcp/tools/{toolId}": {
+            "patch": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Patch MCP tool (enable/disable / risk / server)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "tool id",
+                        "name": "toolId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "patch",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.patchMCPToolRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.MCPTool"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/memory/assets": {
             "get": {
                 "produces": [
@@ -16640,6 +16698,20 @@
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.Template"
                     }
+                }
+            }
+        },
+        "internal_api.patchMCPToolRequest": {
+            "type": "object",
+            "properties": {
+                "risk": {
+                    "type": "string"
+                },
+                "server": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },

@@ -13,6 +13,7 @@ import {
   type DiffFile,
 } from "@/modules/quest/api/quest.api";
 import { AgentChatShell } from "@/modules/agent-session/components/AgentChatShell";
+import { McpToolsPanel } from "@/modules/agent-session/components/McpToolsPanel";
 import type { AgentSessionView } from "@/modules/agent-session/api/session.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
@@ -92,6 +93,7 @@ export function QuestPage() {
   const [activePlan, setActivePlan] = useState<GoalPlan | null>(null);
   const [artifactAccess, setArtifactAccess] = useState<ArtifactAccessResponse | null>(null);
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
+  const [mcpOpen, setMcpOpen] = useState(false);
   const goalInputRef = useRef<HTMLInputElement>(null);
 
   const boardQuery = useQuery({
@@ -367,9 +369,15 @@ export function QuestPage() {
               <Link to="/automation" className="nav-dropdown-item" role="menuitem">
                 Skills
               </Link>
-              <span className="nav-dropdown-item muted" role="menuitem" aria-disabled="true" title="会话侧栏配置（占位）">
+              <button
+                type="button"
+                className="nav-dropdown-item"
+                role="menuitem"
+                data-testid="agent-settings-mcp"
+                onClick={() => setMcpOpen(true)}
+              >
                 MCP
-              </span>
+              </button>
             </div>
           </details>
           <button type="button" className="btn icon-btn" onClick={() => boardQuery.refetch()}>
@@ -402,6 +410,7 @@ export function QuestPage() {
             void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
           }}
         />
+        <McpToolsPanel open={mcpOpen} onClose={() => setMcpOpen(false)} />
       </div>
 
       {selectedRunId ? (
