@@ -2,9 +2,11 @@ package api
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
 
@@ -427,5 +429,125 @@ func TestAgentCommandsAndModelsAndPatchSeats(t *testing.T) {
 	r.ServeHTTP(unkW, unkReq)
 	if unkW.Code != http.StatusConflict {
 		t.Fatalf("unknown command status=%d want 409 body=%s", unkW.Code, unkW.Body.String())
+	}
+}
+
+func TestAgentSessionStreamBlankSeesTurn(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, _ := newPlatformTestRouter(t)
+
+	createW := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions", bytes.NewReader([]byte(`{}`)))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createW.Code, createW.Body.String())
+	}
+	var sess struct {
+		ID        string `json:"id"`
+		StreamURL string `json:"streamUrl"`
+	}
+	if err := json.Unmarshal(createW.Body.Bytes(), &sess); err != nil {
+		t.Fatal(err)
+	}
+	if sess.ID == "" || !strings.Contains(sess.StreamURL, sess.ID+"/stream") {
+		t.Fatalf("sess=%+v", sess)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions/"+sess.ID+"/stream", nil)
+	req = req.WithContext(ctx)
+
+	done := make(chan struct{})
+	w := httptest.NewRecorder()
+	go func() {
+		r.ServeHTTP(w, req)
+		close(done)
+	}()
+
+	// let SSE open
+	time.Sleep(200 * time.Millisecond)
+
+	turnW := httptest.NewRecorder()
+	turnReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions/"+sess.ID+"/turns",
+		bytes.NewReader([]byte(`{"prompt":"stream me"}`)))
+	turnReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(turnW, turnReq)
+	if turnW.Code != http.StatusOK {
+		cancel()
+		<-done
+		t.Fatalf("turn status=%d body=%s", turnW.Code, turnW.Body.String())
+	}
+
+	deadline := time.Now().Add(3 * time.Second)
+	for time.Now().Before(deadline) {
+		if strings.Contains(w.Body.String(), "session.turn") || strings.Contains(w.Body.String(), "assistant.message") {
+			break
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	cancel()
+	<-done
+
+	body := w.Body.String()
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
+		t.Fatalf("content-type=%q body=%q", ct, body)
+	}
+	if !strings.Contains(body, "session.turn") && !strings.Contains(body, "assistant.message") {
+		t.Fatalf("body=%q want session.turn or assistant.message", body)
+	}
+}
+
+func TestAgentSessionStreamBoundRunOK(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_sess_stream", TraceID: "trace_sess_stream",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	createW := httptest.NewRecorder()
+	createReq := httptest.NewRequest(http.MethodPost, "/api/v1/agents/sessions",
+		bytes.NewReader([]byte(`{"runId":"run_sess_stream"}`)))
+	createReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(createW, createReq)
+	if createW.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createW.Code, createW.Body.String())
+	}
+	var sess struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(createW.Body.Bytes(), &sess); err != nil {
+		t.Fatal(err)
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/agents/sessions/"+sess.ID+"/stream", nil)
+	req = req.WithContext(ctx)
+	done := make(chan struct{})
+	w := httptest.NewRecorder()
+	go func() {
+		r.ServeHTTP(w, req)
+		close(done)
+	}()
+	time.Sleep(250 * time.Millisecond)
+	cancel()
+	<-done
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("stream status=%d body=%s", w.Code, w.Body.String())
+	}
+	if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "text/event-stream") {
+		t.Fatalf("content-type=%q", ct)
 	}
 }

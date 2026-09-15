@@ -34,7 +34,7 @@ func (s *Service) FindByRunID(spaceID, runID string) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 

@@ -197,7 +197,7 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 			}
 		}
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	s.applyProviderKind(view, req.ProviderKind)
 	s.ensureMainThread(view)
 	if err := s.save(view); err != nil {
@@ -215,7 +215,7 @@ func (s *Service) Get(sessionID string) (*View, error) {
 	if err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 
@@ -243,7 +243,7 @@ func (s *Service) List(spaceID string, limit int, includeClosed bool) ([]View, e
 		if !includeClosed && view.Status == StatusClosed {
 			continue
 		}
-		view.StreamURL = streamURL(view.RunID)
+		view.StreamURL = sessionStreamURL(view.ID)
 		if view.CreatedAt == 0 && !row.CreatedAt.IsZero() {
 			view.CreatedAt = row.CreatedAt.Unix()
 		}
@@ -314,7 +314,7 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	if err := s.save(view); err != nil {
 		return nil, nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, &turn, nil
 }
 
@@ -366,7 +366,7 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	if err := s.save(view); err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 
@@ -381,7 +381,7 @@ func (s *Service) SetWorkspaceID(sessionID, workspaceID string) (*View, error) {
 	if err := s.save(view); err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 
@@ -392,7 +392,7 @@ func (s *Service) Close(sessionID string) (*View, error) {
 		return nil, err
 	}
 	if view.Status == StatusClosed {
-		view.StreamURL = streamURL(view.RunID)
+		view.StreamURL = sessionStreamURL(view.ID)
 		return view, nil
 	}
 	view.Status = StatusClosed
@@ -400,7 +400,7 @@ func (s *Service) Close(sessionID string) (*View, error) {
 	if err := s.save(view); err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 
@@ -412,7 +412,7 @@ func (s *Service) ListEvents(sessionID string, afterSeq int64, limit int) (Event
 		return EventsResponse{}, err
 	}
 	out := EventsResponse{
-		SessionID: view.ID, RunID: view.RunID, StreamURL: streamURL(view.RunID), Items: []events.Envelope{},
+		SessionID: view.ID, RunID: view.RunID, StreamURL: sessionStreamURL(view.ID), Items: []events.Envelope{},
 	}
 	if limit <= 0 || limit > 200 {
 		limit = 50
@@ -567,12 +567,13 @@ func decodeView(row store.AuditLog) (*View, error) {
 	return &view, nil
 }
 
-func streamURL(runID string) string {
-	runID = strings.TrimSpace(runID)
-	if runID == "" {
+// sessionStreamURL returns the session-scoped SSE path (always, even for blank sessions).
+func sessionStreamURL(sessionID string) string {
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
 		return ""
 	}
-	return "/api/v1/runs/" + runID + "/stream"
+	return "/api/v1/agents/sessions/" + sessionID + "/stream"
 }
 
 func firstNonEmpty(values ...string) string {

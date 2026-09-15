@@ -187,13 +187,21 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		view.UpdatedAt = now
 		s.emitAssistantReply(view, turn, "已清空会话", "command")
 	default:
-		return nil, fmt.Errorf("%w: unknown command %q", ErrIntentRejected, cmd)
+		sk, lookupErr := lookupSkillCommand(view.RepoRoot, cmd)
+		if lookupErr != nil || sk == nil {
+			return nil, fmt.Errorf("%w: unknown command %q", ErrIntentRejected, cmd)
+		}
+		view.Turns = append(view.Turns, turn)
+		view.UpdatedAt = now
+		if !s.replyViaSkillLLM(view, turn, sk, args) {
+			s.emitAssistantReply(view, turn, formatSkillLoadedReply(sk), "skill")
+		}
 	}
 
 	if err := s.save(view); err != nil {
 		return nil, err
 	}
-	view.StreamURL = streamURL(view.RunID)
+	view.StreamURL = sessionStreamURL(view.ID)
 	return view, nil
 }
 
@@ -212,4 +220,64 @@ func formatHelpText(catalog CommandsResponse) string {
 		b.WriteString("]\n")
 	}
 	return strings.TrimRight(b.String(), "\n")
+}
+
+func lookupSkillCommand(repoRoot, cmd string) (*skills.Skill, error) {
+	name := strings.TrimPrefix(strings.TrimSpace(cmd), "/")
+	if name == "" {
+		return nil, fmt.Errorf("empty skill name")
+	}
+	root := strings.TrimSpace(repoRoot)
+	if root == "" {
+		root = "."
+	}
+	if sk, err := skills.Get(root, name); err == nil && sk != nil {
+		return sk, nil
+	}
+	list, err := skills.ScanRepo(root)
+	if err != nil || list == nil {
+		return nil, fmt.Errorf("skill %q not found", name)
+	}
+	want := strings.ToLower(name)
+	for i := range list.Items {
+		sk := list.Items[i]
+		id := strings.ToLower(strings.TrimSpace(sk.ID))
+		nm := strings.ToLower(strings.TrimSpace(sk.Name))
+		if id == want || nm == want {
+			full, err := skills.Get(root, sk.ID)
+			if err != nil {
+				return &sk, nil
+			}
+			return full, nil
+		}
+	}
+	return nil, fmt.Errorf("skill %q not found", name)
+}
+
+func formatSkillLoadedReply(sk *skills.Skill) string {
+	if sk == nil {
+		return "已加载技能，可用自然语言继续"
+	}
+	title := firstNonEmpty(strings.TrimSpace(sk.Name), strings.TrimSpace(sk.ID), "skill")
+	body := strings.TrimSpace(sk.Body)
+	const maxRunes = 600
+	if body == "" {
+		desc := strings.TrimSpace(sk.Description)
+		if desc != "" {
+			body = desc
+		}
+	}
+	if n := len([]rune(body)); n > maxRunes {
+		body = string([]rune(body)[:maxRunes]) + "…"
+	}
+	var b strings.Builder
+	b.WriteString("# ")
+	b.WriteString(title)
+	b.WriteString("\n\n")
+	if body != "" {
+		b.WriteString(body)
+		b.WriteString("\n\n")
+	}
+	b.WriteString("已加载技能，可用自然语言继续")
+	return b.String()
 }

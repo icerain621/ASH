@@ -2,7 +2,7 @@
 
 > Status: **living backlog**（2026-09-15）  
 > Spec: [`2026-09-15-agent-chat-dsh-parity-design.md`](./2026-09-15-agent-chat-dsh-parity-design.md)  
-> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流（**真 LLM / Provider**）· P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats  
+> 已落地：`874b0ce` ListSessions · `6e88718` 三栏 Chat 壳 · **本轮** title/PATCH/DELETE/`stop` 别名 + FE SSE/工具卡/停止/改名关闭 · P2 assistant 流（**真 LLM / Provider**）· P3 Workspace `f711d93` / FE `7c29e5f` · **P4/P5** slash commands + model/permission seats · **session stream SSE** + **skill 命令执行**  
 > 原则：不引入 Cordis / 不嵌入 `dsh web`
 
 本文记录 **相对 DSH Agent Chat 仍缺的后端能力**，供续推复刻时排期；FE 可先用现有 API 做近似体验的项另标。
@@ -13,7 +13,7 @@
 
 | 缺口 | 现状 | 建议 API / 行为 |
 |------|------|-----------------|
-| Session 级 live 流 | ✅ FE：有 `runId` 时 `useRunStream` 合并 transcript；无 run 仍轮询 events。可选 session stream 代理仍未做 | FE 优先 SSE；可选 `GET /agents/sessions/{id}/stream` 代理（无 runId 时 404，空白会话仍靠 turns 轮询）— **仍可选** |
+| Session 级 live 流 | ✅ `GET /agents/sessions/{id}/stream`；有 runId 复用 run ledger SSE；空白会话轮询 `ListEvents`（~1s，支持 afterSeq / Last-Event-ID）。View.`streamUrl` 恒为会话路径；FE `useSessionStream` 优先 | 完成 |
 | Stop 生成 | ✅ `action:"stop"` 别名 `cancel`；FE IntentBar/Composer 运行中显示停止 | 完成 |
 | Tool 事件可见性 | ✅ FE `conversationNodes` + tool bubble；仍依赖 run ledger 事件质量 | 保证 `tool.called`/`tool.result`/`step.*` 对 UI 可见（`ui_only`/`model_visible`）；无新表 |
 
@@ -44,7 +44,7 @@
 
 未设置 `ASH_LLM_BASE_URL` 时：有 `providerKind` 则跑 generalized provider；否则 echo。
 
-**Stop 说明**：Intent `stop`/`cancel` 仅取消绑定 run；当前 LLM/provider/echo 回包仍在 PromptTurn 内同步完成，故 `stopped:true` 预留给未来 mid-flight cancel。可选 `GET /agents/sessions/{id}/stream` 仍未做（有 runId 时 FE 已用 run SSE）。
+**Stop 说明**：Intent `stop`/`cancel` 仅取消绑定 run；当前 LLM/provider/echo 回包仍在 PromptTurn 内同步完成，故 `stopped:true` 预留给未来 mid-flight cancel。
 
 ## P3 — Workspace 分组（非 Cordis）
 
@@ -57,7 +57,7 @@
 | 缺口 | 现状 | 建议 |
 |------|------|------|
 | 命令目录 | ✅ `GET /agents/commands` → `{ items: [{ name, description, source }] }`（builtin `/help` `/clear` + best-effort skills） | 完成 |
-| 执行命令 | ✅ `action:"command"` + `command`/`args`；未知 fail-closed 409；`/clear` 清空 Turns/Replies；`/help` 列表 | 完成（skill/mcp 执行仍后置） |
+| 执行命令 | ✅ `action:"command"`：`/help` `/clear` + **skill 执行**（`skills.Get` / ScanRepo；LLM 时 system=skill.Body，否则摘要 `source:"skill"`）；未知仍 409；**MCP 执行仍开** | skill 完成；MCP 仍后置 |
 
 ## P5 — Model / Plan / Permission seats
 
@@ -73,6 +73,12 @@
 - 完整 slash 目录一比一  
 - 栏宽拖拽 / workspace DnD（纯 FE 可后补）
 
+## 仍开（高价值）
+
+| 缺口 | 说明 |
+|------|------|
+| MCP slash 执行 | 目录可列出 mcp 源；Intent `command` 对未知非 skill 仍 fail-closed；无 MCP tool invoke 桥 |
+
 ## 修订
 
 | 日期 | 说明 |
@@ -83,3 +89,4 @@
 | 2026-09-15 | 落地 P3：Agent Workspace API `f711d93` + Chat 侧栏按 Workspace 分组 `7c29e5f` |
 | 2026-09-15 | 落地 P4/P5：`/agents/commands` + Intent `command`；`/agents/models` + PATCH seats；FE 命令菜单与座位行；真 LLM 流仍开 |
 | 2026-09-15 | 落地 P2 余量：`internal/llmchat` + PromptTurn LLM→Provider→echo；gaps 标注真流已落地；session stream 路由仍可选 |
+| 2026-09-15 | 落地 session stream SSE + skill 命令执行；FE 优先会话级 SSE；MCP exec 仍开 |

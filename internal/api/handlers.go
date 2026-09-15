@@ -170,6 +170,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.POST("/agents/sessions/:sessionId/turns", h.promptAgentSessionTurn)
 		v1.POST("/agents/sessions/:sessionId/actions", h.agentSessionIntent)
 		v1.GET("/agents/sessions/:sessionId/events", h.listAgentSessionEvents)
+		v1.GET("/agents/sessions/:sessionId/stream", h.streamAgentSession)
 		v1.GET("/agent-workspaces", h.listAgentWorkspaces)
 		v1.POST("/agent-workspaces", h.createAgentWorkspace)
 		v1.PATCH("/agent-workspaces/:workspaceId", h.patchAgentWorkspace)
@@ -557,25 +558,16 @@ func (h *Handler) streamRun(c *gin.Context) {
 	if !h.requireRunAccess(c, runID) {
 		return
 	}
+	lastSeq := h.parseSSEResumeSeq(c, runID)
+	h.streamRunLedgerSSE(c, runID, lastSeq)
+}
 
+// streamRunLedgerSSE writes run ledger events as SSE (shared by run and session stream).
+func (h *Handler) streamRunLedgerSSE(c *gin.Context, runID string, lastSeq int64) {
 	c.Writer.Header().Set("Content-Type", "text/event-stream")
 	c.Writer.Header().Set("Cache-Control", "no-cache")
 	c.Writer.Header().Set("Connection", "keep-alive")
 	c.Writer.Header().Set("X-Accel-Buffering", "no")
-
-	lastSeq := int64(0)
-	lastID := strings.TrimSpace(c.GetHeader("Last-Event-ID"))
-	if lastID == "" {
-		lastID = strings.TrimSpace(c.Query("Last-Event-ID"))
-	}
-	if lastID == "" {
-		lastID = strings.TrimSpace(c.Query("lastEventId"))
-	}
-	if lastID != "" {
-		if seq, err := h.eventsFor(c).SeqFromEventID(runID, lastID); err == nil {
-			lastSeq = seq
-		}
-	}
 
 	opened := false
 	failed := false
@@ -648,4 +640,26 @@ func (h *Handler) streamRun(c *gin.Context) {
 			lastSeq = evs[len(evs)-1].Seq
 		}
 	}
+}
+
+func (h *Handler) parseSSEResumeSeq(c *gin.Context, runID string) int64 {
+	lastSeq := int64(0)
+	if v := strings.TrimSpace(c.Query("afterSeq")); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n > 0 {
+			lastSeq = n
+		}
+	}
+	lastID := strings.TrimSpace(c.GetHeader("Last-Event-ID"))
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("Last-Event-ID"))
+	}
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("lastEventId"))
+	}
+	if lastID != "" && runID != "" {
+		if seq, err := h.eventsFor(c).SeqFromEventID(runID, lastID); err == nil {
+			lastSeq = seq
+		}
+	}
+	return lastSeq
 }

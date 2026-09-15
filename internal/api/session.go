@@ -1,13 +1,16 @@
 package api
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/session"
 )
 
@@ -299,6 +302,117 @@ func (h *Handler) listAgentSessionEvents(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, out)
+}
+
+// StreamAgentSession godoc
+// @Summary Agent session live SSE
+// @Description Bound sessions stream the run ledger; blank sessions poll ListEvents (assistant.* / session.turn).
+// @Tags agents
+// @Produce text/event-stream
+// @Param sessionId path string true "session id"
+// @Param afterSeq query int false "resume after this seq"
+// @Param Last-Event-ID header string false "last received event id"
+// @Success 200 {string} string "SSE stream"
+// @Failure 404 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/agents/sessions/{sessionId}/stream [get]
+func (h *Handler) streamAgentSession(c *gin.Context) {
+	sessionID := c.Param("sessionId")
+	view, err := h.sessionFor(c).Get(sessionID)
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("SESSION_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, view.SpaceID) {
+		return
+	}
+
+	if runID := strings.TrimSpace(view.RunID); runID != "" {
+		lastSeq := h.parseSSEResumeSeq(c, runID)
+		h.streamRunLedgerSSE(c, runID, lastSeq)
+		return
+	}
+
+	h.streamBlankSessionSSE(c, sessionID)
+}
+
+func (h *Handler) streamBlankSessionSSE(c *gin.Context, sessionID string) {
+	c.Writer.Header().Set("Content-Type", "text/event-stream")
+	c.Writer.Header().Set("Cache-Control", "no-cache")
+	c.Writer.Header().Set("Connection", "keep-alive")
+	c.Writer.Header().Set("X-Accel-Buffering", "no")
+
+	flusher, ok := c.Writer.(http.Flusher)
+	if !ok {
+		c.JSON(http.StatusInternalServerError, errorBody("SSE_UNSUPPORTED", "streaming not supported"))
+		return
+	}
+
+	lastSeq := int64(0)
+	if v := strings.TrimSpace(c.Query("afterSeq")); v != "" {
+		if n, err := strconv.ParseInt(v, 10, 64); err == nil && n >= 0 {
+			lastSeq = n
+		}
+	}
+	lastID := strings.TrimSpace(c.GetHeader("Last-Event-ID"))
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("Last-Event-ID"))
+	}
+	if lastID == "" {
+		lastID = strings.TrimSpace(c.Query("lastEventId"))
+	}
+	if lastID != "" {
+		if n, err := strconv.ParseInt(lastID, 10, 64); err == nil && n > lastSeq {
+			lastSeq = n
+		} else if resp, err := h.sessionFor(c).ListEvents(sessionID, 0, 200); err == nil {
+			for _, ev := range resp.Items {
+				if ev.ID == lastID && ev.Seq > lastSeq {
+					lastSeq = ev.Seq
+				}
+			}
+		}
+	}
+
+	writeEvents := func(evs []events.Envelope) {
+		for _, ev := range evs {
+			data, _ := json.Marshal(ev)
+			_, _ = c.Writer.Write([]byte("id: " + ev.ID + "\n"))
+			_, _ = c.Writer.Write([]byte("event: " + ev.Type + "\n"))
+			_, _ = c.Writer.Write([]byte("data: "))
+			_, _ = c.Writer.Write(data)
+			_, _ = c.Writer.Write([]byte("\n\n"))
+			flusher.Flush()
+			if ev.Seq > lastSeq {
+				lastSeq = ev.Seq
+			}
+		}
+	}
+
+	_, _ = c.Writer.Write([]byte(": session stream open\n\n"))
+	flusher.Flush()
+
+	svc := h.sessionFor(c)
+	if resp, err := svc.ListEvents(sessionID, lastSeq, 100); err == nil {
+		writeEvents(resp.Items)
+	}
+
+	ticker := time.NewTicker(1 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-c.Request.Context().Done():
+			return
+		case <-ticker.C:
+			resp, err := svc.ListEvents(sessionID, lastSeq, 100)
+			if err != nil {
+				return
+			}
+			if len(resp.Items) == 0 {
+				continue
+			}
+			writeEvents(resp.Items)
+		}
+	}
 }
 
 // ListAgentCommands godoc

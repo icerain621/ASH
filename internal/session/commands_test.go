@@ -2,6 +2,8 @@ package session_test
 
 import (
 	"errors"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -127,5 +129,48 @@ func TestUpdate_seats(t *testing.T) {
 	_, err = svc.Update(view.ID, session.PatchRequest{PermissionMode: &bad})
 	if err == nil {
 		t.Fatal("expected invalid permissionMode")
+	}
+}
+
+func TestIntent_commandSkillExec(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := session.NewService(db, nil, ev)
+
+	repo := t.TempDir()
+	skillDir := filepath.Join(repo, ".ash", "skills", "demo-skill")
+	if err := os.MkdirAll(skillDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	content := "---\nname: demo-skill\ndescription: Demo skill body.\n---\n\n# Demo Skill\n\nFollow these steps carefully.\n"
+	if err := os.WriteFile(filepath.Join(skillDir, "SKILL.md"), []byte(content), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	view, err := svc.Create(session.CreateRequest{
+		SpaceID: "local", CreatedBy: "actor1", RepoRoot: repo,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := svc.Intent(view.ID, session.IntentRequest{
+		Action: "command", Command: "/demo-skill", Args: "focus on tests", ActorID: "actor1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(out.Replies) == 0 {
+		t.Fatal("expected skill reply")
+	}
+	reply := out.Replies[len(out.Replies)-1]
+	if reply.Source != "skill" {
+		t.Fatalf("source=%q want skill", reply.Source)
+	}
+	if !strings.Contains(reply.Text, "Demo Skill") && !strings.Contains(reply.Text, "demo-skill") {
+		t.Fatalf("reply=%q want skill title", reply.Text)
+	}
+	if !strings.Contains(reply.Text, "已加载技能") {
+		t.Fatalf("reply=%q want loaded hint", reply.Text)
 	}
 }

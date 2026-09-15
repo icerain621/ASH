@@ -32,8 +32,11 @@ func TestCreateBindRunAndPromptTurn(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if view.RunID != run.ID || view.StreamURL == "" || !strings.Contains(view.StreamURL, run.ID) {
+	if view.RunID != run.ID || view.StreamURL == "" || !strings.Contains(view.StreamURL, view.ID) {
 		t.Fatalf("view=%+v", view)
+	}
+	if !strings.Contains(view.StreamURL, "/agents/sessions/") {
+		t.Fatalf("streamUrl=%q want session stream path", view.StreamURL)
 	}
 
 	view2, turn, err := svc.PromptTurn(view.ID, TurnRequest{Prompt: "continue with tests"})

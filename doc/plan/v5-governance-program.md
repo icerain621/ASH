@@ -69,7 +69,7 @@
 1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
 2. **控制台三主题 IA**：Tasks 1–4 **已落地**（壳层 `e0a8680` · Agent `bd0e60c` · 记忆 `1322bbb` · 评审 `bcb19a0`/`66fda66`）；规格 [`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md) 状态 **landed**
 3. **Agent Chat DSH 对标**：壳层已落地；**第二波** SSE 直播 · 工具卡 · Stop · 标题/关闭（`122b4c4` · `437e5d4`）
-4. **后端缺口清单**（P2–P5 已落地；可选 session stream 仍开）：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md) — 真 LLM：`ASH_LLM_BASE_URL` 等
+4. **后端缺口清单**（P2–P5 已落地；session stream + skill exec 已落地；MCP exec 仍开）：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md) — 真 LLM：`ASH_LLM_BASE_URL` 等
 5. 并行可选：v5 **freeze** 或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
 6. 门禁：`make v5-signoff`
 
