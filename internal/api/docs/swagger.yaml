@@ -5758,12 +5758,17 @@ paths:
       - agents
   /api/v1/agents/sessions/{sessionId}:
     delete:
-      description: Sets status=closed (soft delete). List excludes closed by default.
+      description: Default soft-closes (status=closed). Pass purge=1 to permanently
+        delete the agent.session audit row.
       parameters:
       - description: session id
         in: path
         name: sessionId
         required: true
+        type: string
+      - description: set to 1/true for hard delete
+        in: query
+        name: purge
         type: string
       produces:
       - application/json
@@ -5776,7 +5781,7 @@ paths:
           description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-      summary: Soft-close agent session
+      summary: Soft-close or hard-purge agent session
       tags:
       - agents
     get:

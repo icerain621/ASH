@@ -18,8 +18,10 @@ type Props = {
   creatingWorkspace?: boolean;
   renamingId?: string | null;
   closingId?: string | null;
+  purgingId?: string | null;
   onRename?: (sessionId: string, title: string) => void;
   onClose?: (sessionId: string) => void;
+  onPurge?: (sessionId: string) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -47,8 +49,10 @@ export function SessionHistoryList({
   creatingWorkspace,
   renamingId,
   closingId,
+  purgingId,
   onRename,
   onClose,
+  onPurge,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -136,13 +140,33 @@ export function SessionHistoryList({
                 type="button"
                 className="btn mini err"
                 data-testid={`agent-history-close-${item.id}`}
-                disabled={closingId === item.id || item.status === "closed"}
+                disabled={closingId === item.id || purgingId === item.id || item.status === "closed"}
                 onClick={(e) => {
                   e.stopPropagation();
                   onClose?.(item.id);
                 }}
               >
                 关闭
+              </button>
+              <button
+                type="button"
+                className="btn mini err"
+                data-testid={`agent-history-purge-${item.id}`}
+                disabled={purgingId === item.id || closingId === item.id}
+                title="彻底删除（不可恢复）"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (
+                    !window.confirm(
+                      "彻底删除该会话？此操作不可恢复（仅移除会话记录，不删 run 事件）。",
+                    )
+                  ) {
+                    return;
+                  }
+                  onPurge?.(item.id);
+                }}
+              >
+                删除
               </button>
             </div>
           </>

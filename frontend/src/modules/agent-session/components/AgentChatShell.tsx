@@ -7,6 +7,7 @@ import {
   listAgentSessions,
   listSessionEvents,
   patchAgentSession,
+  purgeAgentSession,
   submitSessionIntent,
   type AgentSessionView,
   type SessionEventEnvelope,
@@ -22,6 +23,7 @@ import { DetailsPane } from "./DetailsPane";
 import { type IntentPayload } from "./IntentBar";
 import { SessionHistoryList } from "./SessionHistoryList";
 import { TrajectoryPane } from "./TrajectoryPane";
+import { useChatColumnWidths } from "./useChatColumnWidths";
 import { shortId } from "@/shared/utils/format";
 
 export type AgentChatShellProps = {
@@ -115,6 +117,7 @@ export function AgentChatShell({
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const { shellStyle, startResize } = useChatColumnWidths();
 
   const listQuery = useQuery({
     queryKey: ["agent-sessions"],
@@ -235,6 +238,19 @@ export function AgentChatShell({
     onError: (e: Error) => setError(e.message),
   });
 
+  const purgeMut = useMutation({
+    mutationFn: (sessionId: string) => purgeAgentSession(sessionId),
+    onSuccess: (result) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+      void qc.removeQueries({ queryKey: ["agent-session", result.id] });
+      if (selectedSessionId === result.id) {
+        onSelectSession(null);
+      }
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const baseEvents: SessionEventEnvelope[] = useMemo(
     () => eventsQuery.data?.items ?? [],
     [eventsQuery.data?.items],
@@ -270,6 +286,7 @@ export function AgentChatShell({
     <div
       className={`agent-chat-shell${detailsOpen ? "" : " details-collapsed"}`}
       data-testid="agent-chat-shell"
+      style={shellStyle}
     >
       <SessionHistoryList
         items={listQuery.data?.items ?? []}
@@ -281,6 +298,7 @@ export function AgentChatShell({
         creatingWorkspace={createWorkspaceMut.isPending}
         renamingId={renameMut.isPending ? renameMut.variables?.sessionId : null}
         closingId={closeMut.isPending ? closeMut.variables ?? null : null}
+        purgingId={purgeMut.isPending ? purgeMut.variables ?? null : null}
         onSelect={(session) => {
           setError("");
           if (session.workspaceId) setActiveWorkspaceId(session.workspaceId);
@@ -291,6 +309,19 @@ export function AgentChatShell({
         onNewWorkspace={() => createWorkspaceMut.mutate()}
         onRename={(sessionId, title) => renameMut.mutate({ sessionId, title })}
         onClose={(sessionId) => closeMut.mutate(sessionId)}
+        onPurge={(sessionId) => purgeMut.mutate(sessionId)}
+      />
+
+      <div
+        className="agent-chat-col-resizer"
+        data-testid="agent-chat-resize-sidebar"
+        role="separator"
+        aria-orientation="vertical"
+        aria-label="调整侧栏宽度"
+        onMouseDown={(e) => {
+          e.preventDefault();
+          startResize("sidebar", e.clientX);
+        }}
       />
 
       <div className="agent-chat-main">
@@ -385,6 +416,20 @@ export function AgentChatShell({
           </>
         )}
       </div>
+
+      {detailsOpen ? (
+        <div
+          className="agent-chat-col-resizer"
+          data-testid="agent-chat-resize-details"
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="调整详情栏宽度"
+          onMouseDown={(e) => {
+            e.preventDefault();
+            startResize("details", e.clientX);
+          }}
+        />
+      ) : null}
 
       <DetailsPane open={detailsOpen} selection={selection} />
     </div>

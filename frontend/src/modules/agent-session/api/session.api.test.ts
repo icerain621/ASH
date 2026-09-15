@@ -6,6 +6,7 @@ import {
   listAgentModels,
   listAgentSessions,
   patchAgentSession,
+  purgeAgentSession,
   updateSession,
 } from "./session.api";
 
@@ -90,5 +91,11 @@ describe("patch/close session", () => {
   it("DELETEs to soft-close", async () => {
     await closeAgentSession("sess_1");
     expect(api).toHaveBeenCalledWith("/agents/sessions/sess_1", { method: "DELETE" });
+  });
+
+  it("DELETEs with purge=1 for hard delete", async () => {
+    api.mockResolvedValue({ id: "sess_1", purged: true });
+    await purgeAgentSession("sess_1");
+    expect(api).toHaveBeenCalledWith("/agents/sessions/sess_1?purge=1", { method: "DELETE" });
   });
 });

@@ -404,6 +404,25 @@ func (s *Service) Close(sessionID string) (*View, error) {
 	return view, nil
 }
 
+// PurgeResult is returned after hard-deleting a session audit row.
+type PurgeResult struct {
+	ID     string `json:"id"`
+	Purged bool   `json:"purged"`
+}
+
+// Purge permanently deletes the agent.session audit_log row (hard delete).
+// Bound run ledger events are left intact; Get/List will no longer find the session.
+func (s *Service) Purge(sessionID string) (*PurgeResult, error) {
+	row, err := s.loadRow(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if err := s.q().Delete(&store.AuditLog{}, "id = ? AND event_type = ?", row.ID, auditEventType).Error; err != nil {
+		return nil, fmt.Errorf("purge session: %w", err)
+	}
+	return &PurgeResult{ID: row.ID, Purged: true}, nil
+}
+
 // ListEvents returns recent run events for the session's bound run.
 // When the session has no runId, turns are projected as session.turn envelopes.
 func (s *Service) ListEvents(sessionID string, afterSeq int64, limit int) (EventsResponse, error) {

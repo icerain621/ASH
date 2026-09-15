@@ -189,6 +189,7 @@ var Catalog = map[string]Entry{
 	"SESSION_TURN_FAILED":      {Domain: "agents", Summary: "Failed to accept session turn.prompt"},
 	"SESSION_UPDATE_FAILED":    {Domain: "agents", Summary: "Failed to patch agent session"},
 	"SESSION_CLOSE_FAILED":     {Domain: "agents", Summary: "Failed to soft-close agent session"},
+	"SESSION_PURGE_FAILED":     {Domain: "agents", Summary: "Failed to hard-purge agent session"},
 	"SESSION_INTENT_FAILED":    {Domain: "agents", Summary: "Failed to apply thin session intent"},
 	"SESSION_INTENT_REJECTED":  {Domain: "agents", Summary: "Session intent rejected (fail-closed)"},
 	"SESSION_WORKSPACE_ATTACH_FAILED": {Domain: "agents", Summary: "Failed to attach new session to workspace"},

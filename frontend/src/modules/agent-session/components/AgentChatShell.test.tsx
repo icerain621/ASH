@@ -11,6 +11,7 @@ const submitSessionIntent = vi.fn();
 const getAgentSession = vi.fn();
 const patchAgentSession = vi.fn();
 const closeAgentSession = vi.fn();
+const purgeAgentSession = vi.fn();
 const listAgentWorkspaces = vi.fn();
 const createAgentWorkspace = vi.fn();
 const listAgentCommands = vi.fn();
@@ -28,6 +29,7 @@ vi.mock("@/modules/agent-session/api/session.api", async () => {
     getAgentSession: (...args: unknown[]) => getAgentSession(...args),
     patchAgentSession: (...args: unknown[]) => patchAgentSession(...args),
     closeAgentSession: (...args: unknown[]) => closeAgentSession(...args),
+    purgeAgentSession: (...args: unknown[]) => purgeAgentSession(...args),
     listAgentCommands: (...args: unknown[]) => listAgentCommands(...args),
     listAgentModels: (...args: unknown[]) => listAgentModels(...args),
     updateSession: (...args: unknown[]) => updateSession(...args),
@@ -188,6 +190,7 @@ describe("AgentChatShell", () => {
       status: "closed",
       title: "Ship chat",
     });
+    purgeAgentSession.mockResolvedValue({ id: "sess_a", purged: true });
   });
 
   it("renders three-column shell with session list", async () => {
@@ -197,6 +200,8 @@ describe("AgentChatShell", () => {
     expect(screen.getByTestId("agent-workspace-list")).toBeTruthy();
     expect(await screen.findByText("Ship chat")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-resize-sidebar")).toBeTruthy();
+    expect(screen.getByTestId("agent-chat-resize-details")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-details")).toBeTruthy();
   });
 
@@ -278,5 +283,18 @@ describe("AgentChatShell", () => {
       expect(closeAgentSession).toHaveBeenCalledWith("sess_a");
       expect(onSelectSession).toHaveBeenCalledWith(null);
     });
+  });
+
+  it("purges session after confirm", async () => {
+    const onSelectSession = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderShell({ selectedSessionId: "sess_a", onSelectSession });
+    fireEvent.click(await screen.findByTestId("agent-history-purge-sess_a"));
+    await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
+      expect(purgeAgentSession).toHaveBeenCalledWith("sess_a");
+      expect(onSelectSession).toHaveBeenCalledWith(null);
+    });
+    confirmSpy.mockRestore();
   });
 });

@@ -136,6 +136,16 @@ export async function closeAgentSession(sessionId: string): Promise<AgentSession
   });
 }
 
+export type PurgeAgentSessionResult = { id: string; purged: boolean };
+
+/** Hard-delete session audit row (`?purge=1`). */
+export async function purgeAgentSession(sessionId: string): Promise<PurgeAgentSessionResult> {
+  return api<PurgeAgentSessionResult>(
+    `/agents/sessions/${encodeURIComponent(sessionId)}?purge=1`,
+    { method: "DELETE" },
+  );
+}
+
 export async function submitSessionIntent(
   sessionId: string,
   body: {

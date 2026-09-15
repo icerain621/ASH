@@ -164,11 +164,12 @@ func (h *Handler) patchAgentSession(c *gin.Context) {
 }
 
 // CloseAgentSession godoc
-// @Summary Soft-close agent session
-// @Description Sets status=closed (soft delete). List excludes closed by default.
+// @Summary Soft-close or hard-purge agent session
+// @Description Default soft-closes (status=closed). Pass purge=1 to permanently delete the agent.session audit row.
 // @Tags agents
 // @Produce json
 // @Param sessionId path string true "session id"
+// @Param purge query string false "set to 1/true for hard delete"
 // @Success 200 {object} session.View
 // @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/agents/sessions/{sessionId} [delete]
@@ -182,6 +183,20 @@ func (h *Handler) closeAgentSession(c *gin.Context) {
 		return
 	}
 	if !h.requirePermission(c, permRunCreate, view.SpaceID) {
+		return
+	}
+	purgeQ := strings.TrimSpace(strings.ToLower(c.Query("purge")))
+	if purgeQ == "1" || purgeQ == "true" || purgeQ == "yes" {
+		spaceID, runID, sessionID := view.SpaceID, view.RunID, view.ID
+		result, err := h.sessionFor(c).Purge(sessionID)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, errorBody("SESSION_PURGE_FAILED", err.Error()))
+			return
+		}
+		_ = h.dbFor(c).Create(auditRow(spaceID, currentActor(c), "agent.session_purged", map[string]any{
+			"sessionId": sessionID, "runId": runID, "purged": true,
+		})).Error
+		c.JSON(http.StatusOK, result)
 		return
 	}
 	closed, err := h.sessionFor(c).Close(c.Param("sessionId"))

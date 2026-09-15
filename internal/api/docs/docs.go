@@ -560,14 +560,14 @@ const docTemplate = `{
                 }
             },
             "delete": {
-                "description": "Sets status=closed (soft delete). List excludes closed by default.",
+                "description": "Default soft-closes (status=closed). Pass purge=1 to permanently delete the agent.session audit row.",
                 "produces": [
                     "application/json"
                 ],
                 "tags": [
                     "agents"
                 ],
-                "summary": "Soft-close agent session",
+                "summary": "Soft-close or hard-purge agent session",
                 "parameters": [
                     {
                         "type": "string",
@@ -575,6 +575,12 @@ const docTemplate = `{
                         "name": "sessionId",
                         "in": "path",
                         "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "set to 1/true for hard delete",
+                        "name": "purge",
+                        "in": "query"
                     }
                 ],
                 "responses": {

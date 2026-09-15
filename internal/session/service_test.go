@@ -509,6 +509,26 @@ func TestUpdateTitleAndCloseListFilter(t *testing.T) {
 	if err == nil {
 		t.Fatal("closed session must reject turns")
 	}
+
+	purged, err := svc.Purge(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if purged == nil || !purged.Purged || purged.ID != view.ID {
+		t.Fatalf("purge=%+v", purged)
+	}
+	if _, err := svc.Get(view.ID); err == nil {
+		t.Fatal("expected Get after purge to fail")
+	}
+	allAfterPurge, err := svc.List("local", 50, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, item := range allAfterPurge {
+		if item.ID == view.ID {
+			t.Fatalf("purged session still listed: %+v", allAfterPurge)
+		}
+	}
 }
 
 func TestTruncateTitleRunes(t *testing.T) {

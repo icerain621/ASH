@@ -68,8 +68,8 @@
 ## 7. Out of scope (本轮)
 
 - DSH `/` slash 命令目录完整复刻  
-- Workspace 多级树 / 拖拽调栏宽  
-- 完整助手 Markdown 流式打字机  
+- Workspace 多级树 / session DnD 调序（栏宽拖拽已落地）  
+- mid-flight LLM cancel（预留 `stopped`）  
 - MCP 一等设置面板  
 
 ## 8. Revision
@@ -78,3 +78,4 @@
 |------|------|
 | 2026-09-15 | 初稿：对标验收 + 空白会话默认 + API/FE 切面 |
 | 2026-09-15 | **落地**：BE ListSessions + 空白事件投影 `874b0ce`；FE 三栏壳 `6e88718`；验收项全部勾选 |
+| 2026-09-15 | 续推：P0–P5 / MCP / 密度 / 硬 purge / 栏宽拖拽；详见 backend-gaps |
