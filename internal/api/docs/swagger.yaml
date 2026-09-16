@@ -2908,6 +2908,10 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_session.PatchRequest:
     properties:
+      disabledTools:
+        items:
+          type: string
+        type: array
       permissionMode:
         type: string
       planId:
@@ -2939,6 +2943,10 @@ definitions:
         type: integer
       createdBy:
         type: string
+      disabledTools:
+        items:
+          type: string
+        type: array
       goal:
         type: string
       id:

@@ -471,6 +471,18 @@ func TestUpdateTitleAndCloseListFilter(t *testing.T) {
 		t.Fatalf("patched=%+v", patched)
 	}
 
+	disabled := []string{"shell.exec", " git.status ", "shell.exec"}
+	patched, err = svc.Update(view.ID, PatchRequest{DisabledTools: &disabled})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(patched.DisabledTools) != 2 || patched.DisabledTools[0] != "git.status" || patched.DisabledTools[1] != "shell.exec" {
+		t.Fatalf("disabledTools=%v", patched.DisabledTools)
+	}
+	if !patched.ToolDisabled("shell.exec") || patched.ToolDisabled("git.diff") {
+		t.Fatalf("ToolDisabled mismatch %+v", patched)
+	}
+
 	closed, err := svc.Close(view.ID)
 	if err != nil {
 		t.Fatal(err)

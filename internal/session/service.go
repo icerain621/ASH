@@ -42,6 +42,7 @@ type View struct {
 	ProviderFallback bool           `json:"providerFallback,omitempty"`
 	ProviderReason   string         `json:"providerReason,omitempty"`
 	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
+	DisabledTools    []string       `json:"disabledTools,omitempty"`
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
 	CreatedBy        string           `json:"createdBy,omitempty"`
@@ -52,10 +53,11 @@ type View struct {
 
 // PatchRequest updates mutable session seat fields.
 type PatchRequest struct {
-	Title          *string `json:"title"`
-	ProviderKind   *string `json:"providerKind"`
-	PlanID         *string `json:"planId"`
-	PermissionMode *string `json:"permissionMode"`
+	Title          *string   `json:"title"`
+	ProviderKind   *string   `json:"providerKind"`
+	PlanID         *string   `json:"planId"`
+	PermissionMode *string   `json:"permissionMode"`
+	DisabledTools  *[]string `json:"disabledTools"`
 }
 
 const maxTitleRunes = 48
@@ -375,6 +377,18 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 			delete(view.Meta, "permissionMode")
 		}
 	}
+	if req.DisabledTools != nil {
+		cleaned := normalizeDisabledTools(*req.DisabledTools)
+		view.DisabledTools = cleaned
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		if len(cleaned) == 0 {
+			delete(view.Meta, "disabledTools")
+		} else {
+			view.Meta["disabledTools"] = cleaned
+		}
+	}
 	view.UpdatedAt = time.Now().UTC().Unix()
 	if err := s.save(view); err != nil {
 		return nil, err
@@ -626,6 +640,11 @@ func decodeView(row store.AuditLog) (*View, error) {
 	if view.Replies == nil {
 		view.Replies = []AssistantReply{}
 	}
+	if len(view.DisabledTools) == 0 && view.Meta != nil {
+		if raw, ok := view.Meta["disabledTools"]; ok {
+			view.DisabledTools = coerceStringSlice(raw)
+		}
+	}
 	return &view, nil
 }
 
@@ -664,4 +683,88 @@ func truncateTitle(text string, maxRunes int) string {
 		return string(runes)
 	}
 	return string(runes[:maxRunes])
+}
+
+func normalizeDisabledTools(in []string) []string {
+	seen := map[string]struct{}{}
+	out := make([]string, 0, len(in))
+	for _, name := range in {
+		name = strings.TrimSpace(name)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		out = append(out, name)
+	}
+	sort.Strings(out)
+	return out
+}
+
+func coerceStringSlice(raw any) []string {
+	switch v := raw.(type) {
+	case []string:
+		return normalizeDisabledTools(v)
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				out = append(out, s)
+			}
+		}
+		return normalizeDisabledTools(out)
+	default:
+		return nil
+	}
+}
+
+func (v *View) effectiveDisabledTools() []string {
+	if v == nil {
+		return nil
+	}
+	if len(v.DisabledTools) > 0 {
+		return normalizeDisabledTools(v.DisabledTools)
+	}
+	if v.Meta != nil {
+		return coerceStringSlice(v.Meta["disabledTools"])
+	}
+	return nil
+}
+
+// ToolDisabled reports whether a built-in tool is session-disabled.
+func (v *View) ToolDisabled(name string) bool {
+	name = strings.TrimSpace(name)
+	if name == "" || v == nil {
+		return false
+	}
+	for _, d := range v.effectiveDisabledTools() {
+		if d == name {
+			return true
+		}
+	}
+	return false
+}
+
+// DisabledToolsForRun returns disabled built-in tools for any session bound to runID.
+func (s *Service) DisabledToolsForRun(runID string) []string {
+	runID = strings.TrimSpace(runID)
+	if s == nil || runID == "" {
+		return nil
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return nil
+	}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil {
+			continue
+		}
+		if tools := view.effectiveDisabledTools(); len(tools) > 0 {
+			return tools
+		}
+	}
+	return nil
 }

@@ -1843,9 +1843,11 @@ main {
   color: var(--warn);
 }
 
-.agent-tools-badge.risk-safe {
-  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
-  color: var(--ok);
+.agent-tools-row-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
 }
 
 .agent-chat-bubble.role-assistant {

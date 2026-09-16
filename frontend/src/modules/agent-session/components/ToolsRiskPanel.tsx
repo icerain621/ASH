@@ -1,24 +1,38 @@
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { listToolRiskCatalog } from "@/modules/platform/api/platform.api";
+import { patchAgentSession, type AgentSessionView } from "@/modules/agent-session/api/session.api";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  session?: AgentSessionView | null;
 };
 
 type RiskFilter = "all" | "danger" | "medium" | "safe";
 
-/** Agent Chat Tools panel: built-in tool risk catalog with filter (read-only). */
-export function ToolsRiskPanel({ open, onClose }: Props) {
+function disabledSet(session?: AgentSessionView | null): Set<string> {
+  const fromField = session?.disabledTools ?? [];
+  const fromMeta = Array.isArray(session?.meta?.disabledTools)
+    ? (session?.meta?.disabledTools as unknown[]).filter((x): x is string => typeof x === "string")
+    : [];
+  return new Set([...fromField, ...fromMeta].map((s) => s.trim()).filter(Boolean));
+}
+
+/** Agent Chat Tools panel: risk catalog + session-scoped enable/disable. */
+export function ToolsRiskPanel({ open, onClose, session = null }: Props) {
+  const qc = useQueryClient();
   const [q, setQ] = useState("");
   const [risk, setRisk] = useState<RiskFilter>("all");
+  const [error, setError] = useState("");
 
   const catalogQuery = useQuery({
     queryKey: ["tool-risk-catalog"],
     queryFn: listToolRiskCatalog,
     enabled: open,
   });
+
+  const disabled = disabledSet(session);
 
   const items = useMemo(() => {
     const all = catalogQuery.data?.items ?? [];
@@ -33,6 +47,22 @@ export function ToolsRiskPanel({ open, onClose }: Props) {
     });
   }, [catalogQuery.data?.items, q, risk]);
 
+  const toggleMut = useMutation({
+    mutationFn: async (toolName: string) => {
+      if (!session?.id) throw new Error("先选择会话再切换工具");
+      const next = new Set(disabled);
+      if (next.has(toolName)) next.delete(toolName);
+      else next.add(toolName);
+      return patchAgentSession(session.id, { disabledTools: Array.from(next).sort() });
+    },
+    onSuccess: (updated) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-session", updated.id] });
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   if (!open) return null;
 
   return (
@@ -45,10 +75,20 @@ export function ToolsRiskPanel({ open, onClose }: Props) {
           </button>
         </div>
         <p className="muted-line">
-          只读目录：danger 默认需人工批准或场景 allow_dangerous。运行时启停需 space/scenario
-          策略（尚未开放）。MCP 用「设置 → MCP」。
+          danger 默认需人工批准或场景 allow_dangerous。会话级停用会在绑定 run 执行时拒绝该工具。MCP 用「设置 →
+          MCP」。
           {catalogQuery.data?.docRef ? ` · ${catalogQuery.data.docRef}` : ""}
         </p>
+        {!session?.id ? (
+          <p className="muted-line" data-testid="agent-tools-need-session">
+            选择会话后可启停工具。
+          </p>
+        ) : null}
+        {error ? (
+          <p className="error-text" data-testid="agent-tools-error">
+            {error}
+          </p>
+        ) : null}
 
         <div className="agent-tools-filters" data-testid="agent-tools-filters">
           <input
@@ -70,23 +110,39 @@ export function ToolsRiskPanel({ open, onClose }: Props) {
         </div>
 
         <ul className="agent-mcp-list" data-testid="agent-tools-list">
-          {items.map((tool) => (
-            <li
-              key={tool.name}
-              className={`agent-mcp-row${tool.defaultDeny ? " deny" : ""}`}
-              data-testid={`agent-tools-row-${tool.name}`}
-              data-risk={tool.risk}
-            >
-              <div>
-                <strong title={tool.label}>{tool.name}</strong>
-                <span className="muted-line">
-                  {tool.risk}
-                  {tool.defaultDeny ? " · default deny" : ""}
-                </span>
-              </div>
-              <span className={`agent-tools-badge risk-${tool.risk}`}>{tool.risk}</span>
-            </li>
-          ))}
+          {items.map((tool) => {
+            const off = disabled.has(tool.name);
+            return (
+              <li
+                key={tool.name}
+                className={`agent-mcp-row${tool.defaultDeny || off ? " deny" : ""}`}
+                data-testid={`agent-tools-row-${tool.name}`}
+                data-risk={tool.risk}
+                data-disabled={off ? "1" : "0"}
+              >
+                <div>
+                  <strong title={tool.label}>{tool.name}</strong>
+                  <span className="muted-line">
+                    {tool.risk}
+                    {tool.defaultDeny ? " · default deny" : ""}
+                    {off ? " · 已停用" : ""}
+                  </span>
+                </div>
+                <div className="agent-tools-row-actions">
+                  <span className={`agent-tools-badge risk-${tool.risk}`}>{tool.risk}</span>
+                  <button
+                    type="button"
+                    className="btn mini"
+                    data-testid={`agent-tools-toggle-${tool.name}`}
+                    disabled={!session?.id || toggleMut.isPending}
+                    onClick={() => toggleMut.mutate(tool.name)}
+                  >
+                    {off ? "启用" : "停用"}
+                  </button>
+                </div>
+              </li>
+            );
+          })}
           {!catalogQuery.isLoading && items.length === 0 ? (
             <li className="muted-line">无匹配工具</li>
           ) : null}

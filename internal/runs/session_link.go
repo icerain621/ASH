@@ -17,6 +17,7 @@ type SessionProviderBind struct {
 // (avoids session → goal → runs → session import cycles).
 type SessionLinker interface {
 	EnsureForRun(spaceID, runID, repoRoot, createdBy string, bind SessionProviderBind) (sessionID string, created bool, err error)
+	DisabledToolsForRun(runID string) []string
 	WithContext(ctx context.Context) SessionLinker
 }
 

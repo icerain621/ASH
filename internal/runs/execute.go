@@ -306,6 +306,15 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					_, ferr := s.failRun(rec, runID, traceID, started, "POLICY_DENIED", reason)
 					return ferr
 				}
+				if denied, reason := s.sessionToolDisabled(runID, item.Tool); denied {
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+						"target": "tool", "reason": reason, "action": "deny", "ref": item.Tool,
+						"matrix": "session_disabled_tools",
+					})
+					s.finishStep(stepRow, "failed", stepStart, "TOOL_DISABLED", reason)
+					_, ferr := s.failRun(rec, runID, traceID, started, "TOOL_DISABLED", reason)
+					return ferr
+				}
 				risk := string(s.tools.ToolRisk(item.Tool))
 				if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
@@ -1045,6 +1054,19 @@ func (s *Service) scenarioToolDenied(rec *store.RunRecord, tool string) (bool, s
 	}
 	ok, reason := authz.EvaluateScenarioTool(policy, rec.ActorRole, tool)
 	return !ok, reason
+}
+
+func (s *Service) sessionToolDisabled(runID, tool string) (bool, string) {
+	tool = strings.TrimSpace(tool)
+	if s == nil || s.sessionSvc == nil || tool == "" {
+		return false, ""
+	}
+	for _, name := range s.sessionSvc.DisabledToolsForRun(runID) {
+		if strings.TrimSpace(name) == tool {
+			return true, fmt.Sprintf("tool %q disabled for linked agent session", tool)
+		}
+	}
+	return false, ""
 }
 
 func (s *Service) dangerousToolAllowed(inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {

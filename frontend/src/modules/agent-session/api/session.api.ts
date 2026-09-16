@@ -30,6 +30,7 @@ export type AgentSessionView = {
   workspaceId?: string;
   providerKind?: string;
   permissionMode?: PermissionMode | string;
+  disabledTools?: string[];
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
   replies?: Array<{
@@ -109,6 +110,7 @@ export async function patchAgentSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}`, {
@@ -117,7 +119,7 @@ export async function patchAgentSession(
   });
 }
 
-/** Alias for seat updates (title / providerKind / planId / permissionMode). */
+/** Alias for seat updates (title / providerKind / planId / permissionMode / disabledTools). */
 export async function updateSession(
   sessionId: string,
   body: {
@@ -125,6 +127,7 @@ export async function updateSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
   return patchAgentSession(sessionId, body);

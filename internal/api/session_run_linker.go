@@ -22,6 +22,10 @@ func (l sessionRunLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy strin
 	return view.ID, created, nil
 }
 
+func (l sessionRunLinker) DisabledToolsForRun(runID string) []string {
+	return l.svc.DisabledToolsForRun(runID)
+}
+
 func (l sessionRunLinker) WithContext(ctx context.Context) runs.SessionLinker {
 	return sessionRunLinker{svc: l.svc.WithContext(ctx)}
 }

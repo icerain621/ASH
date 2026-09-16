@@ -16,7 +16,7 @@ import { McpToolsPanel } from "@/modules/agent-session/components/McpToolsPanel"
 import { SkillsCatalogPanel } from "@/modules/agent-session/components/SkillsCatalogPanel";
 import { ToolsRiskPanel } from "@/modules/agent-session/components/ToolsRiskPanel";
 import type { AgentSessionView } from "@/modules/agent-session/api/session.api";
-import { submitSessionIntent } from "@/modules/agent-session/api/session.api";
+import { getAgentSession, submitSessionIntent } from "@/modules/agent-session/api/session.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import {
@@ -99,6 +99,12 @@ export function QuestPage() {
   const [toolsOpen, setToolsOpen] = useState(false);
   const [skillsOpen, setSkillsOpen] = useState(false);
   const goalInputRef = useRef<HTMLInputElement>(null);
+
+  const toolsSessionQuery = useQuery({
+    queryKey: ["agent-session", selectedSessionId],
+    queryFn: () => getAgentSession(selectedSessionId!),
+    enabled: Boolean(toolsOpen && selectedSessionId),
+  });
 
   const boardQuery = useQuery({
     queryKey: ["quest-board", spaceId],
@@ -430,7 +436,11 @@ export function QuestPage() {
           }}
         />
         <McpToolsPanel open={mcpOpen} onClose={() => setMcpOpen(false)} />
-        <ToolsRiskPanel open={toolsOpen} onClose={() => setToolsOpen(false)} />
+        <ToolsRiskPanel
+          open={toolsOpen}
+          onClose={() => setToolsOpen(false)}
+          session={toolsSessionQuery.data ?? null}
+        />
         <SkillsCatalogPanel
           open={skillsOpen}
           onClose={() => setSkillsOpen(false)}

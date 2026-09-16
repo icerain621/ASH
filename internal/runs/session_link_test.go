@@ -28,6 +28,8 @@ func (f *fakeSessionLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy str
 	return f.id, true, nil
 }
 
+func (f *fakeSessionLinker) DisabledToolsForRun(runID string) []string { return nil }
+
 func (f *fakeSessionLinker) WithContext(ctx context.Context) SessionLinker { return f }
 
 func TestLinkProviderSessionCreatesDocument(t *testing.T) {

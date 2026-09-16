@@ -13279,6 +13279,12 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.PatchRequest": {
             "type": "object",
             "properties": {
+                "disabledTools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
                 "permissionMode": {
                     "type": "string"
                 },
@@ -13326,6 +13332,12 @@ const docTemplate = `{
                 },
                 "createdBy": {
                     "type": "string"
+                },
+                "disabledTools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "goal": {
                     "type": "string"
