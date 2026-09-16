@@ -202,6 +202,18 @@ vi.mock("@/modules/platform/api/platform.api", () => ({
   })),
 }));
 
+vi.mock("@/modules/skills/api/skills.api", () => ({
+  listSkills: vi.fn(async () => ({
+    items: [{ id: "ash-test", name: "ash-test", description: "test skill", path: "x", relPath: "x", contextRef: "" }],
+    repoRoot: ".",
+  })),
+  getSkill: vi.fn(),
+  listSkillCatalog: vi.fn(async () => ({ items: [] })),
+  installSkillFromCatalog: vi.fn(),
+  installSkillPack: vi.fn(),
+  verifySkillPack: vi.fn(),
+}));
+
 vi.mock("@/services/http/client", () => ({
   getCurrentSpaceId: () => "local",
 }));
@@ -271,6 +283,9 @@ describe("QuestPage", () => {
     expect(screen.getByText("Tools")).toBeTruthy();
     expect(screen.getByText("Skills")).toBeTruthy();
     expect(screen.getByText("MCP")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-settings-skills"));
+    expect(await screen.findByTestId("agent-skills-panel")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-skills-close"));
     fireEvent.click(screen.getByTestId("agent-settings-tools"));
     expect(await screen.findByTestId("agent-tools-panel")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-tools-close"));

@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Download, KanbanSquare, MessageSquarePlus, RefreshCcw, Settings } from "lucide-react";
 import { useMemo, useRef, useState } from "react";
 import {
@@ -14,8 +13,10 @@ import {
 } from "@/modules/quest/api/quest.api";
 import { AgentChatShell } from "@/modules/agent-session/components/AgentChatShell";
 import { McpToolsPanel } from "@/modules/agent-session/components/McpToolsPanel";
+import { SkillsCatalogPanel } from "@/modules/agent-session/components/SkillsCatalogPanel";
 import { ToolsRiskPanel } from "@/modules/agent-session/components/ToolsRiskPanel";
 import type { AgentSessionView } from "@/modules/agent-session/api/session.api";
+import { submitSessionIntent } from "@/modules/agent-session/api/session.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import {
@@ -96,6 +97,7 @@ export function QuestPage() {
   const [taskBoardOpen, setTaskBoardOpen] = useState(false);
   const [mcpOpen, setMcpOpen] = useState(false);
   const [toolsOpen, setToolsOpen] = useState(false);
+  const [skillsOpen, setSkillsOpen] = useState(false);
   const goalInputRef = useRef<HTMLInputElement>(null);
 
   const boardQuery = useQuery({
@@ -374,9 +376,15 @@ export function QuestPage() {
               >
                 Tools
               </button>
-              <Link to="/automation" className="nav-dropdown-item" role="menuitem">
+              <button
+                type="button"
+                className="nav-dropdown-item"
+                role="menuitem"
+                data-testid="agent-settings-skills"
+                onClick={() => setSkillsOpen(true)}
+              >
                 Skills
-              </Link>
+              </button>
               <button
                 type="button"
                 className="nav-dropdown-item"
@@ -420,6 +428,25 @@ export function QuestPage() {
         />
         <McpToolsPanel open={mcpOpen} onClose={() => setMcpOpen(false)} />
         <ToolsRiskPanel open={toolsOpen} onClose={() => setToolsOpen(false)} />
+        <SkillsCatalogPanel
+          open={skillsOpen}
+          onClose={() => setSkillsOpen(false)}
+          canRun={Boolean(selectedSessionId)}
+          onRunSkill={(slash) => {
+            if (!selectedSessionId) {
+              setMessage("请先选择或新建会话再运行 Skill");
+              return;
+            }
+            void submitSessionIntent(selectedSessionId, { action: "command", command: slash })
+              .then(() => {
+                setMessage(`已运行 ${slash}`);
+                setSkillsOpen(false);
+                void qc.invalidateQueries({ queryKey: ["agent-session", selectedSessionId] });
+                void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+              })
+              .catch((e: Error) => setMessage(e.message || "Skill 运行失败"));
+          }}
+        />
       </div>
 
       {selectedRunId ? (

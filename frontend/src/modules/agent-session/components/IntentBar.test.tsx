@@ -87,4 +87,26 @@ describe("IntentBar", () => {
       args: "now",
     });
   });
+
+  it("sends on Enter and inserts newline on Shift+Enter", () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    fireEvent.change(area, { target: { value: "hello" } });
+    fireEvent.keyDown(area, { key: "Enter", shiftKey: true });
+    expect(onIntent).not.toHaveBeenCalled();
+    fireEvent.keyDown(area, { key: "Enter", shiftKey: false });
+    expect(onIntent).toHaveBeenCalledWith({ action: "prompt", prompt: "hello" });
+  });
+
+  it("picks highlighted slash command with Enter", async () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    fireEvent.change(area, { target: { value: "/" } });
+    await waitFor(() => expect(screen.getByTestId("agent-command-help")).toBeInTheDocument());
+    fireEvent.keyDown(area, { key: "ArrowDown" });
+    fireEvent.keyDown(area, { key: "Enter", shiftKey: false });
+    expect(onIntent).toHaveBeenCalledWith({ action: "command", command: "/clear" });
+  });
 });

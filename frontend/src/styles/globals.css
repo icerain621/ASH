@@ -1868,7 +1868,8 @@ main {
   cursor: pointer;
 }
 
-.agent-command-menu-item:hover {
+.agent-command-menu-item:hover,
+.agent-command-menu-item.active {
   background: color-mix(in srgb, var(--text) 6%, transparent);
 }
 

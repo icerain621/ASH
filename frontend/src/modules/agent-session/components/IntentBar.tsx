@@ -29,10 +29,28 @@ function ensureSlash(name: string): string {
   return n.startsWith("/") ? n : `/${n}`;
 }
 
+function submitText(
+  text: string,
+  onIntent: (payload: IntentPayload) => void,
+): boolean {
+  const trimmed = text.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/")) {
+    const sp = trimmed.indexOf(" ");
+    const command = sp < 0 ? trimmed : trimmed.slice(0, sp);
+    const args = sp < 0 ? "" : trimmed.slice(sp + 1).trim();
+    onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
+  } else {
+    onIntent({ action: "prompt", prompt: trimmed });
+  }
+  return true;
+}
+
 /** Thin composer: prompt input or gate takeover (DSH-aligned). */
 export function IntentBar({ mode, busy = false, canStop = false, gateReason, onIntent }: Props) {
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [activeIndex, setActiveIndex] = useState(0);
 
   const commandsQuery = useQuery({
     queryKey: ["agent-commands"],
@@ -52,11 +70,23 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
     if (!prompt.startsWith("/")) setMenuOpen(false);
   }, [prompt]);
 
+  useEffect(() => {
+    setActiveIndex(0);
+  }, [filter, items.length]);
+
   const pickCommand = (it: AgentCommandItem) => {
     const name = ensureSlash(it.name);
     onIntent({ action: "command", command: name });
     setPrompt("");
     setMenuOpen(false);
+  };
+
+  const sendCurrent = () => {
+    if (busy) return;
+    if (submitText(prompt, onIntent)) {
+      setPrompt("");
+      setMenuOpen(false);
+    }
   };
 
   if (mode === "gate") {
@@ -117,11 +147,40 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             value={prompt}
             disabled={busy}
             data-testid="agent-intent-prompt"
-            placeholder="只发意图，不拼系统 prompt（/ 打开命令）"
+            placeholder="Enter 发送 · Shift+Enter 换行 · / 打开命令"
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);
               if (v.startsWith("/")) setMenuOpen(true);
+            }}
+            onKeyDown={(e) => {
+              if (showMenu && items.length > 0) {
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setActiveIndex((i) => (i + 1) % items.length);
+                  return;
+                }
+                if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setActiveIndex((i) => (i - 1 + items.length) % items.length);
+                  return;
+                }
+                if (e.key === "Escape") {
+                  e.preventDefault();
+                  setMenuOpen(false);
+                  return;
+                }
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  const it = items[Math.min(activeIndex, items.length - 1)];
+                  if (it) pickCommand(it);
+                  return;
+                }
+              }
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                sendCurrent();
+              }
             }}
           />
         </label>
@@ -132,13 +191,16 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             ) : items.length === 0 ? (
               <li className="muted-line">无匹配命令</li>
             ) : (
-              items.map((it) => (
+              items.map((it, idx) => (
                 <li key={`${it.source}:${it.name}`}>
                   <button
                     type="button"
-                    className="agent-command-menu-item"
+                    className={`agent-command-menu-item${idx === activeIndex ? " active" : ""}`}
                     disabled={busy}
+                    role="option"
+                    aria-selected={idx === activeIndex}
                     data-testid={`agent-command-${it.name.replace(/^\//, "")}`}
+                    onMouseEnter={() => setActiveIndex(idx)}
                     onClick={() => pickCommand(it)}
                   >
                     <strong>{it.name}</strong>
@@ -182,20 +244,7 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
           className="btn mini ok"
           disabled={busy || !prompt.trim()}
           data-testid="agent-intent-send"
-          onClick={() => {
-            const text = prompt.trim();
-            if (!text) return;
-            if (text.startsWith("/")) {
-              const sp = text.indexOf(" ");
-              const command = sp < 0 ? text : text.slice(0, sp);
-              const args = sp < 0 ? "" : text.slice(sp + 1).trim();
-              onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
-            } else {
-              onIntent({ action: "prompt", prompt: text });
-            }
-            setPrompt("");
-            setMenuOpen(false);
-          }}
+          onClick={sendCurrent}
         >
           发送
         </button>
