@@ -21,6 +21,8 @@
 | **可展开工具卡** IN/OUT + Details 结构化 + fence复制 | ✅ |
 | Composer 旁 **Tools / MCP / Skills** 快捷入口 | ✅ |
 | Tools **会话级运行时启停**（`disabledTools`） | ✅ |
+| Chat **过滤 step.***（仅 Trajectory）+ 气泡↔Trajectory **seq 同步** | ✅ |
+| Permission **full 确认** + 侧栏 **显示已关闭** | ✅ |
 | Cordis / 完整 slash 目录一比一 | ❌ 明确不做 |
 
 ## 仍可选（非阻塞）
@@ -40,3 +42,4 @@
 | 2026-09-16 | slash fill-not-fire；工作区改名/关闭；侧栏搜索；贴底+stopped |
 | 2026-09-16 | 可展开工具卡 / Details 工具段 / Composer 快捷入口 / fence 复制 |
 | 2026-09-16 | session `disabledTools` + Tools 面板启停 + run 执行拦截 |
+| 2026-09-16 | Chat 去 step；气泡 seq→Trajectory；full 确认；includeClosed |

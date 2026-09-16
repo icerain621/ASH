@@ -128,11 +128,12 @@ export function AgentChatShell({
   const [highlightSeq, setHighlightSeq] = useState<number | null>(null);
   const [error, setError] = useState("");
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
+  const [includeClosed, setIncludeClosed] = useState(false);
   const { shellStyle, startResize } = useChatColumnWidths();
 
   const listQuery = useQuery({
-    queryKey: ["agent-sessions"],
-    queryFn: () => listAgentSessions({ limit: 50 }),
+    queryKey: ["agent-sessions", includeClosed],
+    queryFn: () => listAgentSessions({ limit: 50, includeClosed }),
   });
 
   const workspaceQuery = useQuery({
@@ -401,6 +402,8 @@ export function AgentChatShell({
           renameWorkspaceMut.mutate({ workspaceId, title })
         }
         onCloseWorkspace={(workspaceId) => closeWorkspaceMut.mutate(workspaceId)}
+        includeClosed={includeClosed}
+        onIncludeClosedChange={setIncludeClosed}
       />
 
       <div
@@ -495,14 +498,20 @@ export function AgentChatShell({
                 <ChatTranscript
                   events={events}
                   selectedId={selection?.id}
-                  onSelect={setSelection}
+                  onSelect={(node) => {
+                    setSelection(node);
+                    if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
+                  }}
                 />
               ) : (
                 <TrajectoryPane
                   events={events}
                   runId={runId || undefined}
                   highlightSeq={highlightSeq}
-                  onSelectSeq={setHighlightSeq}
+                  onSelectSeq={(seq) => {
+                    setHighlightSeq(seq);
+                    setViewTab("trajectory");
+                  }}
                 />
               )}
             </div>

@@ -66,9 +66,33 @@ describe("ChatSeats", () => {
     );
 
     const perm = screen.getByTestId("agent-chat-seat-permission") as HTMLSelectElement;
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     fireEvent.change(perm, { target: { value: "full" } });
     await waitFor(() =>
       expect(updateSession).toHaveBeenCalledWith("sess_1", { permissionMode: "full" }),
     );
+    expect(confirmSpy).toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("cancels full permission when confirm rejected", async () => {
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+          permissionMode: "read-only",
+        }}
+      />,
+    );
+    await waitFor(() => expect(listAgentModels).toHaveBeenCalled());
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.change(screen.getByTestId("agent-chat-seat-permission"), {
+      target: { value: "full" },
+    });
+    expect(updateSession).not.toHaveBeenCalledWith("sess_1", { permissionMode: "full" });
+    confirmSpy.mockRestore();
   });
 });

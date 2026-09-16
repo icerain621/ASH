@@ -84,6 +84,12 @@ export function ChatSeats({ session, disabled = false }: Props) {
           onChange={(e) => {
             const next = e.target.value.trim() as PermissionMode;
             if (!next || next === permissionMode) return;
+            if (next === "full") {
+              const ok = window.confirm(
+                "切换到 full 权限？将允许危险工具在无逐步批准时执行（仍受场景策略约束）。",
+              );
+              if (!ok) return;
+            }
             patchMut.mutate({ permissionMode: next });
           }}
         >

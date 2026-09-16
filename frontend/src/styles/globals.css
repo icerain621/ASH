@@ -1411,9 +1411,15 @@ main {
   background: var(--surface-soft);
 }
 
-.agent-history-search {
-  display: block;
-  margin: 0 0.65rem 0.45rem;
+.agent-history-closed-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0 0.65rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  cursor: pointer;
+  user-select: none;
 }
 
 .agent-history-search input {

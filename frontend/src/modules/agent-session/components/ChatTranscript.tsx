@@ -10,6 +10,7 @@ export type ChatBubbleSelection = {
   title: string;
   summary: string;
   payload?: unknown;
+  seq?: number;
   toolStatus?: MergedChatBubble["toolStatus"];
   toolName?: string;
   toolInput?: string;
@@ -40,6 +41,7 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
       title: item.title,
       summary: item.summary,
       payload: item.payload,
+      seq: item.seq,
       toolStatus: item.toolStatus,
       toolName: item.toolName,
       toolInput: item.toolInput,

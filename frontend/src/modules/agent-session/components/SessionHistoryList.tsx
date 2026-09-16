@@ -39,6 +39,8 @@ type Props = {
   closingWorkspaceId?: string | null;
   onRenameWorkspace?: (workspaceId: string, title: string) => void;
   onCloseWorkspace?: (workspaceId: string) => void;
+  includeClosed?: boolean;
+  onIncludeClosedChange?: (include: boolean) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -76,6 +78,8 @@ export function SessionHistoryList({
   closingWorkspaceId,
   onRenameWorkspace,
   onCloseWorkspace,
+  includeClosed = false,
+  onIncludeClosedChange,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -321,6 +325,16 @@ export function SessionHistoryList({
           onChange={(e) => setQuery(e.target.value)}
         />
       </label>
+      {onIncludeClosedChange ? (
+        <label className="agent-history-closed-toggle" data-testid="agent-history-include-closed">
+          <input
+            type="checkbox"
+            checked={includeClosed}
+            onChange={(e) => onIncludeClosedChange(e.target.checked)}
+          />
+          显示已关闭
+        </label>
+      ) : null}
       <div className="agent-workspace-list" data-testid="agent-workspace-list">
         {groups.map((group) => {
           const key = group.workspace?.id ?? "unassigned";

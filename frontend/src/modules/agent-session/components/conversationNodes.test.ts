@@ -64,6 +64,20 @@ describe("conversationNodes", () => {
     );
   });
 
+  it("omits step.* from chat bubbles (Trajectory-only)", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({ id: "u1", seq: 1, type: "session.turn", payload: { prompt: "hi" } }),
+      ev({ id: "s1", seq: 2, type: "step.started", payload: { name: "plan" } }),
+      ev({
+        id: "m1",
+        seq: 3,
+        type: "assistant.message",
+        payload: { turnId: "t1", text: "done" },
+      }),
+    ]);
+    expect(bubbles.map((b) => b.type)).toEqual(["session.turn", "assistant.message"]);
+  });
+
   it("uses eventVisibility when visibility field is missing", () => {
     const item = ev({ type: "gate.waiting_approval" });
     expect(eventVisibility(item)).toBe("ui_only");

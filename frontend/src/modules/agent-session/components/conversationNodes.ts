@@ -25,6 +25,13 @@ export function isThreadVisibleEvent(ev: SessionEventEnvelope): boolean {
   return eventVisibility(ev) !== "audit";
 }
 
+/** Chat transcript omits step.* (DSH: steps live in Trajectory, not mixed with bubbles). */
+export function isChatBubbleEvent(ev: SessionEventEnvelope): boolean {
+  if (!isThreadVisibleEvent(ev)) return false;
+  const type = ev.type || "";
+  return !type.startsWith("step.");
+}
+
 function payloadRecord(payload: unknown): Record<string, unknown> {
   if (payload && typeof payload === "object" && !Array.isArray(payload)) {
     return payload as Record<string, unknown>;
@@ -146,6 +153,7 @@ export type MergedChatBubble = {
   kind: string;
   title: string;
   summary: string;
+  seq?: number;
   streaming?: boolean;
   turnId?: string;
   payload?: unknown;
@@ -230,7 +238,7 @@ function findOpenToolCard(
  * Other visible events become their own bubbles.
  */
 export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedChatBubble[] {
-  const visible = events.filter(isThreadVisibleEvent);
+  const visible = events.filter(isChatBubbleEvent);
   const out: MergedChatBubble[] = [];
   /** Index of the open streaming assistant bubble for a turnId. */
   const streamingIdx = new Map<string, number>();
@@ -241,6 +249,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
     const p = payloadRecord(item.payload);
     const turnId = str(p.turnId);
     const id = item.id || `${item.seq}-${item.type}`;
+    const seq = item.seq > 0 ? item.seq : undefined;
 
     if (type === "assistant.delta") {
       const text = str(p.text);
@@ -253,6 +262,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           type: "assistant.delta",
           payload: item.payload,
           stopped: Boolean(p.stopped),
+          seq: seq ?? out[existing].seq,
         };
       } else {
         const idx = out.length;
@@ -267,6 +277,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           turnId: turnId || undefined,
           payload: item.payload,
           stopped: Boolean(p.stopped),
+          seq,
         });
         if (turnId) streamingIdx.set(turnId, idx);
       }
@@ -287,6 +298,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
         turnId: turnId || undefined,
         payload: item.payload,
         stopped: Boolean(p.stopped),
+        seq,
       };
       if (existing != null && out[existing]) {
         out[existing] = bubble;
@@ -313,6 +325,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
         toolName: name,
         toolInput: input,
         toolOutput: "",
+        seq,
       });
       continue;
     }
@@ -336,6 +349,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           payload: item.payload,
           toolStatus: status,
           toolOutput: output,
+          seq: seq ?? prev.seq,
         };
         continue;
       }
@@ -351,6 +365,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
         toolName: name,
         toolInput: "",
         toolOutput: output,
+        seq,
       });
       continue;
     }
@@ -363,6 +378,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
       title: node.title,
       summary: node.summary,
       payload: item.payload,
+      seq,
     });
   }
 
