@@ -1,4 +1,30 @@
 import type { ReactNode } from "react";
+import { useState } from "react";
+
+function CodeFence({ lang, code }: { lang?: string; code: string }) {
+  const [copied, setCopied] = useState(false);
+  return (
+    <div className="ash-md-pre-wrap">
+      <button
+        type="button"
+        className="btn mini ash-md-copy"
+        data-testid="agent-chat-md-copy"
+        onClick={(e) => {
+          e.stopPropagation();
+          void navigator.clipboard?.writeText(code).then(() => {
+            setCopied(true);
+            window.setTimeout(() => setCopied(false), 1200);
+          });
+        }}
+      >
+        {copied ? "已复制" : "复制"}
+      </button>
+      <pre className="ash-md-pre" data-lang={lang || undefined}>
+        <code>{code}</code>
+      </pre>
+    </div>
+  );
+}
 
 function renderInline(text: string): ReactNode[] {
   const nodes: ReactNode[] = [];
@@ -189,9 +215,7 @@ export function BubbleMarkdown({ text }: { text: string }) {
     }
     const lang = m[1] || undefined;
     parts.push(
-      <pre key={key++} className="ash-md-pre" data-lang={lang || undefined}>
-        <code>{m[2].replace(/\n$/, "")}</code>
-      </pre>,
+      <CodeFence key={key++} lang={lang} code={m[2].replace(/\n$/, "")} />,
     );
     last = m.index + m[0].length;
   }

@@ -18,15 +18,15 @@
 | Slash **点选填入不发送**（可补参数） | ✅ |
 | 工作区 **改名/关闭** + 侧栏会话搜索 | ✅ |
 | Transcript **贴底滚动** + 助手 **已停止** 徽章 | ✅ |
+| **可展开工具卡** IN/OUT + Details 结构化 + fence复制 | ✅ |
+| Composer 旁 **Tools / MCP / Skills** 快捷入口 | ✅ |
 | Cordis / 完整 slash 目录一比一 | ❌ 明确不做 |
 
 ## 仍可选（非阻塞）
 
 | 项 | 说明 |
 |----|------|
-| Tools 运行时开关 | 内置风险目录仍只读；需 space/scenario 策略 API 才可真正启停 |
-| 可展开工具卡 IN/OUT / Details 结构化 | 已有配对与状态；可再加深披露 UI |
-| Composer 旁 Tools/MCP/Skills 快捷入口 | 目前仅页头设置菜单 |
+| Tools 运行时开关 | 内置风险目录仍只读；需 session/space `disabledTools` + 执行面拦截 |
 
 ## 修订
 
@@ -37,3 +37,4 @@
 | 2026-09-16 | Skills 面板接入 pack verify/install 与 org catalog |
 | 2026-09-16 | tool.called/result 合并为工具卡；Tools 面板搜索/风险筛选 |
 | 2026-09-16 | slash fill-not-fire；工作区改名/关闭；侧栏搜索；贴底+stopped |
+| 2026-09-16 | 可展开工具卡 / Details 工具段 / Composer 快捷入口 / fence 复制 |

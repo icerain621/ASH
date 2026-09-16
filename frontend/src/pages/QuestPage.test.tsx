@@ -525,4 +525,12 @@ describe("QuestPage", () => {
       );
     });
   });
+
+  it("opens Tools panel from composer shortcut when session selected", async () => {
+    renderQuest();
+    fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
+    expect(await screen.findByTestId("agent-composer-shortcuts")).toBeTruthy();
+    fireEvent.click(screen.getByTestId("agent-composer-tools"));
+    expect(await screen.findByTestId("agent-tools-panel")).toBeTruthy();
+  });
 });

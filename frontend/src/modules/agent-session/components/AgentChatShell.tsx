@@ -37,6 +37,9 @@ export type AgentChatShellProps = {
   runStatus?: string;
   gateReason?: string;
   onIntentSuccess?: () => void;
+  onOpenTools?: () => void;
+  onOpenMcp?: () => void;
+  onOpenSkills?: () => void;
 };
 
 type CenterTab = "chat" | "trajectory";
@@ -114,6 +117,9 @@ export function AgentChatShell({
   runStatus,
   gateReason,
   onIntentSuccess,
+  onOpenTools,
+  onOpenMcp,
+  onOpenSkills,
 }: AgentChatShellProps) {
   const qc = useQueryClient();
   const [viewTab, setViewTab] = useState<CenterTab>("chat");
@@ -507,6 +513,9 @@ export function AgentChatShell({
               gateReason={gateReason}
               session={activeSession}
               onIntent={(payload) => intentMut.mutate(payload)}
+              onOpenTools={onOpenTools}
+              onOpenMcp={onOpenMcp}
+              onOpenSkills={onOpenSkills}
             />
           </>
         )}

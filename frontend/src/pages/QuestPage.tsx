@@ -419,6 +419,9 @@ export function QuestPage() {
           onSelectSession={selectAgentSession}
           runStatus={runStatus}
           gateReason={gate?.reason}
+          onOpenTools={() => setToolsOpen(true)}
+          onOpenMcp={() => setMcpOpen(true)}
+          onOpenSkills={() => setSkillsOpen(true)}
           onIntentSuccess={() => {
             void qc.invalidateQueries({ queryKey: ["quest-run", selectedRunId] });
             void qc.invalidateQueries({ queryKey: ["quest-timeline", selectedRunId] });

@@ -1715,6 +1715,108 @@ main {
   color: var(--err);
 }
 
+.agent-tool-card {
+  width: min(92%, 36rem);
+  text-align: left;
+}
+
+.agent-tool-dot {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--muted);
+  flex-shrink: 0;
+}
+
+.agent-tool-dot[data-status="running"] {
+  background: var(--warn);
+}
+
+.agent-tool-dot[data-status="ok"] {
+  background: var(--ok);
+}
+
+.agent-tool-dot[data-status="error"] {
+  background: var(--err);
+}
+
+.agent-tool-chevron {
+  margin-left: auto;
+  cursor: pointer;
+  color: var(--muted);
+  padding: 0 0.2rem;
+  user-select: none;
+}
+
+.agent-tool-preview {
+  opacity: 0.85;
+  font-size: 0.8rem;
+}
+
+.agent-tool-io {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.25rem;
+}
+
+.agent-tool-block {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.agent-tool-block-label {
+  display: block;
+  font-size: 0.68rem;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+  padding: 0.2rem 0.45rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-soft);
+}
+
+.agent-tool-block pre {
+  margin: 0;
+  padding: 0.4rem 0.5rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 0.78rem;
+  max-height: 14rem;
+  overflow: auto;
+}
+
+.agent-details-tool {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin: 0.5rem 0;
+}
+
+.agent-composer-shortcuts {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  margin: 0 0 0.35rem;
+}
+
+.agent-composer-shortcuts .btn.mini {
+  font-size: 0.75rem;
+  padding: 0.15rem 0.45rem;
+}
+
+.ash-md-pre-wrap {
+  position: relative;
+}
+
+.ash-md-copy {
+  position: absolute;
+  top: 0.35rem;
+  right: 0.35rem;
+  z-index: 1;
+}
+
 .agent-tools-filters {
   display: grid;
   grid-template-columns: 1fr auto;

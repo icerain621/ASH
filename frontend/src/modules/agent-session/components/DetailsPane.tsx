@@ -16,13 +16,34 @@ function readablePayload(payload: unknown): unknown {
   }
 }
 
+function asRecord(payload: unknown): Record<string, unknown> {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    return payload as Record<string, unknown>;
+  }
+  return {};
+}
+
+function str(v: unknown): string {
+  return typeof v === "string" ? v : v == null ? "" : String(v);
+}
+
+function isToolSelection(selection: ChatBubbleSelection): boolean {
+  return (
+    selection.kind === "tool.card" ||
+    selection.kind === "tool.called" ||
+    selection.kind === "tool.result" ||
+    selection.kind === "tool" ||
+    selection.type.startsWith("tool.")
+  );
+}
+
 /** Right details pane for selected chat/trajectory node. */
 export function DetailsPane({ open, selection }: Props) {
   const payload = selection ? readablePayload(selection.payload) : null;
-  const source =
-    payload && typeof payload === "object" && payload !== null && "source" in payload
-      ? String((payload as Record<string, unknown>).source ?? "")
-      : "";
+  const rec = asRecord(payload);
+  const source = str(rec.source);
+  const toolView = selection && isToolSelection(selection);
+
   return (
     <aside
       className={`agent-chat-details${open ? " open" : ""}`}
@@ -46,8 +67,35 @@ export function DetailsPane({ open, selection }: Props) {
               source: {source}
             </p>
           ) : null}
-          <p className="muted-line">{selection.summary}</p>
-          <pre className="code-block compact">
+
+          {toolView ? (
+            <div className="agent-details-tool" data-testid="agent-details-tool">
+              <p className="muted-line">
+                {selection.toolName || str(rec.name) || str(rec.tool) || "tool"}
+                {selection.toolStatus ? ` · ${selection.toolStatus}` : ""}
+                {str(rec.durationMs) ? ` · ${str(rec.durationMs)}ms` : ""}
+                {str(rec.failureClass) ? ` · ${str(rec.failureClass)}` : ""}
+              </p>
+              {(selection.toolInput || str(rec.input) || str(rec.args)) && (
+                <div className="agent-tool-block" data-testid="agent-details-tool-input">
+                  <span className="agent-tool-block-label">IN</span>
+                  <pre>{selection.toolInput || str(rec.input) || str(rec.args)}</pre>
+                </div>
+              )}
+              {(selection.toolOutput || str(rec.output) || str(rec.result) || str(rec.error)) && (
+                <div className="agent-tool-block" data-testid="agent-details-tool-output">
+                  <span className="agent-tool-block-label">OUT</span>
+                  <pre>
+                    {selection.toolOutput || str(rec.output) || str(rec.result) || str(rec.error)}
+                  </pre>
+                </div>
+              )}
+            </div>
+          ) : (
+            <p className="muted-line">{selection.summary}</p>
+          )}
+
+          <pre className="code-block compact" data-testid="agent-details-raw-json">
             {JSON.stringify(
               {
                 id: selection.id,
