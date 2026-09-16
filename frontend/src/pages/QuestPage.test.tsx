@@ -208,7 +208,11 @@ vi.mock("@/modules/skills/api/skills.api", () => ({
     repoRoot: ".",
   })),
   getSkill: vi.fn(),
-  listSkillCatalog: vi.fn(async () => ({ items: [] })),
+  listSkillCatalog: vi.fn(async () => ({
+    ok: true,
+    source: ".ash/skill-catalog.json",
+    items: [{ name: "pack-demo", version: "1.0.0", publisher: "ash", url: "file://x" }],
+  })),
   installSkillFromCatalog: vi.fn(),
   installSkillPack: vi.fn(),
   verifySkillPack: vi.fn(),
@@ -285,6 +289,8 @@ describe("QuestPage", () => {
     expect(screen.getByText("MCP")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-settings-skills"));
     expect(await screen.findByTestId("agent-skills-panel")).toBeTruthy();
+    expect(screen.getByTestId("agent-skills-pack")).toBeTruthy();
+    expect(await screen.findByTestId("agent-skills-catalog-row-pack-demo")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-skills-close"));
     fireEvent.click(screen.getByTestId("agent-settings-tools"));
     expect(await screen.findByTestId("agent-tools-panel")).toBeTruthy();

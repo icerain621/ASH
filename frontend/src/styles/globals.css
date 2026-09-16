@@ -2026,6 +2026,32 @@ main {
   border-color: color-mix(in srgb, var(--err, #c44) 45%, var(--border));
 }
 
+.agent-skills-pack {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin: 0.65rem 0;
+  padding: 0.55rem;
+  border: 1px dashed var(--border);
+  border-radius: 8px;
+}
+
+.agent-skills-pack-actions {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.agent-skills-section {
+  margin-top: 0.85rem;
+}
+
+.agent-skills-section-title {
+  margin: 0 0 0.4rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
 @media (max-width: 1100px) {
   .agent-chat-shell {
     grid-template-columns:
