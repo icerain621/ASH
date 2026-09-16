@@ -149,6 +149,8 @@ export type MergedChatBubble = {
   streaming?: boolean;
   turnId?: string;
   payload?: unknown;
+  /** Assistant generation was stopped mid-flight. */
+  stopped?: boolean;
   /** Paired tool.called + tool.result card. */
   toolStatus?: ToolCardStatus;
   toolName?: string;
@@ -250,6 +252,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           streaming: true,
           type: "assistant.delta",
           payload: item.payload,
+          stopped: Boolean(p.stopped),
         };
       } else {
         const idx = out.length;
@@ -263,6 +266,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           streaming: true,
           turnId: turnId || undefined,
           payload: item.payload,
+          stopped: Boolean(p.stopped),
         });
         if (turnId) streamingIdx.set(turnId, idx);
       }
@@ -282,6 +286,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
         streaming: false,
         turnId: turnId || undefined,
         payload: item.payload,
+        stopped: Boolean(p.stopped),
       };
       if (existing != null && out[existing]) {
         out[existing] = bubble;

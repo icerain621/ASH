@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   closeAgentSession,
   createAgentSession,
@@ -14,6 +14,7 @@ import {
 } from "../api/session.api";
 import {
   attachAgentWorkspaceSession,
+  closeAgentWorkspace,
   createAgentWorkspace,
   detachAgentWorkspaceSession,
   listAgentWorkspaces,
@@ -291,6 +292,26 @@ export function AgentChatShell({
     onError: (e: Error) => setError(e.message),
   });
 
+  const renameWorkspaceMut = useMutation({
+    mutationFn: ({ workspaceId, title }: { workspaceId: string; title: string }) =>
+      patchAgentWorkspace(workspaceId, { title }),
+    onSuccess: () => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const closeWorkspaceMut = useMutation({
+    mutationFn: (workspaceId: string) => closeAgentWorkspace(workspaceId),
+    onSuccess: (ws) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-workspaces"] });
+      if (activeWorkspaceId === ws.id) setActiveWorkspaceId(null);
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
   const baseEvents: SessionEventEnvelope[] = useMemo(
     () => eventsQuery.data?.items ?? [],
     [eventsQuery.data?.items],
@@ -316,11 +337,21 @@ export function AgentChatShell({
       shortId(activeSession.id)
     : "选择或新建会话";
 
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+
   useEffect(() => {
     setSelection(null);
     setHighlightSeq(null);
     setViewTab("chat");
+    stickToBottomRef.current = true;
   }, [selectedSessionId]);
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el || !stickToBottomRef.current) return;
+    el.scrollTop = el.scrollHeight;
+  }, [events, viewTab]);
 
   return (
     <div
@@ -354,6 +385,16 @@ export function AgentChatShell({
           reorderMut.mutate({ workspaceId, sessionIds })
         }
         onMoveSession={(req) => moveMut.mutate(req)}
+        renamingWorkspaceId={
+          renameWorkspaceMut.isPending ? renameWorkspaceMut.variables?.workspaceId : null
+        }
+        closingWorkspaceId={
+          closeWorkspaceMut.isPending ? closeWorkspaceMut.variables ?? null : null
+        }
+        onRenameWorkspace={(workspaceId, title) =>
+          renameWorkspaceMut.mutate({ workspaceId, title })
+        }
+        onCloseWorkspace={(workspaceId) => closeWorkspaceMut.mutate(workspaceId)}
       />
 
       <div
@@ -433,7 +474,17 @@ export function AgentChatShell({
           </div>
         ) : (
           <>
-            <div className="agent-chat-scroll">
+            <div
+              className="agent-chat-scroll"
+              data-testid="agent-chat-scroll"
+              ref={scrollRef}
+              onScroll={() => {
+                const el = scrollRef.current;
+                if (!el) return;
+                const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+                stickToBottomRef.current = dist < 80;
+              }}
+            >
               {viewTab === "chat" ? (
                 <ChatTranscript
                   events={events}

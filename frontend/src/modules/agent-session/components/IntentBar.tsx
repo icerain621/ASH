@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   listAgentCommands,
   type AgentCommandItem,
@@ -51,6 +51,7 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const commandsQuery = useQuery({
     queryKey: ["agent-commands"],
@@ -74,11 +75,18 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
     setActiveIndex(0);
   }, [filter, items.length]);
 
+  /** Fill composer with command (DSH: pick does not auto-send; user may add args). */
   const pickCommand = (it: AgentCommandItem) => {
     const name = ensureSlash(it.name);
-    onIntent({ action: "command", command: name });
-    setPrompt("");
+    setPrompt(`${name} `);
     setMenuOpen(false);
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      const len = el.value.length;
+      el.setSelectionRange(len, len);
+    });
   };
 
   const sendCurrent = () => {
@@ -143,11 +151,12 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
         <label className="wide-field">
           意图
           <textarea
+            ref={textareaRef}
             rows={2}
             value={prompt}
             disabled={busy}
             data-testid="agent-intent-prompt"
-            placeholder="Enter 发送 · Shift+Enter 换行 · / 打开命令"
+            placeholder="Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);

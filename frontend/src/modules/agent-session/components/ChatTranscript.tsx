@@ -51,11 +51,14 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                   type="button"
                   className={`agent-chat-bubble role-${item.role}${active ? " active" : ""}${
                     item.streaming ? " streaming" : ""
-                  }${item.toolStatus ? ` tool-${item.toolStatus}` : ""}`}
+                  }${item.toolStatus ? ` tool-${item.toolStatus}` : ""}${
+                    item.stopped ? " stopped" : ""
+                  }`}
                   data-testid={testIdForRole(item.role)}
                   data-role={item.role}
                   data-node-kind={item.kind}
                   data-tool-status={item.toolStatus || undefined}
+                  data-stopped={item.stopped ? "1" : "0"}
                   data-streaming={item.streaming ? "1" : "0"}
                   data-active={active ? "1" : "0"}
                   onClick={() =>
@@ -71,6 +74,11 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                 >
                   <div className="agent-chat-bubble-meta">
                     <strong>{item.title}</strong>
+                    {item.stopped ? (
+                      <span className="agent-stopped-badge" data-testid="agent-chat-stopped-badge">
+                        已停止
+                      </span>
+                    ) : null}
                     {statusLabel ? (
                       <span
                         className="agent-tool-status"

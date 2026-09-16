@@ -64,14 +64,15 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
   });
 
-  it("opens command menu on slash and submits command", async () => {
+  it("opens command menu on slash and fills without sending", async () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
     fireEvent.click(screen.getByTestId("agent-intent-slash"));
     await waitFor(() => expect(screen.getByTestId("agent-command-help")).toBeInTheDocument());
     expect(listAgentCommands).toHaveBeenCalled();
     fireEvent.click(screen.getByTestId("agent-command-help"));
-    expect(onIntent).toHaveBeenCalledWith({ action: "command", command: "/help" });
+    expect(onIntent).not.toHaveBeenCalled();
+    expect(screen.getByTestId("agent-intent-prompt")).toHaveValue("/help ");
   });
 
   it("sends leading slash text as command action", () => {
@@ -99,7 +100,7 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "prompt", prompt: "hello" });
   });
 
-  it("picks highlighted slash command with Enter", async () => {
+  it("fills highlighted slash command with Enter without sending", async () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
     const area = screen.getByTestId("agent-intent-prompt");
@@ -107,6 +108,7 @@ describe("IntentBar", () => {
     await waitFor(() => expect(screen.getByTestId("agent-command-help")).toBeInTheDocument());
     fireEvent.keyDown(area, { key: "ArrowDown" });
     fireEvent.keyDown(area, { key: "Enter", shiftKey: false });
-    expect(onIntent).toHaveBeenCalledWith({ action: "command", command: "/clear" });
+    expect(onIntent).not.toHaveBeenCalled();
+    expect(area).toHaveValue("/clear ");
   });
 });

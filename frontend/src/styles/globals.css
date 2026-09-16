@@ -1411,6 +1411,62 @@ main {
   background: var(--surface-soft);
 }
 
+.agent-history-search {
+  display: block;
+  margin: 0 0.65rem 0.45rem;
+}
+
+.agent-history-search input {
+  width: 100%;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.agent-workspace-head {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding-right: 0.2rem;
+}
+
+.agent-workspace-head .agent-workspace-toggle {
+  flex: 1;
+  min-width: 0;
+}
+
+.agent-workspace-actions {
+  display: flex;
+  gap: 0.15rem;
+  flex-shrink: 0;
+}
+
+.agent-workspace-actions .btn.mini {
+  padding: 0.1rem 0.35rem;
+  font-size: 0.72rem;
+}
+
+.agent-stopped-badge {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--warn) 50%, var(--border));
+  color: var(--warn);
+}
+
+.agent-chat-bubble.stopped {
+  opacity: 0.92;
+}
+
 .agent-workspace-toggle {
   display: flex;
   align-items: center;

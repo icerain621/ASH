@@ -15,6 +15,9 @@
 | Composer **Enter 发送 / Shift+Enter 换行** + slash ↑↓ 键盘 | ✅ |
 | Skills **pack 验签/安装 + 组织 Catalog**（Chat 设置内） | ✅ |
 | Chat **工具卡合并**（called+result）+ Tools 目录筛选 | ✅ |
+| Slash **点选填入不发送**（可补参数） | ✅ |
+| 工作区 **改名/关闭** + 侧栏会话搜索 | ✅ |
+| Transcript **贴底滚动** + 助手 **已停止** 徽章 | ✅ |
 | Cordis / 完整 slash 目录一比一 | ❌ 明确不做 |
 
 ## 仍可选（非阻塞）
@@ -22,6 +25,8 @@
 | 项 | 说明 |
 |----|------|
 | Tools 运行时开关 | 内置风险目录仍只读；需 space/scenario 策略 API 才可真正启停 |
+| 可展开工具卡 IN/OUT / Details 结构化 | 已有配对与状态；可再加深披露 UI |
+| Composer 旁 Tools/MCP/Skills 快捷入口 | 目前仅页头设置菜单 |
 
 ## 修订
 
@@ -31,3 +36,4 @@
 | 2026-09-16 | Skills 面板 + Composer 键盘交互贴 DSH |
 | 2026-09-16 | Skills 面板接入 pack verify/install 与 org catalog |
 | 2026-09-16 | tool.called/result 合并为工具卡；Tools 面板搜索/风险筛选 |
+| 2026-09-16 | slash fill-not-fire；工作区改名/关闭；侧栏搜索；贴底+stopped |

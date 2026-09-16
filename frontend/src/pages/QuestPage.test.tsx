@@ -282,6 +282,7 @@ describe("QuestPage", () => {
     expect(await screen.findByTestId("agent-home")).toBeTruthy();
     expect(await screen.findByTestId("agent-chat-shell")).toBeTruthy();
     expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(screen.getByTestId("agent-history-search")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
     expect(screen.getByTestId("agent-settings-menu")).toBeTruthy();
     expect(screen.getByText("Tools")).toBeTruthy();

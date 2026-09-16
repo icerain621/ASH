@@ -160,4 +160,17 @@ describe("conversationNodes", () => {
     expect(bubbles[0].toolStatus).toBe("running");
     expect(bubbles[0].summary).toContain("执行中");
   });
+
+  it("surfaces stopped badge on assistant.message", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "m1",
+        seq: 1,
+        type: "assistant.message",
+        payload: { turnId: "t9", text: "partial…", stopped: true },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].stopped).toBe(true);
+  });
 });

@@ -35,6 +35,10 @@ type Props = {
   onReorderSessions?: (workspaceId: string, sessionIds: string[]) => void;
   /** Cross-workspace (or unassigned) move. */
   onMoveSession?: (req: SessionMoveRequest) => void;
+  renamingWorkspaceId?: string | null;
+  closingWorkspaceId?: string | null;
+  onRenameWorkspace?: (workspaceId: string, title: string) => void;
+  onCloseWorkspace?: (workspaceId: string) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -68,16 +72,32 @@ export function SessionHistoryList({
   onPurge,
   onReorderSessions,
   onMoveSession,
+  renamingWorkspaceId,
+  closingWorkspaceId,
+  onRenameWorkspace,
+  onCloseWorkspace,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
+  const [editingWsId, setEditingWsId] = useState<string | null>(null);
+  const [wsDraft, setWsDraft] = useState("");
+  const [query, setQuery] = useState("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragFromWs, setDragFromWs] = useState<string | null>(null);
 
+  const filteredItems = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return items;
+    return items.filter((s) => {
+      const title = (s.title || s.goal || "").toLowerCase();
+      return s.id.toLowerCase().includes(needle) || title.includes(needle);
+    });
+  }, [items, query]);
+
   const groups = useMemo(
-    () => groupSessionsByWorkspace(items, workspaces),
-    [items, workspaces],
+    () => groupSessionsByWorkspace(filteredItems, workspaces),
+    [filteredItems, workspaces],
   );
 
   const canDragAny = Boolean(onReorderSessions || onMoveSession);
@@ -92,6 +112,13 @@ export function SessionHistoryList({
     setEditingId(null);
     if (!next || !onRename) return;
     onRename(sessionId, next);
+  }
+
+  function commitWorkspaceRename(workspaceId: string) {
+    const next = wsDraft.trim();
+    setEditingWsId(null);
+    if (!next || !onRenameWorkspace) return;
+    onRenameWorkspace(workspaceId, next);
   }
 
   function toggleGroup(key: string) {
@@ -285,6 +312,15 @@ export function SessionHistoryList({
           </button>
         </div>
       </div>
+      <label className="agent-history-search wide-field">
+        <span className="sr-only">搜索会话</span>
+        <input
+          value={query}
+          placeholder="搜索会话标题 / ID"
+          data-testid="agent-history-search"
+          onChange={(e) => setQuery(e.target.value)}
+        />
+      </label>
       <div className="agent-workspace-list" data-testid="agent-workspace-list">
         {groups.map((group) => {
           const key = group.workspace?.id ?? "unassigned";
@@ -293,6 +329,7 @@ export function SessionHistoryList({
           const selectedWs = group.workspace
             ? activeWorkspaceId === group.workspace.id
             : activeWorkspaceId === null;
+          const editingWs = Boolean(group.workspace && editingWsId === group.workspace.id);
           return (
             <section
               key={key}
@@ -310,24 +347,101 @@ export function SessionHistoryList({
                 handleDropOnGroup(wsId);
               }}
             >
-              <button
-                type="button"
-                className="agent-workspace-toggle"
-                aria-expanded={isOpen}
-                onClick={() => {
-                  toggleGroup(key);
-                  onSelectWorkspace(group.workspace?.id ?? null);
-                }}
-              >
-                <span className="agent-workspace-chevron">{isOpen ? "▾" : "▸"}</span>
-                <strong>{group.workspace?.title ?? "未分组"}</strong>
-                <span className="muted-line">{group.sessions.length}</span>
-              </button>
+              <div className="agent-workspace-head">
+                {editingWs && group.workspace ? (
+                  <div
+                    className="agent-history-rename"
+                    data-testid={`agent-workspace-rename-${group.workspace.id}`}
+                  >
+                    <input
+                      value={wsDraft}
+                      data-testid={`agent-workspace-rename-input-${group.workspace.id}`}
+                      onChange={(e) => setWsDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitWorkspaceRename(group.workspace!.id);
+                        if (e.key === "Escape") setEditingWsId(null);
+                      }}
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="btn mini ok"
+                      disabled={
+                        renamingWorkspaceId === group.workspace.id || !wsDraft.trim()
+                      }
+                      data-testid={`agent-workspace-rename-save-${group.workspace.id}`}
+                      onClick={() => commitWorkspaceRename(group.workspace!.id)}
+                    >
+                      保存
+                    </button>
+                    <button type="button" className="btn mini" onClick={() => setEditingWsId(null)}>
+                      取消
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="agent-workspace-toggle"
+                      aria-expanded={isOpen}
+                      onClick={() => {
+                        toggleGroup(key);
+                        onSelectWorkspace(group.workspace?.id ?? null);
+                      }}
+                    >
+                      <span className="agent-workspace-chevron">{isOpen ? "▾" : "▸"}</span>
+                      <strong>{group.workspace?.title ?? "未分组"}</strong>
+                      <span className="muted-line">{group.sessions.length}</span>
+                    </button>
+                    {group.workspace ? (
+                      <div className="agent-workspace-actions">
+                        <button
+                          type="button"
+                          className="btn mini"
+                          data-testid={`agent-workspace-rename-btn-${group.workspace.id}`}
+                          disabled={renamingWorkspaceId === group.workspace.id}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingWsId(group.workspace!.id);
+                            setWsDraft(group.workspace!.title || "工作区");
+                          }}
+                        >
+                          改名
+                        </button>
+                        <button
+                          type="button"
+                          className="btn mini err"
+                          data-testid={`agent-workspace-close-${group.workspace.id}`}
+                          disabled={
+                            closingWorkspaceId === group.workspace.id ||
+                            group.workspace.status === "closed"
+                          }
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (
+                              !window.confirm(
+                                `关闭工作区「${group.workspace!.title}」？会话不会删除。`,
+                              )
+                            ) {
+                              return;
+                            }
+                            onCloseWorkspace?.(group.workspace!.id);
+                          }}
+                        >
+                          关闭
+                        </button>
+                      </div>
+                    ) : null}
+                  </>
+                )}
+              </div>
               {isOpen ? (
                 <ul className="agent-history-list">
                   {group.sessions.map((item) => renderSessionRow(item, wsId))}
                   {!group.sessions.length ? (
-                    <li className="muted-line">暂无会话 · 可拖入</li>
+                    <li className="muted-line">
+                      {query.trim() ? "无匹配会话" : "暂无会话 · 可拖入"}
+                    </li>
                   ) : null}
                 </ul>
               ) : null}
