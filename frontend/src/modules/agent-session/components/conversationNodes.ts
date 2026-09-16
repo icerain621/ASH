@@ -8,6 +8,7 @@ export type ConversationNodeKind =
   | "session.intent"
   | "tool.called"
   | "tool.result"
+  | "tool.card"
   | "tool"
   | "step"
   | "default";
@@ -136,6 +137,8 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
 
 export type ChatBubbleRole = "user" | "assistant" | "gate" | "tool" | "other";
 
+export type ToolCardStatus = "running" | "ok" | "error";
+
 export type MergedChatBubble = {
   id: string;
   role: ChatBubbleRole;
@@ -146,6 +149,11 @@ export type MergedChatBubble = {
   streaming?: boolean;
   turnId?: string;
   payload?: unknown;
+  /** Paired tool.called + tool.result card. */
+  toolStatus?: ToolCardStatus;
+  toolName?: string;
+  toolInput?: string;
+  toolOutput?: string;
 };
 
 function bubbleRole(type: string, kind: string): ChatBubbleRole {
@@ -158,6 +166,7 @@ function bubbleRole(type: string, kind: string): ChatBubbleRole {
     kind === "tool.called" ||
     kind === "tool.result" ||
     kind === "tool" ||
+    kind === "tool.card" ||
     kind === "step" ||
     type.startsWith("tool.") ||
     type.startsWith("step.")
@@ -167,8 +176,55 @@ function bubbleRole(type: string, kind: string): ChatBubbleRole {
   return "other";
 }
 
+function toolNameOf(p: Record<string, unknown>): string {
+  return str(p.name) || str(p.tool) || str(p.toolName) || "tool";
+}
+
+function toolMatchKey(p: Record<string, unknown>): string {
+  return (
+    str(p.callId) ||
+    str(p.toolCallId) ||
+    str(p.invocationId) ||
+    str(p.id) ||
+    toolNameOf(p)
+  );
+}
+
+function toolInputOf(p: Record<string, unknown>): string {
+  return str(p.input) || str(p.args) || compactJSON(p) || "";
+}
+
+function toolOutputOf(p: Record<string, unknown>): string {
+  return str(p.output) || str(p.result) || str(p.error) || compactJSON(p) || "";
+}
+
+function formatToolSummary(input: string, output: string, status: ToolCardStatus): string {
+  const lines: string[] = [];
+  if (input) lines.push(`← ${input}`);
+  if (status === "running") {
+    lines.push("… 执行中");
+  } else if (output) {
+    lines.push(`→ ${output}`);
+  }
+  return lines.join("\n") || status;
+}
+
+function findOpenToolCard(
+  out: MergedChatBubble[],
+  key: string,
+  name: string,
+): number | undefined {
+  for (let i = out.length - 1; i >= 0; i--) {
+    const b = out[i];
+    if (b.kind !== "tool.card" || b.toolStatus !== "running") continue;
+    if (b.id === `tool:${key}` || b.toolName === name || b.toolName === key) return i;
+  }
+  return undefined;
+}
+
 /**
  * Merge assistant.delta by turnId into one live bubble; assistant.message replaces/completes it.
+ * Pairs tool.called + tool.result into one tool card (DSH-aligned).
  * Other visible events become their own bubbles.
  */
 export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedChatBubble[] {
@@ -233,6 +289,64 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
       } else {
         out.push(bubble);
       }
+      continue;
+    }
+
+    if (type === "tool.called") {
+      const name = toolNameOf(p);
+      const key = toolMatchKey(p);
+      const input = toolInputOf(p);
+      out.push({
+        id: `tool:${key}`,
+        role: "tool",
+        type: "tool.card",
+        kind: "tool.card",
+        title: `工具 · ${name}`,
+        summary: formatToolSummary(input, "", "running"),
+        payload: item.payload,
+        toolStatus: "running",
+        toolName: name,
+        toolInput: input,
+        toolOutput: "",
+      });
+      continue;
+    }
+
+    if (type === "tool.result") {
+      const name = toolNameOf(p);
+      const key = toolMatchKey(p);
+      const output = toolOutputOf(p);
+      const err = str(p.error);
+      const status: ToolCardStatus = err || str(p.ok) === "false" ? "error" : "ok";
+      const openIdx = findOpenToolCard(out, key, name);
+      if (openIdx != null && out[openIdx]) {
+        const prev = out[openIdx];
+        const input = prev.toolInput || "";
+        out[openIdx] = {
+          ...prev,
+          type: "tool.card",
+          kind: "tool.card",
+          title: `工具 · ${prev.toolName || name}`,
+          summary: formatToolSummary(input, output, status),
+          payload: item.payload,
+          toolStatus: status,
+          toolOutput: output,
+        };
+        continue;
+      }
+      out.push({
+        id: `tool:${key}:result`,
+        role: "tool",
+        type: "tool.card",
+        kind: "tool.card",
+        title: `工具 · ${name}`,
+        summary: formatToolSummary("", output, status),
+        payload: item.payload,
+        toolStatus: status,
+        toolName: name,
+        toolInput: "",
+        toolOutput: output,
+      });
       continue;
     }
 

@@ -123,4 +123,41 @@ describe("conversationNodes", () => {
     expect(bubbles[0].streaming).toBe(true);
     expect(bubbles[0].role).toBe("assistant");
   });
+
+  it("pairs tool.called and tool.result into one tool card", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "c1",
+        seq: 1,
+        type: "tool.called",
+        payload: { name: "git.status", callId: "tc_1", args: "{}" },
+      }),
+      ev({
+        id: "r1",
+        seq: 2,
+        type: "tool.result",
+        payload: { name: "git.status", callId: "tc_1", output: "clean" },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].kind).toBe("tool.card");
+    expect(bubbles[0].toolStatus).toBe("ok");
+    expect(bubbles[0].toolName).toBe("git.status");
+    expect(bubbles[0].summary).toContain("clean");
+    expect(bubbles[0].summary).toContain("←");
+  });
+
+  it("keeps running tool card when result has not arrived", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "c1",
+        seq: 1,
+        type: "tool.called",
+        payload: { name: "shell.exec", args: "ls" },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].toolStatus).toBe("running");
+    expect(bubbles[0].summary).toContain("执行中");
+  });
 });

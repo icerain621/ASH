@@ -23,6 +23,13 @@ function testIdForRole(role: MergedChatBubble["role"]): string {
   return "agent-chat-bubble";
 }
 
+function toolStatusLabel(status: MergedChatBubble["toolStatus"]): string {
+  if (status === "running") return "执行中";
+  if (status === "error") return "失败";
+  if (status === "ok") return "完成";
+  return "";
+}
+
 /** Bubble transcript for Chat tab (DSH-aligned). Merges assistant.delta by turnId. */
 export function ChatTranscript({ events, selectedId, onSelect }: Props) {
   const bubbles = mergeAssistantBubbles(events);
@@ -37,16 +44,18 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
         <ul className="agent-chat-bubbles">
           {bubbles.map((item) => {
             const active = selectedId === item.id;
+            const statusLabel = toolStatusLabel(item.toolStatus);
             return (
               <li key={item.id} className={`agent-chat-bubble-row role-${item.role}`}>
                 <button
                   type="button"
                   className={`agent-chat-bubble role-${item.role}${active ? " active" : ""}${
                     item.streaming ? " streaming" : ""
-                  }`}
+                  }${item.toolStatus ? ` tool-${item.toolStatus}` : ""}`}
                   data-testid={testIdForRole(item.role)}
                   data-role={item.role}
                   data-node-kind={item.kind}
+                  data-tool-status={item.toolStatus || undefined}
                   data-streaming={item.streaming ? "1" : "0"}
                   data-active={active ? "1" : "0"}
                   onClick={() =>
@@ -62,7 +71,16 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
                 >
                   <div className="agent-chat-bubble-meta">
                     <strong>{item.title}</strong>
-                    {item.role === "tool" || item.role === "gate" ? (
+                    {statusLabel ? (
+                      <span
+                        className="agent-tool-status"
+                        data-testid="agent-tool-status"
+                        data-status={item.toolStatus}
+                      >
+                        {statusLabel}
+                      </span>
+                    ) : null}
+                    {item.role === "gate" ? (
                       <span className="muted agent-chat-bubble-type">{item.type}</span>
                     ) : null}
                   </div>

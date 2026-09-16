@@ -1628,6 +1628,68 @@ main {
   font-size: 0.85rem;
 }
 
+.agent-chat-bubble.role-tool.tool-running {
+  border-left-color: color-mix(in srgb, var(--warn) 70%, var(--border));
+}
+
+.agent-chat-bubble.role-tool.tool-error {
+  border-left-color: color-mix(in srgb, var(--err) 70%, var(--border));
+}
+
+.agent-tool-status {
+  font-size: 0.72rem;
+  padding: 0.05rem 0.35rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.agent-tool-status[data-status="running"] {
+  border-color: color-mix(in srgb, var(--warn) 50%, var(--border));
+  color: var(--warn);
+}
+
+.agent-tool-status[data-status="ok"] {
+  border-color: color-mix(in srgb, var(--ok) 50%, var(--border));
+  color: var(--ok);
+}
+
+.agent-tool-status[data-status="error"] {
+  border-color: color-mix(in srgb, var(--err) 50%, var(--border));
+  color: var(--err);
+}
+
+.agent-tools-filters {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.65rem;
+}
+
+.agent-tools-badge {
+  flex-shrink: 0;
+  font-size: 0.72rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  color: var(--muted);
+}
+
+.agent-tools-badge.risk-danger {
+  border-color: color-mix(in srgb, var(--err) 45%, var(--border));
+  color: var(--err);
+}
+
+.agent-tools-badge.risk-medium {
+  border-color: color-mix(in srgb, var(--warn) 45%, var(--border));
+  color: var(--warn);
+}
+
+.agent-tools-badge.risk-safe {
+  border-color: color-mix(in srgb, var(--ok) 45%, var(--border));
+  color: var(--ok);
+}
+
 .agent-chat-bubble.role-assistant {
   max-width: min(100%, var(--ash-chat-content-width));
   background: color-mix(in srgb, var(--surface-raised) 70%, var(--surface-soft));

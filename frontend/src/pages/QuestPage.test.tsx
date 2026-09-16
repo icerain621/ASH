@@ -294,6 +294,7 @@ describe("QuestPage", () => {
     fireEvent.click(screen.getByTestId("agent-skills-close"));
     fireEvent.click(screen.getByTestId("agent-settings-tools"));
     expect(await screen.findByTestId("agent-tools-panel")).toBeTruthy();
+    expect(screen.getByTestId("agent-tools-filters")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-tools-close"));
     fireEvent.click(screen.getByTestId("agent-settings-mcp"));
     expect(await screen.findByTestId("agent-mcp-panel")).toBeTruthy();

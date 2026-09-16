@@ -14,6 +14,7 @@
 | Tools / MCP / **Skills** 一等设置面板 | ✅ |
 | Composer **Enter 发送 / Shift+Enter 换行** + slash ↑↓ 键盘 | ✅ |
 | Skills **pack 验签/安装 + 组织 Catalog**（Chat 设置内） | ✅ |
+| Chat **工具卡合并**（called+result）+ Tools 目录筛选 | ✅ |
 | Cordis / 完整 slash 目录一比一 | ❌ 明确不做 |
 
 ## 仍可选（非阻塞）
@@ -29,3 +30,4 @@
 | 2026-09-16 | Markdown 表格/任务列表 |
 | 2026-09-16 | Skills 面板 + Composer 键盘交互贴 DSH |
 | 2026-09-16 | Skills 面板接入 pack verify/install 与 org catalog |
+| 2026-09-16 | tool.called/result 合并为工具卡；Tools 面板搜索/风险筛选 |
