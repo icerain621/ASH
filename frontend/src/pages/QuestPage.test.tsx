@@ -486,21 +486,16 @@ describe("QuestPage", () => {
     });
   });
 
-  it("shows gate panel with approve and cancel for waiting_approval", async () => {
+  it("uses chat composer gate when session selected (no duplicate quest-gate-panel)", async () => {
     vi.mocked(approveRun).mockResolvedValue({ runId: "run_1", ok: true });
     vi.mocked(cancelRun).mockResolvedValue({ runId: "run_1", status: "canceled" });
     renderQuest();
     fireEvent.click(await screen.findByTestId("agent-history-item-sess_quest"));
-    expect(await screen.findByTestId("quest-gate-panel")).toBeTruthy();
-    expect(screen.getByTestId("quest-gate-detail").textContent).toContain("need human review");
-    fireEvent.click(screen.getByTestId("quest-gate-approve"));
+    expect(screen.queryByTestId("quest-gate-panel")).toBeNull();
     await waitFor(() => {
-      expect(approveRun).toHaveBeenCalled();
+      expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-mode", "gate");
     });
-    fireEvent.click(screen.getByTestId("quest-gate-cancel"));
-    await waitFor(() => {
-      expect(cancelRun).toHaveBeenCalledWith("run_1");
-    });
+    expect(screen.getByTestId("agent-intent-approve")).toBeTruthy();
   });
 
   it("lists artifacts and issues access link", async () => {

@@ -23,6 +23,7 @@
 | Tools **会话级运行时启停**（`disabledTools`） | ✅ |
 | Chat **过滤 step.***（仅 Trajectory）+ 气泡↔Trajectory **seq 同步** | ✅ |
 | Permission **full 确认** + 侧栏 **显示已关闭** | ✅ |
+| **回到底部**、标题内联改名、事件驱动 gate、Quest gate 去重 | ✅ |
 | Cordis / 完整 slash 目录一比一 | ❌ 明确不做 |
 
 ## 仍可选（非阻塞）
@@ -43,3 +44,4 @@
 | 2026-09-16 | 可展开工具卡 / Details 工具段 / Composer 快捷入口 / fence 复制 |
 | 2026-09-16 | session `disabledTools` + Tools 面板启停 + run 执行拦截 |
 | 2026-09-16 | Chat 去 step；气泡 seq→Trajectory；full 确认；includeClosed |
+| 2026-09-16 | 回到底部；标题内联改名；事件驱动 gate；Quest gate 去重 |

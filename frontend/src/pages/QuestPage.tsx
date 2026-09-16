@@ -464,7 +464,7 @@ export function QuestPage() {
 
       {selectedRunId ? (
         <div className="agent-run-ops" data-testid="agent-run-ops">
-          {runStatus === "waiting_approval" ? (
+          {runStatus === "waiting_approval" && !selectedSessionId ? (
             <div className="pane" data-testid="quest-gate-panel" style={{ marginBottom: "1rem" }}>
               <div className="pane-title">
                 <h2>等待审批</h2>

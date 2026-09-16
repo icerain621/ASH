@@ -27,6 +27,7 @@ import { DetailsPane } from "./DetailsPane";
 import { type IntentPayload } from "./IntentBar";
 import { SessionHistoryList, type SessionMoveRequest } from "./SessionHistoryList";
 import { TrajectoryPane } from "./TrajectoryPane";
+import { deriveGateFromEvents } from "./deriveGateFromEvents";
 import { useChatColumnWidths } from "./useChatColumnWidths";
 import { shortId } from "@/shared/utils/format";
 import { reorderSessionIds } from "./reorderSessionIds";
@@ -129,6 +130,9 @@ export function AgentChatShell({
   const [error, setError] = useState("");
   const [activeWorkspaceId, setActiveWorkspaceId] = useState<string | null>(null);
   const [includeClosed, setIncludeClosed] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
+  const [showJumpBottom, setShowJumpBottom] = useState(false);
   const { shellStyle, startResize } = useChatColumnWidths();
 
   const listQuery = useQuery({
@@ -335,9 +339,16 @@ export function AgentChatShell({
     [baseEvents, streamedEvents],
   );
 
-  const mode = runStatus === "waiting_approval" ? "gate" : "prompt";
+  const eventGate = useMemo(() => deriveGateFromEvents(events), [events]);
+  const mode =
+    runStatus === "waiting_approval" || eventGate.waiting ? "gate" : "prompt";
+  const effectiveGateReason =
+    (gateReason && gateReason.trim()) || eventGate.reason || "Run 等待审批";
   const runBusy =
-    runStatus === "running" || runStatus === "waiting_approval" || intentMut.isPending;
+    runStatus === "running" ||
+    runStatus === "waiting_approval" ||
+    eventGate.waiting ||
+    intentMut.isPending;
   const headerTitle = activeSession
     ? (activeSession.title || "").trim() ||
       (activeSession.goal || "").trim() ||
@@ -351,7 +362,9 @@ export function AgentChatShell({
     setSelection(null);
     setHighlightSeq(null);
     setViewTab("chat");
+    setEditingTitle(false);
     stickToBottomRef.current = true;
+    setShowJumpBottom(false);
   }, [selectedSessionId]);
 
   useEffect(() => {
@@ -359,6 +372,24 @@ export function AgentChatShell({
     if (!el || !stickToBottomRef.current) return;
     el.scrollTop = el.scrollHeight;
   }, [events, viewTab]);
+
+  const jumpToBottom = () => {
+    stickToBottomRef.current = true;
+    setShowJumpBottom(false);
+    const el = scrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  };
+
+  const commitHeaderTitle = () => {
+    if (!selectedSessionId) {
+      setEditingTitle(false);
+      return;
+    }
+    const next = titleDraft.trim();
+    setEditingTitle(false);
+    if (!next || next === headerTitle) return;
+    renameMut.mutate({ sessionId: selectedSessionId, title: next });
+  };
 
   return (
     <div
@@ -421,7 +452,34 @@ export function AgentChatShell({
       <div className="agent-chat-main">
         <header className="agent-chat-header">
           <div className="agent-chat-header-title">
-            <h2>{headerTitle}</h2>
+            {editingTitle && selectedSessionId ? (
+              <div className="agent-chat-header-rename" data-testid="agent-chat-header-rename">
+                <input
+                  value={titleDraft}
+                  data-testid="agent-chat-header-rename-input"
+                  autoFocus
+                  onChange={(e) => setTitleDraft(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") commitHeaderTitle();
+                    if (e.key === "Escape") setEditingTitle(false);
+                  }}
+                  onBlur={commitHeaderTitle}
+                />
+              </div>
+            ) : (
+              <h2
+                className={selectedSessionId ? "agent-chat-header-title-editable" : undefined}
+                data-testid="agent-chat-header-title"
+                title={selectedSessionId ? "点击改名" : undefined}
+                onClick={() => {
+                  if (!selectedSessionId) return;
+                  setTitleDraft(headerTitle);
+                  setEditingTitle(true);
+                }}
+              >
+                {headerTitle}
+              </h2>
+            )}
             <span className="muted-line">
               {selectedSessionId ? shortId(selectedSessionId) : "—"}
               {runId ? ` · run ${shortId(runId)}` : ""}
@@ -483,43 +541,61 @@ export function AgentChatShell({
           </div>
         ) : (
           <>
-            <div
-              className="agent-chat-scroll"
-              data-testid="agent-chat-scroll"
-              ref={scrollRef}
-              onScroll={() => {
-                const el = scrollRef.current;
-                if (!el) return;
-                const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-                stickToBottomRef.current = dist < 80;
-              }}
-            >
-              {viewTab === "chat" ? (
-                <ChatTranscript
-                  events={events}
-                  selectedId={selection?.id}
-                  onSelect={(node) => {
-                    setSelection(node);
-                    if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
-                  }}
-                />
-              ) : (
-                <TrajectoryPane
-                  events={events}
-                  runId={runId || undefined}
-                  highlightSeq={highlightSeq}
-                  onSelectSeq={(seq) => {
-                    setHighlightSeq(seq);
-                    setViewTab("trajectory");
-                  }}
-                />
-              )}
+            <div className="agent-chat-scroll-wrap">
+              <div
+                className="agent-chat-scroll"
+                data-testid="agent-chat-scroll"
+                ref={scrollRef}
+                onScroll={() => {
+                  const el = scrollRef.current;
+                  if (!el) return;
+                  const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+                  const pinned = dist < 80;
+                  stickToBottomRef.current = pinned;
+                  setShowJumpBottom(!pinned);
+                }}
+              >
+                {viewTab === "chat" ? (
+                  <ChatTranscript
+                    events={events}
+                    selectedId={selection?.id}
+                    onSelect={(node) => {
+                      setSelection(node);
+                      if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
+                    }}
+                  />
+                ) : (
+                  <TrajectoryPane
+                    events={events}
+                    runId={runId || undefined}
+                    highlightSeq={highlightSeq}
+                    onSelectSeq={(seq) => {
+                      setHighlightSeq(seq);
+                    }}
+                    onSelectEvent={(node) => {
+                      setSelection(node);
+                      if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
+                      setDetailsOpen(true);
+                    }}
+                  />
+                )}
+              </div>
+              {showJumpBottom ? (
+                <button
+                  type="button"
+                  className="agent-chat-jump-bottom"
+                  data-testid="agent-chat-jump-bottom"
+                  onClick={jumpToBottom}
+                >
+                  ↓ 回到底部
+                </button>
+              ) : null}
             </div>
             <ChatComposer
               mode={mode}
               busy={intentMut.isPending || !selectedSessionId}
               canStop={runBusy}
-              gateReason={gateReason}
+              gateReason={effectiveGateReason}
               session={activeSession}
               onIntent={(payload) => intentMut.mutate(payload)}
               onOpenTools={onOpenTools}
