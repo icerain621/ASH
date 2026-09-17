@@ -1,0 +1,1171 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ASH 吸收交互原型 · Agent 薄壳 + 管控&评审</title>
+<style>
+  :root {
+    --bg: #f6f8fb;
+    --surface: #ffffff;
+    --raised: #f0f4f8;
+    --soft: #f8fafc;
+    --border: #d8e0e8;
+    --border-strong: #b9c5d2;
+    --text: #172033;
+    --muted: #687386;
+    --accent: #0f9f6e;
+    --accent-strong: #047857;
+    --ok: #16803f;
+    --warn: #b7791f;
+    --err: #d14343;
+    --hook: #2563eb;
+    --mono: "JetBrains Mono", "Cascadia Code", Consolas, monospace;
+    --sans: "IBM Plex Sans", "Segoe UI", ui-sans-serif, system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: var(--sans); background: var(--bg); color: var(--text); min-height: 100vh; }
+  .page-head {
+    padding: 20px 28px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .page-head h1 { margin: 0 0 6px; font-size: 20px; font-weight: 650; }
+  .page-head p { margin: 0; color: var(--muted); font-size: 13px; max-width: 92ch; line-height: 1.5; }
+  .meta-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+  .chip {
+    font-size: 11px; padding: 3px 8px; border-radius: 4px;
+    border: 1px solid var(--border); color: var(--muted); background: var(--soft);
+  }
+  .chip.accent { color: var(--accent-strong); border-color: #a7e3cb; background: #eefbf5; }
+  .chip.warn { color: var(--warn); border-color: #f0d9a0; background: #fff8e8; }
+  .chip.hook { color: var(--hook); border-color: #bfdbfe; background: #eff6ff; }
+
+  main { padding: 20px 28px 48px; }
+  .legend { display: flex; flex-wrap: wrap; gap: 10px 18px; margin-bottom: 14px; font-size: 12px; color: var(--muted); }
+  .legend b { color: var(--text); font-weight: 600; }
+
+  .app {
+    border: 1px solid var(--border); border-radius: 10px; background: var(--surface);
+    overflow: hidden; max-width: 1180px;
+  }
+  .topbar {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 14px; border-bottom: 1px solid var(--border); background: var(--soft);
+  }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 14px; }
+  .brand-mark {
+    width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
+    color: #fff; display: grid; place-items: center; font-size: 12px;
+  }
+  .pillars { display: flex; gap: 6px; margin-left: 8px; }
+  .pillar {
+    border: 1px solid var(--border); background: var(--surface); color: var(--muted);
+    border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .pillar.on { color: var(--accent-strong); border-color: var(--accent); background: #eefbf5; }
+  .top-actions { margin-left: auto; display: flex; gap: 8px; color: var(--muted); font-size: 12px; }
+  .top-actions span {
+    border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; background: var(--surface);
+  }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* Agent chat */
+  .body {
+    display: grid; grid-template-columns: 250px minmax(0, 1fr) 280px; min-height: 560px;
+  }
+  .col { border-right: 1px solid var(--border); min-height: 560px; display: flex; flex-direction: column; }
+  .col:last-child { border-right: 0; }
+  .col-h {
+    padding: 10px 12px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 650;
+  }
+  .col-h .muted { font-weight: 500; color: var(--muted); margin-left: auto; }
+  .tabs { display: flex; gap: 4px; }
+  .tab {
+    border: 0; background: transparent; color: var(--muted); padding: 4px 8px;
+    border-radius: 4px; cursor: pointer; font: inherit; font-size: 12px;
+  }
+  .tab.on { background: var(--raised); color: var(--text); font-weight: 650; }
+  .side-tools { display: flex; gap: 6px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  .mini {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 5px; padding: 4px 8px; font-size: 11px; cursor: pointer;
+  }
+  .mini.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .mini.ghost { color: var(--muted); }
+  .mini.link { color: var(--hook); border-color: #bfdbfe; background: #eff6ff; }
+  .session-list { padding: 8px; overflow: auto; flex: 1; }
+  .sess {
+    border: 1px solid transparent; border-radius: 8px; padding: 8px 10px; margin-bottom: 4px; cursor: pointer;
+  }
+  .sess:hover { background: var(--soft); }
+  .sess.on { background: #eefbf5; border-color: #a7e3cb; }
+  .sess .t { font-size: 13px; font-weight: 600; }
+  .sess .s { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .branch {
+    display: inline-block; font-size: 10px; margin-left: 6px; padding: 1px 5px; border-radius: 3px;
+    background: #eff6ff; color: var(--hook); border: 1px solid #bfdbfe; vertical-align: middle;
+  }
+  .conv-head {
+    padding: 10px 14px; border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .title { font-size: 14px; font-weight: 650; }
+  .crumbs { font-size: 12px; color: var(--muted); }
+  .crumbs a { color: var(--hook); text-decoration: none; cursor: pointer; }
+  .badges { display: flex; gap: 6px; margin-left: auto; flex-wrap: wrap; }
+  .lamp {
+    display: inline-flex; align-items: center; gap: 5px; font-size: 11px;
+    border: 1px solid var(--border); border-radius: 999px; padding: 3px 8px;
+    color: var(--muted); background: var(--surface); cursor: pointer;
+  }
+  .lamp i { width: 7px; height: 7px; border-radius: 50%; background: var(--border-strong); display: inline-block; }
+  .lamp.ok i { background: var(--ok); }
+  .lamp.warn i { background: var(--warn); }
+  .lamp.err i { background: var(--err); }
+  .lamp.hook i { background: var(--hook); }
+  .transcript {
+    flex: 1; padding: 16px 18px; overflow: auto; min-height: 340px;
+    background:
+      linear-gradient(rgba(23,32,51,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(23,32,51,0.03) 1px, transparent 1px),
+      var(--bg);
+    background-size: 24px 24px;
+  }
+  .bubble {
+    max-width: 720px; margin: 0 auto 12px; padding: 10px 12px;
+    border-radius: 10px; border: 1px solid var(--border); background: var(--surface);
+    font-size: 13px; line-height: 1.5;
+  }
+  .bubble.user { background: #eefbf5; border-color: #a7e3cb; }
+  .bubble.tool { border-left: 3px solid var(--warn); }
+  .bubble.gate { border-left: 3px solid var(--err); background: #fff8f8; }
+  .bubble.compact { border-left: 3px solid var(--hook); background: #f8fbff; }
+  .bubble.hook { border-left: 3px solid var(--hook); }
+  .bubble .who { font-size: 11px; color: var(--muted); margin-bottom: 4px; font-weight: 600; }
+  .tool-card {
+    margin-top: 6px; padding: 8px; border-radius: 6px; background: var(--raised);
+    font-family: var(--mono); font-size: 11px; color: var(--muted);
+  }
+  .composer-wrap { border-top: 1px solid var(--border); padding: 12px 14px; background: var(--surface); }
+  .composer {
+    max-width: 760px; margin: 0 auto; border: 1px solid var(--border-strong);
+    border-radius: 10px; padding: 10px 12px; background: var(--soft);
+  }
+  .composer .ph { color: var(--muted); font-size: 13px; min-height: 40px; }
+  .composer .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .composer .row .spacer { flex: 1; }
+  .btn {
+    border: 1px solid var(--border); background: var(--surface); color: var(--text);
+    border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
+  }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .btn.danger { background: #fff1f1; border-color: #f0c4c4; color: var(--err); }
+  .btn.warn { background: #fff8e8; border-color: #f0d9a0; color: var(--warn); }
+  .steer-bar {
+    max-width: 760px; margin: 0 auto 8px; border: 1px dashed var(--warn); background: #fff8e8;
+    border-radius: 8px; padding: 8px 10px; font-size: 12px; display: flex; gap: 8px; align-items: center;
+  }
+  .queue-chip {
+    display: inline-flex; align-items: center; gap: 6px; border: 1px solid #bfdbfe;
+    background: #eff6ff; color: var(--hook); border-radius: 999px; padding: 3px 10px; font-size: 11px;
+  }
+  .gate-panel {
+    max-width: 760px; margin: 0 auto; border: 1px solid #f0c4c4; background: #fff8f8;
+    border-radius: 10px; padding: 12px;
+  }
+  .gate-panel h4 { margin: 0 0 6px; font-size: 13px; }
+  .gate-panel p { margin: 0 0 10px; font-size: 12px; color: var(--muted); }
+  .gate-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+  .details { padding: 12px; font-size: 12px; overflow: auto; }
+  .details h4 { margin: 0 0 8px; font-size: 12px; }
+  .kv { display: grid; grid-template-columns: 88px 1fr; gap: 6px 8px; margin-bottom: 12px; }
+  .kv span { color: var(--muted); }
+  .block {
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px; background: var(--soft); margin-bottom: 10px;
+  }
+  .block .h { font-weight: 650; margin-bottom: 4px; }
+
+  /* Gov workbench */
+  .gov-body { display: grid; grid-template-columns: 220px minmax(0, 1fr); min-height: 560px; }
+  .gov-nav { border-right: 1px solid var(--border); background: var(--soft); padding: 10px 8px; }
+  .mem-tabs {
+    display: flex; align-items: center; gap: 6px; flex-wrap: wrap;
+    padding: 8px 12px; border-bottom: 1px solid var(--border); background: var(--surface);
+  }
+  .mem-tab {
+    border: 1px solid var(--border); background: var(--soft); color: var(--muted);
+    border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
+  }
+  .mem-tab.on { color: var(--accent-strong); border-color: var(--accent); background: #eefbf5; }
+  .gov-nav .sec {
+    font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); padding: 8px 10px 6px;
+  }
+  .gov-item {
+    display: block; width: 100%; text-align: left; border: 1px solid transparent;
+    background: transparent; border-radius: 8px; padding: 8px 10px; margin-bottom: 2px;
+    cursor: pointer; font: inherit; font-size: 12px; color: var(--text);
+  }
+  .gov-item:hover { background: var(--surface); }
+  .gov-item.on { background: #eefbf5; border-color: #a7e3cb; color: var(--accent-strong); font-weight: 650; }
+  .gov-item .sub { display: block; font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 2px; }
+  .gov-main { display: flex; flex-direction: column; min-height: 560px; }
+  .gov-panel { display: none; flex: 1; flex-direction: column; }
+  .gov-panel.active { display: flex; }
+
+  .tree { padding: 10px 12px; font-size: 12px; font-family: var(--mono); line-height: 1.7; }
+  .tree .node { cursor: pointer; padding: 2px 4px; border-radius: 4px; }
+  .tree .node:hover { background: var(--raised); }
+  .tree .node.on { background: #eefbf5; color: var(--accent-strong); }
+  .tree .indent { padding-left: 16px; }
+  .tree .indent2 { padding-left: 32px; }
+  .tree .dot { color: var(--muted); }
+
+  .tl { padding: 12px 16px; }
+  .tl-filters { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+  .tl-item { display: grid; grid-template-columns: 56px 10px 1fr; gap: 8px; margin-bottom: 8px; font-size: 12px; }
+  .tl-item .ts { color: var(--muted); font-family: var(--mono); font-size: 10px; }
+  .tl-item .rail { width: 10px; display: flex; justify-content: center; }
+  .tl-item .rail::before {
+    content: ""; width: 8px; height: 8px; border-radius: 50%; margin-top: 4px; background: var(--border-strong);
+  }
+  .tl-item.tool .rail::before { background: var(--warn); }
+  .tl-item.gate .rail::before { background: var(--err); }
+  .tl-item.compact .rail::before { background: var(--hook); }
+  .tl-item.hook .rail::before { background: var(--hook); }
+  .tl-item.model .rail::before { background: var(--accent); }
+  .tl-card {
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; background: var(--surface);
+  }
+  .tl-card.on { border-color: var(--accent); background: #eefbf5; }
+  .vis {
+    font-size: 10px; border: 1px solid var(--border); border-radius: 3px;
+    padding: 0 4px; color: var(--muted); margin-left: 6px;
+  }
+  .hook-strip {
+    display: flex; flex-wrap: wrap; gap: 6px; padding: 8px 12px;
+    border-bottom: 1px solid var(--border); background: #f8fbff;
+  }
+  .hook-step {
+    font-size: 10px; padding: 4px 7px; border-radius: 4px;
+    border: 1px solid #bfdbfe; color: var(--hook); background: #fff;
+  }
+  .hook-step.fail { border-color: #f0c4c4; color: var(--err); background: #fff1f1; }
+  .hook-step.ok { border-color: #a7e3cb; color: var(--ok); background: #eefbf5; }
+
+  .split2 { display: grid; grid-template-columns: 1fr 280px; flex: 1; min-height: 0; }
+  .split2 > .pane { border-right: 1px solid var(--border); display: flex; flex-direction: column; min-height: 480px; }
+  .split2 > .pane:last-child { border-right: 0; }
+
+  .note {
+    margin-top: 12px; padding: 10px 12px; border-radius: 8px; border: 1px solid var(--border);
+    background: var(--surface); font-size: 12px; color: var(--muted); max-width: 1180px;
+  }
+  .note strong { color: var(--text); }
+
+  @media (max-width: 960px) {
+    .body, .gov-body, .split2 { grid-template-columns: 1fr; }
+    .col, .gov-nav { border-right: 0; border-bottom: 1px solid var(--border); min-height: auto; }
+  }
+</style>
+</head>
+<body>
+  <header class="page-head">
+    <h1>ASH 吸收交互原型 · 收敛版</h1>
+    <p>
+      <strong>Agent</strong> 仅主 Chat 壳。<strong>记忆</strong> 补全记忆体（分层/视角/候选/TTL/Link/资产）与知识（RAG/Wiki/LSP）全页。
+      原吸收 1–7 在 <strong>管控&amp;评审</strong>。候选厚批准深链管控台，记忆页不做完整 Workbench。
+    </p>
+    <div class="meta-row">
+      <span class="chip accent">Agent = P02 主壳</span>
+      <span class="chip accent">记忆 = 双核 Memory + Knowledge</span>
+      <span class="chip hook">管控&amp;评审 = P01/P05–P07/P12–P13/P16</span>
+      <span class="chip warn">主题名：管控&amp;评审</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="legend" id="legend">
+      <span><b>当前</b> <span id="legend-cur">Agent · 主 Chat 壳</span></span>
+      <span><b>原则</b> 交互做薄 · 管控做厚</span>
+    </div>
+
+    <div class="app">
+      <div class="topbar">
+        <div class="brand"><span class="brand-mark">A</span> ASH</div>
+        <div class="pillars">
+          <button type="button" class="pillar on" data-view="agent" id="pillar-agent">Agent</button>
+          <button type="button" class="pillar" data-view="memory" id="pillar-memory">记忆</button>
+          <button type="button" class="pillar" data-view="gov" id="pillar-gov">管控&amp;评审</button>
+        </div>
+        <div class="top-actions"><span>更多 ▾</span><span>账号 ▾</span></div>
+      </div>
+
+      <!-- ===== Agent: shell only ===== -->
+      <div class="view active" id="view-agent">
+        <div class="body">
+          <aside class="col">
+            <div class="col-h">会话 <span class="muted">列表</span></div>
+            <div class="side-tools">
+              <button class="mini primary" type="button">新建</button>
+              <button class="mini ghost" type="button">任务板</button>
+            </div>
+            <div class="session-list">
+              <div class="sess on"><div class="t">hotfix citation gate</div><div class="s">刚刚 · space team-core</div></div>
+              <div class="sess"><div class="t">空白会话</div><div class="s">昨天</div></div>
+              <div class="sess"><div class="t">feature_delivery #12</div><div class="s">2 天前 · 已关</div></div>
+            </div>
+          </aside>
+          <section class="col">
+            <div class="conv-head">
+              <div class="title">hotfix citation gate</div>
+              <div class="tabs">
+                <button class="tab on" type="button">Chat</button>
+                <button class="tab" type="button" data-goto-gov="trajectory" title="完整 Trajectory 在管控&评审">Trajectory</button>
+              </div>
+              <div class="badges">
+                <span class="lamp ok" data-goto-gov="trajectory" title="打开管控&评审 · Trajectory"><i></i>派生投影</span>
+                <span class="lamp hook" data-goto-gov="hooks" title="打开管控&评审 · Hooks"><i></i>Hooks</span>
+                <span class="lamp warn" data-goto-gov="approve" title="有待批 · 去管控&评审"><i></i>待批</span>
+                <button class="mini link" type="button" data-goto-mem="links" title="当前会话记忆 · MemoryLink" data-testid="agent-goto-session-memory">记忆</button>
+                <button class="mini link" type="button" data-goto-gov="tree">管控台 →</button>
+              </div>
+            </div>
+            <div class="transcript">
+              <div class="bubble user"><div class="who">你</div>修复 citation 门禁误报，保持 fail-closed。</div>
+              <div class="bubble"><div class="who">助手</div>先核对最近 Run 事件与 SpacePolicy，再提最小补丁。</div>
+              <div class="bubble tool"><div class="who">工具 · read</div>
+                <div class="tool-card">internal/policy/citation.go:88-120</div>
+              </div>
+              <div class="bubble compact">
+                <div class="who">提示</div>
+                会话树 / Compact / Steer / 审批预设 / Hooks / 谱系已收敛到
+                <button class="mini link" type="button" data-goto-gov="tree">管控&amp;评审</button>
+                ，本页只保留对话与意图。
+              </div>
+            </div>
+            <div class="composer-wrap">
+              <div class="composer">
+                <div class="ph">发送意图…（prompt / approve / cancel / stop）</div>
+                <div class="row">
+                  <button class="btn" type="button">@ 引用</button>
+                  <button class="btn" type="button">/ 命令</button>
+                  <span class="spacer"></span>
+                  <button class="btn" type="button">Stop</button>
+                  <button class="btn primary" type="button">发送</button>
+                </div>
+              </div>
+            </div>
+          </section>
+          <aside class="col">
+            <div class="col-h">Details <span class="muted">可关</span></div>
+            <div class="details">
+              <h4>选中节点</h4>
+              <div class="kv">
+                <span>类型</span><div>tool.read</div>
+                <span>可见性</span><div>model_visible</div>
+                <span>seq</span><div>14</div>
+              </div>
+              <div class="block">
+                <div class="h">深链（不占 Composer）</div>
+                <button class="mini link" type="button" data-goto-gov="trajectory">Trajectory</button>
+                <button class="mini link" type="button" data-goto-gov="lineage">谱系</button>
+                <button class="mini link" type="button" data-goto-gov="approve">审批</button>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </div>
+
+      <!-- ===== Memory: full pillar ===== -->
+      <div class="view" id="view-memory">
+        <div class="mem-tabs" role="tablist" aria-label="记忆板块">
+          <button type="button" class="mem-tab on" data-mem-tab="body">记忆体</button>
+          <button type="button" class="mem-tab" data-mem-tab="knowledge">知识</button>
+          <button type="button" class="mini link" data-goto-gov="approve" style="margin-left:auto">厚评审 → 管控&amp;评审</button>
+        </div>
+        <div class="gov-body">
+          <nav class="gov-nav" id="mem-nav-body" aria-label="记忆体子导航">
+            <div class="sec">视角</div>
+            <button type="button" class="gov-item on" data-mem="layer">分层浏览<div class="sub">L0 / L1 / L2 · 主轴</div></button>
+            <button type="button" class="gov-item" data-mem="scenario">场景视角<div class="sub">按 Scenario 过滤</div></button>
+            <button type="button" class="gov-item" data-mem="skill">Skill 视角<div class="sub">按 Skill 绑定</div></button>
+            <button type="button" class="gov-item" data-mem="tools">Tools 视角<div class="sub">按工具引用</div></button>
+            <button type="button" class="gov-item" data-mem="project">项目视角<div class="sub">按 repo / 项目</div></button>
+            <div class="sec">治理操作</div>
+            <button type="button" class="gov-item" data-mem="create">新建候选<div class="sub">手动提交 · 证据</div></button>
+            <button type="button" class="gov-item" data-mem="query">检索已批准<div class="sub">RAG / FTS query</div></button>
+            <button type="button" class="gov-item" data-mem="ttl">TTL 复核<div class="sub">到期 · sweep</div></button>
+            <button type="button" class="gov-item" data-mem="links">MemoryLink<div class="sub">Run/Thread 关联</div></button>
+            <button type="button" class="gov-item" data-mem="assets">资产登记<div class="sub">MemoryAsset · v5</div></button>
+          </nav>
+          <nav class="gov-nav" id="mem-nav-knowledge" aria-label="知识子导航" hidden>
+            <div class="sec">知识中心</div>
+            <button type="button" class="gov-item on" data-mem="know-overview">总览<div class="sub">RAG Hybrid · Profile</div></button>
+            <button type="button" class="gov-item" data-mem="know-wiki">Wiki 投影<div class="sub">列表 · 正文</div></button>
+            <button type="button" class="gov-item" data-mem="know-lsp">LSP 探针<div class="sub">hover / def / refs</div></button>
+          </nav>
+
+          <div class="gov-main">
+            <!-- layer -->
+            <div class="gov-panel active" id="mem-layer">
+              <div class="col-h">分层浏览 <span class="muted">候选 + 治理边 · Space team-core</span>
+                <div class="tabs" style="margin-left:12px">
+                  <button class="tab on" type="button">全部</button>
+                  <button class="tab" type="button">L0</button>
+                  <button class="tab" type="button">L1</button>
+                  <button class="tab" type="button">L2</button>
+                </div>
+                <button class="mini" type="button" style="margin-left:auto">刷新候选</button>
+              </div>
+              <div class="split2" style="grid-template-columns:200px 1fr 260px">
+                <div class="pane">
+                  <div class="col-h">分层树</div>
+                  <div class="tree">
+                    <div class="node on">● L0 会话草稿 <span class="branch">3</span></div>
+                    <div class="node">● L1 团队共识 <span class="branch">12</span></div>
+                    <div class="indent"><div class="node">├─ 正式</div><div class="node">└─ 候选</div></div>
+                    <div class="node">● L2 组织规范 <span class="branch">4</span></div>
+                  </div>
+                  <div class="details" style="border-top:1px solid var(--border)">
+                    <div class="block"><div class="h">资产摘要</div>active 16 · draft 3 · deprecated 2</div>
+                  </div>
+                </div>
+                <div class="pane">
+                  <div class="col-h">候选列表 <span class="muted">5 条</span></div>
+                  <div class="tl" style="padding-top:8px">
+                    <div class="tl-card on" style="margin-bottom:8px;cursor:pointer">
+                      <strong>L1</strong> · citation 须有 file 证据
+                      <div class="tool-card">待审核 · mem_a1 · confidence 0.72</div>
+                    </div>
+                    <div class="tl-card" style="margin-bottom:8px;cursor:pointer">
+                      <strong>L0</strong> · 本 Run 临时笔记
+                      <div class="tool-card">待审核 · mem_b2</div>
+                    </div>
+                    <div class="tl-card" style="margin-bottom:8px;cursor:pointer">
+                      <strong>L2</strong> · 发布前必跑 doctor
+                      <div class="tool-card">已通过 · mem_c3</div>
+                    </div>
+                  </div>
+                  <div class="side-tools">
+                    <button class="mini primary" type="button">薄通过</button>
+                    <button class="mini" type="button">拒绝</button>
+                    <button class="mini link" type="button" data-goto-gov="approve">厚评审队列 →</button>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <h4>治理详情</h4>
+                  <div class="kv">
+                    <span>ID</span><div>mem_a1</div>
+                    <span>层级</span><div>L1</div>
+                    <span>TTL</span><div>14d · 复核倒计时 3d</div>
+                    <span>scope</span><div>team</div>
+                  </div>
+                  <div class="block"><div class="h">治理边</div>重复 → mem_c0（pending_duplicate）<br/>支持 → wiki:testing</div>
+                  <div class="block"><div class="h">关联</div>Run run_9f · Thread thr_12 · hit_used 2</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- perspectives with filter hint -->
+            <div class="gov-panel" id="mem-scenario">
+              <div class="col-h">场景视角 <span class="muted">过滤器</span></div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <p class="chip warn" style="display:inline-block;margin-bottom:12px">字段尚未全量回填；视角切换已就绪，后续按 scenarioId 过滤。</p>
+                  <div class="tl-card" style="margin-bottom:8px"><strong>feature_delivery</strong> · 3 条候选 / 8 条正式</div>
+                  <div class="tl-card" style="margin-bottom:8px"><strong>hotfix</strong> · 2 条候选 / 5 条正式</div>
+                  <div class="tl-card"><strong>security_patch</strong> · 1 条候选 / 4 条正式</div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">用途</div>按交付场景看记忆覆盖与缺口。</div>
+                  <div class="block"><div class="h">深链</div>缺口项可新建候选或进资产登记。</div>
+                </div>
+              </div>
+            </div>
+            <div class="gov-panel" id="mem-skill">
+              <div class="col-h">Skill 视角</div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <p class="chip warn" style="display:inline-block;margin-bottom:12px">当前候选列表尚无 Skill 字段；视角已切换。</p>
+                  <div class="tl-card" style="margin-bottom:8px"><strong>skill:release-notes</strong> · 关联记忆 2</div>
+                  <div class="tl-card"><strong>skill:citation-guard</strong> · 关联记忆 5</div>
+                </div>
+                <div class="pane details"><div class="block"><div class="h">绑定</div>Skills 沉淀须经记忆评审升格（非自动）。</div></div>
+              </div>
+            </div>
+            <div class="gov-panel" id="mem-tools">
+              <div class="col-h">Tools 视角</div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <p class="chip warn" style="display:inline-block;margin-bottom:12px">当前候选列表尚无 Tools 字段；视角已切换。</p>
+                  <div class="tl-card" style="margin-bottom:8px"><strong>bash</strong> · 危险工具记忆 4</div>
+                  <div class="tl-card"><strong>write</strong> · citation 相关 7</div>
+                </div>
+                <div class="pane details"><div class="block"><div class="h">与门禁</div>工具风险记忆可喂 SpacePolicy / Hooks。</div></div>
+              </div>
+            </div>
+            <div class="gov-panel" id="mem-project">
+              <div class="col-h">项目视角</div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <p class="chip warn" style="display:inline-block;margin-bottom:12px">当前候选列表尚无项目字段；视角已切换。</p>
+                  <div class="tl-card" style="margin-bottom:8px"><strong>repo:ash</strong> · scopeRepo 主路径</div>
+                  <div class="tl-card"><strong>repo:docs</strong> · Wiki 投影较多</div>
+                </div>
+                <div class="pane details"><div class="block"><div class="h">范围</div>对齐 Memory scope user/team/repo。</div></div>
+              </div>
+            </div>
+
+            <!-- create -->
+            <div class="gov-panel" id="mem-create">
+              <div class="col-h">新建候选 <span class="muted">手动</span></div>
+              <div class="split2">
+                <div class="pane" style="padding:16px;max-width:520px">
+                  <div class="block">
+                    <div class="h">运行 ID（可选）</div>
+                    <div class="tool-card">run_… · 关联 SSE / MemoryLink</div>
+                  </div>
+                  <div class="block">
+                    <div class="h">层级</div>
+                    <button class="mini" type="button">L0</button>
+                    <button class="mini primary" type="button">L1</button>
+                    <button class="mini" type="button">L2</button>
+                  </div>
+                  <div class="block"><div class="h">标题</div><div class="tool-card">M1 治理规则</div></div>
+                  <div class="block"><div class="h">内容</div><div class="tool-card">合并前始终运行测试与 doctor。</div></div>
+                  <div class="block"><div class="h">证据引用 (L1+)</div><div class="tool-card">doc/README.md</div></div>
+                  <button class="btn primary" type="button">提交候选</button>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">提交后</div>治理提示：重复/冲突边；进入候选列表。</div>
+                  <div class="block"><div class="h">升格</div>薄通过可在列表；厚多签走管控&amp;评审。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- query -->
+            <div class="gov-panel" id="mem-query">
+              <div class="col-h">检索已批准 <span class="muted">queryMemory</span></div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="composer" style="margin-bottom:12px">
+                    <div class="ph">doctor release</div>
+                    <div class="row"><span class="spacer"></span><button class="btn primary" type="button">检索 topK=10</button></div>
+                  </div>
+                  <div class="tl-card on" style="margin-bottom:8px">
+                    <strong>L2</strong> 发布前必跑 doctor
+                    <div class="tool-card">score 0.91 · hit · scope team</div>
+                  </div>
+                  <div class="tl-card" style="margin-bottom:8px">
+                    <strong>L1</strong> citation 须有 file 证据
+                    <div class="tool-card">score 0.84</div>
+                  </div>
+                  <div class="tl-card">
+                    <strong>wiki:release</strong> 发布检查清单
+                    <div class="tool-card">score 0.71 · knowledge</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">引用</div>可复制为 contextRef / 写入 Agent 意图。</div>
+                  <div class="block"><div class="h">审计</div>hit_used 回写 Run 事件。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- ttl -->
+            <div class="gov-panel" id="mem-ttl">
+              <div class="col-h">TTL 复核队列 <span class="muted">2 待复核 · 1 待 sweep</span>
+                <button class="btn warn" type="button" style="margin-left:auto">执行 sweep</button>
+              </div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="tl-card" style="margin-bottom:8px;border-left:3px solid var(--warn)">
+                    <strong>L1</strong> 临时 hotfix 约定
+                    <div class="tool-card">reviewDue · 剩余 18h · mem_t1</div>
+                  </div>
+                  <div class="tl-card" style="margin-bottom:8px;border-left:3px solid var(--warn)">
+                    <strong>L0</strong> 会话草稿包
+                    <div class="tool-card">reviewDue · 剩余 2d</div>
+                  </div>
+                  <div class="tl-card" style="border-left:3px solid var(--err)">
+                    <strong>L1</strong> 过期候选
+                    <div class="tool-card">expired · 待弃用</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">sweep</div>弃用到期；复核队列条数进 Doctor/KPI。</div>
+                  <div class="block"><div class="h">人工</div>可续期 TTL 或升格/拒绝。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- links -->
+            <div class="gov-panel" id="mem-links">
+              <div class="col-h">MemoryLink <span class="muted" id="mem-links-session-label">会话 hotfix citation gate · Thread thr_12 · open</span>
+                <button class="mini" type="button" style="margin-left:auto">封印</button>
+                <button class="mini" type="button">复现校验</button>
+                <button class="mini link" type="button" data-view="agent">← 回 Agent</button>
+              </div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="tl-card on" style="margin-bottom:8px">
+                    seq 14 · mem_a1 · citation 证据
+                    <div class="tool-card">kind=supports · run_9f</div>
+                  </div>
+                  <div class="tl-card" style="margin-bottom:8px">
+                    seq 22 · mem_c3 · doctor 规范
+                    <div class="tool-card">kind=supports · hit_used</div>
+                  </div>
+                  <div class="tl-card">
+                    seq 30 · mem_x · 冲突候选
+                    <div class="tool-card">kind=conflict</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="kv">
+                    <span>digest</span><div>a3f9…（未 seal）</div>
+                    <span>replay</span><div>—</div>
+                  </div>
+                  <div class="block"><div class="h">三性</div>封印后可 compare / replay；服务管控&amp;评审。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- assets -->
+            <div class="gov-panel" id="mem-assets">
+              <div class="col-h">MemoryAsset 登记 <span class="muted">v5 Registry</span></div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="tl-card on" style="margin-bottom:8px">
+                    <strong>active</strong> · L1 聚合 · team-core
+                    <div class="tool-card">scoreSnapshot Q=4.2 S=4.5 · policyRef pack_team</div>
+                  </div>
+                  <div class="tl-card" style="margin-bottom:8px">
+                    <strong>draft</strong> · L2 组织规范包
+                    <div class="tool-card">待启停登记审核</div>
+                  </div>
+                  <div class="tl-card">
+                    <strong>deprecated</strong> · 旧 citation 规则
+                    <div class="tool-card">保留审计 · 不可命中</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">启停</div>厚启停在管控&amp;评审 · 启停登记；本页只读摘要。</div>
+                  <div class="block"><div class="h">测评</div>空间评价维度挂 scoreSnapshot。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- knowledge panels -->
+            <div class="gov-panel" id="mem-know-overview">
+              <div class="col-h">知识总览 <span class="muted">repoRoot = .</span>
+                <button class="mini" type="button" style="margin-left:auto">刷新</button>
+              </div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="block">
+                    <div class="h">RAG Hybrid</div>
+                    模式 <code>hybrid</code> · Hybrid 可用 · LSP 可用<br/>
+                    向量：可用 · chroma · refs 128 · defaultPrefer=vector<br/>
+                    文档 42 · 分块 910 · 路径 220 · 符号 1800 · FTS 可用 (sqlite)
+                    <div style="margin-top:8px"><button class="btn" type="button">重建符号/路径索引</button></div>
+                  </div>
+                  <div class="block">
+                    <div class="h">Repo Profile</div>
+                    <code>profile:ash</code> — Go Worker + React 控制台<br/>
+                    语言：Go, TypeScript · 测试：make test · 模块：internal/*, frontend
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">注入</div>Run 准备可注入 profile: / wiki: contextRefs。</div>
+                  <div class="block"><div class="h">与记忆体</div>Wiki 可被检索命中；升格仍走记忆评审。</div>
+                </div>
+              </div>
+            </div>
+            <div class="gov-panel" id="mem-know-wiki">
+              <div class="col-h">Wiki 投影
+                <input class="mini" style="margin-left:12px;width:160px;padding:4px 8px;border:1px solid var(--border);border-radius:5px" placeholder="检索 architecture…" />
+              </div>
+              <div class="split2">
+                <div class="pane" style="padding:12px">
+                  <div class="tl-card on" style="margin-bottom:8px;cursor:pointer">Architecture Overview <span class="vis">wiki</span></div>
+                  <div class="tl-card" style="margin-bottom:8px;cursor:pointer">Testing &amp; Doctor <span class="vis">wiki</span></div>
+                  <div class="tl-card" style="cursor:pointer">Release Checklist <span class="vis">doc</span></div>
+                </div>
+                <div class="pane details">
+                  <h4>Architecture Overview</h4>
+                  <div class="kv">
+                    <span>ref</span><div>wiki:architecture</div>
+                    <span>layer</span><div>L1 投影</div>
+                  </div>
+                  <div class="block"><div class="h">正文</div>双核 Agent × Memory；治理平面 DSL/Doctor；演进平面 Feedback/Improve…</div>
+                </div>
+              </div>
+            </div>
+            <div class="gov-panel" id="mem-know-lsp">
+              <div class="col-h">LSP 探针 <span class="muted">thin LSP</span></div>
+              <div class="split2">
+                <div class="pane" style="padding:14px">
+                  <div class="block"><div class="h">目标</div><div class="tool-card">internal/policy/citation.go:96</div></div>
+                  <div class="block">
+                    <div class="h">操作</div>
+                    <button class="mini primary" type="button">hover</button>
+                    <button class="mini" type="button">definition</button>
+                    <button class="mini" type="button">references</button>
+                  </div>
+                  <div class="tl-card">
+                    hover → <code>func RequireCitation(...)</code><br/>
+                    def → citation.go:72<br/>
+                    refs → 8 locations
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">用途</div>知识侧符号导航；不替代全 IDE LSP。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ===== 管控&评审: aggregated 1-7 ===== -->
+      <div class="view" id="view-gov">
+        <div class="gov-body">
+          <nav class="gov-nav" aria-label="管控&评审子导航">
+            <div class="sec">交互可观测</div>
+            <button type="button" class="gov-item on" data-gov="trajectory">
+              Trajectory<div class="sub">P01 事件 · 可见性</div>
+            </button>
+            <button type="button" class="gov-item" data-gov="tree">
+              会话树<div class="sub">P05 Fork / Compare</div>
+            </button>
+            <button type="button" class="gov-item" data-gov="lineage">
+              子代理谱系<div class="sub">P16 ACP / Sub-run</div>
+            </button>
+            <div class="sec">会话语义</div>
+            <button type="button" class="gov-item" data-gov="compact">
+              Compact<div class="sub">P06 摘要 · spill</div>
+            </button>
+            <button type="button" class="gov-item" data-gov="steer">
+              Steer / Queue<div class="sub">P07 打断 · 排队</div>
+            </button>
+            <div class="sec">门禁与扩展</div>
+            <button type="button" class="gov-item" data-gov="approve">
+              审批预设<div class="sub">P12 once / Space</div>
+            </button>
+            <button type="button" class="gov-item" data-gov="hooks">
+              Hooks<div class="sub">P13 生命周期 · fail-closed</div>
+            </button>
+            <div class="sec">既有 v5</div>
+            <button type="button" class="gov-item" data-gov="workbench" disabled style="opacity:.55;cursor:default">
+              Workbench / 评分<div class="sub">已落地 · 本原型不重绘</div>
+            </button>
+          </nav>
+
+          <div class="gov-main">
+            <!-- trajectory -->
+            <div class="gov-panel active" id="gov-trajectory">
+              <div class="col-h">Trajectory 加深 <span class="muted">P01 · 选自会话 hotfix…</span>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane">
+                  <div class="tl">
+                    <div class="tl-filters">
+                      <button class="mini primary" type="button">全部</button>
+                      <button class="mini" type="button">model_visible</button>
+                      <button class="mini" type="button">ui_only</button>
+                      <button class="mini" type="button">tool</button>
+                      <button class="mini" type="button">gate</button>
+                      <button class="mini" type="button">hook</button>
+                      <button class="mini" type="button">compact</button>
+                    </div>
+                    <div class="tl-item model"><div class="ts">12:01</div><div class="rail"></div><div class="tl-card">user.prompt <span class="vis">model</span></div></div>
+                    <div class="tl-item tool"><div class="ts">12:01</div><div class="rail"></div><div class="tl-card on">tool.read citation.go <span class="vis">model</span></div></div>
+                    <div class="tl-item hook"><div class="ts">12:02</div><div class="rail"></div><div class="tl-card">hook.PreToolUse ok <span class="vis">ui</span></div></div>
+                    <div class="tl-item gate"><div class="ts">12:02</div><div class="rail"></div><div class="tl-card">waiting_approval tool_risk <span class="vis">model</span></div></div>
+                    <div class="tl-item compact"><div class="ts">12:08</div><div class="rail"></div><div class="tl-card">harness.compaction <span class="vis">summary</span></div></div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <h4>事件详情</h4>
+                  <div class="kv">
+                    <span>seq</span><div>14</div>
+                    <span>type</span><div>tool.read</div>
+                    <span>visibility</span><div>model_visible</div>
+                  </div>
+                  <div class="block"><div class="h">不变量</div>模型可见 ⟺ 已写入事件日志；FE 不私算分。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- tree -->
+            <div class="gov-panel" id="gov-tree">
+              <div class="col-h">会话树 <span class="muted">P05</span>
+                <button class="mini primary" type="button" style="margin-left:8px">Fork</button>
+                <button class="mini" type="button">Compare</button>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane">
+                  <div class="tree">
+                    <div class="node">● hotfix citation gate <span class="branch">main</span></div>
+                    <div class="indent">
+                      <div class="node on">├─ try-alt-prompt <span class="branch">fork</span></div>
+                      <div class="node">└─ after-compact <span class="branch">fork</span></div>
+                    </div>
+                    <div class="node" style="margin-top:8px">● feature_delivery #12</div>
+                    <div class="indent"><div class="node dot">└─ （无分支）</div></div>
+                  </div>
+                  <div class="transcript" style="min-height:220px;background:var(--bg)">
+                    <div class="bubble compact"><div class="who">分支点 · seq 9</div>自 main 分叉；后续 turn 独立写入 Thread。</div>
+                    <div class="bubble user"><div class="who">你 · fork</div>换一种 citation 说明语气再试。</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">Compare · main vs fork</div>同 seq 对齐；diff 仅投影字段。</div>
+                  <div class="kv">
+                    <span>main</span><div>tool_risk 拦截 1</div>
+                    <span>fork</span><div>尚无门禁</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- compact -->
+            <div class="gov-panel" id="gov-compact">
+              <div class="col-h">Compact <span class="muted">P06</span>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane transcript" style="background:var(--bg)">
+                  <div class="bubble compact">
+                    <div class="who">Compact 摘要 · 自动</div>
+                    前 24 turn 已压缩为要点：门禁策略、两处失败补丁、待验证用例。
+                    <div class="tool-card">spill → artifacts/compact/…</div>
+                    <div style="margin-top:8px">
+                      <button class="btn" type="button">展开摘要</button>
+                      <button class="btn warn" type="button">手动 /compact</button>
+                    </div>
+                  </div>
+                  <div class="bubble user"><div class="who">你</div>继续，只改测试。</div>
+                </div>
+                <div class="pane details">
+                  <div class="kv">
+                    <span>事件</span><div>harness.compaction</div>
+                    <span>可见性</span><div>ui + model summary</div>
+                  </div>
+                  <div class="block"><div class="h">与 Chat 关系</div>Chat 仅显示摘要芯片；完整操作在本页。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- steer -->
+            <div class="gov-panel" id="gov-steer">
+              <div class="col-h">Steer / Queue <span class="muted">P07</span>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane">
+                  <div class="transcript" style="min-height:200px">
+                    <div class="bubble"><div class="who">助手 · 流式</div>正在应用补丁并跑 verify…</div>
+                    <div class="bubble tool"><div class="who">工具 · bash</div><div class="tool-card">go test ./internal/policy/…</div></div>
+                  </div>
+                  <div class="composer-wrap">
+                    <div class="steer-bar">
+                      <strong>Steer</strong> 运行中插入指示
+                      <span class="spacer"></span>
+                      <button class="btn warn" type="button">立即 Steer</button>
+                    </div>
+                    <div class="composer">
+                      <div class="ph">语义说明：Enter=Steer（running）· 结束后变 Queue</div>
+                      <div class="row">
+                        <span class="queue-chip">Queue：1 再开 PR 描述</span>
+                        <span class="spacer"></span>
+                        <button class="btn" type="button">Stop</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">Steer</div>打断当前 turn，写 steer 事件。</div>
+                  <div class="block"><div class="h">Queue</div>idle 后按序投递；可删队首。</div>
+                  <div class="block"><div class="h">Chat 壳</div>仅保留 Stop；完整队列在本页管理。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- approve -->
+            <div class="gov-panel" id="gov-approve">
+              <div class="col-h">审批预设 <span class="muted">P12 · 禁 YOLO</span>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane">
+                  <div class="transcript" style="min-height:160px">
+                    <div class="bubble gate">
+                      <div class="who">门禁 · bash</div>
+                      请求执行：<code>rm -rf ./tmp-build</code>
+                      <div class="tool-card">sandbox=isolated · policy tier danger</div>
+                    </div>
+                  </div>
+                  <div class="composer-wrap">
+                    <div class="gate-panel">
+                      <h4>Gate 决策（管控台）</h4>
+                      <p>Agent Chat 仅显示待批灯 + 简易允许/拒绝；预设与 Space 写入在本页。</p>
+                      <div class="gate-actions">
+                        <button class="btn primary" type="button">允许一次</button>
+                        <button class="btn" type="button">本会话允许此类</button>
+                        <button class="btn" type="button">写入 Space 策略…</button>
+                        <button class="btn danger" type="button">拒绝</button>
+                        <button class="btn" type="button">取消 Run</button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="kv">
+                    <span>Space</span><div>team-core</div>
+                    <span>预设</span><div>cite+tool_risk</div>
+                  </div>
+                  <div class="block"><div class="h">本会话允许</div>仅 sessionId；不升格 org 默认。</div>
+                  <div class="block"><div class="h">写入 Space</div>策略包变更可进编排评审。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- hooks -->
+            <div class="gov-panel" id="gov-hooks">
+              <div class="col-h">Hooks <span class="muted">P13 · ash.hooks.v1</span>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="hook-strip">
+                <span class="hook-step ok">SessionStart</span>
+                <span class="hook-step ok">PromptSubmit</span>
+                <span class="hook-step fail">PreToolUse</span>
+                <span class="hook-step">Permission</span>
+                <span class="hook-step">PostToolUse</span>
+                <span class="hook-step">PreCompact</span>
+                <span class="hook-step">Stop</span>
+              </div>
+              <div class="split2">
+                <div class="pane transcript" style="background:var(--bg)">
+                  <div class="bubble hook">
+                    <div class="who">Hook · PreToolUse</div>
+                    组织钩子 <code>cite-guard</code> 拒绝无 citation 的 write。
+                    <div class="tool-card">fail-closed · 未执行工具 · hook.denied</div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="block"><div class="h">配置</div>空间级启用；变更可走编排评审。</div>
+                  <div class="block"><div class="h">Non-goal</div>不引入 Cordis；默认 deny 优于 allow。</div>
+                  <div class="block"><div class="h">Chat</div>仅 Hooks 灯；详情与配置在本页。</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- lineage -->
+            <div class="gov-panel" id="gov-lineage">
+              <div class="col-h">子代理谱系 <span class="muted">P16</span>
+                <button class="mini" type="button" style="margin-left:8px">中断子代理</button>
+                <button class="mini" type="button">续写回主</button>
+                <button class="mini link" type="button" data-view="agent" style="margin-left:auto">← 回 Agent Chat</button>
+              </div>
+              <div class="split2">
+                <div class="pane">
+                  <div class="tree">
+                    <div class="node">● 主会话 hotfix…</div>
+                    <div class="indent">
+                      <div class="node on">├─ sub · explore-tests <span class="branch">acp</span></div>
+                      <div class="indent2"><div class="node dot">└─ （叶子）</div></div>
+                      <div class="node">└─ sub · draft-pr <span class="branch">sub-run</span></div>
+                    </div>
+                  </div>
+                  <div class="conv-head" style="border-top:1px solid var(--border)">
+                    <div class="crumbs"><a data-view="agent">主 hotfix</a> / <strong>explore-tests</strong></div>
+                    <div class="badges"><span class="lamp warn"><i></i>subagent running</span></div>
+                  </div>
+                  <div class="transcript" style="min-height:180px">
+                    <div class="bubble"><div class="who">子代理 · explore-tests</div>正在列出相关测试文件…</div>
+                    <div class="bubble tool"><div class="who">工具 · glob</div><div class="tool-card">**/*citation*_test.go</div></div>
+                  </div>
+                </div>
+                <div class="pane details">
+                  <div class="kv">
+                    <span>parent</span><div>sess_main</div>
+                    <span>child</span><div>sess_sub_01</div>
+                    <span>provider</span><div>acp</div>
+                  </div>
+                  <div class="block"><div class="h">回写</div>子结果摘要 → 主 Trajectory；全文可 spill。</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <p class="note">
+      <strong>IA 决议（原型）：</strong>三主题 <em>Agent · 记忆 · 管控&amp;评审</em>。
+      Agent 薄交互；记忆承载双核知识面（薄批准 + 深链厚评审）；管控&amp;评审承载吸收 1–7 与 v5 Workbench。
+    </p>
+  </main>
+
+<script>
+  const legendCur = document.getElementById("legend-cur");
+  const labels = {
+    agent: "Agent · 主 Chat 壳",
+    memory: "记忆",
+    gov: "管控&评审",
+    layer: "记忆 · 分层浏览",
+    scenario: "记忆 · 场景视角",
+    skill: "记忆 · Skill 视角",
+    tools: "记忆 · Tools 视角",
+    project: "记忆 · 项目视角",
+    create: "记忆 · 新建候选",
+    query: "记忆 · 检索已批准",
+    ttl: "记忆 · TTL 复核",
+    links: "记忆 · MemoryLink",
+    assets: "记忆 · 资产登记",
+    "know-overview": "知识 · 总览",
+    "know-wiki": "知识 · Wiki",
+    "know-lsp": "知识 · LSP",
+    trajectory: "管控&评审 · Trajectory",
+    tree: "管控&评审 · 会话树",
+    compact: "管控&评审 · Compact",
+    steer: "管控&评审 · Steer/Queue",
+    approve: "管控&评审 · 审批预设",
+    hooks: "管控&评审 · Hooks",
+    lineage: "管控&评审 · 子代理谱系",
+  };
+
+  const memBodyIds = ["layer","scenario","skill","tools","project","create","query","ttl","links","assets"];
+  const memKnowIds = ["know-overview","know-wiki","know-lsp"];
+
+  function setPillar(view) {
+    document.querySelectorAll(".pillar").forEach((p) => {
+      p.classList.toggle("on", p.dataset.view === view);
+    });
+    document.querySelectorAll(".view").forEach((v) => {
+      v.classList.toggle("active", v.id === "view-" + view);
+    });
+  }
+
+  function setGovPanel(id) {
+    setPillar("gov");
+    document.querySelectorAll(".gov-item[data-gov]").forEach((el) => {
+      el.classList.toggle("on", el.dataset.gov === id);
+    });
+    document.querySelectorAll("#view-gov .gov-panel").forEach((el) => {
+      el.classList.toggle("active", el.id === "gov-" + id);
+    });
+    legendCur.textContent = labels[id] || labels.gov;
+    history.replaceState(null, "", "#gov/" + id);
+  }
+
+  function setMemTab(tab) {
+    document.querySelectorAll(".mem-tab").forEach((t) => {
+      t.classList.toggle("on", t.dataset.memTab === tab);
+    });
+    const navBody = document.getElementById("mem-nav-body");
+    const navKnow = document.getElementById("mem-nav-knowledge");
+    if (tab === "knowledge") {
+      navBody.hidden = true;
+      navKnow.hidden = false;
+      setMemPanel("know-overview");
+    } else {
+      navBody.hidden = false;
+      navKnow.hidden = true;
+      setMemPanel("layer");
+    }
+  }
+
+  function setMemPanel(id, opts) {
+    setPillar("memory");
+    const isKnow = memKnowIds.includes(id);
+    document.getElementById("mem-nav-body").hidden = isKnow;
+    document.getElementById("mem-nav-knowledge").hidden = !isKnow;
+    document.querySelectorAll(".mem-tab").forEach((t) => {
+      t.classList.toggle("on", t.dataset.memTab === (isKnow ? "knowledge" : "body"));
+    });
+    document.querySelectorAll("#mem-nav-body .gov-item[data-mem], #mem-nav-knowledge .gov-item[data-mem]").forEach((el) => {
+      el.classList.toggle("on", el.dataset.mem === id);
+    });
+    document.querySelectorAll("#view-memory .gov-panel").forEach((el) => {
+      el.classList.toggle("active", el.id === "mem-" + id);
+    });
+    if (id === "links") {
+      const label = document.getElementById("mem-links-session-label");
+      if (label) {
+        const sess = (opts && opts.sessionTitle) || "hotfix citation gate";
+        label.textContent = "会话 " + sess + " · Thread thr_12 · open";
+      }
+    }
+    legendCur.textContent = labels[id] || labels.memory;
+    const q = opts && opts.fromAgent ? "?from=agent" : "";
+    history.replaceState(null, "", "#memory/" + id + q);
+  }
+
+  function showAgent() {
+    setPillar("agent");
+    legendCur.textContent = labels.agent;
+    history.replaceState(null, "", "#agent");
+  }
+
+  function showMemory() {
+    setMemPanel("layer");
+  }
+
+  function gotoSessionMemory() {
+    const titleEl = document.querySelector("#view-agent .conv-head .title");
+    const sessionTitle = titleEl ? titleEl.textContent.trim() : "hotfix citation gate";
+    setMemPanel("links", { fromAgent: true, sessionTitle });
+  }
+
+  document.getElementById("pillar-agent").addEventListener("click", showAgent);
+  document.getElementById("pillar-memory").addEventListener("click", showMemory);
+  document.getElementById("pillar-gov").addEventListener("click", () => setGovPanel("trajectory"));
+
+  document.querySelectorAll(".mem-tab").forEach((t) => {
+    t.addEventListener("click", () => setMemTab(t.dataset.memTab));
+  });
+  document.querySelectorAll("[data-mem]").forEach((el) => {
+    el.addEventListener("click", () => setMemPanel(el.dataset.mem));
+  });
+
+  document.querySelectorAll("[data-goto-gov]").forEach((el) => {
+    el.addEventListener("click", () => setGovPanel(el.getAttribute("data-goto-gov")));
+  });
+  document.querySelectorAll("[data-goto-mem]").forEach((el) => {
+    el.addEventListener("click", () => {
+      const target = el.getAttribute("data-goto-mem");
+      if (target === "links") gotoSessionMemory();
+      else setMemPanel(target, { fromAgent: true });
+    });
+  });
+  document.querySelectorAll("[data-view='agent']").forEach((el) => {
+    if (el.classList.contains("pillar")) return;
+    el.addEventListener("click", showAgent);
+  });
+  document.querySelectorAll(".gov-item[data-gov]").forEach((el) => {
+    if (el.disabled) return;
+    el.addEventListener("click", () => setGovPanel(el.dataset.gov));
+  });
+
+  const hash = location.hash.slice(1);
+  const hashPath = hash.split("?")[0];
+  if (hashPath === "memory" || hashPath.startsWith("memory/")) {
+    const id = hashPath.startsWith("memory/") ? hashPath.slice(7) : "layer";
+    if (memBodyIds.includes(id) || memKnowIds.includes(id)) setMemPanel(id);
+    else showMemory();
+  } else if (hashPath === "gov" || hashPath.startsWith("gov/")) {
+    setGovPanel(hashPath.startsWith("gov/") ? hashPath.slice(4) || "trajectory" : "trajectory");
+  } else {
+    showAgent();
+  }
+</script>
+</body>
+</html>
