@@ -38,23 +38,36 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "prompt", prompt: "continue" });
   });
 
-  it("shows approve/cancel takeover when waiting approval", () => {
+  it("shows four gate buttons: once / session / reject / cancel run", () => {
     const onIntent = vi.fn();
     wrap(
       <IntentBar
         mode="gate"
         busy={false}
         gateReason="need human review"
+        gateTool="danger.tool"
         onIntent={onIntent}
       />,
     );
     expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-mode", "gate");
-    fireEvent.click(screen.getByTestId("agent-intent-approve"));
-    expect(onIntent).toHaveBeenCalledWith({ action: "approve", reason: "approved from IntentBar" });
+    fireEvent.click(screen.getByTestId("agent-intent-allow-once"));
+    expect(onIntent).toHaveBeenCalledWith({
+      action: "approve",
+      scope: "once",
+      tool: "danger.tool",
+      reason: "allow once from IntentBar",
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-allow-session"));
+    expect(onIntent).toHaveBeenCalledWith({
+      action: "approve",
+      scope: "session",
+      tool: "danger.tool",
+      reason: "allow session from IntentBar",
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-reject"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "reject", reason: "rejected from IntentBar" });
     fireEvent.click(screen.getByTestId("agent-intent-cancel"));
     expect(onIntent).toHaveBeenCalledWith({ action: "cancel" });
-    fireEvent.click(screen.getByTestId("agent-intent-stop"));
-    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
   });
 
   it("shows stop in prompt mode when canStop", () => {

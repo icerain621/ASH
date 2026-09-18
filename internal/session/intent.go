@@ -9,21 +9,40 @@ import (
 	"github.com/ash-repwiki/ash/internal/interaction"
 )
 
-// Intent actions for thin agent interaction (GV01).
+// Intent actions for thin agent interaction (GV01 / EW04).
 const (
 	IntentPrompt  = "prompt"
 	IntentApprove = "approve"
 	IntentCancel  = "cancel"
 	IntentReject  = "reject"
 	IntentCommand = "command"
+
+	// Gate aliases (sprint EW04 protocol names).
+	IntentAllowOnce    = "allow_once"
+	IntentAllowSession = "allow_session"
+	IntentDeny         = "deny"
+	IntentCancelRun    = "cancel_run"
+
+	ApproveScopeOnce    = "once"
+	ApproveScopeSession = "session"
+
+	MetaAllowedToolsSession = "allowedToolsSession"
 )
 
 // ErrIntentRejected is returned when an intent cannot be applied (fail-closed).
 var ErrIntentRejected = errors.New("session intent rejected")
 
+// GateApproveRequest is the run-gate approve payload from session intents.
+type GateApproveRequest struct {
+	ActorID string
+	Reason  string
+	Scope   string
+	Tool    string
+}
+
 // RunControl abstracts run gate operations to avoid importing internal/runs (cycle).
 type RunControl interface {
-	ApproveRun(runID, actorID, reason string) error
+	ApproveRun(runID string, req GateApproveRequest) error
 	CancelRun(runID string) error
 }
 
@@ -35,6 +54,8 @@ type IntentRequest struct {
 	ActorID string `json:"actorId,omitempty"`
 	Command string `json:"command,omitempty"`
 	Args    string `json:"args,omitempty"`
+	Scope   string `json:"scope,omitempty"`
+	Tool    string `json:"tool,omitempty"`
 }
 
 // WithRunControl returns a shallow copy with run gate control wired.
@@ -54,9 +75,11 @@ func (s *Service) Intent(sessionID string, req IntentRequest) (*View, error) {
 	case IntentPrompt:
 		view, _, err := s.PromptTurn(sessionID, TurnRequest{Prompt: req.Prompt})
 		return view, err
-	case IntentApprove, IntentReject:
+	case IntentApprove, IntentAllowOnce, IntentAllowSession:
 		return s.intentApprove(sessionID, req, action)
-	case IntentCancel, "stop": // stop is a UX alias of cancel
+	case IntentReject, IntentDeny:
+		return s.intentApprove(sessionID, req, IntentReject)
+	case IntentCancel, "stop", IntentCancelRun: // stop / cancel_run are UX aliases of cancel
 		return s.intentCancel(sessionID, req)
 	case IntentCommand:
 		return s.intentCommand(sessionID, req)
@@ -81,6 +104,9 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 	}
 	actor := firstNonEmpty(strings.TrimSpace(req.ActorID), view.CreatedBy, "session")
 	reason := strings.TrimSpace(req.Reason)
+	scope := normalizeIntentApproveScope(action, req.Scope)
+	tool := strings.TrimSpace(req.Tool)
+
 	if action == IntentReject {
 		if reason == "" {
 			reason = "rejected"
@@ -90,14 +116,22 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 			return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
 		}
 	} else {
-		if err := s.runs.ApproveRun(view.RunID, actor, reason); err != nil {
+		if err := s.runs.ApproveRun(view.RunID, GateApproveRequest{
+			ActorID: actor, Reason: reason, Scope: scope, Tool: tool,
+		}); err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
+		}
+		if scope == ApproveScopeSession && tool != "" {
+			if err := s.addAllowedToolSession(view, tool); err != nil {
+				return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
+			}
 		}
 	}
 	if view.RunID != "" && s.events != nil {
 		trace := firstNonEmpty(view.TraceID, view.RunID)
 		_, _ = s.events.Append(view.RunID, trace, "session.intent", "info", map[string]any{
 			"sessionId": view.ID, "action": action, "actorId": actor, "reason": reason,
+			"scope": scope, "tool": tool,
 			"threadId": metaString(view.Meta, interaction.MetaThreadID),
 		}, events.WithVisibility(events.VisibilityUIOnly))
 	}
@@ -106,6 +140,40 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 		return nil, err
 	}
 	return view, nil
+}
+
+func normalizeIntentApproveScope(action, scope string) string {
+	action = strings.ToLower(strings.TrimSpace(action))
+	if action == IntentAllowSession {
+		return ApproveScopeSession
+	}
+	if action == IntentAllowOnce {
+		return ApproveScopeOnce
+	}
+	switch strings.ToLower(strings.TrimSpace(scope)) {
+	case ApproveScopeSession, IntentAllowSession:
+		return ApproveScopeSession
+	default:
+		return ApproveScopeOnce
+	}
+}
+
+func (s *Service) addAllowedToolSession(view *View, tool string) error {
+	if view == nil || strings.TrimSpace(tool) == "" {
+		return nil
+	}
+	if view.Meta == nil {
+		view.Meta = map[string]any{}
+	}
+	list := coerceStringSlice(view.Meta[MetaAllowedToolsSession])
+	tool = strings.TrimSpace(tool)
+	for _, existing := range list {
+		if existing == tool {
+			return s.save(view)
+		}
+	}
+	view.Meta[MetaAllowedToolsSession] = append(list, tool)
+	return s.save(view)
 }
 
 // intentCancel cancels the bound run when present, and/or cancels an in-flight PromptTurn

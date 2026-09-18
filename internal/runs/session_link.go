@@ -18,6 +18,8 @@ type SessionProviderBind struct {
 type SessionLinker interface {
 	EnsureForRun(spaceID, runID, repoRoot, createdBy string, bind SessionProviderBind) (sessionID string, created bool, err error)
 	DisabledToolsForRun(runID string) []string
+	AllowedToolsSessionForRun(runID string) []string
+	AddAllowedToolSession(runID, tool string) error
 	WithContext(ctx context.Context) SessionLinker
 }
 

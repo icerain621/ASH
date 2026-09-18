@@ -12,6 +12,8 @@ export type IntentPayload = {
   reason?: string;
   command?: string;
   args?: string;
+  scope?: "once" | "session";
+  tool?: string;
 };
 
 type Props = {
@@ -20,6 +22,8 @@ type Props = {
   /** Show Stop when run is generating / waiting. */
   canStop?: boolean;
   gateReason?: string;
+  /** Tool name from open gate (for allow_session). */
+  gateTool?: string;
   onIntent: (payload: IntentPayload) => void;
 };
 
@@ -47,7 +51,14 @@ function submitText(
 }
 
 /** Thin composer: prompt input or gate takeover (DSH-aligned). */
-export function IntentBar({ mode, busy = false, canStop = false, gateReason, onIntent }: Props) {
+export function IntentBar({
+  mode,
+  busy = false,
+  canStop = false,
+  gateReason,
+  gateTool,
+  onIntent,
+}: Props) {
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -98,6 +109,7 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
   };
 
   if (mode === "gate") {
+    const tool = (gateTool || "").trim();
     return (
       <div className="agent-intent-bar" data-testid="agent-intent-bar" data-mode="gate">
         <p className="muted-line" data-testid="agent-intent-gate-reason">
@@ -108,10 +120,34 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             type="button"
             className="btn mini ok"
             disabled={busy}
-            data-testid="agent-intent-approve"
-            onClick={() => onIntent({ action: "approve", reason: "approved from IntentBar" })}
+            data-testid="agent-intent-allow-once"
+            onClick={() =>
+              onIntent({
+                action: "approve",
+                scope: "once",
+                tool: tool || undefined,
+                reason: "allow once from IntentBar",
+              })
+            }
           >
-            批准
+            允许一次
+          </button>
+          <button
+            type="button"
+            className="btn mini ok"
+            disabled={busy}
+            data-testid="agent-intent-allow-session"
+            title={tool ? `本会话允许 ${tool}` : "本会话允许此类工具"}
+            onClick={() =>
+              onIntent({
+                action: "approve",
+                scope: "session",
+                tool: tool || undefined,
+                reason: "allow session from IntentBar",
+              })
+            }
+          >
+            本会话允许此类
           </button>
           <button
             type="button"
@@ -126,19 +162,10 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             type="button"
             className="btn mini"
             disabled={busy}
-            data-testid="agent-intent-stop"
-            onClick={() => onIntent({ action: "stop" })}
-          >
-            停止
-          </button>
-          <button
-            type="button"
-            className="btn mini"
-            disabled={busy}
             data-testid="agent-intent-cancel"
             onClick={() => onIntent({ action: "cancel" })}
           >
-            取消
+            取消 Run
           </button>
         </div>
       </div>

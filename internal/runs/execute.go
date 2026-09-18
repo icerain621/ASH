@@ -316,7 +316,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					return ferr
 				}
 				risk := string(s.tools.ToolRisk(item.Tool))
-				if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
+				if !s.dangerousToolAllowed(rec, req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
 					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
 						return setErr
@@ -1069,14 +1069,35 @@ func (s *Service) sessionToolDisabled(runID, tool string) (bool, string) {
 	return false, ""
 }
 
-func (s *Service) dangerousToolAllowed(inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {
+func (s *Service) dangerousToolAllowed(rec *store.RunRecord, inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {
 	if risk != string(toolbus.RiskDanger) {
 		return true
 	}
 	if explicitDangerousToolPolicy(item.Policy) {
 		return true
 	}
-	return approvedStep(inputs, "_approvedDangerousToolSteps", stepID)
+	if approvedStep(inputs, "_approvedDangerousToolSteps", stepID) {
+		return true
+	}
+	tool := strings.TrimSpace(item.Tool)
+	if tool == "" {
+		return false
+	}
+	if toolInAllowedSessionList(inputs["_allowedToolsSession"], tool) {
+		return true
+	}
+	if s.sessionSvc != nil {
+		for _, name := range s.sessionSvc.AllowedToolsSessionForRun(rec.ID) {
+			if strings.TrimSpace(name) == tool {
+				return true
+			}
+		}
+	}
+	spaceID := ""
+	if rec != nil {
+		spaceID = rec.SpaceID
+	}
+	return spaceToolPresetAllows(s, spaceID, tool)
 }
 
 func explicitDangerousToolPolicy(policy string) bool {

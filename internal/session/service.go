@@ -803,3 +803,68 @@ func (s *Service) DisabledToolsForRun(runID string) []string {
 	}
 	return nil
 }
+
+// AllowedToolsSessionForRun returns session-scoped tool allows for any session bound to runID.
+func (s *Service) AllowedToolsSessionForRun(runID string) []string {
+	runID = strings.TrimSpace(runID)
+	if s == nil || runID == "" {
+		return nil
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil || view.Meta == nil {
+			continue
+		}
+		for _, tool := range coerceStringSlice(view.Meta[MetaAllowedToolsSession]) {
+			if tool == "" || seen[tool] {
+				continue
+			}
+			seen[tool] = true
+			out = append(out, tool)
+		}
+	}
+	return out
+}
+
+// AddAllowedToolSession appends tool to allowedToolsSession on sessions bound to runID.
+func (s *Service) AddAllowedToolSession(runID, tool string) error {
+	runID = strings.TrimSpace(runID)
+	tool = strings.TrimSpace(tool)
+	if s == nil || runID == "" || tool == "" {
+		return nil
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil {
+			continue
+		}
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		list := coerceStringSlice(view.Meta[MetaAllowedToolsSession])
+		exists := false
+		for _, existing := range list {
+			if existing == tool {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			view.Meta[MetaAllowedToolsSession] = append(list, tool)
+			if err := s.save(view); err != nil {
+				return err
+			}
+		}
+	}
+	return nil
+}

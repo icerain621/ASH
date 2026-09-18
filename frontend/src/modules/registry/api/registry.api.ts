@@ -50,6 +50,7 @@ export type SpacePolicyResponse = {
     citationMode: string;
     multiSign: boolean;
     reviewSlaHours: number;
+    bodyJson?: string;
   };
   effective: {
     spaceId: string;
@@ -67,7 +68,12 @@ export function getSpacePolicy(spaceId: string) {
 
 export function putSpacePolicy(
   spaceId: string,
-  body: { citationMode?: string; multiSign?: boolean; reviewSlaHours?: number },
+  body: {
+    citationMode?: string;
+    multiSign?: boolean;
+    reviewSlaHours?: number;
+    bodyJson?: string;
+  },
 ) {
   return api<SpacePolicyResponse>(`/spaces/${encodeURIComponent(spaceId)}/policy`, {
     method: "PUT",

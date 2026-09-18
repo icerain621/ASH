@@ -47,7 +47,17 @@ export type AgentSessionView = {
   updatedAt?: number;
 };
 
-export type SessionIntentAction = "prompt" | "approve" | "cancel" | "stop" | "reject" | "command";
+export type SessionIntentAction =
+  | "prompt"
+  | "approve"
+  | "cancel"
+  | "stop"
+  | "reject"
+  | "command"
+  | "allow_once"
+  | "allow_session"
+  | "deny"
+  | "cancel_run";
 
 export type AgentSessionListResponse = {
   items: AgentSessionView[];
@@ -162,6 +172,8 @@ export async function submitSessionIntent(
     actorId?: string;
     command?: string;
     args?: string;
+    scope?: "once" | "session" | string;
+    tool?: string;
   },
 ): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}/actions`, {

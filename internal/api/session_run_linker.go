@@ -26,6 +26,14 @@ func (l sessionRunLinker) DisabledToolsForRun(runID string) []string {
 	return l.svc.DisabledToolsForRun(runID)
 }
 
+func (l sessionRunLinker) AllowedToolsSessionForRun(runID string) []string {
+	return l.svc.AllowedToolsSessionForRun(runID)
+}
+
+func (l sessionRunLinker) AddAllowedToolSession(runID, tool string) error {
+	return l.svc.AddAllowedToolSession(runID, tool)
+}
+
 func (l sessionRunLinker) WithContext(ctx context.Context) runs.SessionLinker {
 	return sessionRunLinker{svc: l.svc.WithContext(ctx)}
 }

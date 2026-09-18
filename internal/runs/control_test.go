@@ -898,6 +898,212 @@ scenario:
 	}
 }
 
+func TestApproveScopeOnceVsSessionForDangerousTool(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "danger_tool_twice"
+  scenarioVersion: "1.0.0"
+  roles:
+    Admin: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec]
+  steps:
+    - id: "ops.danger1"
+      role: "Admin"
+      kind: "tool_chain"
+      chain:
+        - tool: "danger.tool"
+          timeoutMs: 30000
+    - id: "ops.danger2"
+      role: "Admin"
+      kind: "tool_chain"
+      chain:
+        - tool: "danger.tool"
+          timeoutMs: 30000
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "danger_tool_twice.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	ev := events.NewService(db)
+
+	t.Run("allow_once_only_current_step", func(t *testing.T) {
+		calls := 0
+		regOnce := toolbus.NewRegistry()
+		regOnce.Register("danger.tool", toolbus.RiskDanger, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+			calls++
+			return map[string]any{"ok": true}, nil
+		})
+		svc := NewService(db, ev, loader, toolbus.NewBus(regOnce)).WithAgentExecutor(agentexec.StaticExecutor{})
+		created, err := svc.Create(CreateRequest{
+			Scenario: ScenarioRef{Name: "danger_tool_twice", ScenarioVersion: "1.0.0"},
+			Inputs:   map[string]any{"issueOrSpec": "once"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		sum, err := svc.Get(created.RunID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sum.Status != "waiting_approval" {
+			t.Fatalf("status=%q want waiting_approval", sum.Status)
+		}
+		if _, err := svc.Approve(created.RunID, ApproveRequest{
+			ActorID: "tester", Reason: "once", Scope: ApproveScopeOnce, Tool: "danger.tool",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		sum, err = svc.Get(created.RunID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sum.Status != "waiting_approval" {
+			t.Fatalf("after once status=%q want waiting_approval for second step", sum.Status)
+		}
+		if calls != 1 {
+			t.Fatalf("calls=%d want 1 after allow_once", calls)
+		}
+		meta, err := loadRunMeta(svc.db.RunDir(created.RunID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if toolInAllowedSessionList(meta.Inputs["_allowedToolsSession"], "danger.tool") {
+			t.Fatal("allow_once must not write allowedToolsSession")
+		}
+	})
+
+	t.Run("allow_session_skips_same_tool", func(t *testing.T) {
+		calls := 0
+		regSess := toolbus.NewRegistry()
+		regSess.Register("danger.tool", toolbus.RiskDanger, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+			calls++
+			return map[string]any{"ok": true}, nil
+		})
+		fake := &fakeSessionLinker{}
+		svc := NewService(db, ev, loader, toolbus.NewBus(regSess)).
+			WithAgentExecutor(agentexec.StaticExecutor{}).
+			WithSessionService(fake)
+		created, err := svc.Create(CreateRequest{
+			Scenario: ScenarioRef{Name: "danger_tool_twice", ScenarioVersion: "1.0.0"},
+			Inputs:   map[string]any{"issueOrSpec": "session"},
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		if _, err := svc.Approve(created.RunID, ApproveRequest{
+			ActorID: "tester", Reason: "session", Scope: ApproveScopeSession, Tool: "danger.tool",
+		}); err != nil {
+			t.Fatal(err)
+		}
+		sum, err := svc.Get(created.RunID)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if sum.Status != "finished" {
+			t.Fatalf("status=%q want finished after allow_session", sum.Status)
+		}
+		if calls != 2 {
+			t.Fatalf("calls=%d want 2", calls)
+		}
+		meta, err := loadRunMeta(svc.db.RunDir(created.RunID))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !toolInAllowedSessionList(meta.Inputs["_allowedToolsSession"], "danger.tool") {
+			t.Fatal("expected allowedToolsSession on run meta")
+		}
+		if len(fake.allowedTools) != 1 || fake.allowedTools[0] != "danger.tool" {
+			t.Fatalf("session linker allowed=%v", fake.allowedTools)
+		}
+		evs, err := svc.events.ListAfter(created.RunID, 0, 500)
+		if err != nil {
+			t.Fatal(err)
+		}
+		foundDecision := false
+		for _, e := range evs {
+			if e.Type == "gate.decision" && strings.Contains(string(e.Payload), `"scope":"session"`) {
+				foundDecision = true
+				break
+			}
+		}
+		if !foundDecision {
+			t.Fatal("expected gate.decision with scope=session")
+		}
+	})
+}
+
+func TestSpacePolicyPresetAllowSkipsDangerGate(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	now := time.Now().UTC()
+	if err := db.Create(&store.SpacePolicyPack{
+		SpaceID: "local", CitationMode: "optional", BodyJSON: `{"toolApprovalPresets":[{"tool":"danger.tool","default":"allow"}]}`,
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "danger_preset"
+  scenarioVersion: "1.0.0"
+  roles:
+    Admin: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec]
+  steps:
+    - id: "ops.danger"
+      role: "Admin"
+      kind: "tool_chain"
+      chain:
+        - tool: "danger.tool"
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "danger_preset.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	reg := toolbus.NewRegistry()
+	reg.Register("danger.tool", toolbus.RiskDanger, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		calls++
+		return map[string]any{"ok": true}, nil
+	})
+	svc := NewService(db, events.NewService(db), loader, toolbus.NewBus(reg)).WithAgentExecutor(agentexec.StaticExecutor{})
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "danger_preset", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": "preset"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum, err := svc.Get(created.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Status != "finished" {
+		t.Fatalf("status=%q want finished (preset allow)", sum.Status)
+	}
+	if calls != 1 {
+		t.Fatalf("calls=%d", calls)
+	}
+}
+
 func TestRuntimeCommandRequiresApprovalThenExecutesViaExecGo(t *testing.T) {
 	dir := t.TempDir()
 	db := store.OpenTest(t, dir)

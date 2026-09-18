@@ -90,7 +90,7 @@ func (s *Service) runVerifyChecks(
 			return false, reason
 		}
 		risk := string(s.tools.ToolRisk(item.Tool))
-		if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
+		if !s.dangerousToolAllowed(rec, req.Inputs, step.ID, item, risk) {
 			return false, fmt.Sprintf("tool %s has danger risk and requires approval", item.Tool)
 		}
 		res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, rec.PolicyProfile, scenarioMin, toolCtx, item, nil)

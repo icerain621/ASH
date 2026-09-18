@@ -19,13 +19,17 @@ type stubRunControl struct {
 	lastActor    string
 	lastReason   string
 	lastRunID    string
+	lastScope    string
+	lastTool     string
 }
 
-func (s *stubRunControl) ApproveRun(runID, actorID, reason string) error {
+func (s *stubRunControl) ApproveRun(runID string, req session.GateApproveRequest) error {
 	s.approveCalls++
 	s.lastRunID = runID
-	s.lastActor = actorID
-	s.lastReason = reason
+	s.lastActor = req.ActorID
+	s.lastReason = req.Reason
+	s.lastScope = req.Scope
+	s.lastTool = req.Tool
 	return s.approveErr
 }
 
@@ -97,8 +101,29 @@ func TestIntent_promptApproveCancel(t *testing.T) {
 	if rc.approveCalls != 1 || rc.lastRunID != "run_intent_1" || rc.lastReason != "looks good" {
 		t.Fatalf("approve stub=%+v", rc)
 	}
+	if rc.lastScope != session.ApproveScopeOnce {
+		t.Fatalf("default scope=%q want once", rc.lastScope)
+	}
 	if out.ID != view.ID {
 		t.Fatalf("out=%+v", out)
+	}
+
+	_, err = svc.Intent(view.ID, session.IntentRequest{
+		Action: "allow_session", Reason: "trust bash", ActorID: "actor1", Tool: "bash",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rc.approveCalls != 2 || rc.lastScope != session.ApproveScopeSession || rc.lastTool != "bash" {
+		t.Fatalf("allow_session stub=%+v", rc)
+	}
+	view2, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	tools := coerceMetaStringSlice(view2.Meta[session.MetaAllowedToolsSession])
+	if len(tools) != 1 || tools[0] != "bash" {
+		t.Fatalf("allowedToolsSession=%v", view2.Meta[session.MetaAllowedToolsSession])
 	}
 
 	_, err = svc.Intent(view.ID, session.IntentRequest{Action: "cancel", ActorID: "actor1"})
@@ -134,5 +159,22 @@ func TestIntent_approveFailClosedWithoutGate(t *testing.T) {
 	}
 	if !errors.Is(err, session.ErrIntentRejected) && !strings.Contains(err.Error(), "approvable") {
 		t.Fatalf("err=%v want ErrIntentRejected or approvable message", err)
+	}
+}
+
+func coerceMetaStringSlice(v any) []string {
+	switch t := v.(type) {
+	case []string:
+		return t
+	case []any:
+		out := make([]string, 0, len(t))
+		for _, item := range t {
+			if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+				out = append(out, strings.TrimSpace(s))
+			}
+		}
+		return out
+	default:
+		return nil
 	}
 }

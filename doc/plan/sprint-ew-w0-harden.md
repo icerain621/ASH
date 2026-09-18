@@ -10,7 +10,7 @@
 | **EW01** | OpenAPI 漂移清理 | 16 | — | ✅ 完成 |
 | **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ✅ 完成 |
 | **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ✅ 完成 |
-| **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ⬜ |
+| **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ✅ |
 | **EW05** | MCP 注册工具 HTTP 执行 + 门禁 | 48 | EW04 建议先合（门禁复用） | ⬜ |
 
 **合计：** 160h · 建议顺序 EW01∥EW02 → EW03 → EW04 → EW05
@@ -69,11 +69,11 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW04-1 | 协议：gate 响应动作 `allow_once` · `allow_session` · `deny` · `cancel_run`（intent / approve 扩展） | 单测；事件可审计 | ⬜ |
-| EW04-2 | 会话级允许集合写入 session meta（工具名/风险档） | 同会话二次同类工具不重复 gate（策略内） | ⬜ |
-| EW04-3 | SpacePolicyPack `BodyJSON` 增加 `toolApprovalPresets`（或并列字段） | get/put + Reviews/Space 可编辑最小 UI | ⬜ |
-| EW04-4 | IntentBar / gate：四按钮对齐原型（允许一次 / 本会话允许此类 / 拒绝 / 取消 Run） | FE + deriveGate | ⬜ |
-| EW04-5 | Doctor 或 API 测：fail-closed 默认；无 YOLO | 证据或单测 | ⬜ |
+| EW04-1 | 协议：gate 响应动作 `allow_once` · `allow_session` · `deny` · `cancel_run`（intent / approve 扩展） | 单测；事件可审计 | ✅ |
+| EW04-2 | 会话级允许集合写入 session meta（工具名/风险档） | 同会话二次同类工具不重复 gate（策略内） | ✅ |
+| EW04-3 | SpacePolicyPack `BodyJSON` 增加 `toolApprovalPresets`（或并列字段） | get/put + Reviews/Space 可编辑最小 UI | ✅ |
+| EW04-4 | IntentBar / gate：四按钮对齐原型（允许一次 / 本会话允许此类 / 拒绝 / 取消 Run） | FE + deriveGate | ✅ |
+| EW04-5 | Doctor 或 API 测：fail-closed 默认；无 YOLO | 证据或单测 | ✅ |
 
 **非目标：** ash.hooks.v1；execpolicy 完整沙箱声明（W1）。
 

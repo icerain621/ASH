@@ -117,6 +117,9 @@ func (s *Service) PutPack(spaceID string, req PutPackRequest) (*Pack, error) {
 		row.ReviewSLAHours = *req.ReviewSLAHours
 	}
 	if req.BodyJSON != "" {
+		if err := validateBodyJSON(req.BodyJSON); err != nil {
+			return nil, err
+		}
 		row.BodyJSON = req.BodyJSON
 	}
 	if row.BodyJSON == "" {
@@ -272,4 +275,77 @@ func firstNonEmpty(vals ...string) string {
 		}
 	}
 	return ""
+}
+
+// ToolApprovalPreset is a BodyJSON toolApprovalPresets entry (fail-closed: default ask).
+type ToolApprovalPreset struct {
+	Tool    string `json:"tool"`
+	Risk    string `json:"risk,omitempty"`
+	Default string `json:"default"`
+}
+
+const (
+	PresetDefaultAsk   = "ask"
+	PresetDefaultAllow = "allow"
+	PresetDefaultDeny  = "deny"
+)
+
+// ParseToolApprovalPresets extracts toolApprovalPresets from SpacePolicy BodyJSON.
+// Invalid JSON or missing field returns nil (fail-closed: no auto-allow).
+func ParseToolApprovalPresets(bodyJSON string) []ToolApprovalPreset {
+	bodyJSON = strings.TrimSpace(bodyJSON)
+	if bodyJSON == "" || bodyJSON == "{}" {
+		return nil
+	}
+	var body struct {
+		ToolApprovalPresets []ToolApprovalPreset `json:"toolApprovalPresets"`
+	}
+	if err := json.Unmarshal([]byte(bodyJSON), &body); err != nil {
+		return nil
+	}
+	out := make([]ToolApprovalPreset, 0, len(body.ToolApprovalPresets))
+	for _, p := range body.ToolApprovalPresets {
+		tool := strings.TrimSpace(p.Tool)
+		if tool == "" {
+			continue
+		}
+		def := strings.ToLower(strings.TrimSpace(p.Default))
+		if def == "" {
+			def = PresetDefaultAsk
+		}
+		out = append(out, ToolApprovalPreset{
+			Tool: tool, Risk: strings.TrimSpace(p.Risk), Default: def,
+		})
+	}
+	return out
+}
+
+// PresetAllowsTool reports whether BodyJSON explicitly allows tool without a gate.
+// Only default=allow auto-skips; ask/deny/unknown stay fail-closed.
+func PresetAllowsTool(bodyJSON, tool string) bool {
+	tool = strings.TrimSpace(tool)
+	if tool == "" {
+		return false
+	}
+	for _, p := range ParseToolApprovalPresets(bodyJSON) {
+		if p.Tool == tool && p.Default == PresetDefaultAllow {
+			return true
+		}
+	}
+	return false
+}
+
+// PutPack validates BodyJSON when present (must be object JSON; presets optional).
+func validateBodyJSON(raw string) error {
+	raw = strings.TrimSpace(raw)
+	if raw == "" {
+		return nil
+	}
+	var m map[string]any
+	if err := json.Unmarshal([]byte(raw), &m); err != nil {
+		return fmt.Errorf("bodyJson must be a JSON object: %w", err)
+	}
+	// Touch presets parse path so invalid nested types do not panic later.
+	_ = ParseToolApprovalPresets(raw)
+	return nil
 }

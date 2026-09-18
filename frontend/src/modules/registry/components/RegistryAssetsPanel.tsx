@@ -1,4 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import {
   createAgentAsset,
   createMemoryAsset,
@@ -11,8 +12,17 @@ import {
   type RegistryAsset,
 } from "@/modules/registry/api/registry.api";
 
+const DEFAULT_PRESETS_JSON = `{
+  "toolApprovalPresets": [
+    { "tool": "bash", "risk": "high", "default": "ask" }
+  ]
+}`;
+
 export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
   const qc = useQueryClient();
+  const [bodyJson, setBodyJson] = useState(DEFAULT_PRESETS_JSON);
+  const [bodyError, setBodyError] = useState("");
+
   const agentsQuery = useQuery({
     queryKey: ["agent-assets", spaceId],
     queryFn: () => listAgentAssets("", 40),
@@ -25,6 +35,13 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
     queryKey: ["space-policy", spaceId],
     queryFn: () => getSpacePolicy(spaceId),
   });
+
+  useEffect(() => {
+    const raw = policyQuery.data?.pack?.bodyJson;
+    if (typeof raw === "string" && raw.trim()) {
+      setBodyJson(raw);
+    }
+  }, [policyQuery.data?.pack?.bodyJson]);
 
   const patchAgent = useMutation({
     mutationFn: ({ id, status }: { id: string; status: string }) => patchAgentAssetStatus(id, status),
@@ -43,12 +60,31 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["memory-assets", spaceId] }),
   });
   const putPolicy = useMutation({
-    mutationFn: (body: { citationMode?: string; multiSign?: boolean; reviewSlaHours?: number }) =>
-      putSpacePolicy(spaceId, body),
-    onSuccess: () => qc.invalidateQueries({ queryKey: ["space-policy", spaceId] }),
+    mutationFn: (body: {
+      citationMode?: string;
+      multiSign?: boolean;
+      reviewSlaHours?: number;
+      bodyJson?: string;
+    }) => putSpacePolicy(spaceId, body),
+    onSuccess: () => {
+      setBodyError("");
+      qc.invalidateQueries({ queryKey: ["space-policy", spaceId] });
+    },
+    onError: (e: Error) => setBodyError(e.message),
   });
 
   const eff = policyQuery.data?.effective;
+
+  const saveBodyJson = () => {
+    try {
+      JSON.parse(bodyJson);
+    } catch {
+      setBodyError("BodyJSON 必须是合法 JSON 对象");
+      return;
+    }
+    setBodyError("");
+    putPolicy.mutate({ bodyJson });
+  };
 
   return (
     <div className="pane" data-testid="registry-assets-panel">
@@ -79,6 +115,33 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
         >
           写入策略包
         </button>
+      </div>
+
+      <label className="wide-field" data-testid="space-policy-bodyjson-field">
+        工具审批预设 (BodyJSON / toolApprovalPresets)
+        <textarea
+          rows={6}
+          value={bodyJson}
+          data-testid="space-policy-bodyjson"
+          onChange={(e) => setBodyJson(e.target.value)}
+          style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 12 }}
+        />
+      </label>
+      <div className="row-actions" style={{ marginBottom: 12 }}>
+        <button
+          type="button"
+          className="btn mini"
+          data-testid="space-policy-bodyjson-save"
+          disabled={putPolicy.isPending}
+          onClick={saveBodyJson}
+        >
+          保存 BodyJSON
+        </button>
+        {bodyError ? (
+          <span className="error-text" data-testid="space-policy-bodyjson-error">
+            {bodyError}
+          </span>
+        ) : null}
       </div>
 
       <AssetTable

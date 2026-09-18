@@ -82,3 +82,49 @@ func TestGetPutEffectivePolicy(t *testing.T) {
 		t.Fatalf("sources=%v", eff.Sources)
 	}
 }
+
+func TestParseToolApprovalPresetsFailClosed(t *testing.T) {
+	if got := spacepolicy.ParseToolApprovalPresets(""); len(got) != 0 {
+		t.Fatalf("empty=%v", got)
+	}
+	if spacepolicy.PresetAllowsTool(`{}`, "bash") {
+		t.Fatal("empty body must not allow")
+	}
+	if spacepolicy.PresetAllowsTool(`{"toolApprovalPresets":[{"tool":"bash","risk":"high","default":"ask"}]}`, "bash") {
+		t.Fatal("ask must not auto-allow")
+	}
+	if spacepolicy.PresetAllowsTool(`{"toolApprovalPresets":[{"tool":"bash","default":"deny"}]}`, "bash") {
+		t.Fatal("deny must not auto-allow")
+	}
+	if !spacepolicy.PresetAllowsTool(`{"toolApprovalPresets":[{"tool":"bash","risk":"high","default":"allow"}]}`, "bash") {
+		t.Fatal("allow preset should auto-allow bash")
+	}
+	if spacepolicy.PresetAllowsTool(`{"toolApprovalPresets":[{"tool":"bash","default":"allow"}]}`, "other") {
+		t.Fatal("other tool must stay fail-closed")
+	}
+}
+
+func TestPutPackPersistsToolApprovalPresets(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := spacepolicy.NewService(db)
+	body := `{"toolApprovalPresets":[{"tool":"danger.tool","risk":"high","default":"ask"}]}`
+	pack, err := svc.PutPack("local", spacepolicy.PutPackRequest{BodyJSON: body})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if pack.BodyJSON != body {
+		t.Fatalf("bodyJson=%q", pack.BodyJSON)
+	}
+	got, err := svc.GetPack("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	presets := spacepolicy.ParseToolApprovalPresets(got.BodyJSON)
+	if len(presets) != 1 || presets[0].Tool != "danger.tool" || presets[0].Default != "ask" {
+		t.Fatalf("presets=%+v", presets)
+	}
+	_, err = svc.PutPack("local", spacepolicy.PutPackRequest{BodyJSON: "not-json"})
+	if err == nil {
+		t.Fatal("expected invalid bodyJson error")
+	}
+}

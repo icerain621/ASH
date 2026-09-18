@@ -8,6 +8,7 @@ type Props = {
   busy?: boolean;
   canStop?: boolean;
   gateReason?: string;
+  gateTool?: string;
   session?: AgentSessionView | null;
   onIntent: (payload: IntentPayload) => void;
   onOpenTools?: () => void;
@@ -21,6 +22,7 @@ export function ChatComposer({
   busy,
   canStop,
   gateReason,
+  gateTool,
   session = null,
   onIntent,
   onOpenTools,
@@ -79,6 +81,7 @@ export function ChatComposer({
         busy={busy}
         canStop={canStop}
         gateReason={gateReason}
+        gateTool={gateTool}
         onIntent={onIntent}
       />
     </div>
