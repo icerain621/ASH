@@ -8,6 +8,19 @@ import (
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
+// stripClientApprovalInputs removes reserved underscore approval keys from client
+// Create/Replay inputs so callers cannot plant allow-lists or step approvals.
+func stripClientApprovalInputs(inputs map[string]any) {
+	if inputs == nil {
+		return
+	}
+	for k := range inputs {
+		if strings.HasPrefix(k, "_allowed") || strings.HasPrefix(k, "_approved") {
+			delete(inputs, k)
+		}
+	}
+}
+
 func normalizeApproveScope(scope string) string {
 	switch strings.ToLower(strings.TrimSpace(scope)) {
 	case ApproveScopeSession, "allow_session":
@@ -16,6 +29,20 @@ func normalizeApproveScope(scope string) string {
 		// Fail-closed: unknown / empty → once (never YOLO / never widen).
 		return ApproveScopeOnce
 	}
+}
+
+// resolveApproveTool forces the tool from pending gate evidence. Client-supplied
+// tool is accepted only when it matches evidence (or evidence is empty and tool is empty).
+func resolveApproveTool(evidenceTool, clientTool string) (string, error) {
+	evidenceTool = strings.TrimSpace(evidenceTool)
+	clientTool = strings.TrimSpace(clientTool)
+	if clientTool != "" && evidenceTool != "" && clientTool != evidenceTool {
+		return "", ErrApproveToolMismatch
+	}
+	if clientTool != "" && evidenceTool == "" {
+		return "", ErrApproveToolMismatch
+	}
+	return evidenceTool, nil
 }
 
 func pendingApprovalTool(s *Service, runID, stepID string) string {

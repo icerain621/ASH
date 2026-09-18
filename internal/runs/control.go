@@ -11,12 +11,13 @@ import (
 )
 
 var (
-	ErrRunNotFound       = errors.New("run not found")
-	ErrRunNotResumable   = errors.New("run is not resumable")
-	ErrRunNotApprovable  = errors.New("run is not approvable")
-	ErrRunNotReplayable  = errors.New("run is not replayable")
-	ErrRunMetaMissing    = errors.New("run metadata missing")
-	ErrInvalidReplayMode = errors.New("replay mode must be exact or latest_memory")
+	ErrRunNotFound         = errors.New("run not found")
+	ErrRunNotResumable     = errors.New("run is not resumable")
+	ErrRunNotApprovable    = errors.New("run is not approvable")
+	ErrRunNotReplayable    = errors.New("run is not replayable")
+	ErrRunMetaMissing      = errors.New("run metadata missing")
+	ErrInvalidReplayMode   = errors.New("replay mode must be exact or latest_memory")
+	ErrApproveToolMismatch = errors.New("approve tool does not match pending gate evidence")
 )
 
 // canReplay reports whether a source run may be replayed into a new run.

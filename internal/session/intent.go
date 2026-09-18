@@ -121,11 +121,7 @@ func (s *Service) intentApprove(sessionID string, req IntentRequest, action stri
 		}); err != nil {
 			return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
 		}
-		if scope == ApproveScopeSession && tool != "" {
-			if err := s.addAllowedToolSession(view, tool); err != nil {
-				return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
-			}
-		}
+		// Session allow-list widening is owned by runs.Approve (evidence tool only).
 	}
 	if view.RunID != "" && s.events != nil {
 		trace := firstNonEmpty(view.TraceID, view.RunID)
@@ -156,24 +152,6 @@ func normalizeIntentApproveScope(action, scope string) string {
 	default:
 		return ApproveScopeOnce
 	}
-}
-
-func (s *Service) addAllowedToolSession(view *View, tool string) error {
-	if view == nil || strings.TrimSpace(tool) == "" {
-		return nil
-	}
-	if view.Meta == nil {
-		view.Meta = map[string]any{}
-	}
-	list := coerceStringSlice(view.Meta[MetaAllowedToolsSession])
-	tool = strings.TrimSpace(tool)
-	for _, existing := range list {
-		if existing == tool {
-			return s.save(view)
-		}
-	}
-	view.Meta[MetaAllowedToolsSession] = append(list, tool)
-	return s.save(view)
 }
 
 // intentCancel cancels the bound run when present, and/or cancels an in-flight PromptTurn

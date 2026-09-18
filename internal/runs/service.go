@@ -589,9 +589,10 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		meta.Inputs = map[string]any{}
 	}
 	scope := normalizeApproveScope(req.Scope)
-	tool := strings.TrimSpace(req.Tool)
-	if tool == "" {
-		tool = pendingApprovalTool(s, runID, step.StepID)
+	evidenceTool := pendingApprovalTool(s, runID, step.StepID)
+	tool, err := resolveApproveTool(evidenceTool, req.Tool)
+	if err != nil {
+		return nil, err
 	}
 	approvalKind := "human"
 	if step.ErrorCode == "GATE_CITATION_MISSING" {

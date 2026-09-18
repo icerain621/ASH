@@ -1042,6 +1042,154 @@ scenario:
 	})
 }
 
+func TestCreateStripsClientPlantedApprovalAllowList(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "danger_plant"
+  scenarioVersion: "1.0.0"
+  roles:
+    Admin: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec]
+  steps:
+    - id: "ops.danger"
+      role: "Admin"
+      kind: "tool_chain"
+      chain:
+        - tool: "danger.tool"
+          timeoutMs: 30000
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "danger_plant.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	calls := 0
+	reg := toolbus.NewRegistry()
+	reg.Register("danger.tool", toolbus.RiskDanger, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		calls++
+		return map[string]any{"ok": true}, nil
+	})
+	svc := NewService(db, events.NewService(db), loader, toolbus.NewBus(reg)).WithAgentExecutor(agentexec.StaticExecutor{})
+
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "danger_plant", ScenarioVersion: "1.0.0"},
+		Inputs: map[string]any{
+			"issueOrSpec": "plant allow-list",
+			"_allowedToolsSession": []any{"danger.tool", "forged.tool"},
+			"_approvedDangerousToolSteps": []any{"ops.danger"},
+		},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	sum, err := svc.Get(created.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Status != "waiting_approval" {
+		t.Fatalf("status=%q want waiting_approval (planted allow-list must not skip gate)", sum.Status)
+	}
+	if calls != 0 {
+		t.Fatalf("danger tool calls=%d want 0 before approval", calls)
+	}
+	meta, err := loadRunMeta(svc.db.RunDir(created.RunID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, ok := meta.Inputs["_allowedToolsSession"]; ok {
+		t.Fatalf("Create must strip _allowedToolsSession, got %v", meta.Inputs["_allowedToolsSession"])
+	}
+	if _, ok := meta.Inputs["_approvedDangerousToolSteps"]; ok {
+		t.Fatalf("Create must strip _approvedDangerousToolSteps, got %v", meta.Inputs["_approvedDangerousToolSteps"])
+	}
+}
+
+func TestApproveSessionRejectsForgedTool(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "danger_forge"
+  scenarioVersion: "1.0.0"
+  roles:
+    Admin: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec]
+  steps:
+    - id: "ops.danger"
+      role: "Admin"
+      kind: "tool_chain"
+      chain:
+        - tool: "danger.tool"
+          timeoutMs: 30000
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "danger_forge.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	reg := toolbus.NewRegistry()
+	reg.Register("danger.tool", toolbus.RiskDanger, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		return map[string]any{"ok": true}, nil
+	})
+	fake := &fakeSessionLinker{}
+	svc := NewService(db, events.NewService(db), loader, toolbus.NewBus(reg)).
+		WithAgentExecutor(agentexec.StaticExecutor{}).
+		WithSessionService(fake)
+
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "danger_forge", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": "forge tool"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Approve(created.RunID, ApproveRequest{
+		ActorID: "tester", Reason: "forge", Scope: ApproveScopeSession, Tool: "forged.other",
+	})
+	if err == nil {
+		t.Fatal("expected Approve to reject forged session tool")
+	}
+	if !errors.Is(err, ErrApproveToolMismatch) {
+		t.Fatalf("err=%v want ErrApproveToolMismatch", err)
+	}
+	sum, err := svc.Get(created.RunID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if sum.Status != "waiting_approval" {
+		t.Fatalf("status=%q want waiting_approval after rejected forge", sum.Status)
+	}
+	meta, err := loadRunMeta(svc.db.RunDir(created.RunID))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if toolInAllowedSessionList(meta.Inputs["_allowedToolsSession"], "forged.other") {
+		t.Fatal("forged tool must not widen allowedToolsSession")
+	}
+	if toolInAllowedSessionList(meta.Inputs["_allowedToolsSession"], "danger.tool") {
+		t.Fatal("reject must not write evidence tool either")
+	}
+	if len(fake.allowedTools) != 0 {
+		t.Fatalf("session linker allowed=%v want empty", fake.allowedTools)
+	}
+}
+
 func TestSpacePolicyPresetAllowSkipsDangerGate(t *testing.T) {
 	dir := t.TempDir()
 	db := store.OpenTest(t, dir)

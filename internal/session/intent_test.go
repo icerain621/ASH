@@ -117,14 +117,8 @@ func TestIntent_promptApproveCancel(t *testing.T) {
 	if rc.approveCalls != 2 || rc.lastScope != session.ApproveScopeSession || rc.lastTool != "bash" {
 		t.Fatalf("allow_session stub=%+v", rc)
 	}
-	view2, err := svc.Get(view.ID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	tools := coerceMetaStringSlice(view2.Meta[session.MetaAllowedToolsSession])
-	if len(tools) != 1 || tools[0] != "bash" {
-		t.Fatalf("allowedToolsSession=%v", view2.Meta[session.MetaAllowedToolsSession])
-	}
+	// Session meta allow-list is written by runs.Approve via SessionLinker (evidence tool),
+	// not from the client-supplied intent tool name.
 
 	_, err = svc.Intent(view.ID, session.IntentRequest{Action: "cancel", ActorID: "actor1"})
 	if err != nil {
@@ -159,22 +153,5 @@ func TestIntent_approveFailClosedWithoutGate(t *testing.T) {
 	}
 	if !errors.Is(err, session.ErrIntentRejected) && !strings.Contains(err.Error(), "approvable") {
 		t.Fatalf("err=%v want ErrIntentRejected or approvable message", err)
-	}
-}
-
-func coerceMetaStringSlice(v any) []string {
-	switch t := v.(type) {
-	case []string:
-		return t
-	case []any:
-		out := make([]string, 0, len(t))
-		for _, item := range t {
-			if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
-				out = append(out, strings.TrimSpace(s))
-			}
-		}
-		return out
-	default:
-		return nil
 	}
 }

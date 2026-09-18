@@ -38,6 +38,10 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		return nil, fmt.Errorf("scenario not found: %w", err)
 	}
 	eng := rules.NewEngine(doc)
+	if req.Inputs == nil {
+		req.Inputs = map[string]any{}
+	}
+	stripClientApprovalInputs(req.Inputs)
 	for _, key := range eng.RequiredInputs() {
 		if _, ok := req.Inputs[key]; !ok {
 			return nil, fmt.Errorf("missing required input %q", key)
