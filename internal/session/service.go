@@ -42,6 +42,7 @@ type View struct {
 	ProviderFallback bool           `json:"providerFallback,omitempty"`
 	ProviderReason   string         `json:"providerReason,omitempty"`
 	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
+	AgentMode        string         `json:"agentMode,omitempty"`      // coding | general
 	DisabledTools    []string       `json:"disabledTools,omitempty"`
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
@@ -57,6 +58,7 @@ type PatchRequest struct {
 	ProviderKind   *string   `json:"providerKind"`
 	PlanID         *string   `json:"planId"`
 	PermissionMode *string   `json:"permissionMode"`
+	AgentMode      *string   `json:"agentMode"`
 	DisabledTools  *[]string `json:"disabledTools"`
 }
 
@@ -202,6 +204,11 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 	}
 	view.StreamURL = sessionStreamURL(view.ID)
 	s.applyProviderKind(view, req.ProviderKind)
+	view.AgentMode = AgentModeCoding
+	if view.Meta == nil {
+		view.Meta = map[string]any{}
+	}
+	view.Meta["agentMode"] = AgentModeCoding
 	s.ensureMainThread(view)
 	if err := s.save(view); err != nil {
 		return nil, err
@@ -347,7 +354,7 @@ func (s *Service) emitSessionTurn(view *View, turn Turn, prompt string, extra ma
 	_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 }
 
-// Update applies a partial patch (title / providerKind / planId / permissionMode).
+// Update applies a partial patch (title / providerKind / planId / permissionMode / agentMode).
 func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
@@ -376,6 +383,17 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 		} else {
 			delete(view.Meta, "permissionMode")
 		}
+	}
+	if req.AgentMode != nil {
+		mode, err := normalizeAgentMode(*req.AgentMode)
+		if err != nil {
+			return nil, err
+		}
+		view.AgentMode = mode
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		view.Meta["agentMode"] = mode
 	}
 	if req.DisabledTools != nil {
 		cleaned := normalizeDisabledTools(*req.DisabledTools)
@@ -645,7 +663,24 @@ func decodeView(row store.AuditLog) (*View, error) {
 			view.DisabledTools = coerceStringSlice(raw)
 		}
 	}
+	hydrateAgentMode(&view)
 	return &view, nil
+}
+
+func hydrateAgentMode(view *View) {
+	if view == nil {
+		return
+	}
+	if view.AgentMode == "" && view.Meta != nil {
+		if raw, ok := view.Meta["agentMode"].(string); ok {
+			view.AgentMode = strings.TrimSpace(raw)
+		}
+	}
+	if mode, err := normalizeAgentMode(view.AgentMode); err == nil {
+		view.AgentMode = mode
+	} else {
+		view.AgentMode = AgentModeCoding
+	}
 }
 
 // sessionStreamURL returns the session-scoped SSE path (always, even for blank sessions).

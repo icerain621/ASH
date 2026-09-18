@@ -123,7 +123,7 @@ func (h *Handler) getAgentSession(c *gin.Context) {
 
 // PatchAgentSession godoc
 // @Summary Patch agent session seats
-// @Description Partial update: title, providerKind, planId, permissionMode.
+// @Description Partial update: title, providerKind, planId, permissionMode, agentMode.
 // @Tags agents
 // @Accept json
 // @Produce json
@@ -159,6 +159,7 @@ func (h *Handler) patchAgentSession(c *gin.Context) {
 		"sessionId": updated.ID, "title": updated.Title, "runId": updated.RunID,
 		"providerKind": updated.ProviderKind, "planId": updated.PlanID,
 		"permissionMode": updated.PermissionMode,
+		"agentMode":      updated.AgentMode,
 	})).Error
 	c.JSON(http.StatusOK, updated)
 }

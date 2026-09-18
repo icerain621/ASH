@@ -32,6 +32,12 @@ const (
 	PermissionFull           = "full"
 )
 
+// AgentMode values for session UX (coding vs general assistant).
+const (
+	AgentModeCoding  = "coding"
+	AgentModeGeneral = "general"
+)
+
 // CommandItem is one slash/skill/mcp command catalog entry.
 type CommandItem struct {
 	Name        string `json:"name"`
@@ -258,6 +264,18 @@ func normalizePermissionMode(mode string) (string, error) {
 		return m, nil
 	default:
 		return "", fmt.Errorf("invalid permissionMode %q (want read-only|workspace-write|full)", mode)
+	}
+}
+
+func normalizeAgentMode(mode string) (string, error) {
+	m := strings.ToLower(strings.TrimSpace(mode))
+	switch m {
+	case "", AgentModeCoding:
+		return AgentModeCoding, nil
+	case AgentModeGeneral:
+		return AgentModeGeneral, nil
+	default:
+		return "", fmt.Errorf("invalid agentMode %q (want coding|general)", mode)
 	}
 }
 

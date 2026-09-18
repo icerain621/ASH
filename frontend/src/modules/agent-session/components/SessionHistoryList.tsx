@@ -1,7 +1,9 @@
 import { useMemo, useState } from "react";
+import type { AgentMode } from "../agentModeLabels";
 import type { AgentSessionView } from "../api/session.api";
 import type { AgentWorkspaceView } from "../api/workspace.api";
 import { shortId } from "@/shared/utils/format";
+import { AgentModeSwitch } from "./AgentModeSwitch";
 import { reorderSessionIds } from "./reorderSessionIds";
 import { groupSessionsByWorkspace } from "./workspaceGroups";
 
@@ -41,6 +43,9 @@ type Props = {
   onCloseWorkspace?: (workspaceId: string) => void;
   includeClosed?: boolean;
   onIncludeClosedChange?: (include: boolean) => void;
+  agentMode?: AgentMode;
+  agentModeBusy?: boolean;
+  onAgentModeChange?: (mode: AgentMode) => void;
 };
 
 function sessionTitle(session: AgentSessionView): string {
@@ -80,6 +85,9 @@ export function SessionHistoryList({
   onCloseWorkspace,
   includeClosed = false,
   onIncludeClosedChange,
+  agentMode = "coding",
+  agentModeBusy,
+  onAgentModeChange,
 }: Props) {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [draft, setDraft] = useState("");
@@ -293,6 +301,13 @@ export function SessionHistoryList({
 
   return (
     <aside className="agent-session-history" data-testid="agent-session-history">
+      {onAgentModeChange ? (
+        <AgentModeSwitch
+          value={agentMode}
+          disabled={agentModeBusy}
+          onChange={onAgentModeChange}
+        />
+      ) : null}
       <div className="agent-history-header">
         <h2>历史会话</h2>
         <div className="agent-history-header-actions">

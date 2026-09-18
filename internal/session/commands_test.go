@@ -136,6 +136,46 @@ func TestUpdate_seats(t *testing.T) {
 	}
 }
 
+func TestUpdate_agentMode(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := session.NewService(db, nil, ev)
+
+	view, err := svc.Create(session.CreateRequest{SpaceID: "local", CreatedBy: "actor1", ProviderKind: "static"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.AgentMode != session.AgentModeCoding {
+		t.Fatalf("default agentMode=%q want coding", view.AgentMode)
+	}
+
+	got, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AgentMode != session.AgentModeCoding {
+		t.Fatalf("get agentMode=%q", got.AgentMode)
+	}
+
+	general := session.AgentModeGeneral
+	patched, err := svc.Update(view.ID, session.PatchRequest{AgentMode: &general})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if patched.AgentMode != session.AgentModeGeneral {
+		t.Fatalf("patched agentMode=%q", patched.AgentMode)
+	}
+	if patched.Meta["agentMode"] != session.AgentModeGeneral {
+		t.Fatalf("meta agentMode=%v", patched.Meta["agentMode"])
+	}
+
+	bad := "voice"
+	_, err = svc.Update(view.ID, session.PatchRequest{AgentMode: &bad})
+	if err == nil {
+		t.Fatal("expected invalid agentMode")
+	}
+}
+
 func TestListCommandsForSpace_includesMCP(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	now := time.Now().UTC()

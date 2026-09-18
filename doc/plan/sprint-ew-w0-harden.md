@@ -9,7 +9,7 @@
 |---|--------|------|------|------|
 | **EW01** | OpenAPI 漂移清理 | 16 | — | ✅ 完成 |
 | **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ✅ 完成 |
-| **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ⬜ |
+| **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ✅ 完成 |
 | **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ⬜ |
 | **EW05** | MCP 注册工具 HTTP 执行 + 门禁 | 48 | EW04 建议先合（门禁复用） | ⬜ |
 
@@ -55,11 +55,11 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW03-1 | 拷贝 `ash-chat-bg.png` / `ash-icon.png` → `frontend/public` 或模块 assets | 构建可引用 | ⬜ |
-| EW03-2 | 无会话 / 空白会话：ASH 空态水印（对标原型） | `agent-chat-empty` 有背景；可关 | ⬜ |
-| EW03-3 | session meta `agentMode`: `coding` \| `general`（PATCH） | API + 默认 coding | ⬜ |
-| EW03-4 | 左栏或顶栏模式切换；空态 tagline 随模式变 | FE + vitest | ⬜ |
-| EW03-5 | `make web-build` + session 单测 | 绿 | ⬜ |
+| EW03-1 | 拷贝 `ash-chat-bg.png` / `ash-icon.png` → `frontend/public` 或模块 assets | 构建可引用 | ✅ |
+| EW03-2 | 无会话 / 空白会话：ASH 空态水印（对标原型） | `agent-chat-empty` 有背景；可关 | ✅ |
+| EW03-3 | session meta `agentMode`: `coding` \| `general`（PATCH） | API + 默认 coding | ✅ |
+| EW03-4 | 左栏或顶栏模式切换；空态 tagline 随模式变 | FE + vitest | ✅ |
+| EW03-5 | `make web-build` + session 单测 | 绿 | ✅ |
 
 **非目标：** 语音输入；任务板新产品面。
 

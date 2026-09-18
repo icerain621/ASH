@@ -1700,6 +1700,10 @@ components:
           type: string
           description: "Seat permission: read-only | workspace-write | full"
           enum: [read-only, workspace-write, full]
+        agentMode:
+          type: string
+          description: "Agent UX mode: coding | general"
+          enum: [coding, general]
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }
@@ -1723,6 +1727,10 @@ components:
           type: string
           description: "Permission seat"
           enum: [read-only, workspace-write, full]
+        agentMode:
+          type: string
+          description: "Agent UX mode seat"
+          enum: [coding, general]
     AgentCommandItem:
       type: object
       required: [name, description, source]

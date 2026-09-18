@@ -17,6 +17,7 @@ export type SessionEventEnvelope = {
 };
 
 export type PermissionMode = "read-only" | "workspace-write" | "full";
+export type AgentMode = "coding" | "general";
 
 export type AgentSessionView = {
   id: string;
@@ -30,6 +31,7 @@ export type AgentSessionView = {
   workspaceId?: string;
   providerKind?: string;
   permissionMode?: PermissionMode | string;
+  agentMode?: AgentMode | string;
   disabledTools?: string[];
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
@@ -110,6 +112,7 @@ export async function patchAgentSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    agentMode?: AgentMode | string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
@@ -127,6 +130,7 @@ export async function updateSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    agentMode?: AgentMode | string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {

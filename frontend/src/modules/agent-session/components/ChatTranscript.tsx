@@ -1,4 +1,6 @@
+import type { AgentMode } from "../agentModeLabels";
 import type { SessionEventEnvelope } from "../api/session.api";
+import { AgentEmptyHero } from "./AgentEmptyHero";
 import { BubbleMarkdown } from "./BubbleMarkdown";
 import { ToolCallBubble } from "./ToolCallBubble";
 import { mergeAssistantBubbles, type MergedChatBubble } from "./conversationNodes";
@@ -21,6 +23,9 @@ type Props = {
   events: SessionEventEnvelope[];
   selectedId?: string | null;
   onSelect?: (node: ChatBubbleSelection) => void;
+  agentMode?: AgentMode;
+  showBrandHero?: boolean;
+  onDismissBrandHero?: () => void;
 };
 
 function testIdForRole(role: MergedChatBubble["role"]): string {
@@ -30,7 +35,14 @@ function testIdForRole(role: MergedChatBubble["role"]): string {
 }
 
 /** Bubble transcript for Chat tab (DSH-aligned). Merges assistant.delta by turnId. */
-export function ChatTranscript({ events, selectedId, onSelect }: Props) {
+export function ChatTranscript({
+  events,
+  selectedId,
+  onSelect,
+  agentMode = "coding",
+  showBrandHero = false,
+  onDismissBrandHero,
+}: Props) {
   const bubbles = mergeAssistantBubbles(events);
 
   const select = (item: MergedChatBubble) => {
@@ -52,9 +64,17 @@ export function ChatTranscript({ events, selectedId, onSelect }: Props) {
   return (
     <div className="agent-chat-transcript" data-testid="agent-chat-transcript">
       {bubbles.length === 0 ? (
-        <p className="muted-line" data-testid="agent-chat-transcript-empty">
-          暂无消息。在下方输入意图开始对话。
-        </p>
+        showBrandHero ? (
+          <AgentEmptyHero
+            agentMode={agentMode}
+            compact
+            onDismiss={onDismissBrandHero}
+          />
+        ) : (
+          <p className="muted-line" data-testid="agent-chat-transcript-empty">
+            暂无消息。在下方输入意图开始对话。
+          </p>
+        )
       ) : (
         <ul className="agent-chat-bubbles">
           {bubbles.map((item) => {
