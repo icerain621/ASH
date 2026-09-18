@@ -11,7 +11,7 @@
 | **EW11** | Hooks 协议骨架 `ash.hooks.v1` | 40 | — | ✅ |
 | **EW12** | PreToolUse 接入 Run 工具链 | 48 | EW11 | ✅ |
 | **EW13** | Hooks 审计事件 + 最小管控投影 | 32 | EW12 | ✅ |
-| **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ⬜ 可与 EW11 并行 |
+| **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ✅ |
 | **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ⬜ |
 | **EW16** | Steer 意图（运行中打断并续写） | 48 | — | ⬜ 可并行 |
 | **EW17** | Queue 意图 + Chat 投影 | 48 | EW16 | ⬜ |
@@ -59,9 +59,9 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW14-1 | `execpolicy.v1`：network/fs/process 声明字段（JSON） | 解析单测 | ⬜ |
-| EW14-2 | 挂 SpacePolicy BodyJSON 与/或 Harness Profile | get/put | ⬜ |
-| EW14-3 | 合并规则：更严者优先（V6-D3） | 单测 | ⬜ |
+| EW14-1 | `execpolicy.v1`：network/fs/process 声明字段（JSON） | 解析单测 | ✅ |
+| EW14-2 | 挂 SpacePolicy BodyJSON 与/或 Harness Profile | get/put | ✅ |
+| EW14-3 | 合并规则：更严者优先（V6-D3） | 单测 | ✅ |
 
 ---
 

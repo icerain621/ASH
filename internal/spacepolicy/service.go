@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/execpolicy"
 	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -296,6 +297,11 @@ func HooksConfigFromBodyJSON(bodyJSON string) (hooks.Config, error) {
 	return hooks.ConfigFromSpaceBodyJSON(bodyJSON)
 }
 
+// ExecPolicyFromBodyJSON reads ash.execpolicy.v1 from SpacePolicy BodyJSON (missing execPolicy → empty).
+func ExecPolicyFromBodyJSON(bodyJSON string) (execpolicy.Policy, error) {
+	return execpolicy.FromSpaceBodyJSON(bodyJSON)
+}
+
 // ParseToolApprovalPresets extracts toolApprovalPresets from SpacePolicy BodyJSON.
 // Invalid JSON or missing field returns nil (fail-closed: no auto-allow).
 func ParseToolApprovalPresets(bodyJSON string) []ToolApprovalPreset {
@@ -353,5 +359,9 @@ func validateBodyJSON(raw string) error {
 	}
 	// Touch presets parse path so invalid nested types do not panic later.
 	_ = ParseToolApprovalPresets(raw)
+	// Fail-closed: if execPolicy is present it must parse as ash.execpolicy.v1.
+	if _, err := ExecPolicyFromBodyJSON(raw); err != nil {
+		return fmt.Errorf("bodyJson.execPolicy: %w", err)
+	}
 	return nil
 }
