@@ -513,6 +513,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	if err := s.gdb().Save(rec).Error; err != nil {
 		return err
 	}
+	s.notifyFollowUpDrain(runID)
 
 	artifactRefs := make([]map[string]any, 0, len(manifest.Artifacts))
 	for _, a := range manifest.Artifacts {

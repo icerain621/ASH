@@ -358,6 +358,7 @@ func (s *Service) failRun(rec *store.RunRecord, runID, traceID string, started t
 	rec.ErrorMessage = msg
 	rec.UpdatedAt = finished
 	_ = s.gdb().Save(rec).Error
+	s.notifyFollowUpDrain(runID)
 	_, _ = s.eventsFor().Append(runID, traceID, "run.failed", "error", map[string]any{
 		"ok":         false,
 		"durationMs": finished.Sub(started).Milliseconds(),

@@ -14,12 +14,24 @@ type flight struct {
 }
 
 type flightRegistry struct {
-	mu   sync.Mutex
-	byID map[string]*flight
+	mu    sync.Mutex
+	byID  map[string]*flight
+	docMu sync.Mutex // serializes follow-up queue read/merge/save against PromptTurn
 }
 
 func newFlightRegistry() *flightRegistry {
 	return &flightRegistry{byID: map[string]*flight{}}
+}
+
+// lockDoc serializes session-document writes that touch meta.followUpQueue.
+// PromptTurn holds a stale view for the whole generation, so queue appends must
+// not race that final save. The unlock func is always safe to call.
+func (r *flightRegistry) lockDoc() func() {
+	if r == nil {
+		return func() {}
+	}
+	r.docMu.Lock()
+	return func() { r.docMu.Unlock() }
 }
 
 func (r *flightRegistry) begin(sessionID string) (context.Context, *flight) {

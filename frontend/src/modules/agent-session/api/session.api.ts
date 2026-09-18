@@ -50,6 +50,7 @@ export type AgentSessionView = {
 export type SessionIntentAction =
   | "prompt"
   | "steer"
+  | "queue"
   | "approve"
   | "cancel"
   | "stop"
@@ -59,6 +60,13 @@ export type SessionIntentAction =
   | "allow_session"
   | "deny"
   | "cancel_run";
+
+/** Ordered follow-up prompts stored on session meta (`followUpQueue`). */
+export function sessionFollowUpQueue(meta?: Record<string, unknown> | null): string[] {
+  const raw = meta?.followUpQueue;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
 
 export type AgentSessionListResponse = {
   items: AgentSessionView[];

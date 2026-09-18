@@ -48,3 +48,20 @@ func (s *Service) linkProviderSession(spaceID, runID, traceID, repoRoot string, 
 	})
 	return sessionID
 }
+
+// followUpDrainer drains one queued session prompt after a bound run finishes or fails.
+// Implemented by api.sessionRunLinker. Cancel/stop must not call this — queue stays.
+type followUpDrainer interface {
+	DrainFollowUpForRun(runID string)
+}
+
+func (s *Service) notifyFollowUpDrain(runID string) {
+	if s == nil || s.sessionSvc == nil {
+		return
+	}
+	d, ok := s.sessionSvc.(followUpDrainer)
+	if !ok || d == nil {
+		return
+	}
+	d.DrainFollowUpForRun(runID)
+}

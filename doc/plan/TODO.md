@@ -15,7 +15,7 @@
 | EW14 | ExecPolicy schema | 解析 + 合并 | ✅ |
 | EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ✅ |
 | EW16 | Steer 意图 | session.steer | ✅ |
-| EW17 | Queue + Chat | meta queue | ⬜ |
+| EW17 | Queue + Chat | meta queue | ✅ |
 | EW18 | W1 签字 | openapi + CHANGELOG | ⬜ |
 
 板：[`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) · 计划：[`docs/superpowers/plans/2026-09-19-w1-v60-absorb.md`](../../docs/superpowers/plans/2026-09-19-w1-v60-absorb.md)

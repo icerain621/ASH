@@ -284,6 +284,8 @@ func (s *Service) List(spaceID string, limit int, includeClosed bool) ([]View, e
 
 // PromptTurn records a turn and emits session.turn on the bound run when present.
 // Reply priority: OpenAI-compatible LLM (ASH_LLM_BASE_URL) → provider executor → echo stub.
+// After a successful (non-canceled) turn, one meta.followUpQueue item is drained when the
+// session is idle. A canceled turn does not drain; steer and queue stay mutually exclusive.
 func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, error) {
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
@@ -306,7 +308,15 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	}
 
 	flightCtx, flight := s.flights.begin(sessionID)
-	defer s.flights.end(sessionID, flight)
+	defer func() {
+		// end() cancels the flight context; capture stop/cancel before that.
+		canceled := flightCtx.Err() != nil
+		s.flights.end(sessionID, flight)
+		if canceled {
+			return
+		}
+		s.drainOneFollowUp(sessionID)
+	}()
 	flight.turnID = turn.ID
 
 	usedLLM := false
@@ -333,7 +343,7 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 		}
 	}
 
-	if err := s.save(view); err != nil {
+	if err := s.saveMergingFollowUpQueue(view); err != nil {
 		return nil, nil, err
 	}
 	view.StreamURL = sessionStreamURL(view.ID)

@@ -2162,6 +2162,17 @@ main {
   margin: 0;
 }
 
+.agent-intent-queue-chip {
+  display: inline-flex;
+  align-items: center;
+  margin: 0 0 0.35rem;
+  padding: 0.12rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  width: fit-content;
+  max-width: 100%;
+}
+
 .agent-chat-details {
   display: flex;
   flex-direction: column;

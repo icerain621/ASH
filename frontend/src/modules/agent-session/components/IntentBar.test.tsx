@@ -90,6 +90,42 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "steer", prompt: "go another way" });
   });
 
+  it("shows queue chip and enqueues without stop clearing it", () => {
+    const onIntent = vi.fn();
+    wrap(
+      <IntentBar
+        mode="prompt"
+        canStop
+        busy={false}
+        queueItems={["after this"]}
+        onIntent={onIntent}
+      />,
+    );
+    const chip = screen.getByTestId("agent-intent-queue-chip");
+    expect(chip).toHaveTextContent("队列 1");
+    expect(chip).toHaveTextContent("after this");
+    expect(chip).toHaveTextContent("停止只结束当前");
+    expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-queue-count", "1");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "next please" } });
+    fireEvent.click(screen.getByTestId("agent-intent-queue"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "queue", prompt: "next please" });
+    fireEvent.click(screen.getByTestId("agent-intent-stop"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
+    expect(onIntent).not.toHaveBeenCalledWith(expect.objectContaining({ action: "steer" }));
+  });
+
+  it("alt+enter queues while running and enter still steers", () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    fireEvent.change(area, { target: { value: "hold" } });
+    fireEvent.keyDown(area, { key: "Enter", altKey: true });
+    expect(onIntent).toHaveBeenCalledWith({ action: "queue", prompt: "hold" });
+    fireEvent.change(area, { target: { value: "interrupt" } });
+    fireEvent.keyDown(area, { key: "Enter", altKey: false });
+    expect(onIntent).toHaveBeenCalledWith({ action: "steer", prompt: "interrupt" });
+  });
+
   it("opens command menu on slash and fills without sending", async () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);

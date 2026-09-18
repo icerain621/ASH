@@ -253,8 +253,8 @@ func (h *Handler) promptAgentSessionTurn(c *gin.Context) {
 }
 
 // AgentSessionIntent godoc
-// @Summary Apply a thin session intent (prompt|steer|approve|cancel|stop|reject|command)
-// @Description Fail-closed: approve without an approvable run gate returns 409. action "steer" cancels in-flight/active run then prompts (requires active work). action "stop" is an alias of "cancel". Unknown slash commands return 409.
+// @Summary Apply a thin session intent (prompt|steer|queue|approve|cancel|stop|reject|command)
+// @Description Fail-closed: approve without an approvable run gate returns 409. steer and queue are mutually exclusive: "steer" cancels in-flight/active run then prompts (requires active work; idle → 409); "queue" never cancels — busy sessions append meta.followUpQueue (drained one-at-a-time after a successful turn or when the bound run finishes/fails); idle queue is treated as prompt. action "stop" is an alias of "cancel" and does not clear or drain the follow-up queue. Unknown slash commands return 409.
 // @Tags agents
 // @Accept json
 // @Produce json

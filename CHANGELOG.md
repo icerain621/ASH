@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW17（W1 v6.0 吸收）：Session intent `queue` — 运行中把 follow-up 写入 `meta.followUpQueue`（不打断，与 `steer` 互斥）；空闲视为 prompt；成功结束的 turn 或 bound run finished/failed 后自动消费一条；`stop`/`cancel` 只停当前、不清空也不消费队列。Chat 队列 chip。
 - Sprint EW16（W1 v6.0 吸收）：Session intent `steer` — 运行中打断 in-flight turn / 活跃 bound run 后以新 prompt 续写；审计事件 `session.steer`；空闲拒绝（非 prompt 别名）；Chat Composer 运行中 Steer 文案。
 - Sprint EW15（W1 v6.0 吸收）：`sandbox.FloorFromExecPolicy` → `ResolveSandboxModeExt` 地板仅抬升；Run 从 SpacePolicy `bodyJson.execPolicy` 加载；Scale `execPolicyLoaded` / `execPolicySandboxFloor`；Doctor `M4-SBX-06`；无配置不降级隔离。
 - Sprint EW14（W1 v6.0 吸收）：`internal/execpolicy` — 声明式 `ash.execpolicy.v1`（network/fs/process 能力地板）、SpacePolicy `bodyJson.execPolicy` 与 Harness Spec 合成解析、`Merge` 更严者优先（V6-D3）；附录 [`doc/appendices/ash-execpolicy-v1.md`](doc/appendices/ash-execpolicy-v1.md)。

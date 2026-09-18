@@ -1,4 +1,4 @@
-import type { AgentSessionView } from "../api/session.api";
+import { sessionFollowUpQueue, type AgentSessionView } from "../api/session.api";
 import { permissionStripLabel, resolvePermissionMode } from "../permissionModeLabels";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 import { ChatSeats } from "./ChatSeats";
@@ -30,6 +30,7 @@ export function ChatComposer({
   onOpenSkills,
 }: Props) {
   const hasShortcuts = Boolean(onOpenTools || onOpenMcp || onOpenSkills);
+  const queueItems = sessionFollowUpQueue(session?.meta);
 
   return (
     <div className="agent-chat-composer" data-testid="agent-chat-composer">
@@ -82,6 +83,7 @@ export function ChatComposer({
         canStop={canStop}
         gateReason={gateReason}
         gateTool={gateTool}
+        queueItems={queueItems}
         onIntent={onIntent}
       />
     </div>

@@ -14,7 +14,7 @@
 | **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ✅ |
 | **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ✅ |
 | **EW16** | Steer 意图（运行中打断并续写） | 48 | — | ✅ |
-| **EW17** | Queue 意图 + Chat 投影 | 48 | EW16 | ⬜ |
+| **EW17** | Queue 意图 + Chat 投影 | 48 | EW16 | ✅ |
 | **EW18** | W1 签字：openapi · 测 · CHANGELOG · 板勾选 | 16 | EW13+EW15+EW17 | ⬜ |
 
 **建议顺序：** EW11→EW12→EW13 ∥ EW14→EW15 ∥ EW16→EW17 → EW18  
@@ -89,9 +89,9 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW17-1 | intent `queue`：非运行中入队；运行结束后自动 prompt | meta queue + 单测 | ⬜ |
-| EW17-2 | Chat 队列 chip + Stop 仅停当前 | FE | ⬜ |
-| EW17-3 | 与 steer 互斥语义写进注释/OpenAPI | 文档 | ⬜ |
+| EW17-1 | intent `queue`：运行中入队；空闲视为 prompt；结束后自动消费一条 | meta queue + 单测 | ✅ |
+| EW17-2 | Chat 队列 chip + Stop 仅停当前（不清空队列） | FE | ✅ |
+| EW17-3 | 与 steer 互斥语义写进注释/OpenAPI | 文档 | ✅ |
 
 ---
 

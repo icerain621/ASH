@@ -37,3 +37,12 @@ func (l sessionRunLinker) AddAllowedToolSession(runID, tool string) error {
 func (l sessionRunLinker) WithContext(ctx context.Context) runs.SessionLinker {
 	return sessionRunLinker{svc: l.svc.WithContext(ctx)}
 }
+
+// DrainFollowUpForRun starts one queued follow-up after the bound run finishes or fails.
+// steer remains the interrupt path; this does not cancel anything.
+func (l sessionRunLinker) DrainFollowUpForRun(runID string) {
+	if l.svc == nil {
+		return
+	}
+	l.svc.DrainFollowUpForRun(runID)
+}

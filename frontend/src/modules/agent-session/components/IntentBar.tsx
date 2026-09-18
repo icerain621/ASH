@@ -24,6 +24,8 @@ type Props = {
   gateReason?: string;
   /** Tool name from open gate (for allow_session). */
   gateTool?: string;
+  /** Follow-up prompts already queued on the session (chip only; Stop does not clear them). */
+  queueItems?: string[];
   onIntent: (payload: IntentPayload) => void;
 };
 
@@ -36,7 +38,7 @@ function ensureSlash(name: string): string {
 function submitText(
   text: string,
   onIntent: (payload: IntentPayload) => void,
-  opts?: { steer?: boolean },
+  opts?: { steer?: boolean; queue?: boolean },
 ): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -45,6 +47,8 @@ function submitText(
     const command = sp < 0 ? trimmed : trimmed.slice(0, sp);
     const args = sp < 0 ? "" : trimmed.slice(sp + 1).trim();
     onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
+  } else if (opts?.queue) {
+    onIntent({ action: "queue", prompt: trimmed });
   } else {
     onIntent({
       action: opts?.steer ? "steer" : "prompt",
@@ -61,6 +65,7 @@ export function IntentBar({
   canStop = false,
   gateReason,
   gateTool,
+  queueItems = [],
   onIntent,
 }: Props) {
   const [prompt, setPrompt] = useState("");
@@ -107,6 +112,14 @@ export function IntentBar({
   const sendCurrent = () => {
     if (busy) return;
     if (submitText(prompt, onIntent, { steer: canStop })) {
+      setPrompt("");
+      setMenuOpen(false);
+    }
+  };
+
+  const queueCurrent = () => {
+    if (busy || !canStop) return;
+    if (submitText(prompt, onIntent, { queue: true })) {
       setPrompt("");
       setMenuOpen(false);
     }
@@ -182,8 +195,16 @@ export function IntentBar({
       data-testid="agent-intent-bar"
       data-mode="prompt"
       data-steer={canStop ? "true" : "false"}
+      data-queue-count={queueItems.length}
     >
       <div className="agent-intent-prompt-wrap">
+        {queueItems.length > 0 ? (
+          <p className="agent-intent-queue-chip muted-line" data-testid="agent-intent-queue-chip">
+            队列 {queueItems.length}
+            {queueItems[0] ? ` · ${queueItems[0].trim().slice(0, 24)}` : ""}
+            {" · 停止只结束当前"}
+          </p>
+        ) : null}
         {canStop ? (
           <p className="muted-line" data-testid="agent-intent-steer-hint">
             运行中：发送将打断当前生成并以新提示续写（Steer）
@@ -199,7 +220,7 @@ export function IntentBar({
             data-testid="agent-intent-prompt"
             placeholder={
               canStop
-                ? "打断并续写 · Enter 发送 · Shift+Enter 换行"
+                ? "打断并续写 · Enter 续写 · Alt+Enter 排队 · Shift+Enter 换行"
                 : "Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
             }
             onChange={(e) => {
@@ -233,6 +254,10 @@ export function IntentBar({
               }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                if (e.altKey && canStop) {
+                  queueCurrent();
+                  return;
+                }
                 sendCurrent();
               }
             }}
@@ -283,15 +308,28 @@ export function IntentBar({
           /
         </button>
         {canStop ? (
-          <button
-            type="button"
-            className="btn mini err"
-            disabled={busy}
-            data-testid="agent-intent-stop"
-            onClick={() => onIntent({ action: "stop" })}
-          >
-            停止
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn mini err"
+              disabled={busy}
+              data-testid="agent-intent-stop"
+              title="只停止当前生成或 Run，不清空 follow-up 队列"
+              onClick={() => onIntent({ action: "stop" })}
+            >
+              停止
+            </button>
+            <button
+              type="button"
+              className="btn mini"
+              disabled={busy || !prompt.trim()}
+              data-testid="agent-intent-queue"
+              title="当前结束后再发送，不打断 Steer"
+              onClick={queueCurrent}
+            >
+              排队
+            </button>
+          </>
         ) : null}
         <button
           type="button"
