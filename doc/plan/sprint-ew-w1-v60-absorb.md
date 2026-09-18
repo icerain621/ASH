@@ -8,7 +8,7 @@
 
 | # | Sprint | 人时 | 依赖 | 状态 |
 |---|--------|------|------|------|
-| **EW11** | Hooks 协议骨架 `ash.hooks.v1` | 40 | — | ⬜ 可开工 |
+| **EW11** | Hooks 协议骨架 `ash.hooks.v1` | 40 | — | ✅ |
 | **EW12** | PreToolUse 接入 Run 工具链 | 48 | EW11 | ⬜ |
 | **EW13** | Hooks 审计事件 + 最小管控投影 | 32 | EW12 | ⬜ |
 | **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ⬜ 可与 EW11 并行 |
@@ -26,10 +26,10 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW11-1 | 包 `internal/hooks`：`ash.hooks.v1` 文档类型（事件枚举、Decision、Rule） | 单测 | ⬜ |
-| EW11-2 | 从 SpacePolicy `BodyJSON.hooks` 或默认空配置加载 | GetEffective；缺省 = 无 hook（不阻断） | ⬜ |
-| EW11-3 | `Evaluate(PreToolUse, ctx)`：声明式匹配 tool/risk → allow\|deny\|ask | fail-closed：匹配 deny 则拒绝；未知 matcher 忽略 | ⬜ |
-| EW11-4 | OpenAPI/附录短说明 + CHANGELOG 条目 | 文档 | ⬜ |
+| EW11-1 | 包 `internal/hooks`：`ash.hooks.v1` 文档类型（事件枚举、Decision、Rule） | 单测 | ✅ |
+| EW11-2 | 从 SpacePolicy `BodyJSON.hooks` 或默认空配置加载 | GetEffective；缺省 = 无 hook（不阻断） | ✅ |
+| EW11-3 | `Evaluate(PreToolUse, ctx)`：声明式匹配 tool/risk → allow\|deny\|ask | fail-closed：匹配 deny 则拒绝；未知 matcher 忽略 | ✅ |
+| EW11-4 | OpenAPI/附录短说明 + CHANGELOG 条目 | 文档 | ✅ |
 
 **非目标：** 外部 shell 脚本 Hooks；SessionStart 全生命周期（EW12+ 再扩）。
 

@@ -1,21 +1,32 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-18  
+> 更新：2026-09-19  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
-## 现行 · W0 硬化（EW）
+## 现行 · W1 v6.0 吸收（EW11+）
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW01 | OpenAPI 漂移清理 | `make openapi-check` | ⬜ |
-| EW02 | 审批席位中文 / fail-closed | ChatSeats vitest | ⬜ |
-| EW03 | 空态品牌 + coding/general | web-build | ⬜ |
-| EW04 | 审批预设 once/会话/策略 | gate + SpacePolicy | ⬜ |
-| EW05 | MCP HTTP execute + 门禁 | openapi + 单测 | ✅ |
+| EW11 | Hooks 协议骨架 ash.hooks.v1 | `go test ./internal/hooks` | ✅ |
+| EW12 | PreToolUse 接入 Run | execute + 事件 | ⬜ |
+| EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ⬜ |
+| EW14 | ExecPolicy schema | 解析 + 合并 | ⬜ |
+| EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ⬜ |
+| EW16 | Steer 意图 | session.steer | ⬜ |
+| EW17 | Queue + Chat | meta queue | ⬜ |
+| EW18 | W1 签字 | openapi + CHANGELOG | ⬜ |
 
-板：[`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) · 计划：[`docs/superpowers/plans/2026-09-18-w0-harden.md`](../../docs/superpowers/plans/2026-09-18-w0-harden.md)
+板：[`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) · 计划：[`docs/superpowers/plans/2026-09-19-w1-v60-absorb.md`](../../docs/superpowers/plans/2026-09-19-w1-v60-absorb.md)
+
+## 已完成 · W0 硬化（EW）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW01–EW05 | OpenAPI · 席位 · 空态 · 审批预设 · MCP execute | 见 W0 板 | ✅ |
+
+板：[`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md)
 
 ---
 

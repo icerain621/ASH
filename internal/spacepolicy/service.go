@@ -8,6 +8,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -289,6 +290,11 @@ const (
 	PresetDefaultAllow = "allow"
 	PresetDefaultDeny  = "deny"
 )
+
+// HooksConfigFromBodyJSON reads ash.hooks.v1 from SpacePolicy BodyJSON (missing hooks → empty config).
+func HooksConfigFromBodyJSON(bodyJSON string) (hooks.Config, error) {
+	return hooks.ConfigFromSpaceBodyJSON(bodyJSON)
+}
 
 // ParseToolApprovalPresets extracts toolApprovalPresets from SpacePolicy BodyJSON.
 // Invalid JSON or missing field returns nil (fail-closed: no auto-allow).
