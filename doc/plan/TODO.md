@@ -10,9 +10,9 @@
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
 | EW11 | Hooks 协议骨架 ash.hooks.v1 | `go test ./internal/hooks` | ✅ |
-| EW12 | PreToolUse 接入 Run | execute + 事件 | ⬜ |
-| EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ⬜ |
-| EW14 | ExecPolicy schema | 解析 + 合并 | ⬜ |
+| EW12 | PreToolUse 接入 Run | execute + 事件 | ✅ |
+| EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ✅ |
+| EW14 | ExecPolicy schema | 解析 + 合并 | ✅ |
 | EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ⬜ |
 | EW16 | Steer 意图 | session.steer | ⬜ |
 | EW17 | Queue + Chat | meta queue | ⬜ |
