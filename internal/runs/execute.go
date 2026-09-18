@@ -16,6 +16,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
@@ -320,6 +321,44 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					return ferr
 				}
 				risk := string(s.tools.ToolRisk(item.Tool))
+				hookDec := s.evaluatePreToolUse(rec, req.Inputs, step.ID, item.Tool, risk)
+				if hookDec.Action != hooks.ActionAllow || hookDec.RuleIndex >= 0 {
+					payload := hookDecisionPayload(step.ID, item.Tool, risk, hookDec)
+					_, _ = s.eventsFor().Append(runID, traceID, "hook.pre_tool_use", "info", payload)
+					_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+				}
+				if hookDec.Action == hooks.ActionDeny {
+					msg := hookDec.Reason
+					if msg == "" {
+						msg = fmt.Sprintf("PreToolUse hook denied tool %s", item.Tool)
+					}
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+						"target": "tool", "reason": msg, "action": "deny", "ref": item.Tool,
+						"matrix": "hooks.pre_tool_use",
+					})
+					s.finishStep(stepRow, "failed", stepStart, errorCodeHookDenied, msg)
+					_, ferr := s.failRun(rec, runID, traceID, started, errorCodeHookDenied, msg)
+					return ferr
+				}
+				if hookDec.Action == hooks.ActionAsk {
+					msg := hookDec.Reason
+					if msg == "" {
+						msg = fmt.Sprintf("PreToolUse hook requires approval for tool %s", item.Tool)
+					}
+					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+						return setErr
+					}
+					rec.UpdatedAt = time.Now().UTC()
+					_ = s.gdb().Save(rec).Error
+					s.finishStep(stepRow, "waiting_approval", stepStart, errorCodeHookAskApprovalRequired, msg)
+					_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
+						"stepId": step.ID, "gate": gateHookPreToolUse, "tool": item.Tool, "risk": risk, "reason": msg,
+					})
+					s.requestApproval(rec, stepRow, gateHookPreToolUse, risk, msg, map[string]any{
+						"stepId": step.ID, "tool": item.Tool, "policy": item.Policy,
+					})
+					return ErrWaitingApproval
+				}
 				if !s.dangerousToolAllowed(rec, req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
 					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {

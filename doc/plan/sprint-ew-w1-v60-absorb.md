@@ -9,7 +9,7 @@
 | # | Sprint | 人时 | 依赖 | 状态 |
 |---|--------|------|------|------|
 | **EW11** | Hooks 协议骨架 `ash.hooks.v1` | 40 | — | ✅ |
-| **EW12** | PreToolUse 接入 Run 工具链 | 48 | EW11 | ⬜ |
+| **EW12** | PreToolUse 接入 Run 工具链 | 48 | EW11 | ✅ |
 | **EW13** | Hooks 审计事件 + 最小管控投影 | 32 | EW12 | ⬜ |
 | **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ⬜ 可与 EW11 并行 |
 | **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ⬜ |
@@ -39,9 +39,9 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW12-1 | `runs/execute` 在 `callTool` 前调用 hooks.Evaluate | deny → 跳过工具并发 `hook.pre_tool_use` 事件 | ⬜ |
-| EW12-2 | ask → 走现有 waiting_approval（复用 EW04） | 单测 | ⬜ |
-| EW12-3 | 空间无 hooks 配置时行为与今日一致 | 回归测 | ⬜ |
+| EW12-1 | `runs/execute` 在 `callTool` 前调用 hooks.Evaluate | deny → 跳过工具并发 `hook.pre_tool_use` 事件 | ✅ |
+| EW12-2 | ask → 走现有 waiting_approval（复用 EW04） | 单测 | ✅ |
+| EW12-3 | 空间无 hooks 配置时行为与今日一致 | 回归测 | ✅ |
 
 ---
 

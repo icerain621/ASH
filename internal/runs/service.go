@@ -607,6 +607,15 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 				_ = s.sessionSvc.AddAllowedToolSession(runID, tool)
 			}
 		}
+	} else if step.ErrorCode == errorCodeHookAskApprovalRequired {
+		approvalKind = "hook"
+		appendApprovedStep(meta.Inputs, approvedHookPreToolUseStepsKey, step.StepID)
+		if scope == ApproveScopeSession && tool != "" {
+			appendAllowedToolSession(meta.Inputs, tool)
+			if s.sessionSvc != nil {
+				_ = s.sessionSvc.AddAllowedToolSession(runID, tool)
+			}
+		}
 	} else {
 		appendApprovedStep(meta.Inputs, "_approvedHumanSteps", step.StepID)
 	}
