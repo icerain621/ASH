@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW13（W1 v6.0 吸收）：Hooks 决策审计可观测 — 附录稳定 `hook.pre_tool_use` / `hook.decision` payload 字段；Agent Chat Trajectory/Details 识别 `hook.*`；Reviews 编排流程只读投影 `bodyJson.hooks` 规则表。
 - Sprint EW12（W1 v6.0 吸收）：`runs/execute` 工具链在调用前加载 SpacePolicy `bodyJson.hooks` 并求值 PreToolUse；`deny` 失败闭合（`HOOK_DENIED` + `hook.pre_tool_use`/`hook.decision`）；`ask` 进入既有 `waiting_approval`（`HOOK_ASK_APPROVAL_REQUIRED`）；无 hooks 配置行为不变。
 - Sprint EW11（W1 v6.0 吸收）：`internal/hooks` — 声明式 `ash.hooks.v1`（PreToolUse）配置解析、SpacePolicy `bodyJson.hooks` 加载与 tool/risk 规则求值（缺省 allow；错误 version / 匹配规则 action 无效 fail-closed → deny）；附录 [`doc/appendices/ash-hooks-v1.md`](doc/appendices/ash-hooks-v1.md)。
 - Sprint EW05（W0 harden）：`POST /api/v1/mcp/tools/{toolId}/execute` — 查库 → toolbus `mcp.call`；medium+ 失败闭合（SpacePolicy preset / session allow-list / permissionMode workspace-write+ / 服务端 `approvalToken`）；FE MCP「试执行」；OpenAPI + 审计事件。

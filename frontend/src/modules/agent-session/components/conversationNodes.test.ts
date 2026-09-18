@@ -64,6 +64,31 @@ describe("conversationNodes", () => {
     );
   });
 
+  it("resolves hook.pre_tool_use and hook.decision for Trajectory", () => {
+    const pre = resolveConversationNode(
+      ev({
+        type: "hook.pre_tool_use",
+        payload: { tool: "bash", action: "deny", reason: "policy", stepId: "s1", ruleIndex: 0 },
+      }),
+    );
+    expect(pre.kind).toBe("hook.pre_tool_use");
+    expect(pre.title).toContain("PreToolUse");
+    expect(pre.summary).toContain("bash");
+    const dec = resolveConversationNode(
+      ev({ type: "hook.decision", payload: { tool: "bash", action: "deny", reason: "policy" } }),
+    );
+    expect(dec.kind).toBe("hook.decision");
+    expect(dec.title).toContain("deny");
+  });
+
+  it("omits hook.* from chat bubbles (Trajectory-only)", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({ id: "u1", seq: 1, type: "session.turn", payload: { prompt: "hi" } }),
+      ev({ id: "h1", seq: 2, type: "hook.decision", payload: { tool: "bash", action: "deny" } }),
+    ]);
+    expect(bubbles.map((b) => b.type)).toEqual(["session.turn"]);
+  });
+
   it("omits step.* from chat bubbles (Trajectory-only)", () => {
     const bubbles = mergeAssistantBubbles([
       ev({ id: "u1", seq: 1, type: "session.turn", payload: { prompt: "hi" } }),

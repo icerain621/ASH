@@ -13,6 +13,7 @@ import {
   type ReviewItem,
 } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
+import { projectHooksFromBodyJson } from "@/modules/registry/hooksPolicy";
 import { RegistryAssetsPanel } from "@/modules/registry/components/RegistryAssetsPanel";
 import { getAuthMe } from "@/modules/platform/api/platform.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
@@ -75,6 +76,8 @@ export function ReviewsPage() {
     queryKey: ["auth-me", spaceId],
     queryFn: getAuthMe,
   });
+
+  const hooksProjection = projectHooksFromBodyJson(policyQuery.data?.pack?.bodyJson);
 
   const isAppealItem = selected?.targetType === "score_appeal";
 
@@ -271,6 +274,52 @@ export function ReviewsPage() {
               打开自动化
             </Link>
           </div>
+          {policyQuery.isLoading ? (
+            <p className="muted-line" style={{ marginTop: 12 }}>
+              加载空间策略…
+            </p>
+          ) : hooksProjection ? (
+            <div className="pane" data-testid="reviews-hooks-projection" style={{ marginTop: 12 }}>
+              <div className="pane-title">
+                <h2>Hooks</h2>
+                <span className="muted-line">{hooksProjection.version || "ash.hooks.v1"}</span>
+              </div>
+              {hooksProjection.parseError ? (
+                <p className="muted-line">{hooksProjection.parseError}</p>
+              ) : hooksProjection.rules.length === 0 ? (
+                <p className="muted-line">已配置 hooks 容器，规则列表为空。</p>
+              ) : (
+                <table className="table compact">
+                  <thead>
+                    <tr>
+                      <th>event</th>
+                      <th>tool</th>
+                      <th>action</th>
+                      <th>reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {hooksProjection.rules.map((rule, idx) => (
+                      <tr key={`hook-rule-${idx}`} data-testid="reviews-hooks-rule">
+                        <td>{rule.event || "—"}</td>
+                        <td>{rule.tool || "*"}</td>
+                        <td>{rule.action || "—"}</td>
+                        <td className="muted-line">{rule.reason || "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+              <p className="muted-line" style={{ marginTop: 8 }}>
+                Run 侧 PreToolUse 决策见 Agent Trajectory 的 <code>hook.*</code> 事件；附录{" "}
+                <code>doc/appendices/ash-hooks-v1.md</code>。
+              </p>
+            </div>
+          ) : (
+            <p className="muted-line" style={{ marginTop: 12 }} data-testid="reviews-hooks-empty">
+              当前空间 BodyJSON 未配置 <code>hooks</code>。
+            </p>
+          )}
         </div>
       ) : null}
 

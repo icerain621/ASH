@@ -219,6 +219,8 @@ export function eventVisibility(ev: { type?: string; visibility?: string }): Eve
     return "audit";
   }
   if ((ev.type || "").startsWith("ui.") || ev.type === "gate.waiting_approval") return "ui_only";
-  if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.")) return "ui_only";
+  if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.") || (ev.type || "").startsWith("hook.")) {
+    return "ui_only";
+  }
   return "model_visible";
 }

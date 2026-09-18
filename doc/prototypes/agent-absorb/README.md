@@ -10,6 +10,12 @@
 
 深链示例：`#memory/layer` · `#memory/know-wiki` · `#gov/hooks` · `#agent`
 
+### `#gov/hooks`（与实现 EW13 对齐）
+
+- **已实现（W1）**：SpacePolicy `bodyJson.hooks`（`ash.hooks.v1`）· Run **PreToolUse** 求值 · 审计事件 `hook.pre_tool_use` / `hook.decision`（Agent **Trajectory** + **Details** KV）· Reviews **编排流程** 只读规则表。
+- **原型扩展（非目标）**：Hook 生命周期条（SessionStart / PostToolUse 等）为交互占位；W1 不落地外部 shell Hooks / Cordis。
+- 字段与 payload 说明：[`doc/appendices/ash-hooks-v1.md`](../../appendices/ash-hooks-v1.md)。
+
 ## 三主题
 
 | 主题 | 内容 |
@@ -59,3 +65,4 @@
 | 2026-09-17 | Agent 看板：编程/通用切换 · ASH 空态水印 · 审批模式（询问/自动/完全）· 模型切换 |
 | 2026-09-18 | 品牌图：`assets/ash-icon.png`（图标）· `assets/ash-chat-bg.png`（Chat 空态背景） |
 | 2026-09-18 | Chat 背景重绘：保留代码雨；强化面部/头部；身躯简化为淡轮廓 |
+| 2026-09-19 | `#gov/hooks` 与 EW13 实现对齐说明（PreToolUse 审计 · Trajectory/Reviews 薄投影） |
