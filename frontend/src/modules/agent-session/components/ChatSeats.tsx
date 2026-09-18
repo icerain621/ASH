@@ -6,12 +6,11 @@ import {
   type AgentSessionView,
   type PermissionMode,
 } from "../api/session.api";
-
-const PERMISSION_OPTIONS: { value: PermissionMode; label: string }[] = [
-  { value: "read-only", label: "read-only" },
-  { value: "workspace-write", label: "workspace-write" },
-  { value: "full", label: "full" },
-];
+import {
+  FULL_ACCESS_CONFIRM_MESSAGE,
+  PERMISSION_OPTIONS,
+  resolvePermissionMode,
+} from "../permissionModeLabels";
 
 type Props = {
   session: AgentSessionView | null;
@@ -50,7 +49,7 @@ export function ChatSeats({ session, disabled = false }: Props) {
 
   const busy = disabled || !session?.id || patchMut.isPending;
   const providerKind = session?.providerKind || modelsQuery.data?.items?.[0]?.id || "static";
-  const permissionMode = (session?.permissionMode || "read-only") as PermissionMode;
+  const permissionMode = resolvePermissionMode(session?.permissionMode);
 
   return (
     <div className="agent-chat-seats" data-testid="agent-chat-seats">
@@ -76,7 +75,7 @@ export function ChatSeats({ session, disabled = false }: Props) {
         </select>
       </label>
       <label className="agent-chat-seat">
-        Permission
+        审批
         <select
           data-testid="agent-chat-seat-permission"
           disabled={busy}
@@ -85,9 +84,7 @@ export function ChatSeats({ session, disabled = false }: Props) {
             const next = e.target.value.trim() as PermissionMode;
             if (!next || next === permissionMode) return;
             if (next === "full") {
-              const ok = window.confirm(
-                "切换到 full 权限？将允许危险工具在无逐步批准时执行（仍受场景策略约束）。",
-              );
+              const ok = window.confirm(FULL_ACCESS_CONFIRM_MESSAGE);
               if (!ok) return;
             }
             patchMut.mutate({ permissionMode: next });

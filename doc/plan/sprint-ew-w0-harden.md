@@ -8,7 +8,7 @@
 | # | Sprint | 人时 | 依赖 | 状态 |
 |---|--------|------|------|------|
 | **EW01** | OpenAPI 漂移清理 | 16 | — | ✅ 完成 |
-| **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ⬜ 可开工（可与 EW01 并行） |
+| **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ✅ 完成 |
 | **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ⬜ |
 | **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ⬜ |
 | **EW05** | MCP 注册工具 HTTP 执行 + 门禁 | 48 | EW04 建议先合（门禁复用） | ⬜ |
@@ -34,10 +34,18 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW02-1 | ChatSeats：中文标签「询问审批 / 自动审批 / 完全访问」映射 `read-only` / `workspace-write` / `full` | vitest ChatSeats；默认仍 `read-only` | ⬜ |
-| EW02-2 | 完全访问二次确认文案对齐原型（非默认、风险明示） | 现有 confirm 强化；测试保留 | ⬜ |
-| EW02-3 | Composer/状态条展示当前审批模式（可选短文案） | AgentChatShell 可见 | ⬜ |
-| EW02-4 | Doc：permissionMode ↔ 原型 ask/auto/full 对照表 | inventory 或本板备注 | ⬜ |
+| EW02-1 | ChatSeats：中文标签「询问审批 / 自动审批 / 完全访问」映射 `read-only` / `workspace-write` / `full` | vitest ChatSeats；默认仍 `read-only` | ✅ |
+| EW02-2 | 完全访问二次确认文案对齐原型（非默认、风险明示） | 现有 confirm 强化；测试保留 | ✅ |
+| EW02-3 | Composer/状态条展示当前审批模式（可选短文案） | AgentChatShell 可见 | ✅ |
+| EW02-4 | Doc：permissionMode ↔ 原型 ask/auto/full 对照表 | inventory 或本板备注 | ✅ |
+
+**permissionMode ↔ 原型对照（PATCH/JSON 仍用左列 enum）：**
+
+| API `permissionMode` | 原型 `data-approve` | UI 席位标签 | Composer 短文案 |
+|----------------------|---------------------|-------------|-----------------|
+| `read-only`（默认） | `ask` | 询问审批 | 审批：询问 |
+| `workspace-write` | `auto` | 自动审批 | 审批：自动 |
+| `full` | `full` | 完全访问 | 审批：完全访问 |
 
 **非目标：** 改 enum 值为 ask/auto（保持后端契约）；Hooks。
 

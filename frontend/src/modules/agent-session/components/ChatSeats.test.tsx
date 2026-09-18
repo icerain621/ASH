@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FULL_ACCESS_CONFIRM_MESSAGE } from "../permissionModeLabels";
 import { ChatSeats } from "./ChatSeats";
 
 const listAgentModels = vi.hoisted(() => vi.fn());
@@ -58,6 +59,7 @@ describe("ChatSeats", () => {
     await waitFor(() =>
       expect(screen.getByTestId("agent-chat-seat-model")).toHaveValue("static"),
     );
+    expect(screen.getByTestId("agent-chat-seat-permission")).toHaveDisplayValue(/询问/);
 
     const model = screen.getByTestId("agent-chat-seat-model") as HTMLSelectElement;
     fireEvent.change(model, { target: { value: "execgo" } });
@@ -71,7 +73,47 @@ describe("ChatSeats", () => {
     await waitFor(() =>
       expect(updateSession).toHaveBeenCalledWith("sess_1", { permissionMode: "full" }),
     );
-    expect(confirmSpy).toHaveBeenCalled();
+    expect(confirmSpy).toHaveBeenCalledWith(FULL_ACCESS_CONFIRM_MESSAGE);
+    confirmSpy.mockRestore();
+  });
+
+  it("defaults permission seat to read-only when session omits permissionMode", async () => {
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+        }}
+      />,
+    );
+    await waitFor(() => expect(listAgentModels).toHaveBeenCalled());
+    expect(screen.getByTestId("agent-chat-seat-permission")).toHaveValue("read-only");
+    expect(screen.getByTestId("agent-chat-seat-permission")).toHaveDisplayValue(/询问/);
+  });
+
+  it("shows Chinese labels for workspace-write without confirm", async () => {
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+          permissionMode: "read-only",
+        }}
+      />,
+    );
+    await waitFor(() => expect(listAgentModels).toHaveBeenCalled());
+    const confirmSpy = vi.spyOn(window, "confirm");
+    fireEvent.change(screen.getByTestId("agent-chat-seat-permission"), {
+      target: { value: "workspace-write" },
+    });
+    await waitFor(() =>
+      expect(updateSession).toHaveBeenCalledWith("sess_1", { permissionMode: "workspace-write" }),
+    );
+    expect(confirmSpy).not.toHaveBeenCalled();
     confirmSpy.mockRestore();
   });
 

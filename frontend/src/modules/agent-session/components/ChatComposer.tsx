@@ -1,4 +1,5 @@
 import type { AgentSessionView } from "../api/session.api";
+import { permissionStripLabel, resolvePermissionMode } from "../permissionModeLabels";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 import { ChatSeats } from "./ChatSeats";
 
@@ -31,6 +32,11 @@ export function ChatComposer({
   return (
     <div className="agent-chat-composer" data-testid="agent-chat-composer">
       {mode === "prompt" ? <ChatSeats session={session} disabled={busy} /> : null}
+      {mode === "prompt" && session?.id ? (
+        <p className="muted-line agent-chat-permission-strip" data-testid="agent-chat-permission-strip">
+          审批：{permissionStripLabel(resolvePermissionMode(session.permissionMode))}
+        </p>
+      ) : null}
       {hasShortcuts && mode === "prompt" ? (
         <div className="agent-composer-shortcuts" data-testid="agent-composer-shortcuts">
           {onOpenTools ? (
