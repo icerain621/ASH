@@ -61,6 +61,8 @@ export type ScaleReadiness = {
   sandboxRemoteDenyOnFail?: boolean;
   sandboxRemoteBackend?: string;
   sandboxRemoteReason?: string;
+  execPolicyLoaded?: boolean;
+  execPolicySandboxFloor?: string;
   ragPathEntryCount?: number;
   ragSymbolCount?: number;
   ragFallbackQueryCount?: number;

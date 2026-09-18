@@ -836,6 +836,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID, polic
 			RunID: runID, TraceID: traceID, StepID: stepID, SpaceID: spaceID,
 			Tool: item.Tool, Risk: risk, RepoRoot: ctx.RepoRoot,
 			PolicyProfile: policyProfile, ScenarioMinMode: scenarioMin,
+			ExecPolicyFloor: s.spaceExecPolicyFloor(spaceID),
 		}
 		dec, routeErr := s.loopFor().OnBeforeTool(hookCtx)
 		if dec.Denied || routeErr != nil {

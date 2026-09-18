@@ -347,6 +347,12 @@ components:
         sandboxRemoteReason:
           type: string
           description: Probe reason when disabled or unavailable.
+        execPolicyLoaded:
+          type: boolean
+          description: SpacePolicy bodyJson has a non-empty ash.execpolicy.v1 (EW15).
+        execPolicySandboxFloor:
+          type: string
+          description: Effective sandbox mode floor derived from SpacePolicy execPolicy (raise-only).
         ragPathEntryCount:
           type: integer
           format: int64

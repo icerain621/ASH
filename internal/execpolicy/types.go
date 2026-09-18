@@ -1,6 +1,6 @@
 // Package execpolicy defines ash.execpolicy.v1 capability declarations
 // (network / fs / process) and stricter-wins merge (V6-D3).
-// Sandbox ResolveSandboxMode wiring is EW15 — not here.
+// Sandbox floor mapping lives in sandbox.FloorFromExecPolicy (EW15).
 package execpolicy
 
 import "strings"

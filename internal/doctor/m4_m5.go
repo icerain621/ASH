@@ -11,6 +11,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/evolve"
+	"github.com/ash-repwiki/ash/internal/execpolicy"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/improve"
@@ -29,6 +30,7 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Sbx03PathJail(),
 		s.m4Sbx04LandlockAvailable(),
 		s.m4Sbx05LandlockDefaultSeccomp(),
+		s.m4Sbx06ExecPolicyFloor(),
 		s.m4Acp01TaskSchema(),
 		s.m4Acp02ProbeUnconfigured(),
 	}
@@ -215,6 +217,31 @@ func (s *Service) m4Sbx05LandlockDefaultSeccomp() CaseResult {
 	}
 	res.Status = "pass"
 	res.Message = "landlock preferred by default; seccompAvailable=" + fmt.Sprintf("%v", seccompOK)
+	return res
+}
+
+func (s *Service) m4Sbx06ExecPolicyFloor() CaseResult {
+	res := CaseResult{ID: "M4-SBX-06", Status: "fail"}
+	unchanged := sandbox.ResolveSandboxModeExt("safe", sandbox.ModeWorkspaceWrite, "", "", "", "")
+	if unchanged != sandbox.ModeWorkspaceWrite {
+		res.Message = fmt.Sprintf("empty execPolicy floor must not lower: got %q", unchanged)
+		return res
+	}
+	strict := sandbox.FloorFromExecPolicy(execpolicy.Policy{
+		Version: execpolicy.SchemaVersion,
+		FS:      execpolicy.FSCaps{Mode: execpolicy.FSNone},
+	})
+	raised := sandbox.ResolveSandboxModeExt("safe", sandbox.ModeOff, "", "", "", strict)
+	if raised != sandbox.ModeIsolated {
+		res.Message = fmt.Sprintf("strict execPolicy floor must raise to isolated: got %q", raised)
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "execPolicy floor raise-only ok"
+	res.Evidence = append(res.Evidence,
+		Evidence{Kind: "execPolicyFloor", Ref: "FloorFromExecPolicy+Resolve"},
+		Evidence{Kind: "execPolicyLoaded", Ref: "capability"},
+	)
 	return res
 }
 

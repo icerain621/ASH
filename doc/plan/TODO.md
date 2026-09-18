@@ -13,7 +13,7 @@
 | EW12 | PreToolUse 接入 Run | execute + 事件 | ✅ |
 | EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ✅ |
 | EW14 | ExecPolicy schema | 解析 + 合并 | ✅ |
-| EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ⬜ |
+| EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ✅ |
 | EW16 | Steer 意图 | session.steer | ⬜ |
 | EW17 | Queue + Chat | meta queue | ⬜ |
 | EW18 | W1 签字 | openapi + CHANGELOG | ⬜ |
@@ -35,7 +35,7 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **60/60** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 **13/13** |
+| Doctor | ALL **61/61** · M3 11/11 · M4 **11/11** · M5 4/4 · TR3 **13/13** |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 

@@ -16107,6 +16107,12 @@ const docTemplate = `{
                 "dualWriteSource": {
                     "type": "string"
                 },
+                "execPolicyLoaded": {
+                    "type": "boolean"
+                },
+                "execPolicySandboxFloor": {
+                    "type": "string"
+                },
                 "lastMigrationSyncAtMs": {
                     "type": "integer"
                 },

@@ -12,7 +12,7 @@
 | **EW12** | PreToolUse 接入 Run 工具链 | 48 | EW11 | ✅ |
 | **EW13** | Hooks 审计事件 + 最小管控投影 | 32 | EW12 | ✅ |
 | **EW14** | ExecPolicy 声明 schema + 合并解析 | 48 | — | ✅ |
-| **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ⬜ |
+| **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ✅ |
 | **EW16** | Steer 意图（运行中打断并续写） | 48 | — | ⬜ 可并行 |
 | **EW17** | Queue 意图 + Chat 投影 | 48 | EW16 | ⬜ |
 | **EW18** | W1 签字：openapi · 测 · CHANGELOG · 板勾选 | 16 | EW13+EW15+EW17 | ⬜ |
@@ -69,9 +69,9 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW15-1 | 合并结果喂入 `sandbox.ResolveSandboxModeExt` 地板 | 单测 | ⬜ |
-| EW15-2 | Doctor 卡片：execpolicy 已加载 / 能力位 | 探针或 readiness 字段 | ⬜ |
-| EW15-3 | 无配置不降低现有隔离 | 回归 | ⬜ |
+| EW15-1 | 合并结果喂入 `sandbox.ResolveSandboxModeExt` 地板 | 单测 | ✅ |
+| EW15-2 | Doctor 卡片：execpolicy 已加载 / 能力位 | 探针或 readiness 字段 | ✅ |
+| EW15-3 | 无配置不降低现有隔离 | 回归 | ✅ |
 
 ---
 

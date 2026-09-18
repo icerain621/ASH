@@ -4669,6 +4669,10 @@ definitions:
         type: string
       dualWriteSource:
         type: string
+      execPolicyLoaded:
+        type: boolean
+      execPolicySandboxFloor:
+        type: string
       lastMigrationSyncAtMs:
         type: integer
       lastMigrationSyncError:

@@ -1,8 +1,8 @@
 # ash.execpolicy.v1 — 声明式执行能力地板
 
-> **实现**：`internal/execpolicy` · **Sprint**：EW14  
+> **实现**：`internal/execpolicy` · `sandbox.FloorFromExecPolicy` · **Sprint**：EW14–EW15  
 > **挂载**：SpacePolicy `bodyJson.execPolicy`；可选从 Harness Profile SpecJSON 合成  
-> **非目标（EW15）**：尚未接入 `sandbox.ResolveSandboxMode*`
+> **EW15**：合并结果经 `FloorFromExecPolicy` 喂入 `sandbox.ResolveSandboxModeExt`（仅抬升地板）；Scale `execPolicyLoaded` / `execPolicySandboxFloor`；Doctor `M4-SBX-06`
 
 ## 版本与形状
 
@@ -67,7 +67,20 @@
    - `fs.mode` ← `off→unrestricted` · `read-only` · `workspace-write` · `isolated→none`；
    - `process.exec` ← 有模式时默认 `allow`（隔离由 FS/网络表达）。
 
-## 与 OpenAPI / EW15
+## 与 OpenAPI / 沙箱地板
 
-配置随既有 SpacePolicy（及 Harness Spec）读写携带；EW14 **不**新增专用 HTTP 路径。  
-EW15：合并结果喂入沙箱地板 + Doctor 能力位；无配置不得降级现有隔离。
+配置随既有 SpacePolicy（及 Harness Spec）读写携带；无专用 HTTP 路径。  
+
+**EW15 地板映射**（`sandbox.FloorFromExecPolicy` → `ResolveSandboxModeExt` 的 `execFloor`）：
+
+| ExecPolicy 轴 | 沙箱地板 |
+|---|---|
+| `fs.mode=none` | `isolated` |
+| `fs.mode=read-only` | `read-only` |
+| `fs.mode=workspace-write` | `workspace-write` |
+| `fs.mode=unrestricted` / unset | 不贡献（不降级） |
+| `network.egress=deny\|ask` | `isolated` |
+| `process.exec=deny` | `isolated` |
+| `process.exec=ask` | `workspace-write` |
+
+空策略 / 缺配置 → 不抬升也不降低现有隔离。Run 工具路由从 SpacePolicy 加载；Scale readiness 暴露 `execPolicyLoaded` + `execPolicySandboxFloor`。
