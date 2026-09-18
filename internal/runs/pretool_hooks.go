@@ -3,8 +3,10 @@ package runs
 import (
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ash-repwiki/ash/internal/hooks"
+	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -63,5 +65,65 @@ func hookDecisionPayload(stepID, tool, risk string, dec hooks.Decision) map[stri
 		"action":    string(dec.Action),
 		"reason":    dec.Reason,
 		"ruleIndex": dec.RuleIndex,
+	}
+}
+
+type preToolUseGateOutcome int
+
+const (
+	preToolUseGateAllow preToolUseGateOutcome = iota
+	preToolUseGateDeny
+)
+
+// applyPreToolUseGate evaluates PreToolUse, emits hook events, and for ask enters waiting_approval
+// (same gate as tool_chain). Deny returns preToolUseGateDeny and a message; allow returns preToolUseGateAllow.
+// Ask returns ErrWaitingApproval after persisting approval state.
+func (s *Service) applyPreToolUseGate(
+	rec *store.RunRecord,
+	runID, traceID string,
+	inputs map[string]any,
+	stepID string,
+	item rules.ToolChainItem,
+	risk string,
+	stepRow *store.RunStep,
+	stepStart time.Time,
+) (preToolUseGateOutcome, string, error) {
+	hookDec := s.evaluatePreToolUse(rec, inputs, stepID, item.Tool, risk)
+	if hookDec.Action != hooks.ActionAllow || hookDec.RuleIndex >= 0 {
+		payload := hookDecisionPayload(stepID, item.Tool, risk, hookDec)
+		_, _ = s.eventsFor().Append(runID, traceID, "hook.pre_tool_use", "info", payload)
+		_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+	}
+	switch hookDec.Action {
+	case hooks.ActionDeny:
+		msg := hookDec.Reason
+		if msg == "" {
+			msg = fmt.Sprintf("PreToolUse hook denied tool %s", item.Tool)
+		}
+		_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+			"target": "tool", "reason": msg, "action": "deny", "ref": item.Tool,
+			"matrix": "hooks.pre_tool_use",
+		})
+		return preToolUseGateDeny, msg, nil
+	case hooks.ActionAsk:
+		msg := hookDec.Reason
+		if msg == "" {
+			msg = fmt.Sprintf("PreToolUse hook requires approval for tool %s", item.Tool)
+		}
+		if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+			return preToolUseGateDeny, "", setErr
+		}
+		rec.UpdatedAt = time.Now().UTC()
+		_ = s.gdb().Save(rec).Error
+		s.finishStep(stepRow, "waiting_approval", stepStart, errorCodeHookAskApprovalRequired, msg)
+		_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
+			"stepId": stepID, "gate": gateHookPreToolUse, "tool": item.Tool, "risk": risk, "reason": msg,
+		})
+		s.requestApproval(rec, stepRow, gateHookPreToolUse, risk, msg, map[string]any{
+			"stepId": stepID, "tool": item.Tool, "policy": item.Policy,
+		})
+		return preToolUseGateDeny, msg, ErrWaitingApproval
+	default:
+		return preToolUseGateAllow, "", nil
 	}
 }

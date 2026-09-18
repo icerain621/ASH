@@ -14,6 +14,32 @@ import (
 	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
+func writeVerifyEchoScenario(t *testing.T, scenariosDir, name string) {
+	t.Helper()
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "` + name + `"
+  scenarioVersion: "1.0.0"
+  roles:
+    Admin: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec]
+  steps:
+    - id: "qa.verify"
+      role: "Admin"
+      kind: "verify"
+      verify:
+        checks:
+          - tool: "echo.safe"
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, name+".yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+}
+
 func writeSafeEchoScenario(t *testing.T, scenariosDir, name string) {
 	t.Helper()
 	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
@@ -113,6 +139,56 @@ func TestPreToolUseHookDenySkipsTool(t *testing.T) {
 	}
 	if !foundPre || !foundDecision {
 		t.Fatalf("events missing hook.pre_tool_use=%v hook.decision=%v", foundPre, foundDecision)
+	}
+}
+
+func TestPreToolUseHookDenyVerifyStep(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	now := time.Now().UTC()
+	body := `{"hooks":{"version":"ash.hooks.v1","rules":[{"event":"PreToolUse","tool":"echo.safe","action":"deny","reason":"blocked by space hook"}]}}`
+	if err := db.Create(&store.SpacePolicyPack{
+		SpaceID: "local", CitationMode: "optional", BodyJSON: body,
+		CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	scenariosDir := filepath.Join(dir, "scenarios")
+	writeVerifyEchoScenario(t, scenariosDir, "hook_deny_verify")
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+
+	calls := 0
+	reg := toolbus.NewRegistry()
+	reg.Register("echo.safe", toolbus.RiskSafe, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		calls++
+		return map[string]any{"ok": true}, nil
+	})
+	ev := events.NewService(db)
+	svc := NewService(db, ev, loader, toolbus.NewBus(reg)).WithAgentExecutor(agentexec.StaticExecutor{})
+
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "hook_deny_verify", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": "verify hook deny"},
+	})
+	if created == nil || created.RunID == "" {
+		t.Fatal(err)
+	}
+	if calls != 0 {
+		t.Fatalf("verify tool executed despite deny: calls=%d", calls)
+	}
+	if err == nil || !strings.Contains(err.Error(), "HOOK_DENIED") {
+		t.Fatalf("err=%v want HOOK_DENIED", err)
+	}
+	var step store.RunStep
+	if err := db.Where("run_id = ?", created.RunID).First(&step).Error; err != nil {
+		t.Fatal(err)
+	}
+	if step.ErrorCode != "HOOK_DENIED" {
+		t.Fatalf("errorCode=%q want HOOK_DENIED", step.ErrorCode)
 	}
 }
 
