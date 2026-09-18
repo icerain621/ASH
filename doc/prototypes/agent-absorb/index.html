@@ -55,16 +55,106 @@
   .brand-mark {
     width: 22px; height: 22px; border-radius: 6px; background: var(--accent);
     color: #fff; display: grid; place-items: center; font-size: 12px;
+    overflow: hidden; padding: 0;
   }
+  .brand-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
   .pillars { display: flex; gap: 6px; margin-left: 8px; }
   .pillar {
     border: 1px solid var(--border); background: var(--surface); color: var(--muted);
     border-radius: 8px; padding: 6px 12px; font-size: 12px; font-weight: 600; cursor: pointer;
   }
   .pillar.on { color: var(--accent-strong); border-color: var(--accent); background: #eefbf5; }
-  .top-actions { margin-left: auto; display: flex; gap: 8px; color: var(--muted); font-size: 12px; }
-  .top-actions span {
-    border: 1px solid var(--border); border-radius: 6px; padding: 5px 9px; background: var(--surface);
+  .top-actions {
+    margin-left: auto; display: flex; align-items: center; gap: 8px;
+    color: var(--muted); font-size: 12px; position: relative;
+  }
+  .top-btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 5px 10px; background: var(--surface); color: var(--text);
+    cursor: pointer; font: inherit; font-size: 12px;
+  }
+  .top-btn:hover, .top-btn.open {
+    border-color: var(--border-strong); background: var(--soft);
+  }
+  .top-btn .gear { font-size: 14px; line-height: 1; color: var(--muted); }
+  .acct-btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border); border-radius: 999px;
+    padding: 4px 10px 4px 4px; background: var(--surface); color: var(--text);
+    cursor: pointer; font: inherit; font-size: 12px; max-width: 220px;
+  }
+  .acct-btn:hover, .acct-btn.open {
+    border-color: var(--accent); background: #eefbf5;
+  }
+  .acct-avatar {
+    width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: #fff;
+    display: grid; place-items: center; font-size: 11px; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .acct-meta { min-width: 0; text-align: left; line-height: 1.25; }
+  .acct-meta .name {
+    font-weight: 650; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .acct-meta .sub {
+    font-size: 10px; color: var(--muted);
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .acct-dot {
+    width: 7px; height: 7px; border-radius: 50%; background: var(--ok);
+    flex-shrink: 0;
+  }
+  .acct-dot.off { background: var(--muted); }
+  .top-dd {
+    display: none; position: absolute; top: calc(100% + 6px); right: 0;
+    width: 280px; background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 8px; z-index: 40;
+  }
+  .top-dd.open { display: block; }
+  .top-dd.align-settings { right: 118px; width: 260px; }
+  .top-dd .hdr {
+    font-size: 10px; letter-spacing: 0.04em; text-transform: uppercase;
+    color: var(--muted); padding: 6px 10px 4px;
+  }
+  .top-dd .profile {
+    display: flex; gap: 10px; align-items: center;
+    padding: 8px 10px 10px; border-bottom: 1px solid var(--border); margin-bottom: 4px;
+  }
+  .top-dd .profile .avatar {
+    width: 36px; height: 36px; border-radius: 50%; background: var(--accent);
+    color: #fff; display: grid; place-items: center; font-weight: 700;
+  }
+  .top-dd .profile .nm { font-weight: 650; font-size: 13px; }
+  .top-dd .profile .em { font-size: 11px; color: var(--muted); }
+  .top-dd .status-row {
+    display: flex; align-items: center; gap: 6px;
+    font-size: 11px; color: var(--ok); padding: 0 10px 8px;
+  }
+  .top-dd .status-row.offline { color: var(--muted); }
+  .top-dd button.item {
+    display: flex; align-items: flex-start; gap: 8px; width: 100%;
+    border: 1px solid transparent; background: transparent; text-align: left;
+    padding: 8px 10px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: 12px; color: var(--text);
+  }
+  .top-dd button.item:hover { background: var(--raised); }
+  .top-dd button.item.on { background: #eefbf5; border-color: #a7e3cb; }
+  .top-dd button.item .lab { font-weight: 650; }
+  .top-dd button.item .desc {
+    display: block; font-size: 10px; color: var(--muted); font-weight: 500; margin-top: 2px;
+  }
+  .top-dd button.item .kind {
+    font-size: 10px; margin-left: auto; color: var(--hook);
+    border: 1px solid #bfdbfe; background: #eff6ff; border-radius: 3px; padding: 1px 5px;
+    flex-shrink: 0; margin-top: 2px;
+  }
+  .top-dd .sep { height: 1px; background: var(--border); margin: 6px 4px; }
+  .top-dd button.item.danger { color: var(--err); }
+  .space-chip {
+    font-size: 10px; border: 1px solid #a7e3cb; background: #eefbf5;
+    color: var(--accent-strong); border-radius: 999px; padding: 2px 8px;
+    max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   }
 
   .view { display: none; }
@@ -156,6 +246,104 @@
   .composer .ph { color: var(--muted); font-size: 13px; min-height: 40px; }
   .composer .row { display: flex; align-items: center; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
   .composer .row .spacer { flex: 1; }
+
+  /* Cursor-like pill composer (Agent) */
+  .cx-composer-wrap {
+    border-top: 1px solid var(--border);
+    padding: 16px 18px 12px;
+    background: var(--surface);
+    position: relative;
+  }
+  .cx-plus-menu {
+    display: none;
+    position: absolute;
+    left: max(18px, calc(50% - 380px));
+    bottom: calc(100% - 8px);
+    width: 240px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 8px;
+    z-index: 30;
+  }
+  .cx-plus-menu.open { display: block; }
+  .cx-plus-menu .hdr {
+    font-size: 11px; color: var(--muted); padding: 6px 10px 8px;
+  }
+  .cx-plus-menu button {
+    display: flex; align-items: center; gap: 10px; width: 100%;
+    border: 0; background: transparent; text-align: left;
+    padding: 9px 10px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: 13px; color: var(--text);
+  }
+  .cx-plus-menu button:hover { background: var(--raised); }
+  .cx-plus-menu .ico {
+    width: 18px; color: var(--muted); font-size: 14px; text-align: center;
+  }
+  .cx-plus-menu .chev { margin-left: auto; color: var(--muted); font-size: 12px; }
+  .cx-plus-menu .sep {
+    height: 1px; background: var(--border); margin: 6px 4px;
+  }
+  .cx-pill {
+    max-width: 760px; margin: 0 auto;
+    display: flex; align-items: center; gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    background: var(--surface);
+    padding: 8px 10px 8px 8px;
+    min-height: 48px;
+  }
+  .cx-pill:focus-within { border-color: var(--border-strong); }
+  .cx-plus {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 1px solid var(--border); background: var(--soft);
+    color: var(--muted); cursor: pointer; font-size: 18px; line-height: 1;
+    display: grid; place-items: center; flex-shrink: 0;
+  }
+  .cx-plus:hover, .cx-plus.open { color: var(--text); border-color: var(--border-strong); }
+  .cx-input {
+    flex: 1; border: 0; outline: none; background: transparent;
+    font: inherit; font-size: 14px; color: var(--text); min-width: 0;
+    padding: 4px 2px;
+  }
+  .cx-input::placeholder { color: #9aa3b2; }
+  .cx-right { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+  .cx-model {
+    border: 0; background: transparent; color: var(--muted);
+    font: inherit; font-size: 13px; cursor: pointer; padding: 4px 6px;
+    border-radius: 6px;
+  }
+  .cx-model:hover { background: var(--raised); color: var(--text); }
+  .cx-mic {
+    width: 28px; height: 28px; border: 0; background: transparent;
+    color: var(--muted); cursor: pointer; border-radius: 50%; font-size: 14px;
+  }
+  .cx-mic:hover { background: var(--raised); color: var(--text); }
+  .cx-action {
+    width: 32px; height: 32px; border-radius: 50%;
+    border: 0; background: #1a1d24; color: #fff;
+    cursor: pointer; display: grid; place-items: center; flex-shrink: 0;
+  }
+  .cx-action:hover { background: #000; }
+  .cx-action .ico-send,
+  .cx-action .ico-stop { display: none; width: 14px; height: 14px; }
+  .cx-action[data-state="idle"] .ico-send { display: block; }
+  .cx-action[data-state="running"] .ico-stop { display: block; }
+  .cx-status {
+    max-width: 760px; margin: 8px auto 0;
+    display: flex; align-items: center; gap: 12px;
+    font-size: 11px; color: var(--muted);
+  }
+  .cx-status .spacer { flex: 1; }
+  .cx-status .prog { display: inline-flex; align-items: center; gap: 6px; }
+  .cx-status .spin {
+    width: 12px; height: 12px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: cxspin 0.8s linear infinite;
+  }
+  .cx-status[data-running="0"] .prog { display: none; }
+  @keyframes cxspin { to { transform: rotate(360deg); } }
+
   .btn {
     border: 1px solid var(--border); background: var(--surface); color: var(--text);
     border-radius: 6px; padding: 6px 10px; font-size: 12px; cursor: pointer;
@@ -265,6 +453,107 @@
   }
   .note strong { color: var(--text); }
 
+  /* Agent board: 编程/通用 · ASH 空态 · 审批模式 · 模型 */
+  .agent-mode-switch {
+    display: flex; gap: 4px; padding: 10px 12px 8px;
+    border-bottom: 1px solid var(--border); background: var(--soft);
+  }
+  .agent-mode-switch button {
+    flex: 1; border: 1px solid var(--border); background: var(--surface);
+    border-radius: 8px; padding: 7px 8px; cursor: pointer;
+    font: inherit; font-size: 12px; font-weight: 650; color: var(--muted);
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .agent-mode-switch button.on {
+    color: var(--accent-strong); border-color: var(--accent); background: #eefbf5;
+  }
+  .agent-side-search {
+    margin: 8px 12px; display: flex; align-items: center; gap: 6px;
+    border: 1px solid var(--border); border-radius: 8px; padding: 6px 10px;
+    background: var(--surface); color: var(--muted); font-size: 12px;
+  }
+  .agent-side-search input {
+    border: 0; outline: none; flex: 1; font: inherit; font-size: 12px; background: transparent; color: var(--text);
+  }
+  .ws-row {
+    display: flex; align-items: center; padding: 4px 12px 8px;
+    font-size: 11px; font-weight: 650; color: var(--muted);
+  }
+  .ws-row .mini { margin-left: auto; }
+
+  .ash-hero {
+    display: none; flex: 1; flex-direction: column;
+    align-items: center; justify-content: center;
+    min-height: 340px; padding: 32px 24px; text-align: center;
+    position: relative; overflow: hidden;
+    background:
+      linear-gradient(90deg, rgba(7,9,13,0.28) 0%, rgba(7,9,13,0.72) 48%, rgba(7,9,13,0.9) 100%),
+      url("assets/ash-chat-bg.png") left center / cover no-repeat,
+      #07090d;
+  }
+  .ash-hero.show { display: flex; }
+  .transcript.has-hero .bubble { display: none; }
+  .transcript.has-hero .ash-hero { display: flex; }
+  .transcript.has-hero [data-chat] { display: none !important; }
+  .ash-hero-mark {
+    width: 72px; height: 72px; border-radius: 18px;
+    overflow: hidden; margin-bottom: 14px;
+    border: 1px solid rgba(0, 229, 255, 0.35);
+    box-shadow: 0 10px 28px rgba(0, 180, 200, 0.18);
+    background: #000;
+  }
+  .ash-hero-mark img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .ash-hero-wm { display: none; }
+  .ash-hero h2 { margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #e8f7ff; }
+  .ash-hero p { margin: 0; font-size: 13px; color: rgba(200, 220, 230, 0.72); max-width: 36ch; line-height: 1.5; }
+
+  .cx-composer-wrap { position: relative; }
+  .cx-approve-menu, .cx-model-menu {
+    display: none; position: absolute; z-index: 35;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 6px; width: 320px;
+  }
+  .cx-approve-menu.open, .cx-model-menu.open { display: block; }
+  .cx-approve-menu { left: 18px; bottom: calc(100% - 4px); }
+  .cx-model-menu { right: max(18px, calc(50% - 380px)); bottom: calc(100% - 4px); width: 220px; }
+  .cx-approve-menu button, .cx-model-menu button {
+    display: flex; gap: 10px; width: 100%; border: 0; background: transparent;
+    text-align: left; padding: 10px; border-radius: 8px; cursor: pointer;
+    font: inherit; font-size: 12px; color: var(--text);
+  }
+  .cx-approve-menu button:hover, .cx-model-menu button:hover { background: var(--raised); }
+  .cx-approve-menu button.on, .cx-model-menu button.on { background: #eefbf5; }
+  .cx-approve-menu .ico { font-size: 16px; width: 22px; flex-shrink: 0; }
+  .cx-approve-menu .lab { font-weight: 650; display: block; }
+  .cx-approve-menu .desc { font-size: 11px; color: var(--muted); margin-top: 2px; line-height: 1.35; }
+  .cx-approve-menu button.danger .lab { color: var(--err); }
+  .cx-approve-chip {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid var(--border); background: var(--soft);
+    border-radius: 999px; padding: 4px 8px; font-size: 11px; color: var(--text);
+    cursor: pointer; flex-shrink: 0; white-space: nowrap;
+  }
+  .cx-approve-chip:hover { border-color: var(--border-strong); }
+  .cx-approve-chip[data-mode="ask"] { color: var(--accent-strong); border-color: #a7e3cb; background: #eefbf5; }
+  .cx-approve-chip[data-mode="auto"] { color: var(--hook); border-color: #bfdbfe; background: #eff6ff; }
+  .cx-approve-chip[data-mode="full"] { color: var(--err); border-color: #f0c4c4; background: #fff1f1; }
+  .cx-pill.tall {
+    border-radius: 16px; flex-wrap: wrap; padding: 10px 12px; min-height: 56px; gap: 8px;
+  }
+  .cx-pill .cx-input { width: 100%; flex: 1 1 100%; order: 1; padding: 4px 4px 8px; }
+  .cx-pill .cx-left { display: flex; align-items: center; gap: 6px; order: 2; }
+  .cx-pill .cx-right { order: 3; margin-left: auto; }
+  .cx-model {
+    display: inline-flex; align-items: center; gap: 4px;
+    border: 1px solid transparent; background: transparent; color: var(--muted);
+    font: inherit; font-size: 12px; cursor: pointer; padding: 4px 8px; border-radius: 999px;
+  }
+  .cx-model:hover, .cx-model.open { background: var(--raised); color: var(--text); border-color: var(--border); }
+  .cx-action.ash {
+    background: var(--accent); width: 36px; height: 36px;
+  }
+  .cx-action.ash:hover { background: var(--accent-strong); }
+
   @media (max-width: 960px) {
     .body, .gov-body, .split2 { grid-template-columns: 1fr; }
     .col, .gov-nav { border-right: 0; border-bottom: 1px solid var(--border); min-height: auto; }
@@ -294,33 +583,104 @@
 
     <div class="app">
       <div class="topbar">
-        <div class="brand"><span class="brand-mark">A</span> ASH</div>
+        <div class="brand"><span class="brand-mark"><img src="assets/ash-icon.png" alt="" /></span> ASH</div>
         <div class="pillars">
           <button type="button" class="pillar on" data-view="agent" id="pillar-agent">Agent</button>
           <button type="button" class="pillar" data-view="memory" id="pillar-memory">记忆</button>
           <button type="button" class="pillar" data-view="gov" id="pillar-gov">管控&amp;评审</button>
         </div>
-        <div class="top-actions"><span>更多 ▾</span><span>账号 ▾</span></div>
+        <div class="top-actions" id="top-actions">
+          <span class="space-chip" id="space-chip" title="当前空间">个人 · 我的工作区</span>
+          <button type="button" class="top-btn" id="btn-settings" aria-haspopup="true" aria-expanded="false" title="设置">
+            <span class="gear" aria-hidden="true">⚙</span> 设置
+          </button>
+          <button type="button" class="acct-btn" id="btn-account" aria-haspopup="true" aria-expanded="false" title="账号与空间">
+            <span class="acct-avatar" id="acct-avatar">JL</span>
+            <span class="acct-meta">
+              <div class="name" id="acct-name">Jay Lu</div>
+              <div class="sub" id="acct-sub">已登录 · jay@ash.local</div>
+            </span>
+            <span class="acct-dot" id="acct-dot" title="已登录"></span>
+          </button>
+
+          <div class="top-dd align-settings" id="dd-settings" role="menu">
+            <div class="hdr">账号与工作区</div>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">空间设置</span><span class="desc">成员 · 策略包 · 配额</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">API Key / 凭证</span><span class="desc">模型与集成密钥（脱敏）</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">通知偏好</span><span class="desc">邮件 · Webhook · 评审 SLA</span></span></button>
+            <div class="sep"></div>
+            <div class="hdr">运维与合规</div>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">运行</span><span class="desc">Runs 列表与状态</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">自动化</span><span class="desc">Waker / 调度</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">CI / 反馈</span><span class="desc">接入与反馈队列</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">发布 / 合规</span><span class="desc">Releases · data-policy</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">规模化 / 诊断</span><span class="desc">Scale · Doctor</span></span></button>
+            <div class="sep"></div>
+            <div class="hdr">外观</div>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">主题与密度</span><span class="desc">浅色 · 紧凑（占位）</span></span></button>
+          </div>
+
+          <div class="top-dd" id="dd-account" role="menu">
+            <div class="profile">
+              <div class="avatar" id="dd-avatar">JL</div>
+              <div>
+                <div class="nm" id="dd-name">Jay Lu</div>
+                <div class="em" id="dd-email">jay@ash.local</div>
+              </div>
+            </div>
+            <div class="status-row" id="login-status-row">
+              <span class="acct-dot" id="dd-status-dot"></span>
+              <span id="dd-status-text">已登录 · Org: ash-demo</span>
+            </div>
+            <div class="hdr">切换空间</div>
+            <button type="button" class="item on" data-space="user:mine" data-space-label="个人 · 我的工作区" role="menuitem">
+              <span><span class="lab">我的工作区</span><span class="desc">个人空间 · kind=user</span></span>
+              <span class="kind">个人</span>
+            </button>
+            <button type="button" class="item" data-space="team:core" data-space-label="团队 · team-core" role="menuitem">
+              <span><span class="lab">team-core</span><span class="desc">团队共享 · 双签可选</span></span>
+              <span class="kind">团队</span>
+            </button>
+            <button type="button" class="item" data-space="team:platform" data-space-label="团队 · team-platform" role="menuitem">
+              <span><span class="lab">team-platform</span><span class="desc">平台工程组</span></span>
+              <span class="kind">团队</span>
+            </button>
+            <div class="sep"></div>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">新建个人空间</span><span class="desc">kind=user</span></span></button>
+            <button type="button" class="item" role="menuitem"><span><span class="lab">加入 / 创建团队空间</span><span class="desc">kind=team</span></span></button>
+            <div class="sep"></div>
+            <button type="button" class="item" id="btn-toggle-login" role="menuitem"><span><span class="lab">模拟登出</span><span class="desc">切换登录态演示</span></span></button>
+            <button type="button" class="item danger" id="btn-logout" role="menuitem"><span><span class="lab">退出登录</span></span></button>
+          </div>
+        </div>
       </div>
 
       <!-- ===== Agent: shell only ===== -->
       <div class="view active" id="view-agent">
         <div class="body">
           <aside class="col">
-            <div class="col-h">会话 <span class="muted">列表</span></div>
+            <div class="agent-mode-switch" role="group" aria-label="Agent 模式">
+              <button type="button" class="on" data-agent-mode="coding" id="mode-coding">⟨/⟩ 编程</button>
+              <button type="button" data-agent-mode="general" id="mode-general">◎ 通用</button>
+            </div>
             <div class="side-tools">
-              <button class="mini primary" type="button">新建</button>
+              <button class="mini primary" type="button" id="btn-new-task">＋ 新的任务</button>
               <button class="mini ghost" type="button">任务板</button>
             </div>
-            <div class="session-list">
-              <div class="sess on"><div class="t">hotfix citation gate</div><div class="s">刚刚 · space team-core</div></div>
-              <div class="sess"><div class="t">空白会话</div><div class="s">昨天</div></div>
-              <div class="sess"><div class="t">feature_delivery #12</div><div class="s">2 天前 · 已关</div></div>
+            <div class="agent-side-search">
+              <span aria-hidden="true">⌕</span>
+              <input type="search" placeholder="搜索会话…" />
+            </div>
+            <div class="ws-row">工作区 <button class="mini" type="button" title="添加工作区">＋</button></div>
+            <div class="session-list" id="agent-session-list">
+              <div class="sess" data-sess="blank" data-empty="1"><div class="t">空白会话</div><div class="s">默认 · ASH 空态</div></div>
+              <div class="sess on" data-sess="hotfix" data-empty="0"><div class="t">hotfix citation gate</div><div class="s">刚刚 · 编程</div></div>
+              <div class="sess" data-sess="feat" data-empty="0"><div class="t">feature_delivery #12</div><div class="s">2 天前 · 已关</div></div>
             </div>
           </aside>
           <section class="col">
             <div class="conv-head">
-              <div class="title">hotfix citation gate</div>
+              <div class="title" id="agent-title">hotfix citation gate</div>
               <div class="tabs">
                 <button class="tab on" type="button">Chat</button>
                 <button class="tab" type="button" data-goto-gov="trajectory" title="完整 Trajectory 在管控&评审">Trajectory</button>
@@ -333,29 +693,85 @@
                 <button class="mini link" type="button" data-goto-gov="tree">管控台 →</button>
               </div>
             </div>
-            <div class="transcript">
-              <div class="bubble user"><div class="who">你</div>修复 citation 门禁误报，保持 fail-closed。</div>
-              <div class="bubble"><div class="who">助手</div>先核对最近 Run 事件与 SpacePolicy，再提最小补丁。</div>
-              <div class="bubble tool"><div class="who">工具 · read</div>
+            <div class="transcript" id="agent-transcript">
+              <div class="ash-hero" id="ash-hero">
+                <div class="ash-hero-mark"><img src="assets/ash-icon.png" alt="ASH" /></div>
+                <h2>ASH Agent</h2>
+                <p id="ash-hero-tag">交付编排从这里开始 · 可审计 · 双核治理</p>
+              </div>
+              <div class="bubble user" data-chat="1"><div class="who">你</div>修复 citation 门禁误报，保持 fail-closed。</div>
+              <div class="bubble" data-chat="1"><div class="who">助手</div>先核对最近 Run 事件与 SpacePolicy，再提最小补丁。</div>
+              <div class="bubble tool" data-chat="1"><div class="who">工具 · read</div>
                 <div class="tool-card">internal/policy/citation.go:88-120</div>
               </div>
-              <div class="bubble compact">
+              <div class="bubble compact" data-chat="1">
                 <div class="who">提示</div>
                 会话树 / Compact / Steer / 审批预设 / Hooks / 谱系已收敛到
                 <button class="mini link" type="button" data-goto-gov="tree">管控&amp;评审</button>
                 ，本页只保留对话与意图。
               </div>
             </div>
-            <div class="composer-wrap">
-              <div class="composer">
-                <div class="ph">发送意图…（prompt / approve / cancel / stop）</div>
-                <div class="row">
-                  <button class="btn" type="button">@ 引用</button>
-                  <button class="btn" type="button">/ 命令</button>
-                  <span class="spacer"></span>
-                  <button class="btn" type="button">Stop</button>
-                  <button class="btn primary" type="button">发送</button>
+            <div class="cx-composer-wrap" id="agent-composer">
+              <div class="cx-plus-menu" id="cx-plus-menu" role="menu" aria-label="添加上下文与工具">
+                <div class="hdr">添加上下文、工具…</div>
+                <button type="button" role="menuitem"><span class="ico">@</span>引用文件 / 会话</button>
+                <button type="button" role="menuitem"><span class="ico">/</span>斜杠命令</button>
+                <button type="button" role="menuitem"><span class="ico">▣</span>任务板 / Plan</button>
+                <button type="button" role="menuitem"><span class="ico">?</span>Ask（只读）</button>
+                <div class="sep"></div>
+                <button type="button" role="menuitem"><span class="ico">⧉</span>Skills<span class="chev">›</span></button>
+                <button type="button" role="menuitem"><span class="ico">⬡</span>MCP<span class="chev">›</span></button>
+                <button type="button" role="menuitem"><span class="ico">⚙</span>Tools<span class="chev">›</span></button>
+              </div>
+              <div class="cx-approve-menu" id="cx-approve-menu" role="menu">
+                <button type="button" class="on" data-approve="ask" role="menuitem">
+                  <span class="ico">🛡</span>
+                  <span><span class="lab">询问审批</span><span class="desc">执行命令、改 Workspace 外文件或访问网络前始终询问（ASH 默认 fail-closed）</span></span>
+                </button>
+                <button type="button" data-approve="auto" role="menuitem">
+                  <span class="ico">▶</span>
+                  <span><span class="lab">自动审批</span><span class="desc">仅在检测到潜在风险时询问（对齐 SpacePolicy 风险档）</span></span>
+                </button>
+                <button type="button" class="danger" data-approve="full" role="menuitem">
+                  <span class="ico">⚠</span>
+                  <span><span class="lab">完全访问</span><span class="desc">不再询问；可自由访问文件、终端与网络（非 ASH 默认 · 需显式确认）</span></span>
+                </button>
+              </div>
+              <div class="cx-model-menu" id="cx-model-menu" role="menu">
+                <button type="button" class="on" data-model="Auto" role="menuitem">Auto（路由）</button>
+                <button type="button" data-model="deepseek-v3" role="menuitem">deepseek-v3</button>
+                <button type="button" data-model="qwen2.5-max" role="menuitem">qwen2.5-max</button>
+                <button type="button" data-model="gpt-4.1" role="menuitem">gpt-4.1</button>
+                <button type="button" data-model="claude-sonnet" role="menuitem">claude-sonnet</button>
+              </div>
+              <div class="cx-pill tall">
+                <input class="cx-input" id="cx-input" type="text" placeholder="一切从这里开始…" autocomplete="off" />
+                <div class="cx-left">
+                  <button type="button" class="cx-plus" id="cx-plus" aria-label="添加上下文" aria-expanded="false" title="添加上下文 / Skills / MCP">+</button>
+                  <button type="button" class="cx-mic" title="@ 引用" aria-label="引用" style="font-size:13px">@</button>
+                  <button type="button" class="cx-approve-chip" id="cx-approve-chip" data-mode="ask" aria-haspopup="true" aria-expanded="false">
+                    🛡 询问审批 ▾
+                  </button>
                 </div>
+                <div class="cx-right">
+                  <button type="button" class="cx-model" id="cx-model" aria-haspopup="true" aria-expanded="false" title="切换模型">Auto ▾</button>
+                  <button type="button" class="cx-mic" title="语音（占位）" aria-label="语音">🎙</button>
+                  <button type="button" class="cx-action ash" id="cx-action" data-state="idle" title="发送 / 暂停" aria-label="发送">
+                    <svg class="ico-send" viewBox="0 0 16 16" aria-hidden="true">
+                      <path d="M8 12.5V3.5M8 3.5 4.5 7M8 3.5 11.5 7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    <svg class="ico-stop" viewBox="0 0 16 16" aria-hidden="true">
+                      <rect x="4" y="4" width="8" height="8" rx="1.2" fill="currentColor"/>
+                    </svg>
+                  </button>
+                </div>
+              </div>
+              <div class="cx-status" id="cx-status" data-running="0">
+                <span id="cx-mode-label">模式：编程</span>
+                <span>·</span>
+                <span id="cx-approve-label">审批：询问</span>
+                <span class="spacer"></span>
+                <span class="prog"><span class="spin" aria-hidden="true"></span><span id="cx-prog-label">生成中</span></span>
               </div>
             </div>
           </section>
@@ -1166,6 +1582,284 @@
   } else {
     showAgent();
   }
+
+  /* Agent board: 编程/通用 · 空态 · 审批 · 模型 · 发送/暂停 */
+  (function initAgentBoard() {
+    const plus = document.getElementById("cx-plus");
+    const menu = document.getElementById("cx-plus-menu");
+    const action = document.getElementById("cx-action");
+    const status = document.getElementById("cx-status");
+    const input = document.getElementById("cx-input");
+    const approveChip = document.getElementById("cx-approve-chip");
+    const approveMenu = document.getElementById("cx-approve-menu");
+    const approveLabel = document.getElementById("cx-approve-label");
+    const modelBtn = document.getElementById("cx-model");
+    const modelMenu = document.getElementById("cx-model-menu");
+    const modeLabel = document.getElementById("cx-mode-label");
+    const transcript = document.getElementById("agent-transcript");
+    const titleEl = document.getElementById("agent-title");
+    const heroTag = document.getElementById("ash-hero-tag");
+    if (!plus || !menu || !action || !status || !input) return;
+
+    const approveText = {
+      ask: { chip: "🛡 询问审批 ▾", label: "审批：询问" },
+      auto: { chip: "▶ 自动审批 ▾", label: "审批：自动" },
+      full: { chip: "⚠ 完全访问 ▾", label: "审批：完全访问" },
+    };
+
+    function closeComposerMenus() {
+      menu.classList.remove("open");
+      plus.classList.remove("open");
+      plus.setAttribute("aria-expanded", "false");
+      if (approveMenu) approveMenu.classList.remove("open");
+      if (approveChip) approveChip.setAttribute("aria-expanded", "false");
+      if (modelMenu) modelMenu.classList.remove("open");
+      if (modelBtn) {
+        modelBtn.classList.remove("open");
+        modelBtn.setAttribute("aria-expanded", "false");
+      }
+    }
+
+    function setRunning(on) {
+      action.dataset.state = on ? "running" : "idle";
+      action.title = on ? "暂停 / 停止" : "发送";
+      action.setAttribute("aria-label", on ? "停止" : "发送");
+      status.dataset.running = on ? "1" : "0";
+    }
+
+    function setEmpty(on) {
+      if (!transcript) return;
+      transcript.classList.toggle("has-hero", on);
+      document.querySelectorAll("#agent-transcript [data-chat]").forEach((el) => {
+        el.style.display = on ? "none" : "";
+      });
+    }
+
+    function selectSession(sess) {
+      document.querySelectorAll("#agent-session-list .sess").forEach((s) => s.classList.remove("on"));
+      sess.classList.add("on");
+      const empty = sess.getAttribute("data-empty") === "1";
+      const name = sess.querySelector(".t")?.textContent || "会话";
+      if (titleEl) titleEl.textContent = name;
+      setEmpty(empty);
+      closeComposerMenus();
+    }
+
+    plus.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const willOpen = !menu.classList.contains("open");
+      closeComposerMenus();
+      if (willOpen) {
+        menu.classList.add("open");
+        plus.classList.add("open");
+        plus.setAttribute("aria-expanded", "true");
+      }
+    });
+    menu.querySelectorAll("button").forEach((b) => {
+      b.addEventListener("click", () => {
+        closeComposerMenus();
+        input.focus();
+      });
+    });
+
+    if (approveChip && approveMenu) {
+      approveChip.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = !approveMenu.classList.contains("open");
+        closeComposerMenus();
+        if (willOpen) {
+          approveMenu.classList.add("open");
+          approveChip.setAttribute("aria-expanded", "true");
+        }
+      });
+      approveMenu.querySelectorAll("[data-approve]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const mode = btn.getAttribute("data-approve");
+          approveMenu.querySelectorAll("[data-approve]").forEach((b) => b.classList.remove("on"));
+          btn.classList.add("on");
+          approveChip.dataset.mode = mode;
+          const t = approveText[mode] || approveText.ask;
+          approveChip.textContent = t.chip;
+          if (approveLabel) approveLabel.textContent = t.label;
+          closeComposerMenus();
+        });
+      });
+    }
+
+    if (modelBtn && modelMenu) {
+      modelBtn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        const willOpen = !modelMenu.classList.contains("open");
+        closeComposerMenus();
+        if (willOpen) {
+          modelMenu.classList.add("open");
+          modelBtn.classList.add("open");
+          modelBtn.setAttribute("aria-expanded", "true");
+        }
+      });
+      modelMenu.querySelectorAll("[data-model]").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          modelMenu.querySelectorAll("[data-model]").forEach((b) => b.classList.remove("on"));
+          btn.classList.add("on");
+          modelBtn.textContent = btn.getAttribute("data-model") + " ▾";
+          closeComposerMenus();
+        });
+      });
+    }
+
+    document.querySelectorAll("[data-agent-mode]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        document.querySelectorAll("[data-agent-mode]").forEach((b) => b.classList.remove("on"));
+        btn.classList.add("on");
+        const coding = btn.getAttribute("data-agent-mode") === "coding";
+        if (modeLabel) modeLabel.textContent = coding ? "模式：编程" : "模式：通用";
+        if (heroTag) {
+          heroTag.textContent = coding
+            ? "交付编排从这里开始 · 可审计 · 双核治理"
+            : "通用助手模式 · 仍受 SpacePolicy / 审批门禁约束";
+        }
+      });
+    });
+
+    document.querySelectorAll("#agent-session-list .sess").forEach((sess) => {
+      sess.addEventListener("click", () => selectSession(sess));
+    });
+
+    const newTask = document.getElementById("btn-new-task");
+    if (newTask) {
+      newTask.addEventListener("click", () => {
+        const blank = document.querySelector('#agent-session-list .sess[data-sess="blank"]');
+        if (blank) selectSession(blank);
+      });
+    }
+
+    document.addEventListener("click", (e) => {
+      const wrap = document.getElementById("agent-composer");
+      if (!wrap || wrap.contains(e.target)) return;
+      closeComposerMenus();
+    });
+
+    action.addEventListener("click", () => {
+      if (action.dataset.state === "running") setRunning(false);
+      else {
+        setEmpty(false);
+        setRunning(true);
+      }
+    });
+    input.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        if (action.dataset.state === "idle") {
+          setEmpty(false);
+          setRunning(true);
+        }
+      }
+    });
+  })();
+
+  /* Topbar: 设置 + 账号/空间 */
+  (function initTopbar() {
+    const btnSettings = document.getElementById("btn-settings");
+    const btnAccount = document.getElementById("btn-account");
+    const ddSettings = document.getElementById("dd-settings");
+    const ddAccount = document.getElementById("dd-account");
+    const spaceChip = document.getElementById("space-chip");
+    if (!btnSettings || !btnAccount || !ddSettings || !ddAccount) return;
+
+    let loggedIn = true;
+
+    function closeAll() {
+      ddSettings.classList.remove("open");
+      ddAccount.classList.remove("open");
+      btnSettings.classList.remove("open");
+      btnAccount.classList.remove("open");
+      btnSettings.setAttribute("aria-expanded", "false");
+      btnAccount.setAttribute("aria-expanded", "false");
+    }
+
+    function openOnly(which) {
+      const openSettings = which === "settings";
+      const openAccount = which === "account";
+      ddSettings.classList.toggle("open", openSettings);
+      ddAccount.classList.toggle("open", openAccount);
+      btnSettings.classList.toggle("open", openSettings);
+      btnAccount.classList.toggle("open", openAccount);
+      btnSettings.setAttribute("aria-expanded", openSettings ? "true" : "false");
+      btnAccount.setAttribute("aria-expanded", openAccount ? "true" : "false");
+    }
+
+    function applyLogin(on) {
+      loggedIn = on;
+      const name = document.getElementById("acct-name");
+      const sub = document.getElementById("acct-sub");
+      const dot = document.getElementById("acct-dot");
+      const statusRow = document.getElementById("login-status-row");
+      const statusText = document.getElementById("dd-status-text");
+      const toggle = document.getElementById("btn-toggle-login");
+      if (on) {
+        name.textContent = "Jay Lu";
+        sub.textContent = "已登录 · jay@ash.local";
+        dot.classList.remove("off");
+        dot.title = "已登录";
+        statusRow.classList.remove("offline");
+        statusText.textContent = "已登录 · Org: ash-demo";
+        if (toggle) toggle.querySelector(".lab").textContent = "模拟登出";
+      } else {
+        name.textContent = "未登录";
+        sub.textContent = "点击登录";
+        dot.classList.add("off");
+        dot.title = "未登录";
+        statusRow.classList.add("offline");
+        statusText.textContent = "未登录 · 本地预览";
+        if (toggle) toggle.querySelector(".lab").textContent = "模拟登录";
+      }
+    }
+
+    btnSettings.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (ddSettings.classList.contains("open")) closeAll();
+      else openOnly("settings");
+    });
+    btnAccount.addEventListener("click", (e) => {
+      e.stopPropagation();
+      if (ddAccount.classList.contains("open")) closeAll();
+      else openOnly("account");
+    });
+
+    ddAccount.querySelectorAll("[data-space]").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        ddAccount.querySelectorAll("[data-space]").forEach((b) => b.classList.remove("on"));
+        btn.classList.add("on");
+        if (spaceChip) spaceChip.textContent = btn.getAttribute("data-space-label") || btn.querySelector(".lab").textContent;
+        closeAll();
+      });
+    });
+
+    const toggleLogin = document.getElementById("btn-toggle-login");
+    const logout = document.getElementById("btn-logout");
+    if (toggleLogin) {
+      toggleLogin.addEventListener("click", () => {
+        applyLogin(!loggedIn);
+        closeAll();
+      });
+    }
+    if (logout) {
+      logout.addEventListener("click", () => {
+        applyLogin(false);
+        closeAll();
+      });
+    }
+
+    ddSettings.querySelectorAll("button.item").forEach((b) => {
+      b.addEventListener("click", () => closeAll());
+    });
+
+    document.addEventListener("click", (e) => {
+      const root = document.getElementById("top-actions");
+      if (!root || root.contains(e.target)) return;
+      closeAll();
+    });
+  })();
 </script>
 </body>
 </html>

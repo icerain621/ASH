@@ -31,6 +31,7 @@
 | [`deepseek-harness-ash-comparison.md`](deepseek-harness-ash-comparison.md) | DeepSeek Harness 与 ASH 能力比对（调研稿） | DSH 重大版本或 ASH Agentic 架构调整时 |
 | [`pi-ash-comparison.md`](pi-ash-comparison.md) | Pi 与 ASH 能力比对（调研稿） | Pi 重大版本或 ASH 集成/CLI 调整时 |
 | [`platform-quad-comparison.md`](platform-quad-comparison.md) | **四产品综合分析**（DSH·Pi·Codex·Hermes→ASH；v6 输入） | 外部平台大版本或 ASH v6 规格启动时 |
+| [`ash-feature-inventory.md`](ash-feature-inventory.md) | 原型对照：功能/接口状态 · 人时 · 交付波次 | 排期或吸收项评审时 |
 | [`../prototypes/agent-absorb/`](../prototypes/agent-absorb/README.md) | 吸收交互原型（Agent 薄壳 + **管控&评审** 工作台） | 对照吸收项或 IA 演进时 |
 | [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
 | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |
