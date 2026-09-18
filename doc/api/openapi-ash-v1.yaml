@@ -2680,6 +2680,13 @@ components:
       properties:
         name: { type: string }
         slug: { type: string }
+    OrgListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrgItem" }
     OrgTemplate:
       type: object
       properties:
@@ -2746,6 +2753,13 @@ components:
         kind: { type: string, enum: [user, team], description: "Space kind (GV07); no separate Team table" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    SpaceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SpaceItem" }
     CreateSpaceRequest:
       type: object
       required: [orgId, name]
@@ -3236,6 +3250,12 @@ components:
         email: { type: string }
         password: { type: string }
         spaceId: { type: string }
+    DevLoginRequest:
+      type: object
+      properties:
+        spaceId:
+          type: string
+          description: Target space id; defaults to local when omitted.
     AuthGatewaySession:
       type: object
       description: Multi-end auth session metadata (DX57)
@@ -3578,139 +3598,6 @@ components:
 security:
   - bearerAuth: []
 paths:
-  /v1/tasks:
-    post:
-      tags: [Tasks]
-      summary: Create task
-      description: M0 legacy planned path. Implementation uses /api/v1/runs and task orchestration APIs.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateTaskRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/CreateTaskResponseData" }
-  /v1/tasks/{taskId}:
-    get:
-      tags: [Tasks]
-      summary: Get task detail
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TaskDetailResponse" }
-  /v1/tasks/{taskId}/start:
-    post:
-      tags: [Tasks]
-      summary: Start task
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/StartTaskRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/StartTaskResponseData" }
-  /v1/tasks/{taskId}/cancel:
-    post:
-      tags: [Tasks]
-      summary: Cancel task
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TaskCancelResponse" }
-  /v1/agent-runs/{runId}:
-    get:
-      tags: [AgentRuns]
-      summary: Get agent run detail
-      description: M0 legacy planned path. Use GET /api/v1/runs/{runId} in implementation.
-      parameters:
-        - in: path
-          name: runId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AgentRun" }
-  /v1/runs/{runId}/stream:
-    get:
-      tags: [AgentRuns]
-      summary: Stream run logs (SSE)
-      parameters:
-        - in: path
-          name: runId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: text/event-stream
-          content:
-            text/event-stream:
-              schema:
-                type: string
-  /v1/memories:
-    post:
-      tags: [Memories]
-      summary: Create memory
-      description: M0 legacy planned path. Use POST /api/v1/memory/candidates in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateMemoryRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/LegacyMemoryCreateResponse" }
-  /v1/memories/search:
-    post:
-      tags: [Memories]
-      summary: Search memories
-      description: M0 legacy planned path. Use POST /api/v1/memory/query in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/MemorySearchRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/MemoryQueryResponse" }
   /api/v1/repo/connections:
     post:
       tags: [Repo]
@@ -4877,6 +4764,31 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/AuthSessionResponse" }
 
+  /api/v1/auth/dev-login:
+    post:
+      tags: [Auth]
+      summary: Issue a development JWT without credentials
+      description: |
+        Local/non-production helper only. Returns an admin-scoped access token for the requested space (default `local`).
+        Not a supported production auth path; console Dev Token controls are hidden when `ASH_CONSOLE_AUTH_REQUIRED=1`.
+        Optional future gate: `ASH_DEV_LOGIN=0` to disable the route in hardened deployments.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DevLoginRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+        "500":
+          description: token signing failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
   /api/v1/auth/oidc/login:
     get:
       tags: [Auth]
@@ -5948,6 +5860,20 @@ paths:
               schema: { $ref: "#/components/schemas/WaterfallResponse" }
 
   /api/v1/orgs:
+    get:
+      tags: [Orgs]
+      summary: List organizations
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgListResponse" }
+        "500":
+          description: list failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
     post:
       tags: [Orgs]
       summary: Create organization
@@ -7238,6 +7164,21 @@ paths:
               schema: { $ref: "#/components/schemas/SecretResponse" }
 
   /api/v1/spaces:
+    get:
+      tags: [Spaces]
+      summary: List spaces
+      description: When the database is empty and the caller context is `local`, returns a synthetic local space row.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceListResponse" }
+        "500":
+          description: list failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
     post:
       tags: [Spaces]
       summary: Create space

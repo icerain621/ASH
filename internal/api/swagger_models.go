@@ -166,6 +166,14 @@ type PluginRegistryListResponse struct {
 	Items []store.PluginRegistry `json:"items"`
 }
 
+type OrgListResponse struct {
+	Items []store.Org `json:"items"`
+}
+
+type SpaceListResponse struct {
+	Items []store.Space `json:"items"`
+}
+
 type RoleListResponse struct {
 	Items []store.Role `json:"items"`
 }

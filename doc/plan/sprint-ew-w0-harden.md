@@ -7,7 +7,7 @@
 
 | # | Sprint | 人时 | 依赖 | 状态 |
 |---|--------|------|------|------|
-| **EW01** | OpenAPI 漂移清理 | 16 | — | ⬜ 可开工 |
+| **EW01** | OpenAPI 漂移清理 | 16 | — | ✅ 完成 |
 | **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ⬜ 可开工（可与 EW01 并行） |
 | **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ⬜ |
 | **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ⬜ |
@@ -21,10 +21,10 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW01-1 | 删除或标注废弃 8 条 legacy `/v1/*`（tasks/agent-runs/memories…） | yaml 无未实现路径；`make openapi-check` | ⬜ |
-| EW01-2 | 补 `GET /api/v1/spaces` · `GET /api/v1/orgs` | 与 `handlers.go` 一致；swagger 同步 | ⬜ |
-| EW01-3 | 补 `POST /api/v1/auth/dev-login`（或文档声明仅非 prod） | openapi + handler 注释一致 | ⬜ |
-| EW01-4 | `make swagger` · `make openapi-check` · CHANGELOG | 绿 | ⬜ |
+| EW01-1 | 删除或标注废弃 8 条 legacy `/v1/*`（tasks/agent-runs/memories…） | yaml 无未实现路径；`make openapi-check` | ✅ |
+| EW01-2 | 补 `GET /api/v1/spaces` · `GET /api/v1/orgs` | 与 `handlers.go` 一致；swagger 同步 | ✅ |
+| EW01-3 | 补 `POST /api/v1/auth/dev-login`（或文档声明仅非 prod） | openapi + handler 注释一致 | ✅ |
+| EW01-4 | `make swagger` · `make openapi-check` · CHANGELOG | 绿 | ✅ |
 
 **非目标：** 实现 legacy Tasks API。
 

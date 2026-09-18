@@ -1372,6 +1372,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/auth/dev-login": {
+            "post": {
+                "description": "Local/non-production helper only. Returns an admin-scoped access token for the requested space (default local). Not for production; console Dev Token is hidden when ASH_CONSOLE_AUTH_REQUIRED=1. Optional future gate ASH_DEV_LOGIN=0.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Issue a development JWT without credentials",
+                "parameters": [
+                    {
+                        "description": "optional target space",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.devLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuthSessionResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/auth/login": {
             "post": {
                 "consumes": [
@@ -4489,6 +4528,29 @@ const docTemplate = `{
             }
         },
         "/api/v1/orgs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orgs"
+                ],
+                "summary": "List organizations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.OrgListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -7694,6 +7756,30 @@ const docTemplate = `{
             }
         },
         "/api/v1/spaces": {
+            "get": {
+                "description": "When the database is empty and caller context is local, returns a synthetic local space row.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "List spaces",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.SpaceListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -15598,6 +15684,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.OrgListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Org"
+                    }
+                }
+            }
+        },
         "internal_api.PasswordChangeResponse": {
             "type": "object",
             "properties": {
@@ -16197,6 +16294,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.SpaceListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Space"
+                    }
+                }
+            }
+        },
         "internal_api.StorageProfileResponse": {
             "type": "object",
             "properties": {
@@ -16606,6 +16714,14 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.devLoginRequest": {
+            "type": "object",
+            "properties": {
+                "spaceId": {
                     "type": "string"
                 }
             }

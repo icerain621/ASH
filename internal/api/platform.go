@@ -546,6 +546,16 @@ type devLoginRequest struct {
 	SpaceID string `json:"spaceId,omitempty"`
 }
 
+// DevLogin godoc
+// @Summary Issue a development JWT without credentials
+// @Description Local/non-production helper only. Returns an admin-scoped access token for the requested space (default local). Not for production; console Dev Token is hidden when ASH_CONSOLE_AUTH_REQUIRED=1. Optional future gate ASH_DEV_LOGIN=0.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body devLoginRequest false "optional target space"
+// @Success 200 {object} AuthSessionResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/auth/dev-login [post]
 func (h *Handler) devLogin(c *gin.Context) {
 	var req devLoginRequest
 	_ = c.ShouldBindJSON(&req)
@@ -573,13 +583,20 @@ func (h *Handler) devLogin(c *gin.Context) {
 	})
 }
 
+// ListOrgs godoc
+// @Summary List organizations
+// @Tags orgs
+// @Produce json
+// @Success 200 {object} OrgListResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/orgs [get]
 func (h *Handler) listOrgs(c *gin.Context) {
 	var rows []store.Org
 	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ORG_LIST_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": rows})
+	c.JSON(http.StatusOK, OrgListResponse{Items: rows})
 }
 
 // CreateOrg godoc
@@ -699,6 +716,14 @@ func (h *Handler) provisionOrgTemplate(c *gin.Context) {
 	c.JSON(http.StatusCreated, result)
 }
 
+// ListSpaces godoc
+// @Summary List spaces
+// @Description When the database is empty and caller context is local, returns a synthetic local space row.
+// @Tags spaces
+// @Produce json
+// @Success 200 {object} SpaceListResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/spaces [get]
 func (h *Handler) listSpaces(c *gin.Context) {
 	var rows []store.Space
 	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
@@ -706,10 +731,12 @@ func (h *Handler) listSpaces(c *gin.Context) {
 		return
 	}
 	if len(rows) == 0 && currentSpace(c) == "local" {
-		c.JSON(http.StatusOK, gin.H{"items": []gin.H{{"id": "local", "name": "Local", "slug": "local", "kind": "team"}}})
+		c.JSON(http.StatusOK, SpaceListResponse{Items: []store.Space{{
+			ID: "local", Name: "Local", Slug: "local", Kind: "team",
+		}}})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": rows})
+	c.JSON(http.StatusOK, SpaceListResponse{Items: rows})
 }
 
 // CreateSpace godoc

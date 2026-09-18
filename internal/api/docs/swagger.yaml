@@ -4434,6 +4434,13 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_modelrouter.Provider'
         type: array
     type: object
+  internal_api.OrgListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.Org'
+        type: array
+    type: object
   internal_api.PasswordChangeResponse:
     properties:
       ok:
@@ -4827,6 +4834,13 @@ definitions:
       spaceId:
         type: string
     type: object
+  internal_api.SpaceListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.Space'
+        type: array
+    type: object
   internal_api.StorageProfileResponse:
     properties:
       artifactPaths:
@@ -5096,6 +5110,11 @@ definitions:
   internal_api.decideCIDiagnosisRequest:
     properties:
       reason:
+        type: string
+    type: object
+  internal_api.devLoginRequest:
+    properties:
+      spaceId:
         type: string
     type: object
   internal_api.diagnoseCIFailureRequest:
@@ -6333,6 +6352,34 @@ paths:
       summary: Apply audit retention policy
       tags:
       - audit
+  /api/v1/auth/dev-login:
+    post:
+      consumes:
+      - application/json
+      description: Local/non-production helper only. Returns an admin-scoped access
+        token for the requested space (default local). Not for production; console
+        Dev Token is hidden when ASH_CONSOLE_AUTH_REQUIRED=1. Optional future gate
+        ASH_DEV_LOGIN=0.
+      parameters:
+      - description: optional target space
+        in: body
+        name: body
+        schema:
+          $ref: '#/definitions/internal_api.devLoginRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AuthSessionResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Issue a development JWT without credentials
+      tags:
+      - auth
   /api/v1/auth/login:
     post:
       consumes:
@@ -8358,6 +8405,21 @@ paths:
       tags:
       - orgs
   /api/v1/orgs:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.OrgListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List organizations
+      tags:
+      - orgs
     post:
       consumes:
       - application/json
@@ -10446,6 +10508,23 @@ paths:
       tags:
       - skills
   /api/v1/spaces:
+    get:
+      description: When the database is empty and caller context is local, returns
+        a synthetic local space row.
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.SpaceListResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: List spaces
+      tags:
+      - spaces
     post:
       consumes:
       - application/json
