@@ -641,7 +641,7 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Partial update: title, providerKind, planId, permissionMode.",
+                "description": "Partial update: title, providerKind, planId, permissionMode, agentMode.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3504,6 +3504,76 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/mcp/tools/{toolId}/execute": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Execute a registered MCP tool via toolbus mcp.call",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "tool id",
+                        "name": "toolId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "execute",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.executeMCPToolRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.MCPToolExecuteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -12606,6 +12676,14 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "scope": {
+                    "description": "Scope is once (default) or session — session adds tool to allowedToolsSession.",
+                    "type": "string"
+                },
+                "tool": {
+                    "description": "Tool is the tool name for session-scoped allow; inferred from pending approval when empty.",
+                    "type": "string"
                 }
             }
         },
@@ -13323,6 +13401,12 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "tool": {
+                    "type": "string"
                 }
             }
         },
@@ -13365,6 +13449,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.PatchRequest": {
             "type": "object",
             "properties": {
+                "agentMode": {
+                    "type": "string"
+                },
                 "disabledTools": {
                     "type": "array",
                     "items": {
@@ -13413,6 +13500,10 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.View": {
             "type": "object",
             "properties": {
+                "agentMode": {
+                    "description": "coding | general",
+                    "type": "string"
+                },
                 "createdAt": {
                     "type": "integer"
                 },
@@ -15651,6 +15742,30 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.MCPToolExecuteResponse": {
+            "type": "object",
+            "properties": {
+                "durationMs": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "failureClass": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "output": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "tool": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.MCPToolListResponse": {
             "type": "object",
             "properties": {
@@ -16773,6 +16888,25 @@ const docTemplate = `{
             "properties": {
                 "reportId": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.executeMCPToolRequest": {
+            "type": "object",
+            "properties": {
+                "approve": {
+                    "description": "Approve is an explicit once confirmation for try-exec (fail-closed; never implied).",
+                    "type": "boolean"
+                },
+                "arguments": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "sessionId": {
+                    "type": "string"
+                },
+                "timeoutMs": {
+                    "type": "integer"
                 }
             }
         },

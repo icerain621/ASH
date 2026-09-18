@@ -2412,6 +2412,13 @@ definitions:
         type: string
       reason:
         type: string
+      scope:
+        description: Scope is once (default) or session — session adds tool to allowedToolsSession.
+        type: string
+      tool:
+        description: Tool is the tool name for session-scoped allow; inferred from
+          pending approval when empty.
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_runs.ApproveResponse:
     properties:
@@ -2880,6 +2887,10 @@ definitions:
         type: string
       reason:
         type: string
+      scope:
+        type: string
+      tool:
+        type: string
     required:
     - action
     type: object
@@ -2908,6 +2919,8 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_session.PatchRequest:
     properties:
+      agentMode:
+        type: string
       disabledTools:
         items:
           type: string
@@ -2939,6 +2952,9 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_session.View:
     properties:
+      agentMode:
+        description: coding | general
+        type: string
       createdAt:
         type: integer
       createdBy:
@@ -4413,6 +4429,22 @@ definitions:
         example: ok
         type: string
     type: object
+  internal_api.MCPToolExecuteResponse:
+    properties:
+      durationMs:
+        type: integer
+      error:
+        type: string
+      failureClass:
+        type: string
+      ok:
+        type: boolean
+      output:
+        additionalProperties: {}
+        type: object
+      tool:
+        type: string
+    type: object
   internal_api.MCPToolListResponse:
     properties:
       items:
@@ -5149,6 +5181,20 @@ definitions:
       reportId:
         type: string
     type: object
+  internal_api.executeMCPToolRequest:
+    properties:
+      approve:
+        description: Approve is an explicit once confirmation for try-exec (fail-closed;
+          never implied).
+        type: boolean
+      arguments:
+        additionalProperties: {}
+        type: object
+      sessionId:
+        type: string
+      timeoutMs:
+        type: integer
+    type: object
   internal_api.githubWebhookResponse:
     properties:
       ashRunId:
@@ -5873,7 +5919,7 @@ paths:
     patch:
       consumes:
       - application/json
-      description: 'Partial update: title, providerKind, planId, permissionMode.'
+      description: 'Partial update: title, providerKind, planId, permissionMode, agentMode.'
       parameters:
       - description: session id
         in: path
@@ -7743,6 +7789,52 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Patch MCP tool (enable/disable / risk / server)
+      tags:
+      - mcp
+  /api/v1/mcp/tools/{toolId}/execute:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: tool id
+        in: path
+        name: toolId
+        required: true
+        type: string
+      - description: execute
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.executeMCPToolRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.MCPToolExecuteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Execute a registered MCP tool via toolbus mcp.call
       tags:
       - mcp
   /api/v1/memory/assets:

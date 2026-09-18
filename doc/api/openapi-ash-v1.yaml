@@ -2231,6 +2231,26 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/MCPToolItem" }
+    MCPToolExecuteRequest:
+      type: object
+      properties:
+        arguments:
+          type: object
+          additionalProperties: true
+        timeoutMs: { type: integer }
+        sessionId: { type: string, description: "Optional agent session for EW04 allow-list / permissionMode gate" }
+        approve: { type: boolean, description: "Explicit once confirmation for medium+ risk try-exec" }
+    MCPToolExecuteResponse:
+      type: object
+      properties:
+        tool: { type: string }
+        ok: { type: boolean }
+        output:
+          type: object
+          additionalProperties: true
+        error: { type: string }
+        failureClass: { type: string }
+        durationMs: { type: integer }
     ToolRiskEntry:
       type: object
       properties:
@@ -3149,6 +3169,8 @@ components:
       properties:
         actorId: { type: string }
         reason: { type: string }
+        scope: { type: string, description: "once (default) or session — session adds tool to allowedToolsSession" }
+        tool: { type: string, description: "Tool name for session-scoped allow; inferred from pending approval when empty" }
     ApproveResponse:
       type: object
       properties:
@@ -5479,6 +5501,47 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MCPToolItem" }
+
+  /api/v1/mcp/tools/{toolId}/execute:
+    post:
+      tags: [Mcp]
+      summary: Execute a registered MCP tool via toolbus mcp.call
+      description: |
+        Fail-closed for catalog risk ≥ medium unless SpacePolicy toolApprovalPresets allow,
+        session permissionMode is workspace-write|full, session allowedToolsSession matches,
+        or body.approve=true (once). Disabled tools return 409. Shares URL/argument whitelist
+        with slash mcp.call.
+      parameters:
+        - in: path
+          name: toolId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MCPToolExecuteRequest" }
+      responses:
+        "200":
+          description: toolbus mcp.call result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MCPToolExecuteResponse" }
+        "403":
+          description: approval required
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "404":
+          description: tool or session not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "409":
+          description: tool disabled
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
 
   /api/v1/memory/candidates:
     get:

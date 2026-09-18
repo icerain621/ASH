@@ -13,7 +13,7 @@
 | EW02 | 审批席位中文 / fail-closed | ChatSeats vitest | ⬜ |
 | EW03 | 空态品牌 + coding/general | web-build | ⬜ |
 | EW04 | 审批预设 once/会话/策略 | gate + SpacePolicy | ⬜ |
-| EW05 | MCP HTTP execute + 门禁 | openapi + 单测 | ⬜ |
+| EW05 | MCP HTTP execute + 门禁 | openapi + 单测 | ✅ |
 
 板：[`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) · 计划：[`docs/superpowers/plans/2026-09-18-w0-harden.md`](../../docs/superpowers/plans/2026-09-18-w0-harden.md)
 

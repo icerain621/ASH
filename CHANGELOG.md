@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW05（W0 harden）：`POST /api/v1/mcp/tools/{toolId}/execute` — 查库 → toolbus `mcp.call`；medium+ 失败闭合（SpacePolicy preset / session allow-list / permissionMode workspace-write+ / `approve` once）；FE MCP「试执行」；OpenAPI + 审计事件。
 - Sprint EW01（W0 harden）：OpenAPI 漂移清理 — 删除 8 条无 handler 的 legacy `/v1/tasks|agent-runs|runs/stream|memories*` 路径；契约补齐 `GET /orgs` · `GET /spaces` · `POST /auth/dev-login` 与 swag 对齐。
 - Sprint DX66（v4.0）：范围冻结 + 签字门禁 — `v4.0-release-scope` **已冻结**；`make v4.0-signoff`（Doctor ALL **57** / M4 **10** + Auth 硬化 smoke + rag-* / sandbox / skill-pack / rag-lsp / remote-sandbox）；清单/签字模板；**不自动**打 `v4.0.0` tag。
 - Sprint DX65（v4.0 草案）：Device **mint UI** — Space Auth Sessions 表单 mint；一次展示 access/refresh（不切换控制台会话）；`make device-session-smoke`；**无新表**。

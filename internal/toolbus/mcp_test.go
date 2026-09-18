@@ -24,15 +24,7 @@ func TestMCPCallSuccess(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	res := DefaultBus().Call(Context{}, CallRequest{
-		Tool: "mcp.call",
-		Args: map[string]any{
-			"serverURL":   srv.URL,
-			"tool":        "demo.echo",
-			"arguments":   map[string]any{"message": "hello"},
-			"allowedArgs": []any{"message"},
-		},
-	})
+	res := CallMCP(srv.URL, "demo.echo", map[string]any{"message": "hello"}, 0, []string{"message"})
 	if !res.OK {
 		t.Fatalf("expected ok: %+v", res)
 	}

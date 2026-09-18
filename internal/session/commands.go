@@ -350,18 +350,7 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
 		parsed := parseMCPArguments(args)
-		res := toolbus.DefaultBus().Call(toolbus.Context{
-			RunID:    view.RunID,
-			TraceID:  view.TraceID,
-			RepoRoot: view.RepoRoot,
-		}, toolbus.CallRequest{
-			Tool: "mcp.call",
-			Args: map[string]any{
-				"serverURL": mcpTool.Server,
-				"name":      mcpTool.Name,
-				"arguments": parsed,
-			},
-		})
+		res := toolbus.CallMCP(mcpTool.Server, mcpTool.Name, parsed, 0, nil)
 		s.emitMCPToolEvents(view, mcpTool, parsed, res)
 		s.emitAssistantReply(view, turn, formatMCPResultText(res), "mcp")
 	}

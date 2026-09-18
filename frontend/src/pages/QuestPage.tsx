@@ -435,7 +435,11 @@ export function QuestPage() {
             void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
           }}
         />
-        <McpToolsPanel open={mcpOpen} onClose={() => setMcpOpen(false)} />
+        <McpToolsPanel
+          open={mcpOpen}
+          onClose={() => setMcpOpen(false)}
+          sessionId={selectedSessionId}
+        />
         <ToolsRiskPanel
           open={toolsOpen}
           onClose={() => setToolsOpen(false)}

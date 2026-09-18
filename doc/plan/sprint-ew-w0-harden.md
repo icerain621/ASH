@@ -11,7 +11,7 @@
 | **EW02** | permissionMode ↔ 询问/自动/完全 UX | 24 | — | ✅ 完成 |
 | **EW03** | Agent 空态品牌 + 编程/通用模式 | 24 | EW02 可选并行 | ✅ 完成 |
 | **EW04** | 审批预设 once / 会话 / 写入策略 | 48 | EW02 | ✅ |
-| **EW05** | MCP 注册工具 HTTP 执行 + 门禁 | 48 | EW04 建议先合（门禁复用） | ⬜ |
+| **EW05** | MCP 注册工具 HTTP 执行 + 门禁 | 48 | EW04 建议先合（门禁复用） | ✅ |
 
 **合计：** 160h · 建议顺序 EW01∥EW02 → EW03 → EW04 → EW05
 
@@ -83,11 +83,11 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW05-1 | `POST /api/v1/mcp/tools/{toolId}/execute`：查库 → `toolbus` `mcp.call` | OpenAPI + handler 测 | ⬜ |
-| EW05-2 | 执行走风险档：medium+ 需 approval / session preset（复用 EW04） | 未批拒绝；审计事件 | ⬜ |
-| EW05-3 | FE：McpToolsPanel「试执行」或 Chat 内调用路径 | 最小可用；非 YOLO | ⬜ |
-| EW05-4 | slash/`mcp.call` 与 HTTP 路径共用校验（URL 白名单等） | 不重复漏洞面 | ⬜ |
-| EW05-5 | `make openapi-check` · 相关 go test · CHANGELOG | 绿 | ⬜ |
+| EW05-1 | `POST /api/v1/mcp/tools/{toolId}/execute`：查库 → `toolbus` `mcp.call` | OpenAPI + handler 测 | ✅ |
+| EW05-2 | 执行走风险档：medium+ 需 approval / session preset（复用 EW04） | 未批拒绝；审计事件 | ✅ |
+| EW05-3 | FE：McpToolsPanel「试执行」或 Chat 内调用路径 | 最小可用；非 YOLO | ✅ |
+| EW05-4 | slash/`mcp.call` 与 HTTP 路径共用校验（URL 白名单等） | 不重复漏洞面 | ✅ |
+| EW05-5 | `make openapi-check` · 相关 go test · CHANGELOG | 绿 | ✅ |
 
 **非目标：** 任意远程 MCP 无登记执行；Cordis。
 
@@ -95,14 +95,15 @@
 
 ## 验收总门
 
-- [ ] `make openapi-check`
-- [ ] `go test ./internal/session/... ./internal/api/... ./internal/toolbus/... ./internal/spacepolicy/... ./internal/runs/... -count=1`
-- [ ] frontend：`npm test`（agent-session / platform MCP 相关）+ `make web-build`
-- [ ] CHANGELOG + 本板全 ✅
-- [ ] 不引入 Hooks / Steer / 会话树（留给 W1）
+- [x] `make openapi-check`
+- [x] `go test ./internal/session/... ./internal/api/... ./internal/toolbus/... ./internal/spacepolicy/... ./internal/runs/... -count=1`
+- [x] frontend：`npm test`（agent-session / platform MCP 相关）+ `make web-build`
+- [x] CHANGELOG + 本板全 ✅
+- [x] 不引入 Hooks / Steer / 会话树（留给 W1）
 
 ## 修订
 
 | 日期 | 说明 |
 |------|------|
 | 2026-09-18 | 初版：W0 → EW01–EW05 |
+| 2026-09-18 | EW05 MCP HTTP execute 完成 |

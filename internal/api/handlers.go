@@ -273,6 +273,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/mcp/tools", h.listMCPTools)
 		v1.POST("/mcp/tools", h.registerMCPTool)
 		v1.PATCH("/mcp/tools/:toolId", h.patchMCPTool)
+		v1.POST("/mcp/tools/:toolId/execute", h.executeMCPTool)
 		v1.POST("/feedback", h.createFeedback)
 		v1.GET("/feedback", h.listFeedback)
 		v1.PATCH("/feedback/:feedbackId", h.updateFeedback)

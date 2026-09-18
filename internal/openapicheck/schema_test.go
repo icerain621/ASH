@@ -49,6 +49,7 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		{"FeedbackListResponse", "internal_api.FeedbackListResponse", 1},
 		{"PluginABIProfileResponse", "internal_api.PluginABIProfileResponse", 8},
 		{"MCPToolListResponse", "internal_api.MCPToolListResponse", 1},
+		{"MCPToolExecuteResponse", "internal_api.MCPToolExecuteResponse", 2},
 		{"ModelProviderListResponse", "internal_api.ModelProviderListResponse", 1},
 		{"ModelRouterDecision", "github_com_ash-repwiki_ash_internal_modelrouter.Decision", 6},
 		{"PluginRegistryListResponse", "internal_api.PluginRegistryListResponse", 1},

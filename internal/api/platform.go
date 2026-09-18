@@ -28,7 +28,10 @@ import (
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/security"
+	"github.com/ash-repwiki/ash/internal/session"
+	"github.com/ash-repwiki/ash/internal/spacepolicy"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
 type registerMCPToolRequest struct {
@@ -43,6 +46,14 @@ type patchMCPToolRequest struct {
 	Status *string `json:"status,omitempty"`
 	Risk   *string `json:"risk,omitempty"`
 	Server *string `json:"server,omitempty"`
+}
+
+type executeMCPToolRequest struct {
+	Arguments map[string]any `json:"arguments,omitempty"`
+	TimeoutMs int64          `json:"timeoutMs,omitempty"`
+	SessionID string         `json:"sessionId,omitempty"`
+	// Approve is an explicit once confirmation for try-exec (fail-closed; never implied).
+	Approve bool `json:"approve,omitempty"`
 }
 
 type createFeedbackRequest struct {
@@ -362,6 +373,204 @@ func (h *Handler) patchMCPTool(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, row)
+}
+
+// ExecuteMCPTool godoc
+// @Summary Execute a registered MCP tool via toolbus mcp.call
+// @Tags mcp
+// @Accept json
+// @Produce json
+// @Param toolId path string true "tool id"
+// @Param body body executeMCPToolRequest true "execute"
+// @Success 200 {object} MCPToolExecuteResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} APIErrorResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/mcp/tools/{toolId}/execute [post]
+func (h *Handler) executeMCPTool(c *gin.Context) {
+	var req executeMCPToolRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	var row store.MCPTool
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("toolId")).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_NOT_FOUND", "mcp tool not found"))
+		return
+	}
+	if !h.requireTargetSpace(c, row.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permMCPWrite, row.SpaceID) {
+		return
+	}
+	if strings.EqualFold(strings.TrimSpace(row.Status), "disabled") {
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "reason": "disabled",
+		})).Error
+		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_DISABLED", "mcp tool is disabled"))
+		return
+	}
+	gateReason, gateOK := h.mcpExecuteGateAllows(c, &row, req.SessionID, req.Approve)
+	if !gateOK {
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": gateReason,
+			"sessionId": strings.TrimSpace(req.SessionID),
+		})).Error
+		if gateReason == "session_not_found" {
+			c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_SESSION_NOT_FOUND", "session not found for MCP gate"))
+			return
+		}
+		c.JSON(http.StatusForbidden, errorBody("MCP_TOOL_APPROVAL_REQUIRED",
+			"mcp tool risk requires approval, session preset, or workspace-write+ permissionMode"))
+		return
+	}
+
+	args := req.Arguments
+	if args == nil {
+		args = map[string]any{}
+	}
+	res := toolbus.CallMCP(row.Server, row.Name, args, req.TimeoutMs, allowedArgsFromMCPSchema(row.SchemaJSON))
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_executed", map[string]any{
+		"toolId": row.ID, "name": row.Name, "risk": row.Risk, "ok": res.OK,
+		"durationMs": res.DurationMs, "sessionId": strings.TrimSpace(req.SessionID),
+		"gate": gateReason, "approve": req.Approve,
+	})).Error
+	if !res.OK {
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessionID string, approve bool) (reason string, ok bool) {
+	if row == nil {
+		return "missing_tool", false
+	}
+	if !mcpRiskNeedsApproval(row.Risk) {
+		return "risk_low", true
+	}
+	if approve {
+		return "approve_once", true
+	}
+	if spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), row.Name) ||
+		spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), "mcp.call") {
+		return "space_preset", true
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return "approval_required", false
+	}
+	if h.session == nil {
+		return "approval_required", false
+	}
+	view, err := h.session.WithContext(c.Request.Context()).Get(sessionID)
+	if err != nil || view == nil {
+		return "session_not_found", false
+	}
+	if view.SpaceID != "" && view.SpaceID != row.SpaceID {
+		return "approval_required", false
+	}
+	mode := strings.ToLower(strings.TrimSpace(view.PermissionMode))
+	if mode == session.PermissionWorkspaceWrite || mode == session.PermissionFull {
+		return "permission_mode", true
+	}
+	for _, name := range sessionAllowedTools(view) {
+		if name == row.Name || name == "mcp.call" {
+			return "session_allowlist", true
+		}
+	}
+	return "approval_required", false
+}
+
+func (h *Handler) spacePolicyBody(c *gin.Context, spaceID string) string {
+	spaceID = firstNonEmptyAPI(strings.TrimSpace(spaceID), "local")
+	var pack store.SpacePolicyPack
+	if err := h.dbFor(c).First(&pack, "space_id = ?", spaceID).Error; err != nil {
+		return ""
+	}
+	return pack.BodyJSON
+}
+
+func sessionAllowedTools(view *session.View) []string {
+	if view == nil || view.Meta == nil {
+		return nil
+	}
+	raw, ok := view.Meta[session.MetaAllowedToolsSession]
+	if !ok {
+		return nil
+	}
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				s = strings.TrimSpace(s)
+				if s != "" {
+					out = append(out, s)
+				}
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func mcpRiskNeedsApproval(risk string) bool {
+	switch strings.ToLower(strings.TrimSpace(risk)) {
+	case "low", "safe":
+		return false
+	default:
+		// medium / high / danger / empty / unknown → fail-closed
+		return true
+	}
+}
+
+func allowedArgsFromMCPSchema(schemaJSON string) []string {
+	schemaJSON = strings.TrimSpace(schemaJSON)
+	if schemaJSON == "" || schemaJSON == "{}" {
+		return nil
+	}
+	var root map[string]any
+	if err := json.Unmarshal([]byte(schemaJSON), &root); err != nil {
+		return nil
+	}
+	if keys, ok := stringListFromAny(root["allowedArgs"]); ok {
+		return keys
+	}
+	if keys, ok := stringListFromAny(root["allowedArgumentKeys"]); ok {
+		return keys
+	}
+	if props, ok := root["properties"].(map[string]any); ok && len(props) > 0 {
+		out := make([]string, 0, len(props))
+		for key := range props {
+			out = append(out, key)
+		}
+		return out
+	}
+	return nil
+}
+
+func stringListFromAny(v any) ([]string, bool) {
+	switch items := v.(type) {
+	case []string:
+		return items, true
+	case []any:
+		out := make([]string, 0, len(items))
+		for _, item := range items {
+			if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+				out = append(out, strings.TrimSpace(s))
+			}
+		}
+		return out, true
+	default:
+		return nil, false
+	}
 }
 
 // CreateFeedback godoc

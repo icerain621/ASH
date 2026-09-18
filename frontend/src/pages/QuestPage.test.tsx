@@ -300,8 +300,8 @@ describe("QuestPage", () => {
     fireEvent.click(screen.getByTestId("agent-tools-close"));
     fireEvent.click(screen.getByTestId("agent-settings-mcp"));
     expect(await screen.findByTestId("agent-mcp-panel")).toBeTruthy();
+    expect(screen.getByTestId("agent-mcp-register")).toBeTruthy();
     expect(await screen.findByText("feature_delivery@1.0.0")).toBeTruthy();
-    expect(screen.getByText(/选择左侧会话，或新建空白会话/)).toBeTruthy();
   });
 
   it("creates blank session from New without opening task board", async () => {
@@ -495,7 +495,10 @@ describe("QuestPage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-mode", "gate");
     });
-    expect(screen.getByTestId("agent-intent-approve")).toBeTruthy();
+    expect(screen.getByTestId("agent-intent-allow-once")).toBeTruthy();
+    expect(screen.getByTestId("agent-intent-allow-session")).toBeTruthy();
+    expect(screen.getByTestId("agent-intent-reject")).toBeTruthy();
+    expect(screen.getByTestId("agent-intent-cancel")).toBeTruthy();
   });
 
   it("lists artifacts and issues access link", async () => {

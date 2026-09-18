@@ -17,6 +17,34 @@ func registerMCPTools(r *Registry) {
 	r.Register("mcp.call", RiskMedium, mcpCall)
 }
 
+// CallMCP invokes the registered mcp.call tool with shared URL/argument validation.
+func CallMCP(serverURL, name string, arguments map[string]any, timeoutMs int64, allowedArgs []string) Result {
+	if arguments == nil {
+		arguments = map[string]any{}
+	}
+	args := map[string]any{
+		"serverURL": serverURL,
+		"name":      name,
+		"arguments": arguments,
+	}
+	if timeoutMs > 0 {
+		args["timeoutMs"] = timeoutMs
+	}
+	if len(allowedArgs) > 0 {
+		out := make([]any, 0, len(allowedArgs))
+		for _, key := range allowedArgs {
+			key = strings.TrimSpace(key)
+			if key != "" {
+				out = append(out, key)
+			}
+		}
+		if len(out) > 0 {
+			args["allowedArgs"] = out
+		}
+	}
+	return DefaultBus().Call(Context{}, CallRequest{Tool: "mcp.call", Args: args})
+}
+
 func mcpCall(_ Context, args map[string]any) (map[string]any, error) {
 	if err := validateMCPTopLevelArgs(args); err != nil {
 		return nil, err

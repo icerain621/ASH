@@ -100,10 +100,13 @@ var Catalog = map[string]Entry{
 	"MODEL_USAGE_RECORD_FAILED": {Domain: "model", Summary: "Failed to persist model usage row"},
 
 	// tool / mcp
-	"MCP_TOOL_LIST_FAILED":   {Domain: "tool", Summary: "Failed to list MCP tools"},
-	"MCP_TOOL_CREATE_FAILED": {Domain: "tool", Summary: "Failed to register MCP tool"},
-	"MCP_TOOL_NOT_FOUND":     {Domain: "tool", Summary: "MCP tool id not found"},
-	"MCP_TOOL_UPDATE_FAILED": {Domain: "tool", Summary: "Failed to patch MCP tool"},
+	"MCP_TOOL_LIST_FAILED":       {Domain: "tool", Summary: "Failed to list MCP tools"},
+	"MCP_TOOL_CREATE_FAILED":     {Domain: "tool", Summary: "Failed to register MCP tool"},
+	"MCP_TOOL_NOT_FOUND":         {Domain: "tool", Summary: "MCP tool id not found"},
+	"MCP_TOOL_UPDATE_FAILED":     {Domain: "tool", Summary: "Failed to patch MCP tool"},
+	"MCP_TOOL_DISABLED":          {Domain: "tool", Summary: "MCP tool is disabled"},
+	"MCP_TOOL_APPROVAL_REQUIRED": {Domain: "tool", Summary: "MCP execute needs approval or session preset"},
+	"MCP_TOOL_SESSION_NOT_FOUND": {Domain: "tool", Summary: "Session id for MCP gate not found"},
 
 	// improve
 	"BASELINE_NOT_READY":        {Domain: "improve", Summary: "Baseline run not finished for proposal"},
