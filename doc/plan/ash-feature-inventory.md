@@ -31,7 +31,7 @@
 | 场景 ID | 场景 | 主模块 | 关键能力 | 现状 |
 |---------|------|--------|----------|------|
 | S01 | 空会话启动任务（编程/通用） | Agent | 空态 · Composer · 模式 · 模型 · 审批 | Chat 主路径有；空态/模式对标原型待改进 |
-| S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **待开发**（协议+投影） |
+| S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **部分交付**（steer/queue 意图 + Chat 投影；W2+ 深化） |
 | S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | 门禁有；once/会话/空间预设 **待改进** |
 | S04 | 长会话压缩可回放 | 管控 | Compact / spill | 事件侧 Partial；Chat/评审 UX **待开发** |
 | S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | interactions compare 有；产品化会话树 **待开发** |
@@ -46,8 +46,8 @@
 | S14 | CI 失败诊断 → 反馈闭环 | 运维 | ci · feedback · improve | **有** |
 | S15 | 发布门禁 / 合规导出 | 运维 | releases · compliance · audit | **有** |
 | S16 | 空间成员与密钥 | 平台 | spaces · secrets · auth | **有** |
-| S17 | Hooks 扩展（cite-guard 等） | 管控 | ash.hooks.v1 | **待开发** |
-| S18 | 声明式 execpolicy / 沙箱能力位 | 管控 | policy · Doctor | **待开发** |
+| S17 | Hooks 扩展（cite-guard 等） | 管控 | ash.hooks.v1 | **部分交付**（PreToolUse MVP + 审计；扩展事件待 W3） |
+| S18 | 声明式 execpolicy / 沙箱能力位 | 管控 | policy · Doctor | **部分交付**（schema/合并 + 沙箱地板 + Doctor；全生命周期待 W3） |
 
 ---
 
@@ -106,10 +106,10 @@
 | Trajectory | 过滤投影台（P01） | events + interactions | 待改进 | 40 | P1 | 有事件；缺原型级过滤器工作台 |
 | 会话树 | Fork / Compare（P05） | threads + 新元数据 | 待开发 | 120 | P0 | 吸收项；compare API 可复用 |
 | Compact | /compact 语义 + 回放（P06） | compaction 事件 | 待开发 | 64 | P1 | |
-| Steer/Queue | 运行中打断 vs 排队（P07） | session actions 扩展 | 待开发 | 96 | P0 | |
+| Steer/Queue | 运行中打断 vs 排队（P07） | session actions 扩展 | 部分交付 | 96 | P0 | EW16–EW17 MVP |
 | 审批预设 | once / 会话 / 写入策略（P12） | approvals · SpacePolicy | 待改进 | 80 | P0 | waiting_approval 有；预设档不足 |
-| Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 待开发 | 160 | P0 | 对标最高杠杆 |
-| ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 待开发 | 120 | P0 | |
+| Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 部分交付 | 160 | P0 | EW11–EW13 MVP |
+| ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 部分交付 | 120 | P0 | EW14–EW15 MVP |
 | 子代理谱系 | 图 / 中断 / 回主（P16） | `runs/…/sub-runs` · threads | 待开发 | 64 | P1 | FE 未接 `spawnSubRun` |
 | MCP 执行 | 工具真实执行收尾（P15） | `mcp/tools*` + ToolBus | 待开发 | 48 | P0 | 规格仍 open |
 | Harness / Improve | 配置演进 | `harness/*` · `improve/*` | 有 | — | — | Automation 内嵌 |
@@ -149,7 +149,7 @@
 | Reviews / Harness / Scores | ~21 | ReviewsPage | 有（v5） |
 | Spaces / Policy / Auth | ~29 | Space / Login | 有 |
 | Platform ops（CI/审计/Doctor/Waker…） | ~40+ | 更多菜单各页 | 有 |
-| Hooks / Steer / Compact / ExecPolicy | 0～弱 | — | **待开发** |
+| Hooks / Steer / Compact / ExecPolicy | 弱→中 | Agent Chat / Run | **部分交付**（Compact 仍待开发） |
 
 遗留：OpenAPI 中 **8 条 legacy `/v1/*`**（tasks/memories…）无 handler，不计入交付。
 
@@ -175,3 +175,4 @@
 | 2026-09-18 | 初版：原型 × Console × OpenAPI × 四象限吸收优先级 |
 | 2026-09-18 | W0 → Sprint 板 EW01–EW05 + 实现计划 |
 | 2026-09-19 | W0 ✅；W1 → Sprint 板 EW11–EW18 + 实现计划 |
+| 2026-09-19 | W1 ✅（EW18 签字）：Hooks / ExecPolicy / Steer-Queue MVP 已落地；上表三行 待开发→部分交付 |

@@ -15,7 +15,7 @@
 | **EW15** | ExecPolicy → sandbox 地板 + Doctor 位 | 40 | EW14 | ✅ |
 | **EW16** | Steer 意图（运行中打断并续写） | 48 | — | ✅ |
 | **EW17** | Queue 意图 + Chat 投影 | 48 | EW16 | ✅ |
-| **EW18** | W1 签字：openapi · 测 · CHANGELOG · 板勾选 | 16 | EW13+EW15+EW17 | ⬜ |
+| **EW18** | W1 签字：openapi · 测 · CHANGELOG · 板勾选 | 16 | EW13+EW15+EW17 | ✅ |
 
 **建议顺序：** EW11→EW12→EW13 ∥ EW14→EW15 ∥ EW16→EW17 → EW18  
 **首切片：** EW11（今日开工）
@@ -99,9 +99,9 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| EW18-1 | `make openapi-check` · 相关 go/vitest · web-build | 绿 | ⬜ |
-| EW18-2 | CHANGELOG · TODO · inventory W1 状态 | 更新 | ⬜ |
-| EW18-3 | 本板全 ✅ | — | ⬜ |
+| EW18-1 | `make openapi-check` · 相关 go/vitest · web-build | 绿 | ✅ |
+| EW18-2 | CHANGELOG · TODO · inventory W1 状态 | 更新 | ✅ |
+| EW18-3 | 本板全 ✅ | — | ✅ |
 
 ## 明确不做（W1）
 
@@ -114,3 +114,4 @@
 | 日期 | 说明 |
 |------|------|
 | 2026-09-19 | 初版 EW11–EW18 |
+| 2026-09-19 | EW18 签字：openapi-check · hooks/execpolicy/session 测 · IntentBar vitest · 文档同步 |
