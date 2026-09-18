@@ -702,7 +702,7 @@ export function executeMCPTool(
     arguments?: Record<string, unknown>;
     timeoutMs?: number;
     sessionId?: string;
-    approve?: boolean;
+    approvalToken?: string;
   } = {},
 ) {
   return api<MCPToolExecuteResult>(`/mcp/tools/${encodeURIComponent(toolId)}/execute`, {

@@ -52,8 +52,23 @@ type executeMCPToolRequest struct {
 	Arguments map[string]any `json:"arguments,omitempty"`
 	TimeoutMs int64          `json:"timeoutMs,omitempty"`
 	SessionID string         `json:"sessionId,omitempty"`
-	// Approve is an explicit once confirmation for try-exec (fail-closed; never implied).
-	Approve bool `json:"approve,omitempty"`
+	// ApprovalToken is a server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED.
+	ApprovalToken string `json:"approvalToken,omitempty"`
+}
+
+// mcpApprovalPending is an in-memory one-time gate for medium+ MCP execute.
+type mcpApprovalPending struct {
+	ToolID  string
+	SpaceID string
+	Expires time.Time
+}
+
+const mcpApprovalTTL = 2 * time.Minute
+
+// MCPToolApprovalRequiredResponse is returned on 409 when medium+ needs a durable once-token.
+type MCPToolApprovalRequiredResponse struct {
+	Error         APIError `json:"error"`
+	ApprovalToken string   `json:"approvalToken"`
 }
 
 type createFeedbackRequest struct {
@@ -377,6 +392,7 @@ func (h *Handler) patchMCPTool(c *gin.Context) {
 
 // ExecuteMCPTool godoc
 // @Summary Execute a registered MCP tool via toolbus mcp.call
+// @Description Fail-closed for catalog risk ≥ medium unless SpacePolicy preset, session allow-list / workspace-write+, or a server-issued approvalToken (from prior 409) is echoed. Client approve:true is ignored.
 // @Tags mcp
 // @Accept json
 // @Produce json
@@ -384,9 +400,8 @@ func (h *Handler) patchMCPTool(c *gin.Context) {
 // @Param body body executeMCPToolRequest true "execute"
 // @Success 200 {object} MCPToolExecuteResponse
 // @Failure 400 {object} APIErrorResponse
-// @Failure 403 {object} APIErrorResponse
 // @Failure 404 {object} APIErrorResponse
-// @Failure 409 {object} APIErrorResponse
+// @Failure 409 {object} MCPToolApprovalRequiredResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/mcp/tools/{toolId}/execute [post]
 func (h *Handler) executeMCPTool(c *gin.Context) {
@@ -413,7 +428,7 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_DISABLED", "mcp tool is disabled"))
 		return
 	}
-	gateReason, gateOK := h.mcpExecuteGateAllows(c, &row, req.SessionID, req.Approve)
+	gateReason, gateOK := h.mcpExecuteGateAllows(c, &row, req.SessionID, req.ApprovalToken)
 	if !gateOK {
 		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
 			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": gateReason,
@@ -423,8 +438,10 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 			c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_SESSION_NOT_FOUND", "session not found for MCP gate"))
 			return
 		}
-		c.JSON(http.StatusForbidden, errorBody("MCP_TOOL_APPROVAL_REQUIRED",
-			"mcp tool risk requires approval, session preset, or workspace-write+ permissionMode"))
+		token := h.issueMCPApprovalToken(row.ID, row.SpaceID)
+		body := errorBody("MCP_TOOL_APPROVAL_REQUIRED", "mcp tool risk requires SpacePolicy preset, session allow-list, or echoed approvalToken")
+		body["approvalToken"] = token
+		c.JSON(http.StatusConflict, body)
 		return
 	}
 
@@ -436,7 +453,7 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_executed", map[string]any{
 		"toolId": row.ID, "name": row.Name, "risk": row.Risk, "ok": res.OK,
 		"durationMs": res.DurationMs, "sessionId": strings.TrimSpace(req.SessionID),
-		"gate": gateReason, "approve": req.Approve,
+		"gate": gateReason,
 	})).Error
 	if !res.OK {
 		c.JSON(http.StatusOK, res)
@@ -445,15 +462,15 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 	c.JSON(http.StatusOK, res)
 }
 
-func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessionID string, approve bool) (reason string, ok bool) {
+func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessionID, approvalToken string) (reason string, ok bool) {
 	if row == nil {
 		return "missing_tool", false
 	}
 	if !mcpRiskNeedsApproval(row.Risk) {
 		return "risk_low", true
 	}
-	if approve {
-		return "approve_once", true
+	if h.consumeMCPApprovalToken(approvalToken, row.ID, row.SpaceID) {
+		return "approval_token", true
 	}
 	if spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), row.Name) ||
 		spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), "mcp.call") {
@@ -483,6 +500,38 @@ func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessi
 		}
 	}
 	return "approval_required", false
+}
+
+func (h *Handler) issueMCPApprovalToken(toolID, spaceID string) string {
+	token := "mcpap_" + uuid.NewString()
+	h.mcpApprovals.Store(token, mcpApprovalPending{
+		ToolID:  toolID,
+		SpaceID: spaceID,
+		Expires: time.Now().UTC().Add(mcpApprovalTTL),
+	})
+	return token
+}
+
+func (h *Handler) consumeMCPApprovalToken(token, toolID, spaceID string) bool {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return false
+	}
+	raw, ok := h.mcpApprovals.LoadAndDelete(token)
+	if !ok {
+		return false
+	}
+	entry, ok := raw.(mcpApprovalPending)
+	if !ok {
+		return false
+	}
+	if time.Now().UTC().After(entry.Expires) {
+		return false
+	}
+	if entry.ToolID != toolID || entry.SpaceID != spaceID {
+		return false
+	}
+	return true
 }
 
 func (h *Handler) spacePolicyBody(c *gin.Context, spaceID string) string {

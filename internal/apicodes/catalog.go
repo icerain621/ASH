@@ -105,7 +105,7 @@ var Catalog = map[string]Entry{
 	"MCP_TOOL_NOT_FOUND":         {Domain: "tool", Summary: "MCP tool id not found"},
 	"MCP_TOOL_UPDATE_FAILED":     {Domain: "tool", Summary: "Failed to patch MCP tool"},
 	"MCP_TOOL_DISABLED":          {Domain: "tool", Summary: "MCP tool is disabled"},
-	"MCP_TOOL_APPROVAL_REQUIRED": {Domain: "tool", Summary: "MCP execute needs approval or session preset"},
+	"MCP_TOOL_APPROVAL_REQUIRED": {Domain: "tool", Summary: "MCP execute needs preset, session allow-list, or approvalToken"},
 	"MCP_TOOL_SESSION_NOT_FOUND": {Domain: "tool", Summary: "Session id for MCP gate not found"},
 
 	// improve

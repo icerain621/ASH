@@ -3513,6 +3513,7 @@ const docTemplate = `{
         },
         "/api/v1/mcp/tools/{toolId}/execute": {
             "post": {
+                "description": "Fail-closed for catalog risk ≥ medium unless SpacePolicy preset, session allow-list / workspace-write+, or a server-issued approvalToken (from prior 409) is echoed. Client approve:true is ignored.",
                 "consumes": [
                     "application/json"
                 ],
@@ -3554,12 +3555,6 @@ const docTemplate = `{
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
                     },
-                    "403": {
-                        "description": "Forbidden",
-                        "schema": {
-                            "$ref": "#/definitions/internal_api.APIErrorResponse"
-                        }
-                    },
                     "404": {
                         "description": "Not Found",
                         "schema": {
@@ -3569,7 +3564,7 @@ const docTemplate = `{
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                            "$ref": "#/definitions/internal_api.MCPToolApprovalRequiredResponse"
                         }
                     },
                     "500": {
@@ -15742,6 +15737,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.MCPToolApprovalRequiredResponse": {
+            "type": "object",
+            "properties": {
+                "approvalToken": {
+                    "type": "string"
+                },
+                "error": {
+                    "$ref": "#/definitions/internal_api.APIError"
+                }
+            }
+        },
         "internal_api.MCPToolExecuteResponse": {
             "type": "object",
             "properties": {
@@ -16894,9 +16900,9 @@ const docTemplate = `{
         "internal_api.executeMCPToolRequest": {
             "type": "object",
             "properties": {
-                "approve": {
-                    "description": "Approve is an explicit once confirmation for try-exec (fail-closed; never implied).",
-                    "type": "boolean"
+                "approvalToken": {
+                    "description": "ApprovalToken is a server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED.",
+                    "type": "string"
                 },
                 "arguments": {
                     "type": "object",

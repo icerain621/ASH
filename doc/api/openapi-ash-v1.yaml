@@ -2239,7 +2239,13 @@ components:
           additionalProperties: true
         timeoutMs: { type: integer }
         sessionId: { type: string, description: "Optional agent session for EW04 allow-list / permissionMode gate" }
-        approve: { type: boolean, description: "Explicit once confirmation for medium+ risk try-exec" }
+        approvalToken: { type: string, description: "Server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED; client approve:true is ignored" }
+    MCPToolApprovalRequiredResponse:
+      type: object
+      required: [error, approvalToken]
+      properties:
+        error: { $ref: "#/components/schemas/APIError" }
+        approvalToken: { type: string }
     MCPToolExecuteResponse:
       type: object
       properties:
@@ -5509,8 +5515,9 @@ paths:
       description: |
         Fail-closed for catalog risk ≥ medium unless SpacePolicy toolApprovalPresets allow,
         session permissionMode is workspace-write|full, session allowedToolsSession matches,
-        or body.approve=true (once). Disabled tools return 409. Shares URL/argument whitelist
-        with slash mcp.call.
+        or body.approvalToken echoes a server-issued one-time token from a prior 409.
+        Client body.approve=true is ignored (not a durable gate). Disabled tools return 409.
+        Shares URL/argument whitelist with slash mcp.call.
       parameters:
         - in: path
           name: toolId
@@ -5527,18 +5534,21 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/MCPToolExecuteResponse" }
-        "403":
-          description: approval required
+        "409":
+          description: approval required (includes approvalToken) or tool disabled
           content:
             application/json:
-              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/MCPToolApprovalRequiredResponse" }
+                  - { $ref: "#/components/schemas/APIErrorResponse" }
         "404":
           description: tool or session not found
           content:
             application/json:
               schema: { $ref: "#/components/schemas/APIErrorResponse" }
-        "409":
-          description: tool disabled
+        "400":
+          description: invalid request
           content:
             application/json:
               schema: { $ref: "#/components/schemas/APIErrorResponse" }

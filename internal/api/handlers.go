@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,6 +72,8 @@ type Handler struct {
 	spacePolicy   *spacepolicy.Service
 	waker         *waker.Service
 	oidc          *idp.Client
+	// mcpApprovals holds short-lived one-time tokens for medium+ MCP try-exec (fail-closed).
+	mcpApprovals sync.Map
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {

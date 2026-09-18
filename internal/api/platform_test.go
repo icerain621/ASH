@@ -470,25 +470,29 @@ func TestExecuteMCPToolHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("medium_without_approval_403", func(t *testing.T) {
+	t.Run("medium_without_approval_409_token", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
 			bytes.NewReader([]byte(`{"arguments":{"q":"hi"}}`)))
 		req.Header.Set("Content-Type", "application/json")
 		r.ServeHTTP(w, req)
-		if w.Code != http.StatusForbidden {
+		if w.Code != http.StatusConflict {
 			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
 		}
 		var errBody struct {
 			Error struct {
 				Code string `json:"code"`
 			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
 		}
 		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
 			t.Fatal(err)
 		}
 		if errBody.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" {
 			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+		if strings.TrimSpace(errBody.ApprovalToken) == "" {
+			t.Fatalf("expected approvalToken body=%s", w.Body.String())
 		}
 	})
 
@@ -514,23 +518,79 @@ func TestExecuteMCPToolHTTP(t *testing.T) {
 		}
 	})
 
-	t.Run("medium_with_approve_200", func(t *testing.T) {
+	t.Run("medium_approve_true_alone_still_denied", func(t *testing.T) {
 		w := httptest.NewRecorder()
 		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
 			bytes.NewReader([]byte(`{"arguments":{"q":"hi"},"approve":true}`)))
 		req.Header.Set("Content-Type", "application/json")
 		r.ServeHTTP(w, req)
-		if w.Code != http.StatusOK {
-			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s want 409 (approve:true must not bypass)", w.Code, w.Body.String())
+		}
+		var errBody struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
+			t.Fatal(err)
+		}
+		if errBody.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" {
+			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+		if strings.TrimSpace(errBody.ApprovalToken) == "" {
+			t.Fatalf("expected approvalToken body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("medium_with_approval_token_200", func(t *testing.T) {
+		w1 := httptest.NewRecorder()
+		req1 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{"q":"hi"}}`)))
+		req1.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w1, req1)
+		if w1.Code != http.StatusConflict {
+			t.Fatalf("challenge status=%d body=%s", w1.Code, w1.Body.String())
+		}
+		var challenge struct {
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w1.Body.Bytes(), &challenge); err != nil {
+			t.Fatal(err)
+		}
+		if challenge.ApprovalToken == "" {
+			t.Fatal("missing approvalToken")
+		}
+		body, _ := json.Marshal(map[string]any{
+			"arguments":     map[string]any{"q": "hi"},
+			"approvalToken": challenge.ApprovalToken,
+		})
+		w2 := httptest.NewRecorder()
+		req2 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader(body))
+		req2.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w2, req2)
+		if w2.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w2.Code, w2.Body.String())
 		}
 		var res struct {
 			OK bool `json:"ok"`
 		}
-		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+		if err := json.Unmarshal(w2.Body.Bytes(), &res); err != nil {
 			t.Fatal(err)
 		}
 		if !res.OK {
-			t.Fatalf("res=%+v body=%s", res, w.Body.String())
+			t.Fatalf("res=%+v body=%s", res, w2.Body.String())
+		}
+		// token is one-time
+		w3 := httptest.NewRecorder()
+		req3 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader(body))
+		req3.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w3, req3)
+		if w3.Code != http.StatusConflict {
+			t.Fatalf("replay status=%d body=%s want 409", w3.Code, w3.Body.String())
 		}
 	})
 

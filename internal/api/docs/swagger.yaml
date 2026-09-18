@@ -4429,6 +4429,13 @@ definitions:
         example: ok
         type: string
     type: object
+  internal_api.MCPToolApprovalRequiredResponse:
+    properties:
+      approvalToken:
+        type: string
+      error:
+        $ref: '#/definitions/internal_api.APIError'
+    type: object
   internal_api.MCPToolExecuteResponse:
     properties:
       durationMs:
@@ -5183,10 +5190,10 @@ definitions:
     type: object
   internal_api.executeMCPToolRequest:
     properties:
-      approve:
-        description: Approve is an explicit once confirmation for try-exec (fail-closed;
-          never implied).
-        type: boolean
+      approvalToken:
+        description: ApprovalToken is a server-issued one-time token from a prior
+          409 MCP_TOOL_APPROVAL_REQUIRED.
+        type: string
       arguments:
         additionalProperties: {}
         type: object
@@ -7795,6 +7802,9 @@ paths:
     post:
       consumes:
       - application/json
+      description: Fail-closed for catalog risk ≥ medium unless SpacePolicy preset,
+        session allow-list / workspace-write+, or a server-issued approvalToken (from
+        prior 409) is echoed. Client approve:true is ignored.
       parameters:
       - description: tool id
         in: path
@@ -7818,10 +7828,6 @@ paths:
           description: Bad Request
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
-        "403":
-          description: Forbidden
-          schema:
-            $ref: '#/definitions/internal_api.APIErrorResponse'
         "404":
           description: Not Found
           schema:
@@ -7829,7 +7835,7 @@ paths:
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/internal_api.APIErrorResponse'
+            $ref: '#/definitions/internal_api.MCPToolApprovalRequiredResponse'
         "500":
           description: Internal Server Error
           schema:

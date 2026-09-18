@@ -7,6 +7,7 @@ import {
   registerMCPTool,
   type MCPTool,
 } from "@/modules/platform/api/platform.api";
+import { ApiError } from "@/services/http/client";
 
 type Props = {
   open: boolean;
@@ -63,12 +64,29 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
   });
 
   const execMut = useMutation({
-    mutationFn: ({ tool, approve }: { tool: MCPTool; approve: boolean }) =>
-      executeMCPTool(tool.id, {
-        arguments: {},
+    mutationFn: async (tool: MCPTool) => {
+      const base = {
+        arguments: {} as Record<string, unknown>,
         sessionId: sessionId || undefined,
-        approve,
-      }),
+      };
+      try {
+        return await executeMCPTool(tool.id, base);
+      } catch (e) {
+        if (
+          e instanceof ApiError &&
+          e.code === "MCP_TOOL_APPROVAL_REQUIRED" &&
+          e.approvalToken &&
+          riskNeedsConfirm(tool.risk)
+        ) {
+          const ok = window.confirm(
+            `工具「${tool.name}」风险为 ${tool.risk || "medium"}，确认试执行？（需服务端一次性 approvalToken，非客户端自证）`,
+          );
+          if (!ok) throw e;
+          return executeMCPTool(tool.id, { ...base, approvalToken: e.approvalToken });
+        }
+        throw e;
+      }
+    },
     onSuccess: (res) => {
       setError("");
       setExecResult(
@@ -98,7 +116,8 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
         </div>
         <p className="muted-line">
           登记后可通过 Chat slash `/name` 或「试执行」调用（status=disabled 时不出现在命令目录）。medium+
-          风险需确认审批，禁止 YOLO。
+          风险需 SpacePolicy preset、会话 allow-list，或服务端一次性 approvalToken（禁止客户端
+          approve:true 自证）。
         </p>
         {error ? (
           <p className="error-text" data-testid="agent-mcp-error">
@@ -172,16 +191,7 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
                     className="btn mini"
                     data-testid={`agent-mcp-try-${tool.id}`}
                     disabled={disabled || execMut.isPending}
-                    onClick={() => {
-                      const needs = riskNeedsConfirm(tool.risk);
-                      if (needs) {
-                        const ok = window.confirm(
-                          `工具「${tool.name}」风险为 ${tool.risk || "medium"}，确认试执行？（非 YOLO，仅本次批准）`,
-                        );
-                        if (!ok) return;
-                      }
-                      execMut.mutate({ tool, approve: needs });
-                    }}
+                    onClick={() => execMut.mutate(tool)}
                   >
                     试执行
                   </button>
