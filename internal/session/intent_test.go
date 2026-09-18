@@ -155,3 +155,83 @@ func TestIntent_approveFailClosedWithoutGate(t *testing.T) {
 		t.Fatalf("err=%v want ErrIntentRejected or approvable message", err)
 	}
 }
+
+func TestIntent_steerCancelsActiveRunAndPrompts(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	rc := &stubRunControl{}
+	svc := session.NewService(db, nil, ev).WithRunControl(rc)
+	seedRun(t, db, "run_steer_1", "running")
+	view, err := svc.Create(session.CreateRequest{RunID: "run_steer_1", SpaceID: "local", CreatedBy: "actor1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := svc.Intent(view.ID, session.IntentRequest{
+		Action: "steer", Prompt: "change direction", ActorID: "actor1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rc.cancelCalls != 1 || rc.lastRunID != "run_steer_1" {
+		t.Fatalf("cancel stub=%+v", rc)
+	}
+	if len(out.Turns) != 1 || out.Turns[0].Prompt != "change direction" {
+		t.Fatalf("turns=%+v", out.Turns)
+	}
+
+	listed, err := ev.ListAfter("run_steer_1", 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	sawSteer := false
+	for _, item := range listed {
+		if item.Type == "session.steer" {
+			sawSteer = true
+			if !strings.Contains(string(item.Payload), "change direction") {
+				t.Fatalf("steer payload=%s", item.Payload)
+			}
+			if item.Visibility != events.VisibilityUIOnly {
+				t.Fatalf("visibility=%q", item.Visibility)
+			}
+		}
+	}
+	if !sawSteer {
+		t.Fatalf("missing session.steer in %+v", listed)
+	}
+}
+
+func TestIntent_steerRejectsWhenIdle(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	rc := &stubRunControl{}
+	svc := session.NewService(db, nil, ev).WithRunControl(rc)
+
+	blank, err := svc.Create(session.CreateRequest{SpaceID: "local", CreatedBy: "actor1", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Intent(blank.ID, session.IntentRequest{Action: "steer", Prompt: "nope"})
+	if err == nil {
+		t.Fatal("expected idle blank steer to fail")
+	}
+	if !errors.Is(err, session.ErrIntentRejected) || !strings.Contains(err.Error(), "nothing to steer") {
+		t.Fatalf("err=%v", err)
+	}
+
+	seedRun(t, db, "run_steer_idle", "finished")
+	bound, err := svc.Create(session.CreateRequest{RunID: "run_steer_idle", SpaceID: "local", CreatedBy: "actor1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = svc.Intent(bound.ID, session.IntentRequest{Action: "steer", Prompt: "nope"})
+	if err == nil {
+		t.Fatal("expected terminal-run steer to fail")
+	}
+	if !errors.Is(err, session.ErrIntentRejected) || !strings.Contains(err.Error(), "nothing to steer") {
+		t.Fatalf("err=%v", err)
+	}
+	if rc.cancelCalls != 0 {
+		t.Fatalf("cancelCalls=%d want 0", rc.cancelCalls)
+	}
+}

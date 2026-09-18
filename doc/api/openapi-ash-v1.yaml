@@ -1143,8 +1143,8 @@ components:
       properties:
         action:
           type: string
-          enum: [prompt, approve, cancel, stop, reject, command]
-          description: "stop is an alias of cancel; command runs slash commands fail-closed"
+          enum: [prompt, steer, approve, cancel, stop, reject, command]
+          description: "steer cancels in-flight/active run then prompts (requires active work); stop is an alias of cancel; command runs slash commands fail-closed"
         prompt: { type: string }
         reason: { type: string }
         actorId: { type: string }
@@ -3907,7 +3907,7 @@ paths:
     post:
       tags: [Agents]
       summary: Apply thin session intent
-      description: prompt|approve|cancel|stop|reject|command. stop is an alias of cancel. Unknown slash commands fail closed (409). Approve without an approvable gate fails closed (409).
+      description: prompt|steer|approve|cancel|stop|reject|command. steer cancels in-flight/active run then prompts (requires active work; idle → 409). stop is an alias of cancel. Unknown slash commands fail closed (409). Approve without an approvable gate fails closed (409).
       parameters:
         - in: path
           name: sessionId

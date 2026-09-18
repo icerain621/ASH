@@ -49,6 +49,7 @@ export type AgentSessionView = {
 
 export type SessionIntentAction =
   | "prompt"
+  | "steer"
   | "approve"
   | "cancel"
   | "stop"

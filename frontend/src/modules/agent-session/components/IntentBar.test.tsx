@@ -77,6 +77,19 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
   });
 
+  it("sends steer intent when canStop (running)", () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
+    expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-steer", "true");
+    expect(screen.getByTestId("agent-intent-steer-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("agent-intent-send")).toHaveTextContent("续写");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
+      target: { value: "go another way" },
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-send"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "steer", prompt: "go another way" });
+  });
+
   it("opens command menu on slash and fills without sending", async () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);

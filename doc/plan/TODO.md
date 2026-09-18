@@ -14,7 +14,7 @@
 | EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ✅ |
 | EW14 | ExecPolicy schema | 解析 + 合并 | ✅ |
 | EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ✅ |
-| EW16 | Steer 意图 | session.steer | ⬜ |
+| EW16 | Steer 意图 | session.steer | ✅ |
 | EW17 | Queue + Chat | meta queue | ⬜ |
 | EW18 | W1 签字 | openapi + CHANGELOG | ⬜ |
 

@@ -65,6 +65,16 @@ func (r *flightRegistry) cancel(sessionID string) bool {
 	return true
 }
 
+// has reports whether a PromptTurn flight is registered for the session.
+func (r *flightRegistry) has(sessionID string) bool {
+	if r == nil || sessionID == "" {
+		return false
+	}
+	r.mu.Lock()
+	defer r.mu.Unlock()
+	return r.byID[sessionID] != nil
+}
+
 func (f *flight) setPartial(turnID, text string) {
 	if f == nil {
 		return

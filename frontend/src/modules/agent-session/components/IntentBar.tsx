@@ -36,6 +36,7 @@ function ensureSlash(name: string): string {
 function submitText(
   text: string,
   onIntent: (payload: IntentPayload) => void,
+  opts?: { steer?: boolean },
 ): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -45,7 +46,10 @@ function submitText(
     const args = sp < 0 ? "" : trimmed.slice(sp + 1).trim();
     onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
   } else {
-    onIntent({ action: "prompt", prompt: trimmed });
+    onIntent({
+      action: opts?.steer ? "steer" : "prompt",
+      prompt: trimmed,
+    });
   }
   return true;
 }
@@ -102,7 +106,7 @@ export function IntentBar({
 
   const sendCurrent = () => {
     if (busy) return;
-    if (submitText(prompt, onIntent)) {
+    if (submitText(prompt, onIntent, { steer: canStop })) {
       setPrompt("");
       setMenuOpen(false);
     }
@@ -173,17 +177,31 @@ export function IntentBar({
   }
 
   return (
-    <div className="agent-intent-bar" data-testid="agent-intent-bar" data-mode="prompt">
+    <div
+      className="agent-intent-bar"
+      data-testid="agent-intent-bar"
+      data-mode="prompt"
+      data-steer={canStop ? "true" : "false"}
+    >
       <div className="agent-intent-prompt-wrap">
+        {canStop ? (
+          <p className="muted-line" data-testid="agent-intent-steer-hint">
+            运行中：发送将打断当前生成并以新提示续写（Steer）
+          </p>
+        ) : null}
         <label className="wide-field">
-          意图
+          {canStop ? "Steer" : "意图"}
           <textarea
             ref={textareaRef}
             rows={2}
             value={prompt}
             disabled={busy}
             data-testid="agent-intent-prompt"
-            placeholder="Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
+            placeholder={
+              canStop
+                ? "打断并续写 · Enter 发送 · Shift+Enter 换行"
+                : "Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
+            }
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);
@@ -282,7 +300,7 @@ export function IntentBar({
           data-testid="agent-intent-send"
           onClick={sendCurrent}
         >
-          发送
+          {canStop ? "续写" : "发送"}
         </button>
       </div>
     </div>

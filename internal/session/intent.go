@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/interaction"
+	"github.com/ash-repwiki/ash/internal/store"
 )
 
 // Intent actions for thin agent interaction (GV01 / EW04).
@@ -16,6 +18,7 @@ const (
 	IntentCancel  = "cancel"
 	IntentReject  = "reject"
 	IntentCommand = "command"
+	IntentSteer   = "steer"
 
 	// Gate aliases (sprint EW04 protocol names).
 	IntentAllowOnce    = "allow_once"
@@ -27,6 +30,9 @@ const (
 	ApproveScopeSession = "session"
 
 	MetaAllowedToolsSession = "allowedToolsSession"
+
+	// How long steer waits for a canceled in-flight PromptTurn to unwind before starting the new prompt.
+	steerFlightWait = 3 * time.Second
 )
 
 // ErrIntentRejected is returned when an intent cannot be applied (fail-closed).
@@ -75,6 +81,8 @@ func (s *Service) Intent(sessionID string, req IntentRequest) (*View, error) {
 	case IntentPrompt:
 		view, _, err := s.PromptTurn(sessionID, TurnRequest{Prompt: req.Prompt})
 		return view, err
+	case IntentSteer:
+		return s.intentSteer(sessionID, req)
 	case IntentApprove, IntentAllowOnce, IntentAllowSession:
 		return s.intentApprove(sessionID, req, action)
 	case IntentReject, IntentDeny:
@@ -85,6 +93,82 @@ func (s *Service) Intent(sessionID string, req IntentRequest) (*View, error) {
 		return s.intentCommand(sessionID, req)
 	default:
 		return nil, fmt.Errorf("%w: unknown action %q", ErrIntentRejected, req.Action)
+	}
+}
+
+// intentSteer cancels in-flight generation and/or an active bound run, then applies a new prompt.
+// Requires active work (in-flight PromptTurn or non-terminal bound run); idle sessions are rejected
+// (steer is not a prompt alias — use action=prompt when idle).
+func (s *Service) intentSteer(sessionID string, req IntentRequest) (*View, error) {
+	prompt := strings.TrimSpace(req.Prompt)
+	if prompt == "" {
+		return nil, fmt.Errorf("%w: steer requires prompt", ErrIntentRejected)
+	}
+	view, err := s.Get(sessionID)
+	if err != nil {
+		return nil, err
+	}
+	if view.Status != StatusActive {
+		return nil, fmt.Errorf("%w: session status %q", ErrIntentRejected, view.Status)
+	}
+
+	cancelledFlight := false
+	if s.flights != nil {
+		cancelledFlight = s.flights.cancel(sessionID)
+	}
+	activeRun := s.boundRunIsActive(view.RunID)
+	if !cancelledFlight && !activeRun {
+		return nil, fmt.Errorf("%w: nothing to steer (no in-flight turn or active run)", ErrIntentRejected)
+	}
+
+	if activeRun {
+		if s.runs == nil {
+			return nil, fmt.Errorf("%w: run control is not configured", ErrIntentRejected)
+		}
+		if err := s.runs.CancelRun(view.RunID); err != nil {
+			return nil, fmt.Errorf("%w: %v", ErrIntentRejected, err)
+		}
+	}
+
+	if cancelledFlight {
+		deadline := time.Now().Add(steerFlightWait)
+		for time.Now().Before(deadline) && s.flights != nil && s.flights.has(sessionID) {
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+
+	actor := firstNonEmpty(strings.TrimSpace(req.ActorID), view.CreatedBy, "session")
+	if view.RunID != "" && s.events != nil {
+		trace := firstNonEmpty(view.TraceID, view.RunID)
+		_, _ = s.events.Append(view.RunID, trace, "session.steer", "info", map[string]any{
+			"sessionId": view.ID, "action": IntentSteer, "actorId": actor, "prompt": prompt,
+			"canceledFlight": cancelledFlight, "canceledRun": activeRun,
+			"threadId": metaString(view.Meta, interaction.MetaThreadID),
+		}, events.WithVisibility(events.VisibilityUIOnly))
+	}
+
+	view, _, err = s.PromptTurn(sessionID, TurnRequest{Prompt: prompt})
+	return view, err
+}
+
+func (s *Service) boundRunIsActive(runID string) bool {
+	runID = strings.TrimSpace(runID)
+	if runID == "" || s == nil || s.db == nil {
+		return false
+	}
+	var rec store.RunRecord
+	if err := s.q().First(&rec, "id = ?", runID).Error; err != nil {
+		return false
+	}
+	return !runStatusTerminal(rec.Status)
+}
+
+func runStatusTerminal(status string) bool {
+	switch strings.ToLower(strings.TrimSpace(status)) {
+	case "finished", "failed", "canceled", "cancelled":
+		return true
+	default:
+		return false
 	}
 }
 
