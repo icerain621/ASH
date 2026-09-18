@@ -12,7 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- Sprint EW11（W1 v6.0 吸收）：`internal/hooks` — 声明式 `ash.hooks.v1`（PreToolUse）配置解析、SpacePolicy `bodyJson.hooks` 加载与 tool/risk 规则求值（缺省 allow；错误 version fail-closed）。
+- Sprint EW11（W1 v6.0 吸收）：`internal/hooks` — 声明式 `ash.hooks.v1`（PreToolUse）配置解析、SpacePolicy `bodyJson.hooks` 加载与 tool/risk 规则求值（缺省 allow；错误 version / 匹配规则 action 无效 fail-closed → deny）；附录 [`doc/appendices/ash-hooks-v1.md`](doc/appendices/ash-hooks-v1.md)。
 - Sprint EW05（W0 harden）：`POST /api/v1/mcp/tools/{toolId}/execute` — 查库 → toolbus `mcp.call`；medium+ 失败闭合（SpacePolicy preset / session allow-list / permissionMode workspace-write+ / 服务端 `approvalToken`）；FE MCP「试执行」；OpenAPI + 审计事件。
 - Sprint EW01（W0 harden）：OpenAPI 漂移清理 — 删除 8 条无 handler 的 legacy `/v1/tasks|agent-runs|runs/stream|memories*` 路径；契约补齐 `GET /orgs` · `GET /spaces` · `POST /auth/dev-login` 与 swag 对齐。
 - Sprint DX66（v4.0）：范围冻结 + 签字门禁 — `v4.0-release-scope` **已冻结**；`make v4.0-signoff`（Doctor ALL **57** / M4 **10** + Auth 硬化 smoke + rag-* / sandbox / skill-pack / rag-lsp / remote-sandbox）；清单/签字模板；**不自动**打 `v4.0.0` tag。

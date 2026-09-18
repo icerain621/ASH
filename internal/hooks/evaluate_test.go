@@ -21,6 +21,41 @@ func TestEvaluate_DenyBash(t *testing.T) {
 	}
 }
 
+func TestEvaluate_MatchingRuleInvalidActionDenies(t *testing.T) {
+	cfg := Config{
+		Version: SchemaVersion,
+		Rules: []Rule{
+			{Event: EventPreToolUse, Tool: "bash", Action: DecisionAction("block"), Reason: "policy"},
+		},
+	}
+	dec := Evaluate(cfg, EventPreToolUse, ToolContext{Tool: "bash", Risk: "low"})
+	if dec.Action != ActionDeny {
+		t.Fatalf("action=%q want deny", dec.Action)
+	}
+	if dec.RuleIndex != 0 {
+		t.Fatalf("ruleIndex=%d want 0", dec.RuleIndex)
+	}
+	if dec.Reason == "" {
+		t.Fatal("expected non-empty deny reason for invalid action")
+	}
+}
+
+func TestEvaluate_MatchingRuleEmptyActionDenies(t *testing.T) {
+	cfg := Config{
+		Version: SchemaVersion,
+		Rules: []Rule{
+			{Event: EventPreToolUse, Tool: "*", Action: DecisionAction(""), Reason: "x"},
+		},
+	}
+	dec := Evaluate(cfg, EventPreToolUse, ToolContext{Tool: "read_file", Risk: "low"})
+	if dec.Action != ActionDeny {
+		t.Fatalf("action=%q want deny", dec.Action)
+	}
+	if dec.RuleIndex != 0 {
+		t.Fatalf("ruleIndex=%d want 0", dec.RuleIndex)
+	}
+}
+
 func TestEvaluate_NoConfigAllow(t *testing.T) {
 	dec := Evaluate(Config{}, EventPreToolUse, ToolContext{Tool: "read_file", Risk: "low"})
 	if dec.Action != ActionAllow {

@@ -1,6 +1,9 @@
 package hooks
 
-import "strings"
+import (
+	"fmt"
+	"strings"
+)
 
 func Evaluate(cfg Config, ev Event, ctx ToolContext) Decision {
 	for i, rule := range cfg.Rules {
@@ -17,7 +20,15 @@ func Evaluate(cfg Config, ev Event, ctx ToolContext) Decision {
 		}
 		action := normalizeAction(rule.Action)
 		if action == "" {
-			continue
+			reason := "matching hook rule has empty or unknown action"
+			if raw := strings.TrimSpace(string(rule.Action)); raw != "" {
+				reason = fmt.Sprintf("matching hook rule has unknown action %q", raw)
+			}
+			return Decision{
+				Action:    ActionDeny,
+				Reason:    reason,
+				RuleIndex: i,
+			}
 		}
 		return Decision{
 			Action:    action,
