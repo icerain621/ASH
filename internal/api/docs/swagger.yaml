@@ -1000,6 +1000,8 @@ definitions:
         type: string
       kind:
         type: string
+      parentThreadId:
+        type: string
       runId:
         type: string
       sessionId:
@@ -7623,6 +7625,28 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Fold thread timeline nodes + digest
+      tags:
+      - interactions
+  /api/v1/interactions/threads/{threadId}/fork:
+    post:
+      parameters:
+      - description: parent thread id
+        in: path
+        name: threadId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Fork an interaction thread
       tags:
       - interactions
   /api/v1/interactions/threads/{threadId}/memory-links:

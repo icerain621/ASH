@@ -160,8 +160,9 @@
 1. **W0（~3 周 · 1 人）**：审批预设 + permissionMode 对齐 · MCP exec · Chat 空态/模式 · OpenAPI 卫生  
    → 任务板 [`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) · 实现计划 [`docs/superpowers/plans/2026-09-18-w0-harden.md`](../../docs/superpowers/plans/2026-09-18-w0-harden.md)  
 2. **W1（~2 月 · 1.5 人）**：Hooks MVP · execpolicy 骨架 · Steer/Queue 协议与 Chat 投影  
-   → 任务板 [`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) · 实现计划 [`docs/superpowers/plans/2026-09-19-w1-v60-absorb.md`](../../docs/superpowers/plans/2026-09-19-w1-v60-absorb.md) · **现行**  
+   → 任务板 [`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) · **✅**  
 3. **W2（~1.5 月 · 1.5 人）**：会话树 fork/compare · Compact UX · 记忆四视角字段回填  
+   → 任务板 [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) · **现行**（EW21 fork）  
 4. **W3（~1 月 · 1 人）**：子代理谱系台 · Trajectory 过滤器工作台 · Provider/Doctor 探针  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
@@ -176,3 +177,4 @@
 | 2026-09-18 | W0 → Sprint 板 EW01–EW05 + 实现计划 |
 | 2026-09-19 | W0 ✅；W1 → Sprint 板 EW11–EW18 + 实现计划 |
 | 2026-09-19 | W1 ✅（EW18 签字）：Hooks / ExecPolicy / Steer-Queue MVP 已落地；上表三行 待开发→部分交付 |
+| 2026-09-19 | W2 开工：EW21 会话线程 Fork |

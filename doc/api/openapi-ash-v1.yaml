@@ -1158,6 +1158,7 @@ components:
         sessionId: { type: string }
         runId: { type: string }
         kind: { type: string }
+        parentThreadId: { type: string }
         status: { type: string }
         digest: { type: string }
         headSeq: { type: integer, format: int64 }
@@ -4245,6 +4246,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InteractionThread" }
+  /api/v1/interactions/threads/{threadId}/fork:
+    post:
+      tags: [Interactions]
+      summary: Fork an interaction thread
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: forked thread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionThread" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/interactions/threads/{threadId}/replay:
     post:
       tags: [Interactions]

@@ -189,6 +189,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/interactions/threads/:threadId", h.getInteractionThread)
 		v1.GET("/interactions/threads/:threadId/memory-links", h.listInteractionMemoryLinks)
 		v1.POST("/interactions/threads/:threadId/seal", h.sealInteractionThread)
+		v1.POST("/interactions/threads/:threadId/fork", h.forkInteractionThread)
 		v1.POST("/interactions/threads/:threadId/replay", h.replayInteractionThread)
 		v1.POST("/interactions/compare", h.compareInteractionThreads)
 		v1.GET("/runs", h.listRuns)

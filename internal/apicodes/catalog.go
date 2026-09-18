@@ -208,6 +208,7 @@ var Catalog = map[string]Entry{
 	"INTERACTION_NOT_FOUND":    {Domain: "interactions", Summary: "Interaction session/thread not found for run"},
 	"THREAD_NOT_FOUND":         {Domain: "interactions", Summary: "Interaction thread id not found"},
 	"THREAD_ENSURE_FAILED":     {Domain: "interactions", Summary: "Failed to ensure interaction thread"},
+	"THREAD_FORK_FAILED":       {Domain: "interactions", Summary: "Failed to fork interaction thread"},
 	"THREAD_SEAL_FAILED":       {Domain: "interactions", Summary: "Failed to seal interaction thread"},
 	"THREAD_REPLAY_FAILED":     {Domain: "interactions", Summary: "Failed to replay interaction thread"},
 	"THREAD_COMPARE_FAILED":    {Domain: "interactions", Summary: "Failed to compare interaction threads"},

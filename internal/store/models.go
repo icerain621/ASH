@@ -4,27 +4,27 @@ import "time"
 
 // RunRecord indexes a delivery run for listing and replay.
 type RunRecord struct {
-	ID              string     `gorm:"primaryKey;size:64"`
-	TraceID         string     `gorm:"index;size:64;not null"`
-	ScenarioName    string     `gorm:"size:128;not null"`
-	ScenarioVersion string     `gorm:"size:64;not null"`
-	PolicyProfile   string     `gorm:"size:64;not null;default:default"`
-	Status          string     `gorm:"size:32;not null;index"`
-	SpaceID         string     `gorm:"size:64;not null;default:local;index"`
-	ActorRole       string     `gorm:"size:64;not null;default:maintainer"`
-	InputsDigest    string     `gorm:"size:128"`
-	RepoRoot        string     `gorm:"size:512"`
-	ParentRunID     string     `gorm:"size:64;index"`
-	RootRunID       string     `gorm:"size:64;index"`
-	Depth           int        `gorm:"not null;default:0"`
-	ToolAllowlistJSON string   `gorm:"type:text"`
-	StartedAt       time.Time  `gorm:"not null"`
-	FinishedAt      *time.Time `gorm:"index"`
-	Recovered       bool       `gorm:"not null;default:false"`
-	ErrorCode       string     `gorm:"size:64"`
-	ErrorMessage    string     `gorm:"size:1024"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
+	ID                string     `gorm:"primaryKey;size:64"`
+	TraceID           string     `gorm:"index;size:64;not null"`
+	ScenarioName      string     `gorm:"size:128;not null"`
+	ScenarioVersion   string     `gorm:"size:64;not null"`
+	PolicyProfile     string     `gorm:"size:64;not null;default:default"`
+	Status            string     `gorm:"size:32;not null;index"`
+	SpaceID           string     `gorm:"size:64;not null;default:local;index"`
+	ActorRole         string     `gorm:"size:64;not null;default:maintainer"`
+	InputsDigest      string     `gorm:"size:128"`
+	RepoRoot          string     `gorm:"size:512"`
+	ParentRunID       string     `gorm:"size:64;index"`
+	RootRunID         string     `gorm:"size:64;index"`
+	Depth             int        `gorm:"not null;default:0"`
+	ToolAllowlistJSON string     `gorm:"type:text"`
+	StartedAt         time.Time  `gorm:"not null"`
+	FinishedAt        *time.Time `gorm:"index"`
+	Recovered         bool       `gorm:"not null;default:false"`
+	ErrorCode         string     `gorm:"size:64"`
+	ErrorMessage      string     `gorm:"size:1024"`
+	CreatedAt         time.Time
+	UpdatedAt         time.Time
 }
 
 func (RunRecord) TableName() string { return "runs" }
@@ -252,12 +252,12 @@ func (RAGChunk) TableName() string { return "rag_chunks" }
 
 // RAGPathEntry is a path/basename row for Hybrid retrieval (Sprint DX9).
 type RAGPathEntry struct {
-	ID        string    `gorm:"primaryKey;size:64"`
-	SpaceID   string    `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_path_space_root_path"`
-	RepoRoot  string    `gorm:"size:512;not null;uniqueIndex:uidx_rag_path_space_root_path"`
-	Path      string    `gorm:"size:1024;not null;uniqueIndex:uidx_rag_path_space_root_path"`
-	Basename  string    `gorm:"size:512;not null;index"`
-	Digest    string    `gorm:"size:128;not null;index"`
+	ID        string `gorm:"primaryKey;size:64"`
+	SpaceID   string `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_path_space_root_path"`
+	RepoRoot  string `gorm:"size:512;not null;uniqueIndex:uidx_rag_path_space_root_path"`
+	Path      string `gorm:"size:1024;not null;uniqueIndex:uidx_rag_path_space_root_path"`
+	Basename  string `gorm:"size:512;not null;index"`
+	Digest    string `gorm:"size:128;not null;index"`
 	UpdatedAt time.Time
 	CreatedAt time.Time
 }
@@ -266,15 +266,15 @@ func (RAGPathEntry) TableName() string { return "rag_path_entries" }
 
 // RAGSymbol is a symbol definition row for Hybrid retrieval (Sprint DX9).
 type RAGSymbol struct {
-	ID        string    `gorm:"primaryKey;size:64"`
-	SpaceID   string    `gorm:"size:64;not null;default:local;index:idx_rag_sym_space_root_name"`
-	RepoRoot  string    `gorm:"size:512;not null;index:idx_rag_sym_space_root_name;index:idx_rag_sym_space_root_path"`
-	Path      string    `gorm:"size:1024;not null;index:idx_rag_sym_space_root_path"`
-	Name      string    `gorm:"size:256;not null;index:idx_rag_sym_space_root_name"`
-	Kind      string    `gorm:"size:32;not null;default:unknown"`
-	Source    string    `gorm:"size:32;not null;default:regex"`
-	Line      int       `gorm:"not null;default:1"`
-	Digest    string    `gorm:"size:128;not null;index"`
+	ID        string `gorm:"primaryKey;size:64"`
+	SpaceID   string `gorm:"size:64;not null;default:local;index:idx_rag_sym_space_root_name"`
+	RepoRoot  string `gorm:"size:512;not null;index:idx_rag_sym_space_root_name;index:idx_rag_sym_space_root_path"`
+	Path      string `gorm:"size:1024;not null;index:idx_rag_sym_space_root_path"`
+	Name      string `gorm:"size:256;not null;index:idx_rag_sym_space_root_name"`
+	Kind      string `gorm:"size:32;not null;default:unknown"`
+	Source    string `gorm:"size:32;not null;default:regex"`
+	Line      int    `gorm:"not null;default:1"`
+	Digest    string `gorm:"size:128;not null;index"`
 	UpdatedAt time.Time
 	CreatedAt time.Time
 }
@@ -283,11 +283,11 @@ func (RAGSymbol) TableName() string { return "rag_symbols" }
 
 // RAGVectorRef maps a chunk to its vector store point (Sprint DX17).
 type RAGVectorRef struct {
-	ID        string    `gorm:"primaryKey;size:64"`
-	SpaceID   string    `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_vec_space_root_chunk"`
-	RepoRoot  string    `gorm:"size:512;not null;uniqueIndex:uidx_rag_vec_space_root_chunk"`
-	ChunkID   string    `gorm:"size:64;not null;uniqueIndex:uidx_rag_vec_space_root_chunk;index"`
-	PointID   string    `gorm:"size:128;not null;index"`
+	ID        string `gorm:"primaryKey;size:64"`
+	SpaceID   string `gorm:"size:64;not null;default:local;uniqueIndex:uidx_rag_vec_space_root_chunk"`
+	RepoRoot  string `gorm:"size:512;not null;uniqueIndex:uidx_rag_vec_space_root_chunk"`
+	ChunkID   string `gorm:"size:64;not null;uniqueIndex:uidx_rag_vec_space_root_chunk;index"`
+	PointID   string `gorm:"size:128;not null;index"`
 	UpdatedAt time.Time
 	CreatedAt time.Time
 }
@@ -662,11 +662,11 @@ type Org struct {
 func (Org) TableName() string { return "orgs" }
 
 type Space struct {
-	ID        string `gorm:"primaryKey;size:64" json:"id"`
-	OrgID     string `gorm:"index;size:64;not null" json:"orgId"`
-	Name      string `gorm:"size:256;not null" json:"name"`
-	Slug      string `gorm:"size:128;index" json:"slug,omitempty"`
-	Kind      string `gorm:"size:16;not null;default:team;index" json:"kind"` // user|team
+	ID        string    `gorm:"primaryKey;size:64" json:"id"`
+	OrgID     string    `gorm:"index;size:64;not null" json:"orgId"`
+	Name      string    `gorm:"size:256;not null" json:"name"`
+	Slug      string    `gorm:"size:128;index" json:"slug,omitempty"`
+	Kind      string    `gorm:"size:16;not null;default:team;index" json:"kind"` // user|team
 	CreatedAt time.Time `json:"createdAt"`
 	UpdatedAt time.Time `json:"updatedAt"`
 }
@@ -746,13 +746,13 @@ type PluginRegistry struct {
 	Endpoint     string `gorm:"size:512"`
 	Capabilities string `gorm:"type:text;not null;default:'[]'"`
 	Compatible   bool   `gorm:"not null;default:false"`
-	Status        string `gorm:"size:32;not null;index"`
-	LastError     string `gorm:"type:text"`
-	LastExportAt  *time.Time
-	ExportErrors  int64 `gorm:"not null;default:0"`
-	DropCount     int64 `gorm:"not null;default:0"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	Status       string `gorm:"size:32;not null;index"`
+	LastError    string `gorm:"type:text"`
+	LastExportAt *time.Time
+	ExportErrors int64 `gorm:"not null;default:0"`
+	DropCount    int64 `gorm:"not null;default:0"`
+	CreatedAt    time.Time
+	UpdatedAt    time.Time
 }
 
 func (PluginRegistry) TableName() string { return "plugin_registry" }
@@ -769,8 +769,8 @@ type ImproveProposal struct {
 	ChangeSummary   string `gorm:"type:text"`
 	CanaryPercent   int    `gorm:"not null;default:0"`
 	CompareJSON     string `gorm:"type:text;not null;default:'{}'"`
-	Source          string `gorm:"size:64"`          // low_score|verify|manual
-	ScoreEventID    string `gorm:"size:64;index"`    // optional link to score_events
+	Source          string `gorm:"size:64"`       // low_score|verify|manual
+	ScoreEventID    string `gorm:"size:64;index"` // optional link to score_events
 	ActorID         string `gorm:"size:128"`
 	CreatedAt       time.Time
 	UpdatedAt       time.Time
@@ -798,20 +798,20 @@ func (HarnessProfileVersion) TableName() string { return "harness_profile_versio
 
 // ScenarioPatchDraft stores orchestration scenario DSL patch drafts (v2 DZ).
 type ScenarioPatchDraft struct {
-	ID            string     `gorm:"primaryKey;size:64"`
-	SpaceID       string     `gorm:"index;size:64;not null"`
-	ScenarioName  string     `gorm:"size:128;not null;index"`
-	FromVersion   string     `gorm:"size:64"`
-	ToVersion     string     `gorm:"size:64"`
-	Title         string     `gorm:"size:256;not null"`
-	DiffText      string     `gorm:"type:text;not null"`
-	Status        string     `gorm:"size:32;not null;index"` // draft|in_review|approved|rejected|archived
-	CreatedBy     string     `gorm:"size:128"`
-	DecidedBy     string     `gorm:"size:128"`
-	DecisionNote  string     `gorm:"type:text"`
-	CreatedAt     time.Time  `gorm:"not null"`
-	UpdatedAt     time.Time  `gorm:"not null"`
-	DecidedAt     *time.Time `gorm:""`
+	ID           string     `gorm:"primaryKey;size:64"`
+	SpaceID      string     `gorm:"index;size:64;not null"`
+	ScenarioName string     `gorm:"size:128;not null;index"`
+	FromVersion  string     `gorm:"size:64"`
+	ToVersion    string     `gorm:"size:64"`
+	Title        string     `gorm:"size:256;not null"`
+	DiffText     string     `gorm:"type:text;not null"`
+	Status       string     `gorm:"size:32;not null;index"` // draft|in_review|approved|rejected|archived
+	CreatedBy    string     `gorm:"size:128"`
+	DecidedBy    string     `gorm:"size:128"`
+	DecisionNote string     `gorm:"type:text"`
+	CreatedAt    time.Time  `gorm:"not null"`
+	UpdatedAt    time.Time  `gorm:"not null"`
+	DecidedAt    *time.Time `gorm:""`
 }
 
 func (ScenarioPatchDraft) TableName() string { return "scenario_patch_drafts" }
@@ -842,7 +842,7 @@ type DiffReviewComment struct {
 	SpaceID   string    `gorm:"index;size:64;not null"`
 	RunID     string    `gorm:"index;size:64;not null"`
 	FilePath  string    `gorm:"size:512;not null;index"`
-	LineIndex int       `gorm:"not null"` // DiffLine.Index within file
+	LineIndex int       `gorm:"not null"`                     // DiffLine.Index within file
 	Side      string    `gorm:"size:16;not null;default:new"` // new|old|context
 	Body      string    `gorm:"type:text;not null"`
 	CreatedBy string    `gorm:"size:128"`
@@ -870,16 +870,17 @@ func (SpaceRule) TableName() string { return "space_rules" }
 // InteractionThread indexes Session→Thread for review observability (v5 GV04).
 // Truth remains run_events; this row is the stable Thread identity + seal digest.
 type InteractionThread struct {
-	ID        string    `gorm:"primaryKey;size:64"`
-	SpaceID   string    `gorm:"index;size:64;not null;default:local"`
-	SessionID string    `gorm:"index;size:64"`
-	RunID     string    `gorm:"uniqueIndex:uniq_interaction_thread_run_kind,priority:1;size:64;not null"`
-	Kind      string    `gorm:"uniqueIndex:uniq_interaction_thread_run_kind,priority:2;size:32;not null;default:main"`
-	Status    string    `gorm:"size:32;not null;default:open;index"` // open|sealed
-	Digest    string    `gorm:"size:128"`
-	HeadSeq   int64     `gorm:"not null;default:0"`
-	CreatedAt time.Time `gorm:"not null"`
-	UpdatedAt time.Time `gorm:"not null"`
+	ID             string    `gorm:"primaryKey;size:64"`
+	SpaceID        string    `gorm:"index;size:64;not null;default:local"`
+	SessionID      string    `gorm:"index;size:64"`
+	RunID          string    `gorm:"index;size:64;not null"`
+	Kind           string    `gorm:"size:32;not null;default:main;index"` // main|fork
+	ParentThreadID string    `gorm:"index;size:64;not null;default:''"`
+	Status         string    `gorm:"size:32;not null;default:open;index"` // open|sealed
+	Digest         string    `gorm:"size:128"`
+	HeadSeq        int64     `gorm:"not null;default:0"`
+	CreatedAt      time.Time `gorm:"not null"`
+	UpdatedAt      time.Time `gorm:"not null"`
 }
 
 func (InteractionThread) TableName() string { return "interaction_threads" }

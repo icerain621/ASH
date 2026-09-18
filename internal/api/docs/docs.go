@@ -3270,6 +3270,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/interactions/threads/{threadId}/fork": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interactions"
+                ],
+                "summary": "Fork an interaction thread",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "parent thread id",
+                        "name": "threadId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/interactions/threads/{threadId}/memory-links": {
             "get": {
                 "produces": [
@@ -10526,6 +10560,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "kind": {
+                    "type": "string"
+                },
+                "parentThreadId": {
                     "type": "string"
                 },
                 "runId": {

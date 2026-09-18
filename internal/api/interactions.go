@@ -137,6 +137,31 @@ func (h *Handler) ensureInteractionThread(c *gin.Context) {
 	c.JSON(http.StatusOK, th)
 }
 
+// ForkInteractionThread godoc
+// @Summary Fork an interaction thread
+// @Tags interactions
+// @Produce json
+// @Param threadId path string true "parent thread id"
+// @Success 200 {object} interaction.Thread
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/interactions/threads/{threadId}/fork [post]
+func (h *Handler) forkInteractionThread(c *gin.Context) {
+	parent, err := h.interactionFor(c).GetThread(c.Param("threadId"))
+	if err != nil {
+		c.JSON(http.StatusNotFound, errorBody("THREAD_NOT_FOUND", err.Error()))
+		return
+	}
+	if !h.requireRequestSpace(c, parent.SpaceID) {
+		return
+	}
+	child, err := h.interactionFor(c).Fork(parent.ID)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("THREAD_FORK_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, child)
+}
+
 // SealInteractionThread godoc
 // @Summary Seal thread digest
 // @Tags interactions

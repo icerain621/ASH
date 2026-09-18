@@ -1,0 +1,23 @@
+# Sprint EW · W2 v6.1 吸收任务板
+
+> 波次：**W2 · v6.1**（[`ash-feature-inventory.md`](ash-feature-inventory.md)）  
+> 前置：**W0 ✅ · W1 ✅**  
+> 原则：fail-closed；不引入 Cordis；中文 commit
+
+| # | Sprint | 人时 | 依赖 | 状态 |
+|---|--------|------|------|------|
+| **EW21** | 会话线程 Fork（parentThreadId） | 40 | — | ✅ |
+| **EW22** | Compare 投影到管控台 | 40 | EW21 | ⬜ |
+| **EW23** | Compact 事件进 Chat/Trajectory | 48 | — | ⬜ |
+| **EW24** | 记忆四视角字段回填 | 80 | — | ⬜ |
+| **EW25** | W2 签字 | 16 | EW22+EW23+EW24 | ⬜ |
+
+## EW21 — Fork
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW21-1 | `interaction.Fork` + `parentThreadId` | 同 run 可多次 fork；单测 | ✅ |
+| EW21-2 | `POST /interactions/threads/{id}/fork` | handler | ✅ |
+| EW21-3 | SQL `000039` parent 列；去掉 (run,kind) 唯一 | expectedVersion 39 | ✅ |
+
+**非目标：** 分支独立事件流（fork 仍折同一 run 事件）；UI 树（EW22）。
