@@ -1,9 +1,23 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-07  
+> 更新：2026-09-18  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
+
+## 现行 · W0 硬化（EW）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW01 | OpenAPI 漂移清理 | `make openapi-check` | ⬜ |
+| EW02 | 审批席位中文 / fail-closed | ChatSeats vitest | ⬜ |
+| EW03 | 空态品牌 + coding/general | web-build | ⬜ |
+| EW04 | 审批预设 once/会话/策略 | gate + SpacePolicy | ⬜ |
+| EW05 | MCP HTTP execute + 门禁 | openapi + 单测 | ⬜ |
+
+板：[`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) · 计划：[`docs/superpowers/plans/2026-09-18-w0-harden.md`](../../docs/superpowers/plans/2026-09-18-w0-harden.md)
+
+---
 
 ## 基线
 

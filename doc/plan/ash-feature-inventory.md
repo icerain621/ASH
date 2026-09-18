@@ -158,6 +158,7 @@
 ## 5. 建议交付顺序（可执行）
 
 1. **W0（~3 周 · 1 人）**：审批预设 + permissionMode 对齐 · MCP exec · Chat 空态/模式 · OpenAPI 卫生  
+   → 任务板 [`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) · 实现计划 [`docs/superpowers/plans/2026-09-18-w0-harden.md`](../../docs/superpowers/plans/2026-09-18-w0-harden.md)  
 2. **W1（~2 月 · 1.5 人）**：Hooks MVP · execpolicy 骨架 · Steer/Queue 协议与 Chat 投影  
 3. **W2（~1.5 月 · 1.5 人）**：会话树 fork/compare · Compact UX · 记忆四视角字段回填  
 4. **W3（~1 月 · 1 人）**：子代理谱系台 · Trajectory 过滤器工作台 · Provider/Doctor 探针  
@@ -171,3 +172,4 @@
 | 日期 | 说明 |
 |------|------|
 | 2026-09-18 | 初版：原型 × Console × OpenAPI × 四象限吸收优先级 |
+| 2026-09-18 | W0 → Sprint 板 EW01–EW05 + 实现计划 |
