@@ -398,24 +398,34 @@ export function MemoryPage() {
                       <td>{m.title}</td>
                       <td>{memoryStatusLabel(m.status)}</td>
                       <td>
-                        {m.status === "candidate" && (
-                          <div className="row-actions" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="btn small icon-only ok"
-                              aria-label="通过候选"
-                              onClick={() => reviewMut.mutate({ id: m.id, decision: "approve" })}
-                            >
-                              <Check size={14} strokeWidth={2} />
-                            </button>
-                            <button
-                              className="btn small icon-only err"
-                              aria-label="拒绝候选"
-                              onClick={() => reviewMut.mutate({ id: m.id, decision: "reject" })}
-                            >
-                              <X size={14} strokeWidth={2} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            className="btn small"
+                            data-testid={`memory-thick-review-${m.id}`}
+                            href={`/ui/reviews?queue=memory&memoryId=${encodeURIComponent(m.id)}`}
+                            title="到管控台厚评审"
+                          >
+                            厚审
+                          </a>
+                          {m.status === "candidate" && (
+                            <>
+                              <button
+                                className="btn small icon-only ok"
+                                aria-label="通过候选"
+                                onClick={() => reviewMut.mutate({ id: m.id, decision: "approve" })}
+                              >
+                                <Check size={14} strokeWidth={2} />
+                              </button>
+                              <button
+                                className="btn small icon-only err"
+                                aria-label="拒绝候选"
+                                onClick={() => reviewMut.mutate({ id: m.id, decision: "reject" })}
+                              >
+                                <X size={14} strokeWidth={2} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}

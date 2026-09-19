@@ -6,6 +6,7 @@ import { persistWorkMode, workModeFromPath } from "./workMode";
 const workspaceLinks = [{ to: "/space", label: "空间设置", testId: "nav-settings-space" }] as const;
 
 const opsLinks = [
+  { to: "/quest", label: "任务板", testId: "nav-settings-quest" },
   { to: "/runs", label: "运行" },
   { to: "/automation", label: "自动化" },
   { to: "/feedback", label: "反馈" },
@@ -108,7 +109,13 @@ export function AppLayout() {
                 运维与合规
               </div>
               {opsLinks.map((item) => (
-                <Link key={item.to} to={item.to} className="nav-dropdown-item" role="menuitem">
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="nav-dropdown-item"
+                  role="menuitem"
+                  data-testid={"testId" in item ? item.testId : undefined}
+                >
                   {item.label}
                 </Link>
               ))}

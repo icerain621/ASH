@@ -56,6 +56,7 @@ describe("AppLayout three-pillar shell", () => {
     );
     expect(within(settings).getByTestId("nav-settings-ops-hdr")).toHaveTextContent("运维与合规");
     expect(within(settings).getByTestId("nav-settings-space")).toHaveTextContent("空间设置");
+    expect(within(settings).getByTestId("nav-settings-quest")).toHaveTextContent("任务板");
     expect(within(settings).getByText("运行")).toBeInTheDocument();
     expect(within(settings).getByText("自动化")).toBeInTheDocument();
     expect(within(settings).getByText("反馈")).toBeInTheDocument();

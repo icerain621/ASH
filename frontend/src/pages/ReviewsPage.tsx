@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { ClipboardList, RefreshCcw, Send } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   assignReview,
   createScenarioPatch,
@@ -59,6 +59,18 @@ export function ReviewsPage() {
   const [overdueOnly, setOverdueOnly] = useState(false);
   const [appealScoreEventId, setAppealScoreEventId] = useState("");
   const [appealReason, setAppealReason] = useState("申诉评分");
+  const [memoryDeepLinkId, setMemoryDeepLinkId] = useState("");
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const queueParam = q.get("queue");
+    if (queueParam === "memory" || queueParam === "orchestration" || queueParam === "appeal" || queueParam === "all") {
+      setQueue(queueParam);
+      setPillar("queue");
+    }
+    const mid = q.get("memoryId")?.trim();
+    if (mid) setMemoryDeepLinkId(mid);
+  }, []);
 
   const queueQuery = useQuery({
     queryKey: ["reviews-queue", queue, spaceId],
@@ -214,6 +226,27 @@ export function ReviewsPage() {
           </div>
         ) : null}
       </div>
+
+      {memoryDeepLinkId ? (
+        <div className="pane" data-testid="reviews-memory-deeplink" style={{ marginBottom: 12 }}>
+          <p className="muted-line">
+            记忆厚审入口 · 候选 <code>{memoryDeepLinkId}</code>
+            {" · "}
+            <Link to="/memory" className="inline-link" data-testid="reviews-memory-back">
+              返回记忆薄批
+            </Link>
+            {" · "}
+            <button
+              type="button"
+              className="btn mini"
+              data-testid="reviews-memory-deeplink-clear"
+              onClick={() => setMemoryDeepLinkId("")}
+            >
+              清除提示
+            </button>
+          </p>
+        </div>
+      ) : null}
 
       <nav className="work-mode" data-testid="review-pillar-nav" role="tablist" aria-label="评审管控板块" style={{ marginBottom: 12 }}>
         {PILLAR_TABS.map((tab) => (

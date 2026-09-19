@@ -6,6 +6,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ## [Unreleased]
 
+### Added
+
+- Sprint EW121–EW122：记忆候选「厚审」深链到 `/reviews?queue=memory&memoryId=`；设置运维菜单增加「任务板」→ `/quest`；inventory 勾销 S01–S03/S07 与任务板陈旧状态。
+
 ### Changed
 
 - EW05 harden：MCP execute 移除客户端 `approve:true` 自证旁路；medium+ 仅 SpacePolicy preset / session allow-list / permissionMode，或回显服务端一次性 `approvalToken`（409 签发）。

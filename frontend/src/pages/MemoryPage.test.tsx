@@ -138,6 +138,12 @@ describe("MemoryPage", () => {
     expect(screen.getByTestId("memory-layer-L2")).toHaveTextContent("1");
   });
 
+  it("links candidate 厚审 to reviews memory queue", async () => {
+    renderPage(<MemoryPage />);
+    const link = await screen.findByTestId("memory-thick-review-mem_l2");
+    expect(link).toHaveAttribute("href", "/ui/reviews?queue=memory&memoryId=mem_l2");
+  });
+
   it("groups skill perspective when skill tags exist", async () => {
     vi.mocked(listCandidates).mockResolvedValueOnce({
       items: [

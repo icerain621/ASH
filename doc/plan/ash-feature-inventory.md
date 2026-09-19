@@ -9,11 +9,11 @@
 
 | 一级模块 | 能力条目 | 有 | 待改进 | 待开发 | 待投入合计 (人时) |
 |----------|----------|----|--------|--------|-------------------|
-| Agent 薄交互 | 12 | 7 | 4 | 1 | ~120 |
+| Agent 薄交互 | 12 | 8 | 3 | 1 | ~80 |
 | 记忆双核 | 13 | 8 | 3 | 2 | ~160 |
 | 管控&评审 | 14 | 5 | 3 | 6 | ~640 |
 | 平台 / 设置 / 运维 | 12 | 10 | 2 | 0 | ~40 |
-| **合计** | **51** | **30** | **12** | **9** | **~960** |
+| **合计** | **51** | **31** | **11** | **9** | **~920** |
 
 交付优先级（建议波次）：
 
@@ -30,13 +30,13 @@
 
 | 场景 ID | 场景 | 主模块 | 关键能力 | 现状 |
 |---------|------|--------|----------|------|
-| S01 | 空会话启动任务（编程/通用） | Agent | 空态 · Composer · 模式 · 模型 · 审批 | Chat 主路径有；空态/模式对标原型待改进 |
-| S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **部分交付**（steer/queue 意图 + Chat 投影；W2+ 深化） |
-| S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | 门禁有；once/会话/空间预设 **待改进** |
+| S01 | 空会话启动任务（编程/通用） | Agent | 空态 · Composer · 模式 · 模型 · 审批 | **有**（EW03 空态 + agentMode） |
+| S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **有**（steer/queue + Chat 投影） |
+| S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | **有**（once/会话/空间预设 EW04） |
 | S04 | 长会话压缩可回放 | 管控 | Compact / spill | **有**（`/compact` + Trajectory/Details） |
 | S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | **有**（Fork/Compare；独立事件流待深化） |
 | S06 | 子代理协作 | 管控 + Runs | sub-run · 谱系 | **有**（Trajectory 派生 + 谱系列表） |
-| S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**；视角聚合待改进 |
+| S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**（薄批 + `?queue=memory&memoryId=` 厚审深链） |
 | S08 | 检索已批准记忆 / hit_used | 记忆 | queryMemory | **有** |
 | S09 | TTL 到期复核 | 记忆 | ttl-queue / sweep | **有** |
 | S10 | 会话 MemoryLink 三性 | 记忆 + 交互 | seal / replay / links | **有**（Agent 深链已接） |
@@ -69,16 +69,16 @@
 | Composer | + 菜单（@ / Skills / MCP / Tools） | skills · mcp/tools · tools/risk-catalog | 有 | — | — | 设置面板已一等 |
 | Details | 节点详情 · Trajectory 深链 | events · interactions | 有 | — | — | Chat 薄；厚面在评审 |
 | Quest | 看板 / 门禁 / diff | `quest/*` · `runs/*/diff*` | 有 | — | — | `/quest` 默认入口 |
-| 任务板 | 原型「任务板」入口 | — | 待开发 | 40 | P3 | 原型 mock；可映射 Quest，不新开产品面 |
+| 任务板 | 原型「任务板」入口 | — | 有 | — | — | 设置菜单「任务板」→ `/quest`；不新开产品面 |
 | 语音输入 | 原型占位 | — | 待开发 | — | P3 | 明确低优 / 可不做 |
 
-**Agent 待投入小计：~112 人时（不含不做项）**
+**Agent 待投入小计：~72 人时（不含不做项）**
 
 ### 3.2 记忆 · 双核
 
 | L2 | L3 能力 | 关键接口 | 状态 | 人时 | 优先级 | 说明 |
 |----|---------|----------|------|------|--------|------|
-| 记忆体 | 候选列表 / 薄通过拒绝 | `memory/candidates*` · `…/review` | 有 | — | — | MemoryPage |
+| 记忆体 | 候选列表 / 薄通过拒绝 | `memory/candidates*` · `…/review` | 有 | — | — | MemoryPage；「厚审」→ Reviews |
 | 记忆体 | 新建候选 | `POST /memory/candidates` | 有 | — | — | |
 | 记忆体 | 分层 L0/L1/L2 浏览 | candidates + records | 有 | — | — | 分层滤镜 + 计数 |
 | 记忆体 | 场景/Skill/Tools/项目视角 | query 扩展字段 | 有 | — | — | EW24 标签/scopeRepo 分组 |
