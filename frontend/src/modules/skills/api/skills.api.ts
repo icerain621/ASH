@@ -58,6 +58,8 @@ export type SkillCatalogList = {
   source?: string;
   message?: string;
   items: SkillCatalogItem[];
+  marketplace: "private";
+  billing: "none";
 };
 
 export function verifySkillPack(body: {

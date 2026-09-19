@@ -236,7 +236,7 @@
 | DX76 | 进程内 Indexer（v4.2 草案） | 可选本机 gRPC；默认关闭 | ✅ |
 | DX77 | ABI 姿态（v4.2 草案） | 插件 / Indexer 是否在听 | ✅ |
 | DX78 | v4.2 冻结 + 签字 | `v4.2-release-scope`；`make v4.2-signoff`；tag 人工 | ✅ |
-| DX79 | 私有目录标记（v4.3 草案） | `marketplace=private`；`billing=none` | ⬜ |
+| DX79 | 私有目录标记（v4.3 草案） | `marketplace=private`；`billing=none` | ✅ |
 | DX80 | 包源白名单（v4.3 草案） | 未配置则拒绝远程 URL | ⬜ |
 | DX81 | 控制台私有提示（v4.3 草案） | 现有 catalog 面板一句 | ⬜ |
 | DX82 | 多区域关闭（v4.3 草案） | `multiRegion=disabled` | ⬜ |

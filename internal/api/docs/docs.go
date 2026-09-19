@@ -13753,11 +13753,17 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_skills.CatalogListResponse": {
             "type": "object",
             "properties": {
+                "billing": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogItem"
                     }
+                },
+                "marketplace": {
+                    "type": "string"
                 },
                 "message": {
                     "type": "string"

@@ -27,7 +27,10 @@ type skillCatalogInstallRequest struct {
 func (h *Handler) listSkillCatalog(c *gin.Context) {
 	out, err := skills.ListCatalog(c.DefaultQuery("repoRoot", "."))
 	if out == nil {
-		out = &skills.CatalogListResponse{OK: false, Message: err.Error(), Items: []skills.CatalogItem{}}
+		out = &skills.CatalogListResponse{
+			OK: false, Message: err.Error(), Items: []skills.CatalogItem{},
+			Marketplace: skills.MarketplacePrivate, Billing: skills.BillingNone,
+		}
 	}
 	if err != nil || !out.OK {
 		c.JSON(http.StatusBadRequest, out)

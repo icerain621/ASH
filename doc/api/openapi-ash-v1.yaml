@@ -930,6 +930,8 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/SkillCatalogItem" }
+        marketplace: { type: string, example: private }
+        billing: { type: string, example: none }
     SkillCatalogInstallRequest:
       type: object
       required: [name]

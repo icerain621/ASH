@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	CatalogSchemaV1      = "ash.skill.catalog.v1"
+	CatalogSchemaV1       = "ash.skill.catalog.v1"
 	DefaultCatalogRelPath = ".ash/skill-catalog.json"
 	envCatalogURL         = "ASH_SKILL_CATALOG_URL"
 	envCatalogPath        = "ASH_SKILL_CATALOG_PATH"
@@ -44,11 +44,29 @@ type Catalog struct {
 }
 
 // CatalogListResponse is returned by GET /skills/catalog.
+// Marketplace and Billing are fixed markers (DX79): private catalog, no billing.
 type CatalogListResponse struct {
-	OK      bool          `json:"ok"`
-	Source  string        `json:"source,omitempty"`
-	Message string        `json:"message,omitempty"`
-	Items   []CatalogItem `json:"items"`
+	OK          bool          `json:"ok"`
+	Source      string        `json:"source,omitempty"`
+	Message     string        `json:"message,omitempty"`
+	Items       []CatalogItem `json:"items"`
+	Marketplace string        `json:"marketplace"`
+	Billing     string        `json:"billing"`
+}
+
+const (
+	MarketplacePrivate = "private"
+	BillingNone        = "none"
+)
+
+func catalogList(ok bool, source, message string, items []CatalogItem) *CatalogListResponse {
+	if items == nil {
+		items = []CatalogItem{}
+	}
+	return &CatalogListResponse{
+		OK: ok, Source: source, Message: message, Items: items,
+		Marketplace: MarketplacePrivate, Billing: BillingNone,
+	}
 }
 
 // CatalogSignMaterial is the canonical HMAC input for an org catalog.
@@ -161,10 +179,10 @@ func VerifyCatalogSignature(cat *Catalog) error {
 func ListCatalog(repoRoot string) (*CatalogListResponse, error) {
 	cat, err := LoadCatalog(repoRoot)
 	if err != nil {
-		return &CatalogListResponse{OK: false, Message: err.Error(), Items: []CatalogItem{}}, err
+		return catalogList(false, "", err.Error(), nil), err
 	}
 	if err := VerifyCatalogSignature(cat); err != nil {
-		return &CatalogListResponse{OK: false, Source: cat.Source, Message: err.Error(), Items: []CatalogItem{}}, err
+		return catalogList(false, cat.Source, err.Error(), nil), err
 	}
 	items := make([]CatalogItem, 0, len(cat.Items))
 	for _, it := range cat.Items {
@@ -173,10 +191,7 @@ func ListCatalog(repoRoot string) (*CatalogListResponse, error) {
 		}
 		items = append(items, it)
 	}
-	return &CatalogListResponse{
-		OK: true, Source: cat.Source, Items: items,
-		Message: fmt.Sprintf("%d item(s)", len(items)),
-	}, nil
+	return catalogList(true, cat.Source, fmt.Sprintf("%d item(s)", len(items)), items), nil
 }
 
 // InstallFromCatalog fetches the pack URL for name(/version) and installs via InstallPackBytes.

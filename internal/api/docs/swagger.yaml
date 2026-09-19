@@ -3040,10 +3040,14 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_skills.CatalogListResponse:
     properties:
+      billing:
+        type: string
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogItem'
         type: array
+      marketplace:
+        type: string
       message:
         type: string
       ok:

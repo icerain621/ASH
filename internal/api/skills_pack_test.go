@@ -125,6 +125,9 @@ func TestSkillCatalogListAndInstallAPI(t *testing.T) {
 	if !listed.OK || len(listed.Items) != 1 {
 		t.Fatalf("listed=%+v", listed)
 	}
+	if listed.Marketplace != skills.MarketplacePrivate || listed.Billing != skills.BillingNone {
+		t.Fatalf("listed=%+v want private/none", listed)
+	}
 
 	body, _ := json.Marshal(map[string]string{
 		"repoRoot": repo,
