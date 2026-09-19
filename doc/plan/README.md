@@ -25,6 +25,7 @@
 | [`v4.0-release-scope.md`](v4.0-release-scope.md) | **v4.0** 范围（**已冻结**；DX61–DX66） | Auth 硬化（RS256 / refresh / 吊销 / 门闸） |
 | [`v4.1-release-scope.md`](v4.1-release-scope.md) | **v4.1** 范围（**已冻结**；DX67–DX72） | 企业 Agentic（配额 / 审计报表 / spawn） |
 | [`v4.2-release-scope.md`](v4.2-release-scope.md) | **v4.2** 范围（**已冻结**；DX73–DX78） | Stage-1（插件 gRPC 生产路径 / 进程内 Indexer） |
+| [`v4.3-release-scope.md`](v4.3-release-scope.md) | **v4.3** 范围（**草案**；DX79–DX84） | 生态薄切片（私有技能目录 / 多区域关闭探测） |
 | [`v5-governance-program.md`](v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互（设计评审中） | 空间管控 / 评分 / Workbench / 薄交互 |
 | [v5 实现排期](../../docs/superpowers/plans/2026-09-13-v5-governance-implementation.md) | **v5** 全量改造排期与技术方案（GV01–12） | 可观测运行 / 记忆关联 / 评分管控 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |

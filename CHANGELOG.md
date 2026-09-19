@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint 草案：v4.3 生态薄切片（DX79–DX84）。私有技能目录标记与远程包源白名单；`multiRegion=disabled`。无计费、非 Active-Active。 / v4.3 draft: private catalog marker, host allowlist, multi-region disabled.
 - Sprint DX78：v4.2 范围已冻结；`make v4.2-signoff` 不自动打 `v4.2.0` tag。 / DX78: v4.2 scope frozen; sign-off gate does not tag.
 - Sprint DX77：`GET /plugins/abi` 增加 `ragIndexerEnabled` / `ragIndexerGrpcAddr`（与 `grpcEnabled` 对称）。 / DX77: ABI profile reports indexer listen posture.
 - Sprint DX76：`ASH_RAG_INDEXER_GRPC_ADDR` 为空不监听；设置后本机委托现有 RAG（无新表）。 / DX76: optional in-process RAG indexer gRPC; off by default.
