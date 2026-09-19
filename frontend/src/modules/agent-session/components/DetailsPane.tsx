@@ -90,6 +90,20 @@ export function DetailsPane({ open, selection }: Props) {
             </dl>
           ) : null}
 
+          {selection.kind === "compact" ? (
+            <div className="agent-details-compact" data-testid="agent-details-compact">
+              <p className="muted-line">压缩摘要（可回放）</p>
+              <pre data-testid="agent-details-compact-summary">
+                {str(rec.summary) || selection.summary || "（无摘要）"}
+              </pre>
+              {(str(rec.priorTurns) || str(rec.priorReplies)) && (
+                <p className="muted-line">
+                  prior turns={str(rec.priorTurns) || "0"} · replies={str(rec.priorReplies) || "0"}
+                </p>
+              )}
+            </div>
+          ) : null}
+
           {toolView ? (
             <div className="agent-details-tool" data-testid="agent-details-tool">
               <p className="muted-line">

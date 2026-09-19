@@ -33,7 +33,7 @@
 | S01 | 空会话启动任务（编程/通用） | Agent | 空态 · Composer · 模式 · 模型 · 审批 | Chat 主路径有；空态/模式对标原型待改进 |
 | S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **部分交付**（steer/queue 意图 + Chat 投影；W2+ 深化） |
 | S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | 门禁有；once/会话/空间预设 **待改进** |
-| S04 | 长会话压缩可回放 | 管控 | Compact / spill | 事件侧 Partial；Chat/评审 UX **待开发** |
+| S04 | 长会话压缩可回放 | 管控 | Compact / spill | **有**（`/compact` + Trajectory/Details） |
 | S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | interactions compare 有；产品化会话树 **待开发** |
 | S06 | 子代理协作 | 管控 + Runs | sub-run · 谱系 | **有**（Trajectory 派生 + 谱系列表） |
 | S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**；视角聚合待改进 |
@@ -105,7 +105,7 @@
 | 交互观测 | by-run / threads / compare | `interactions/*` | 有 | — | — | |
 | Trajectory | 过滤投影台（P01） | events + interactions | 待改进 | 40 | P1 | 有事件；缺原型级过滤器工作台 |
 | 会话树 | Fork / Compare（P05） | threads + 新元数据 | 待开发 | 120 | P0 | 吸收项；compare API 可复用 |
-| Compact | /compact 语义 + 回放（P06） | compaction 事件 | 待开发 | 64 | P1 | |
+| Compact | /compact 语义 + 回放（P06） | compaction 事件 | 有 | — | — | slash 压缩 + Details 摘要；Run spill 仍自动 |
 | Steer/Queue | 运行中打断 vs 排队（P07） | session actions 扩展 | 部分交付 | 96 | P0 | EW16–EW17 MVP |
 | 审批预设 | once / 会话 / 写入策略（P12） | approvals · SpacePolicy | 待改进 | 80 | P0 | waiting_approval 有；预设档不足 |
 | Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 部分交付 | 160 | P0 | EW11–EW13 MVP |
@@ -149,7 +149,7 @@
 | Reviews / Harness / Scores | ~21 | ReviewsPage | 有（v5） |
 | Spaces / Policy / Auth | ~29 | Space / Login | 有 |
 | Platform ops（CI/审计/Doctor/Waker…） | ~40+ | 更多菜单各页 | 有 |
-| Hooks / Steer / Compact / ExecPolicy | 弱→中 | Agent Chat / Run | **部分交付**（Compact 仍待开发） |
+| Hooks / Steer / Compact / ExecPolicy | 弱→中 | Agent Chat / Run | **部分交付**（Compact `/compact` + 投影已有） |
 
 遗留：OpenAPI 中 **8 条 legacy `/v1/*`**（tasks/memories…）无 handler，不计入交付。
 
@@ -171,6 +171,8 @@
    → 任务板 [`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md) · **✅**（EW51–EW52）  
 7. **MemoryLink 深链**：Agent Chat「记忆」→ 记忆页关联页签  
    → 任务板 [`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md) · **✅**（EW61–EW62）  
+8. **P06 Compact**：`/compact` 压缩 transcript + Details 回放摘要  
+   → 任务板 [`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md) · **✅**（EW71–EW72）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -189,3 +191,4 @@
 | 2026-09-19 | P15 ✅（EW41–EW42）：MCP execute 走 PreToolUse |
 | 2026-09-19 | P16 ✅（EW51–EW52）：Trajectory 派生子 Run |
 | 2026-09-19 | MemoryLink 深链 ✅（EW61–EW62） |
+| 2026-09-19 | P06 ✅（EW71–EW72）：`/compact` + Details 摘要 |

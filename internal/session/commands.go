@@ -67,6 +67,7 @@ func BuiltinCommands() []CommandItem {
 	return []CommandItem{
 		{Name: "/help", Description: "列出可用命令", Source: CommandSourceBuiltin},
 		{Name: "/clear", Description: "清空当前会话 transcript", Source: CommandSourceBuiltin},
+		{Name: "/compact", Description: "压缩会话 transcript（保留摘要）", Source: CommandSourceBuiltin},
 	}
 }
 
@@ -333,6 +334,25 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
 		s.emitAssistantReply(view, turn, "已清空会话", "command")
+	case "/compact":
+		priorTurns := len(view.Turns)
+		priorReplies := len(view.Replies)
+		summary := fmt.Sprintf("compacted %d turns / %d replies", priorTurns, priorReplies)
+		view.Turns = []Turn{}
+		view.Replies = []AssistantReply{}
+		view.Turns = append(view.Turns, turn)
+		view.UpdatedAt = now
+		if view.RunID != "" && s.events != nil {
+			trace := firstNonEmpty(view.TraceID, view.RunID)
+			_, _ = s.events.Append(view.RunID, trace, "harness.compaction", "info", map[string]any{
+				"summary":      summary,
+				"source":       "session.command",
+				"priorTurns":   priorTurns,
+				"priorReplies": priorReplies,
+				"sessionId":    view.ID,
+			}, events.WithVisibility(events.VisibilityUIOnly))
+		}
+		s.emitAssistantReply(view, turn, "已压缩会话：\n"+summary, "command")
 	default:
 		sk, lookupErr := lookupSkillCommand(view.RepoRoot, cmd)
 		if lookupErr == nil && sk != nil {

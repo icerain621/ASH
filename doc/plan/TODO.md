@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · P06 Compact（EW71+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW71 | `/compact` | `go test ./internal/session` | ✅ |
+| EW72 | Details 摘要 + 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md)
+
 ## 已完成 · MemoryLink 深链（EW61+）
 
 | # | 项 | 验收 | 状态 |
