@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useState } from "react";
 import { getInteractionByRun, getInteractionThread } from "../api/interactions.api";
 
 type Props = {
@@ -6,6 +7,27 @@ type Props = {
   highlightSeq?: number | null;
   onSelectSeq?: (seq: number | null) => void;
 };
+
+type TimelineFilter = "all" | "model_visible" | "ui_only" | "tool" | "gate" | "hook" | "compact";
+
+const FILTERS: { id: TimelineFilter; label: string }[] = [
+  { id: "all", label: "全部" },
+  { id: "model_visible", label: "模型可见" },
+  { id: "ui_only", label: "界面" },
+  { id: "tool", label: "工具" },
+  { id: "gate", label: "门禁" },
+  { id: "hook", label: "Hook" },
+  { id: "compact", label: "Compact" },
+];
+
+function matchesFilter(type: string, visibility: string, filter: TimelineFilter) {
+  if (filter === "all") return true;
+  if (filter === "model_visible" || filter === "ui_only") return visibility === filter;
+  if (filter === "tool") return type.startsWith("tool.");
+  if (filter === "gate") return type.startsWith("gate.");
+  if (filter === "hook") return type.startsWith("hook.");
+  return type === "harness.compaction";
+}
 
 /** Folded Interaction Thread timeline with seal badge (GV05–06 Task 8). */
 export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
@@ -23,7 +45,8 @@ export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
 
   const thread = byRun.data?.thread;
   const sealed = thread?.status === "sealed";
-  const nodes = foldQuery.data?.nodes ?? [];
+  const [filter, setFilter] = useState<TimelineFilter>("all");
+  const nodes = (foldQuery.data?.nodes ?? []).filter((n) => matchesFilter(n.type, n.visibility, filter));
   const linkSeqs = new Set((foldQuery.data?.links ?? []).map((l) => l.eventSeq));
 
   return (
@@ -35,6 +58,20 @@ export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
           {threadId ? ` · ${threadId.slice(0, 10)}` : ""}
           {foldQuery.data?.digest ? ` · ${foldQuery.data.digest.slice(0, 12)}` : ""}
         </span>
+      </div>
+      <div className="toolbar" data-testid="thread-timeline-filters" style={{ marginBottom: "0.5rem", gap: "0.35rem" }}>
+        {FILTERS.map((item) => (
+          <button
+            key={item.id}
+            type="button"
+            className={filter === item.id ? "btn mini primary" : "btn mini"}
+            data-testid={`thread-timeline-filter-${item.id}`}
+            aria-pressed={filter === item.id}
+            onClick={() => setFilter(item.id)}
+          >
+            {item.label}
+          </button>
+        ))}
       </div>
       {!runId ? (
         <p className="muted-line">选择 Run 后加载 Thread 折叠视图</p>

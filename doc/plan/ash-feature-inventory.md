@@ -164,6 +164,7 @@
 3. **W2（~1.5 月 · 1.5 人）**：会话树 fork/compare · Compact UX · 记忆四视角字段回填  
    → 任务板 [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) · **✅**（EW21–EW25）  
 4. **W3（~1 月 · 1 人）**：子代理谱系台 · Trajectory 过滤器工作台 · Provider/Doctor 探针  
+   → 任务板 [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) · **现行**（EW31–EW32 ✅，EW33 待做）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 

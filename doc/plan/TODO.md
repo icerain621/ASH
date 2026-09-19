@@ -5,6 +5,17 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 现行 · W3 v6.2（EW31+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW31 | 子 Run 谱系 | Trajectory | ✅ |
+| EW32 | 时间线过滤 | ThreadTimeline | ✅ |
+| EW33 | Provider / Doctor | 探针 | ⬜ |
+| EW34 | W3 签字 | CHANGELOG | ⬜ |
+
+板：[`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md)
+
 ## 已完成 · W2 v6.1 吸收（EW21+）
 
 | # | 项 | 验收 | 状态 |

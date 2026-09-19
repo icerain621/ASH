@@ -35,6 +35,7 @@
 | [`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) | **W0 硬化** Sprint 板（EW01–EW05）✅ | 已完成 |
 | [`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) | **W1 v6.0 吸收** Sprint 板（EW11–EW18） | 开工勾选 |
 | [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) | **W2 v6.1 吸收** Sprint 板（EW21–EW25） | 开工勾选 |
+| [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) | **W3** Sprint 板（EW31–EW34） | 开工勾选 |
 | [`../prototypes/agent-absorb/`](../prototypes/agent-absorb/README.md) | 吸收交互原型（Agent 薄壳 + **管控&评审** 工作台） | 对照吸收项或 IA 演进时 |
 | [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
 | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |

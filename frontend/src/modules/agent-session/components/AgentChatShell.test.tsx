@@ -51,6 +51,36 @@ vi.mock("@/services/sse/runStream", () => ({
     url || `/api/v1/agents/sessions/${id}/stream`,
 }));
 
+vi.mock("@/modules/runs/api/runs.api", () => ({
+  getRunTree: vi.fn(async () => ({
+    rootRunId: "run_1",
+    tree: {
+      summary: {
+        runId: "run_1",
+        traceId: "tr",
+        scenario: { name: "hotfix", scenarioVersion: "1" },
+        policyProfile: "default",
+        status: "running",
+        startedAt: 1,
+      },
+      children: [
+        {
+          summary: {
+            runId: "run_child",
+            traceId: "tr",
+            scenario: { name: "hotfix", scenarioVersion: "1" },
+            policyProfile: "default",
+            status: "running",
+            startedAt: 2,
+            parentRunId: "run_1",
+            depth: 1,
+          },
+        },
+      ],
+    },
+  })),
+}));
+
 vi.mock("@/modules/interactions/api/interactions.api", () => ({
   getInteractionByRun: vi.fn(async () => ({
     runId: "run_1",
@@ -244,6 +274,7 @@ describe("AgentChatShell", () => {
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-chat-tab-trajectory"));
     expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    expect(await screen.findByTestId("subrun-lineage")).toHaveTextContent("run_child");
     fireEvent.click(screen.getByTestId("agent-chat-tab-chat"));
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
   });
