@@ -52,6 +52,9 @@ export type CreateRunResponse = {
   traceId: string;
   status?: string;
   executionError?: string;
+  subRunMaxDepth?: number;
+  subRunTokenBudgetProxy?: number;
+  subRunAllowedTools?: string[];
 };
 
 export type ReplayRequest = {

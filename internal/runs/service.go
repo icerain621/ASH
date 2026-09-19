@@ -51,8 +51,11 @@ type RepoRef struct {
 }
 
 type CreateResponse struct {
-	RunID   string `json:"runId"`
-	TraceID string `json:"traceId"`
+	RunID                  string   `json:"runId"`
+	TraceID                string   `json:"traceId"`
+	SubRunMaxDepth         int      `json:"subRunMaxDepth,omitempty"`
+	SubRunTokenBudgetProxy int      `json:"subRunTokenBudgetProxy,omitempty"`
+	SubRunAllowedTools     []string `json:"subRunAllowedTools,omitempty"`
 }
 
 type ArtifactAccessResponse struct {

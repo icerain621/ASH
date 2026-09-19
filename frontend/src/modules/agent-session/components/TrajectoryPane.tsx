@@ -100,6 +100,14 @@ export function TrajectoryPane({
                 {(spawnM.error as Error)?.message || "派生失败"}
               </p>
             ) : null}
+            {spawnM.data?.subRunMaxDepth ? (
+              <p className="muted-line" data-testid="subrun-policy-hint">
+                策略深度 {spawnM.data.subRunMaxDepth}
+                {spawnM.data.subRunTokenBudgetProxy
+                  ? ` · token 代理 ${spawnM.data.subRunTokenBudgetProxy}`
+                  : ""}
+              </p>
+            ) : null}
             {treeQ.isLoading ? (
               <p className="muted-line">加载谱系…</p>
             ) : lineage.length === 0 ? (

@@ -97,10 +97,13 @@ type RunListResponse struct {
 
 // RunCreateResponse is returned when a run is created (execution may still fail in-body).
 type RunCreateResponse struct {
-	RunID          string `json:"runId"`
-	TraceID        string `json:"traceId"`
-	Status         string `json:"status,omitempty"`
-	ExecutionError string `json:"executionError,omitempty"`
+	RunID                  string   `json:"runId"`
+	TraceID                string   `json:"traceId"`
+	Status                 string   `json:"status,omitempty"`
+	ExecutionError         string   `json:"executionError,omitempty"`
+	SubRunMaxDepth         int      `json:"subRunMaxDepth,omitempty"`
+	SubRunTokenBudgetProxy int      `json:"subRunTokenBudgetProxy,omitempty"`
+	SubRunAllowedTools     []string `json:"subRunAllowedTools,omitempty"`
 }
 
 type TimelineAPIResponse struct {

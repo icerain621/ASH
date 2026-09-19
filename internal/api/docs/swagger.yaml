@@ -2459,6 +2459,14 @@ definitions:
     properties:
       runId:
         type: string
+      subRunAllowedTools:
+        items:
+          type: string
+        type: array
+      subRunMaxDepth:
+        type: integer
+      subRunTokenBudgetProxy:
+        type: integer
       traceId:
         type: string
     type: object

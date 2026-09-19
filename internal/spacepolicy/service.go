@@ -366,5 +366,8 @@ func validateBodyJSON(raw string) error {
 	if _, err := QuotasFromBodyJSON(raw); err != nil {
 		return fmt.Errorf("bodyJson.quotas: %w", err)
 	}
+	if _, err := SubRunFromBodyJSON(raw); err != nil {
+		return fmt.Errorf("bodyJson.subRun: %w", err)
+	}
 	return nil
 }

@@ -49,6 +49,9 @@ func (h *Handler) spawnSubRun(c *gin.Context) {
 	c.Header("X-Run-Id", resp.RunID)
 	c.Header("X-Trace-Id", resp.TraceID)
 	out := RunCreateResponse{RunID: resp.RunID, TraceID: resp.TraceID}
+	out.SubRunMaxDepth = resp.SubRunMaxDepth
+	out.SubRunTokenBudgetProxy = resp.SubRunTokenBudgetProxy
+	out.SubRunAllowedTools = resp.SubRunAllowedTools
 	if err != nil {
 		out.ExecutionError = err.Error()
 		if sum, getErr := h.runsFor(c).Get(resp.RunID); getErr == nil {

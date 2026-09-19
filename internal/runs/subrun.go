@@ -55,6 +55,8 @@ func (s *Service) Spawn(parentRunID string, req SpawnRequest) (*CreateResponse, 
 			}
 		}
 	}
+	policy := s.spaceSubRunPolicy(parent.SpaceID)
+	maxDepth = applySubRunDepth(maxDepth, policy)
 	childDepth := parent.Depth + 1
 	if childDepth > maxDepth {
 		return nil, fmt.Errorf("sub-run depth %d exceeds maxDepth %d", childDepth, maxDepth)
@@ -64,10 +66,7 @@ func (s *Service) Spawn(parentRunID string, req SpawnRequest) (*CreateResponse, 
 		return nil, err
 	}
 
-	allow := normalizeAllowlist(req.AllowedTools)
-	if len(allow) == 0 {
-		allow = append([]string(nil), DefaultSubRunAllowlist...)
-	}
+	allow := applySubRunTools(req.AllowedTools, policy)
 	if err := validateSubRunAllowlist(allow); err != nil {
 		return nil, err
 	}
@@ -98,10 +97,14 @@ func (s *Service) Spawn(parentRunID string, req SpawnRequest) (*CreateResponse, 
 		parentRunID: parent.ID, rootRunID: rootID, depth: childDepth, toolAllowlist: allow,
 	})
 	if resp != nil {
+		resp.SubRunMaxDepth = maxDepth
+		resp.SubRunTokenBudgetProxy = policy.TokenBudgetProxy
+		resp.SubRunAllowedTools = append([]string(nil), allow...)
 		_, _ = s.eventsFor().Append(parent.ID, parent.TraceID, "run.spawned", "info", map[string]any{
 			"childRunId": resp.RunID, "childTraceId": resp.TraceID,
 			"depth": childDepth, "reason": strings.TrimSpace(req.Reason),
 			"allowedTools": allow, "scenario": req.Scenario.Name,
+			"subRunMaxDepth": maxDepth, "subRunTokenBudgetProxy": policy.TokenBudgetProxy,
 		})
 	}
 	return resp, err

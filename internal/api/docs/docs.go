@@ -12869,6 +12869,18 @@ const docTemplate = `{
                 "runId": {
                     "type": "string"
                 },
+                "subRunAllowedTools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "subRunMaxDepth": {
+                    "type": "integer"
+                },
+                "subRunTokenBudgetProxy": {
+                    "type": "integer"
+                },
                 "traceId": {
                     "type": "string"
                 }

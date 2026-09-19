@@ -702,6 +702,11 @@ components:
       properties:
         runId: { type: string }
         traceId: { type: string }
+        subRunMaxDepth: { type: integer }
+        subRunTokenBudgetProxy: { type: integer }
+        subRunAllowedTools:
+          type: array
+          items: { type: string }
     GoalFromRequest:
       type: object
       required: [goal]
