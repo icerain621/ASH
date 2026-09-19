@@ -40,6 +40,7 @@ import (
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
+	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/waker"
@@ -103,6 +104,9 @@ func main() {
 	if cfg.PluginGRPCAddr != "" {
 		startPluginGRPC(cfg.PluginGRPCAddr, db)
 	}
+	if cfg.RagIndexerGRPCAddr != "" {
+		startRagIndexerGRPC(cfg.RagIndexerGRPCAddr, db)
+	}
 
 	if ashotel.Enabled() {
 		if err := pluginhealth.EnsureOtelExporter(db.DB, "local"); err != nil {
@@ -147,6 +151,22 @@ func startPluginGRPC(addr string, db *store.DB) {
 		}
 	}()
 	log.Printf("Plugin registry gRPC listening on %s", rt.Addr)
+}
+
+func startRagIndexerGRPC(addr string, db *store.DB) {
+	rt, err := rag.StartIndexerServer(addr, rag.NewService(db))
+	if err != nil {
+		log.Fatalf("rag indexer grpc listen %s: %v", addr, err)
+	}
+	if rt == nil {
+		return
+	}
+	go func() {
+		if err := <-rt.Done(); err != nil {
+			log.Fatalf("rag indexer grpc server: %v", err)
+		}
+	}()
+	log.Printf("RAG indexer gRPC listening on %s", rt.Addr)
 }
 
 func trimLeadingColon(addr string) string {
