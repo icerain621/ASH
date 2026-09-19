@@ -61,10 +61,10 @@
 |----|---------|-----------------|------|------|--------|------|
 | 会话壳 | 会话 CRUD / SSE / 意图 | `agents/sessions*` · `…/actions` · `…/stream` · `…/events` | 有 | — | — | 生产已落地；GV01/02 薄客户端 |
 | 会话壳 | 工作区分组 | `agent-workspaces*` | 有 | — | — | 改名/关闭/搜索已有 |
-| 会话壳 | 编程 / 通用模式 | session 元数据或 provider 配置 | 待改进 | 16 | P1 | 原型有；生产未一等切换 |
-| 会话壳 | ASH 空态品牌背景 | —（静态资源） | 待改进 | 8 | P2 | 原型资产可迁入 Console |
+| 会话壳 | 编程 / 通用模式 | session 元数据或 provider 配置 | 有 | — | — | AgentModeSwitch 已一等 |
+| 会话壳 | ASH 空态品牌背景 | —（静态资源） | 有 | — | — | EW03 空态英雄 |
 | Composer | 发送 / 暂停合一 · Markdown | session actions + stream | 有 | — | — | DSH 对标主路径完成 |
-| Composer | 权限席位 ask/auto/full | `PATCH …/sessions` `permissionMode` | 待改进 | 24 | P0 | 有 seats；需与原型「询问/自动/完全」文案与 fail-closed 默认对齐 |
+| Composer | 权限席位 ask/auto/full | `PATCH …/sessions` `permissionMode` | 有 | — | — | 中文席位 EW02 |
 | Composer | 模型席位 / Auto 路由 | `agents/models` · model-router | 待改进 | 24 | P1 | 列表有；Auto 路由与健康探针弱 |
 | Composer | + 菜单（@ / Skills / MCP / Tools） | skills · mcp/tools · tools/risk-catalog | 有 | — | — | 设置面板已一等 |
 | Details | 节点详情 · Trajectory 深链 | events · interactions | 有 | — | — | Chat 薄；厚面在评审 |
@@ -103,13 +103,13 @@
 | 策略 | SpacePolicy / 规则包 | `spaces/…/policy` · `…/rules*` | 有 | — | — | |
 | 资产 | AgentAsset Registry | `agents/assets*` | 有 | — | — | |
 | 交互观测 | by-run / threads / compare | `interactions/*` | 有 | — | — | |
-| Trajectory | 过滤投影台（P01） | events + interactions | 待改进 | 40 | P1 | 有事件；缺原型级过滤器工作台 |
-| 会话树 | Fork / Compare（P05） | threads + 新元数据 | 待开发 | 120 | P0 | 吸收项；compare API 可复用 |
+| Trajectory | 过滤投影台（P01） | events + interactions | 有 | — | — | EW32 过滤器 |
+| 会话树 | Fork / Compare（P05） | threads + 新元数据 | 有 | — | — | EW21–EW22 Fork/Compare |
 | Compact | /compact 语义 + 回放（P06） | compaction 事件 | 有 | — | — | slash 压缩 + Details 摘要；Run spill 仍自动 |
-| Steer/Queue | 运行中打断 vs 排队（P07） | session actions 扩展 | 部分交付 | 96 | P0 | EW16–EW17 MVP |
-| 审批预设 | once / 会话 / 写入策略（P12） | approvals · SpacePolicy | 待改进 | 80 | P0 | waiting_approval 有；预设档不足 |
-| Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 部分交付 | 160 | P0 | EW11–EW13 MVP |
-| ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 部分交付 | 120 | P0 | EW14–EW15 MVP |
+| Steer/Queue | 运行中打断 vs 排队（P07） | session actions 扩展 | 有 | — | — | EW16–EW17 MVP |
+| 审批预设 | once / 会话 / 写入策略（P12） | approvals · SpacePolicy | 有 | — | — | EW04 |
+| Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 有 | — | — | EW11–EW13 + EW41 MCP |
+| ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 有 | — | — | EW14–EW15 |
 | 子代理谱系 | 图 / 中断 / 回主（P16） | `runs/…/sub-runs` · threads | 有 | — | — | Trajectory 派生 + 回主聚焦；中断仍用既有 cancel |
 | MCP 执行 | 工具真实执行收尾（P15） | `mcp/tools*` + ToolBus | 有 | — | — | PreToolUse deny/ask 与 Run 同源 |
 | Harness / Improve | 配置演进 | `harness/*` · `improve/*` | 有 | — | — | Automation 内嵌 |
