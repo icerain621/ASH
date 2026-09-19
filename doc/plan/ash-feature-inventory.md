@@ -141,17 +141,17 @@
 
 | 域 | ~Ops | 生产 Console 主消费方 | 相对原型 |
 |----|------|----------------------|----------|
-| Agents + workspaces | ~17 | Quest / AgentChatShell | 壳已齐；吸收语义不足 |
-| Interactions | ~8 | Agent / Reviews / MemoryLink | 有；缺树/谱系产品面 |
-| Memory + registry | ~15 | MemoryPage / Space / Reviews | 主路径有；视角待开发 |
+| Agents + workspaces | ~17 | Quest / AgentChatShell | 壳已齐；W0–W3 吸收语义已落地 |
+| Interactions | ~8 | Agent / Reviews / MemoryLink | 有（Fork/Compare · 谱系 · MemoryLink 深链） |
+| Memory + registry | ~15 | MemoryPage / Space / Reviews | 有（四视角分组 + 厚审深链） |
 | RAG / Wiki / LSP | ~10 | KnowledgePanel | 有 |
-| Runs + Quest | ~30 | Runs / Quest | 有 |
+| Runs + Quest | ~30 | Runs / Quest | 有（设置「任务板」→ Quest） |
 | Reviews / Harness / Scores | ~21 | ReviewsPage | 有（v5） |
 | Spaces / Policy / Auth | ~29 | Space / Login | 有 |
-| Platform ops（CI/审计/Doctor/Waker…） | ~40+ | 更多菜单各页 | 有 |
+| Platform ops（CI/审计/Doctor/Waker…） | ~40+ | 设置菜单各页 | 有 |
 | Hooks / Steer / Compact / ExecPolicy | 中 | Agent Chat / Run | **有**（Pre/PostToolUse · Compact · Steer/Queue · ExecPolicy） |
 
-遗留：OpenAPI 中 **8 条 legacy `/v1/*`**（tasks/memories…）无 handler，不计入交付。
+遗留：契约草稿已去掉无 handler 的 legacy `/v1/*`（EW101）；`openapi-check` 要求计数为 0。
 
 ---
 
@@ -181,8 +181,10 @@
    → 任务板 [`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md) · **✅**（EW101–EW102）  
 12. **PostToolUse**：工具成功后声明式钩子  
    → 任务板 [`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md) · **✅**（EW111–EW112）  
+13. **记忆厚审深链 + 任务板入口**：候选 → Reviews；设置 → Quest  
+   → 任务板 [`sprint-ew-w12-memory-thick-review.md`](sprint-ew-w12-memory-thick-review.md) · **✅**（EW121–EW122）  
 
-明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
+明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认、语音输入占位。
 
 ---
 
@@ -204,3 +206,4 @@
 | 2026-09-19 | 模型健康位 ✅（EW91–EW92） |
 | 2026-09-19 | OpenAPI 卫生 ✅（EW101–EW102）：去掉 legacy `/v1/*` |
 | 2026-09-19 | PostToolUse ✅（EW111–EW112） |
+| 2026-09-19 | 记忆厚审深链 + 任务板 ✅（EW121–EW122）；勾销 S01–S03/S07 与 §4 陈旧表述 |
