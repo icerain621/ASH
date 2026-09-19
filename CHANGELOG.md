@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW22（W2 v6.1 吸收）：评审管控台双 Thread 比对可选择同会话 fork，并从此线程 Fork。
 - Sprint EW21（W2 v6.1 吸收）：交互线程 `Fork` — `parentThreadId`、同 run 多次分支；`POST /api/v1/interactions/threads/{threadId}/fork`；SQL rev 39 去掉 `(run_id, kind)` 唯一以便多 fork。分支仍折同一 run 事件（独立事件流留给后续）。
 - Sprint EW17（W1 v6.0 吸收）：Session intent `queue` — 运行中把 follow-up 写入 `meta.followUpQueue`（不打断，与 `steer` 互斥）；空闲视为 prompt；成功结束的 turn 或 bound run finished/failed 后自动消费一条；`stop`/`cancel` 只停当前、不清空也不消费队列。Chat 队列 chip。
 - Sprint EW16（W1 v6.0 吸收）：Session intent `steer` — 运行中打断 in-flight turn / 活跃 bound run 后以新 prompt 续写；审计事件 `session.steer`；空闲拒绝（非 prompt 别名）；Chat Composer 运行中 Steer 文案。

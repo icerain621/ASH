@@ -1,8 +1,10 @@
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
   compareInteractionThreads,
+  forkInteractionThread,
   getInteractionByRun,
+  listInteractionSessionThreads,
   type InteractionCompareResult,
 } from "../api/interactions.api";
 
@@ -16,8 +18,10 @@ type Props = {
 export function ThreadComparePanel({ defaultLeftRunId = "", defaultRightRunId = "" }: Props) {
   const [leftRunId, setLeftRunId] = useState(defaultLeftRunId);
   const [rightRunId, setRightRunId] = useState(defaultRightRunId);
+  const [siblingId, setSiblingId] = useState("");
   const [result, setResult] = useState<InteractionCompareResult | null>(null);
   const [error, setError] = useState("");
+  const qc = useQueryClient();
 
   const leftQ = useQuery({
     queryKey: ["interaction-by-run", leftRunId.trim()],
@@ -30,12 +34,19 @@ export function ThreadComparePanel({ defaultLeftRunId = "", defaultRightRunId = 
     enabled: Boolean(rightRunId.trim()),
   });
 
+  const sessionId = leftQ.data?.thread.sessionId || "";
+  const siblingsQ = useQuery({
+    queryKey: ["interaction-session-threads", sessionId],
+    queryFn: () => listInteractionSessionThreads(sessionId),
+    enabled: Boolean(sessionId),
+  });
+
   const compareMut = useMutation({
     mutationFn: async () => {
       const left = leftQ.data?.thread.id;
-      const right = rightQ.data?.thread.id;
-      if (!left || !right) {
-        throw new Error("左右两侧需能解析到 Interaction Thread");
+      const right = siblingId || rightQ.data?.thread.id;
+      if (!left || !right || left === right) {
+        throw new Error("左右两侧需能解析到不同的 Interaction Thread");
       }
       return compareInteractionThreads(left, right);
     },
@@ -49,7 +60,18 @@ export function ThreadComparePanel({ defaultLeftRunId = "", defaultRightRunId = 
     },
   });
 
-  const canCompare = Boolean(leftQ.data?.thread.id && rightQ.data?.thread.id);
+  const rightId = siblingId || rightQ.data?.thread.id || "";
+  const canCompare = Boolean(leftQ.data?.thread.id && rightId && leftQ.data.thread.id !== rightId);
+
+  const forkMut = useMutation({
+    mutationFn: () => forkInteractionThread(leftQ.data!.thread.id),
+    onSuccess: (child) => {
+      setSiblingId(child.id);
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["interaction-session-threads", sessionId] });
+    },
+    onError: (e: Error) => setError(e.message),
+  });
 
   return (
     <div className="pane" data-testid="thread-compare-panel">
@@ -77,6 +99,35 @@ export function ThreadComparePanel({ defaultLeftRunId = "", defaultRightRunId = 
           />
         </label>
       </div>
+      {sessionId ? (
+        <div className="row-actions" style={{ marginBottom: "0.75rem" }}>
+          <label>
+            同会话分支
+            <select
+              data-testid="thread-compare-sibling"
+              value={siblingId}
+              onChange={(e) => setSiblingId(e.target.value)}
+            >
+              <option value="">（用右侧 Run）</option>
+              {(siblingsQ.data?.items ?? []).map((th) => (
+                <option key={th.id} value={th.id}>
+                  {th.kind}
+                  {th.parentThreadId ? ` ← ${th.parentThreadId.slice(0, 8)}` : ""} {th.id.slice(0, 12)}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            type="button"
+            className="btn mini"
+            data-testid="thread-compare-fork"
+            disabled={!leftQ.data?.thread.id || forkMut.isPending}
+            onClick={() => forkMut.mutate()}
+          >
+            Fork
+          </button>
+        </div>
+      ) : null}
       <div className="row-actions">
         <button
           type="button"
@@ -92,9 +143,9 @@ export function ThreadComparePanel({ defaultLeftRunId = "", defaultRightRunId = 
             L {leftQ.data.thread.id.slice(0, 12)}
           </span>
         ) : null}
-        {rightQ.data?.thread.id ? (
+        {rightId ? (
           <span className="muted-line" data-testid="thread-compare-right-th">
-            R {rightQ.data.thread.id.slice(0, 12)}
+            R {rightId.slice(0, 12)}
           </span>
         ) : null}
       </div>
