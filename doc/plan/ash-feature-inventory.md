@@ -65,7 +65,7 @@
 | 会话壳 | ASH 空态品牌背景 | —（静态资源） | 有 | — | — | EW03 空态英雄 |
 | Composer | 发送 / 暂停合一 · Markdown | session actions + stream | 有 | — | — | DSH 对标主路径完成 |
 | Composer | 权限席位 ask/auto/full | `PATCH …/sessions` `permissionMode` | 有 | — | — | 中文席位 EW02 |
-| Composer | 模型席位 / Auto 路由 | `agents/models` · model-router | 待改进 | 24 | P1 | 列表有；Auto 路由与健康探针弱 |
+| Composer | 模型席位 / Auto 路由 | `agents/models` · model-router | 有 | — | — | 席位 + Provider 健康投影；Auto 路由 API 已有 |
 | Composer | + 菜单（@ / Skills / MCP / Tools） | skills · mcp/tools · tools/risk-catalog | 有 | — | — | 设置面板已一等 |
 | Details | 节点详情 · Trajectory 深链 | events · interactions | 有 | — | — | Chat 薄；厚面在评审 |
 | Quest | 看板 / 门禁 / diff | `quest/*` · `runs/*/diff*` | 有 | — | — | `/quest` 默认入口 |
@@ -175,6 +175,8 @@
    → 任务板 [`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md) · **✅**（EW71–EW72）  
 9. **设置 IA**：顶栏「设置」聚合运维入口  
    → 任务板 [`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md) · **✅**（EW81–EW82）  
+10. **模型健康位**：Composer 投影 `model-router/providers`  
+   → 任务板 [`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md) · **✅**（EW91–EW92）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -195,3 +197,4 @@
 | 2026-09-19 | MemoryLink 深链 ✅（EW61–EW62） |
 | 2026-09-19 | P06 ✅（EW71–EW72）：`/compact` + Details 摘要 |
 | 2026-09-19 | 设置 IA ✅（EW81–EW82）；同步勾销已交付清单行 |
+| 2026-09-19 | 模型健康位 ✅（EW91–EW92） |

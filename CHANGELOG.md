@@ -17,6 +17,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW91–EW92：Composer Model 席位投影 `GET /model-router/providers` 健康位（未配置仍显示，不算错误）。
 - Sprint EW81–EW82：顶栏「更多」改为「设置」，工作区 + 运维分组，并挂上指标/可观测入口。
 - Sprint EW71–EW72（P06）：Builtin `/compact` 压缩会话 transcript，有 bound run 时发 `harness.compaction`；Details 突出压缩摘要。
 - Sprint EW61–EW62：Agent Chat「记忆」深链到 `/memory?tab=links&runId=`；记忆页新增「关联」页签渲染 MemoryLinkPanel。

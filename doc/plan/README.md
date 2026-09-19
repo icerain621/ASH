@@ -41,6 +41,7 @@
 | [`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md) | Agent → MemoryLink 深链 | ✅ |
 | [`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md) | **P06** `/compact` 语义 | ✅ |
 | [`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md) | 顶栏「设置」聚合运维 | ✅ |
+| [`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md) | Composer Provider 健康位 | ✅ |
 | [`../prototypes/agent-absorb/`](../prototypes/agent-absorb/README.md) | 吸收交互原型（Agent 薄壳 + **管控&评审** 工作台） | 对照吸收项或 IA 演进时 |
 | [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
 | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |

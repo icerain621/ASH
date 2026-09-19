@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · 模型健康位（EW91+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW91 | ChatSeats Provider 健康 | ChatSeats test | ✅ |
+| EW92 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md)
+
 ## 已完成 · 设置 IA（EW81+）
 
 | # | 项 | 验收 | 状态 |

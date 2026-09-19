@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   listAgentModels,
   updateSession,
@@ -11,11 +11,19 @@ import {
   PERMISSION_OPTIONS,
   resolvePermissionMode,
 } from "../permissionModeLabels";
+import { listModelProviders } from "@/modules/platform/api/platform.api";
 
 type Props = {
   session: AgentSessionView | null;
   disabled?: boolean;
 };
+
+function providerStatusLabel(status: string) {
+  const s = status.trim().toLowerCase();
+  if (s === "available" || s === "configured") return "可用";
+  if (s === "not_configured" || s === "") return "未配置";
+  return status;
+}
 
 /** Model / permission / plan seats above the composer. */
 export function ChatSeats({ session, disabled = false }: Props) {
@@ -31,6 +39,20 @@ export function ChatSeats({ session, disabled = false }: Props) {
     queryFn: () => listAgentModels(),
     staleTime: 60_000,
   });
+
+  const providersQuery = useQuery({
+    queryKey: ["model-router-providers"],
+    queryFn: () => listModelProviders(),
+    staleTime: 60_000,
+  });
+
+  const providerHealth = useMemo(() => {
+    const items = providersQuery.data?.items ?? [];
+    if (items.length === 0) return "目录空";
+    return items
+      .map((p) => `${p.role || p.id}:${providerStatusLabel(p.status)}`)
+      .join(" · ");
+  }, [providersQuery.data?.items]);
 
   const patchMut = useMutation({
     mutationFn: (body: {
@@ -73,6 +95,9 @@ export function ChatSeats({ session, disabled = false }: Props) {
             ),
           )}
         </select>
+        <span className="muted-line" data-testid="agent-chat-seat-model-health">
+          {providersQuery.isLoading ? "探针…" : providerHealth}
+        </span>
       </label>
       <label className="agent-chat-seat">
         审批
