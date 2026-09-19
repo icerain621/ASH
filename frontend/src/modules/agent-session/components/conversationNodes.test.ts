@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eventVisibility, type SessionEventEnvelope } from "../api/session.api";
 import {
+  isChatBubbleEvent,
   isThreadVisibleEvent,
   mergeAssistantBubbles,
   resolveConversationNode,
@@ -62,6 +63,52 @@ describe("conversationNodes", () => {
     expect(resolveConversationNode(ev({ type: "step.started", payload: { name: "plan" } })).kind).toBe(
       "step",
     );
+  });
+
+  it("resolves hook.pre_tool_use and hook.decision for Trajectory", () => {
+    const pre = resolveConversationNode(
+      ev({
+        type: "hook.pre_tool_use",
+        payload: { tool: "bash", action: "deny", reason: "policy", stepId: "s1", ruleIndex: 0 },
+      }),
+    );
+    expect(pre.kind).toBe("hook.pre_tool_use");
+    expect(pre.title).toContain("PreToolUse");
+    expect(pre.summary).toContain("bash");
+    const post = resolveConversationNode(
+      ev({
+        type: "hook.post_tool_use",
+        payload: { tool: "bash", action: "deny", reason: "cite", stepId: "s1", ruleIndex: 0 },
+      }),
+    );
+    expect(post.kind).toBe("hook.post_tool_use");
+    expect(post.title).toContain("PostToolUse");
+    const dec = resolveConversationNode(
+      ev({ type: "hook.decision", payload: { tool: "bash", action: "deny", reason: "policy" } }),
+    );
+    expect(dec.kind).toBe("hook.decision");
+    expect(dec.title).toContain("deny");
+  });
+
+  it("resolves harness.compaction for Chat and Trajectory", () => {
+    const node = resolveConversationNode(
+      ev({
+        type: "harness.compaction",
+        payload: { summary: "spilled", estimatedTokens: 900, budgetTokens: 1000 },
+      }),
+    );
+    expect(node.kind).toBe("compact");
+    expect(node.title).toBe("Compact");
+    expect(node.summary).toBe("spilled");
+    expect(isChatBubbleEvent(ev({ type: "harness.compaction" }))).toBe(true);
+  });
+
+  it("omits hook.* from chat bubbles (Trajectory-only)", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({ id: "u1", seq: 1, type: "session.turn", payload: { prompt: "hi" } }),
+      ev({ id: "h1", seq: 2, type: "hook.decision", payload: { tool: "bash", action: "deny" } }),
+    ]);
+    expect(bubbles.map((b) => b.type)).toEqual(["session.turn"]);
   });
 
   it("omits step.* from chat bubbles (Trajectory-only)", () => {

@@ -48,4 +48,17 @@ describe("ThreadTimeline", () => {
     fireEvent.click(nodes[1]);
     expect(onSelectSeq).toHaveBeenCalledWith(2);
   });
+
+  it("filters to model_visible nodes", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ThreadTimeline runId="run_1" />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(2));
+    fireEvent.click(screen.getByTestId("thread-timeline-filter-model_visible"));
+    expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(1);
+    expect(screen.getByTestId("thread-timeline-node")).toHaveTextContent("session.turn");
+  });
 });

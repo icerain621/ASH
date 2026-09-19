@@ -45,6 +45,10 @@ export function AgentSessionPanel({ runId, runStatus, gateReason, onIntentSucces
         action: payload.action,
         prompt: payload.prompt,
         reason: payload.reason,
+        command: payload.command,
+        args: payload.args,
+        scope: payload.scope,
+        tool: payload.tool,
         actorId: "console",
       });
     },

@@ -22,6 +22,7 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
     sandboxRemoteEnabled: false,
     sandboxRemoteAvailable: false,
     sandboxRemoteReason: "ASH_SANDBOX_REMOTE disabled (default local)",
+    execPolicyLoaded: false,
   }),
 }));
 

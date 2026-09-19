@@ -11,6 +11,7 @@ const (
 	MetaThreadKind = "threadKind"
 	MetaThreadRun  = "threadRunId"
 	ThreadKindMain = "main"
+	ThreadKindFork = "fork"
 )
 
 // EnsureMainThread binds a stable main thread id onto session meta (GV01 minimal).

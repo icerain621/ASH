@@ -62,6 +62,25 @@ func (s *Service) EnsureThread(req EnsureRequest) (*Thread, bool, error) {
 	return threadFromRow(row), true, nil
 }
 
+// Fork copies a thread identity (same run/session) with parentThreadId set.
+// Multiple forks are allowed. Main remains unique by EnsureThread, not this path.
+func (s *Service) Fork(threadID string) (*Thread, error) {
+	parent, err := s.GetThread(threadID)
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now().UTC()
+	row := store.InteractionThread{
+		ID: "th_" + uuid.NewString(), SpaceID: parent.SpaceID, SessionID: parent.SessionID,
+		RunID: parent.RunID, Kind: ThreadKindFork, ParentThreadID: parent.ID,
+		Status: ThreadStatusOpen, HeadSeq: parent.HeadSeq, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := s.q().Create(&row).Error; err != nil {
+		return nil, err
+	}
+	return threadFromRow(row), nil
+}
+
 // FoldThread loads run events and returns a pure fold projection.
 func (s *Service) FoldThread(threadID string) (*FoldResult, error) {
 	th, err := s.GetThread(threadID)
@@ -177,7 +196,8 @@ func (s *Service) ByRun(runID string) (*ByRunView, error) {
 func threadFromRow(row store.InteractionThread) *Thread {
 	return &Thread{
 		ID: row.ID, SpaceID: row.SpaceID, SessionID: row.SessionID, RunID: row.RunID,
-		Kind: row.Kind, Status: row.Status, Digest: row.Digest, HeadSeq: row.HeadSeq,
+		Kind: row.Kind, ParentThreadID: row.ParentThreadID, Status: row.Status,
+		Digest: row.Digest, HeadSeq: row.HeadSeq,
 		CreatedAt: row.CreatedAt.Unix(), UpdatedAt: row.UpdatedAt.Unix(),
 	}
 }

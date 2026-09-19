@@ -33,6 +33,7 @@ func (s *Service) CreateCandidate(req CreateCandidateRequest) (*CreateCandidateR
 		return nil, err
 	}
 
+	s.fillPerspective(&req)
 	tagsJSON, err := json.Marshal(req.Tags)
 	if err != nil {
 		return nil, err
@@ -543,6 +544,32 @@ func (s *Service) attachEvidence(rows []store.MemoryRecord) ([]RecordView, error
 		})
 	}
 	return out, nil
+}
+
+func (s *Service) fillPerspective(req *CreateCandidateRequest) {
+	runID := strings.TrimSpace(req.RunID)
+	if runID == "" || s == nil || s.gdb() == nil {
+		return
+	}
+	var run store.RunRecord
+	if err := s.gdb().Select("scenario_name", "repo_root").Where("id = ?", runID).First(&run).Error; err != nil {
+		return
+	}
+	if !hasTagPrefix(req.Tags, "scenario:") && strings.TrimSpace(run.ScenarioName) != "" {
+		req.Tags = append(req.Tags, "scenario:"+strings.TrimSpace(run.ScenarioName))
+	}
+	if strings.TrimSpace(req.ScopeRepo) == "" {
+		req.ScopeRepo = run.RepoRoot
+	}
+}
+
+func hasTagPrefix(tags []string, prefix string) bool {
+	for _, tag := range tags {
+		if strings.HasPrefix(tag, prefix) {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Service) applyGovernance(tx *gorm.DB, rec store.MemoryRecord, req ReviewRequest, now time.Time) ([]store.MemoryEdge, error) {

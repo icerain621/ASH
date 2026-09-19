@@ -17,6 +17,7 @@ export type SessionEventEnvelope = {
 };
 
 export type PermissionMode = "read-only" | "workspace-write" | "full";
+export type AgentMode = "coding" | "general";
 
 export type AgentSessionView = {
   id: string;
@@ -30,6 +31,7 @@ export type AgentSessionView = {
   workspaceId?: string;
   providerKind?: string;
   permissionMode?: PermissionMode | string;
+  agentMode?: AgentMode | string;
   disabledTools?: string[];
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
@@ -45,7 +47,26 @@ export type AgentSessionView = {
   updatedAt?: number;
 };
 
-export type SessionIntentAction = "prompt" | "approve" | "cancel" | "stop" | "reject" | "command";
+export type SessionIntentAction =
+  | "prompt"
+  | "steer"
+  | "queue"
+  | "approve"
+  | "cancel"
+  | "stop"
+  | "reject"
+  | "command"
+  | "allow_once"
+  | "allow_session"
+  | "deny"
+  | "cancel_run";
+
+/** Ordered follow-up prompts stored on session meta (`followUpQueue`). */
+export function sessionFollowUpQueue(meta?: Record<string, unknown> | null): string[] {
+  const raw = meta?.followUpQueue;
+  if (!Array.isArray(raw)) return [];
+  return raw.filter((item): item is string => typeof item === "string" && item.trim().length > 0);
+}
 
 export type AgentSessionListResponse = {
   items: AgentSessionView[];
@@ -110,6 +131,7 @@ export async function patchAgentSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    agentMode?: AgentMode | string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
@@ -127,6 +149,7 @@ export async function updateSession(
     providerKind?: string;
     planId?: string;
     permissionMode?: PermissionMode | string;
+    agentMode?: AgentMode | string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
@@ -158,6 +181,8 @@ export async function submitSessionIntent(
     actorId?: string;
     command?: string;
     args?: string;
+    scope?: "once" | "session" | string;
+    tool?: string;
   },
 ): Promise<AgentSessionView> {
   return api<AgentSessionView>(`/agents/sessions/${encodeURIComponent(sessionId)}/actions`, {
@@ -203,6 +228,9 @@ export function eventVisibility(ev: { type?: string; visibility?: string }): Eve
     return "audit";
   }
   if ((ev.type || "").startsWith("ui.") || ev.type === "gate.waiting_approval") return "ui_only";
-  if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.")) return "ui_only";
+  if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.") || (ev.type || "").startsWith("hook.")) {
+    return "ui_only";
+  }
+  if (ev.type === "harness.compaction") return "ui_only";
   return "model_visible";
 }

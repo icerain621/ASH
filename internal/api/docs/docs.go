@@ -641,7 +641,7 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Partial update: title, providerKind, planId, permissionMode.",
+                "description": "Partial update: title, providerKind, planId, permissionMode, agentMode.",
                 "consumes": [
                     "application/json"
                 ],
@@ -694,7 +694,7 @@ const docTemplate = `{
         },
         "/api/v1/agents/sessions/{sessionId}/actions": {
             "post": {
-                "description": "Fail-closed: approve without an approvable run gate returns 409. action \"stop\" is an alias of \"cancel\". Unknown slash commands return 409.",
+                "description": "Fail-closed: approve without an approvable run gate returns 409. steer and queue are mutually exclusive: \"steer\" cancels in-flight/active run then prompts (requires active work; idle → 409); \"queue\" never cancels — busy sessions append meta.followUpQueue (drained one-at-a-time after a successful turn or when the bound run finishes/fails); idle queue is treated as prompt. action \"stop\" is an alias of \"cancel\" and does not clear or drain the follow-up queue. Unknown slash commands return 409.",
                 "consumes": [
                     "application/json"
                 ],
@@ -704,7 +704,7 @@ const docTemplate = `{
                 "tags": [
                     "agents"
                 ],
-                "summary": "Apply a thin session intent (prompt|approve|cancel|stop|reject|command)",
+                "summary": "Apply a thin session intent (prompt|steer|queue|approve|cancel|stop|reject|command)",
                 "parameters": [
                     {
                         "type": "string",
@@ -1361,6 +1361,45 @@ const docTemplate = `{
                         "description": "Forbidden",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/auth/dev-login": {
+            "post": {
+                "description": "Local/non-production helper only. Returns an admin-scoped access token for the requested space (default local). Not for production; console Dev Token is hidden when ASH_CONSOLE_AUTH_REQUIRED=1. Optional future gate ASH_DEV_LOGIN=0.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Issue a development JWT without credentials",
+                "parameters": [
+                    {
+                        "description": "optional target space",
+                        "name": "body",
+                        "in": "body",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.devLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuthSessionResponse"
                         }
                     },
                     "500": {
@@ -3231,6 +3270,40 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/interactions/threads/{threadId}/fork": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "interactions"
+                ],
+                "summary": "Fork an interaction thread",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "parent thread id",
+                        "name": "threadId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_interaction.Thread"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/interactions/threads/{threadId}/memory-links": {
             "get": {
                 "produces": [
@@ -3465,6 +3538,71 @@ const docTemplate = `{
                     },
                     "404": {
                         "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/mcp/tools/{toolId}/execute": {
+            "post": {
+                "description": "Fail-closed for catalog risk ≥ medium unless SpacePolicy preset, session allow-list / workspace-write+, or a server-issued approvalToken (from prior 409) is echoed. Client approve:true is ignored.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "mcp"
+                ],
+                "summary": "Execute a registered MCP tool via toolbus mcp.call",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "tool id",
+                        "name": "toolId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "execute",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.executeMCPToolRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.MCPToolExecuteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.MCPToolApprovalRequiredResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -4489,6 +4627,29 @@ const docTemplate = `{
             }
         },
         "/api/v1/orgs": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "orgs"
+                ],
+                "summary": "List organizations",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.OrgListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -7694,6 +7855,30 @@ const docTemplate = `{
             }
         },
         "/api/v1/spaces": {
+            "get": {
+                "description": "When the database is empty and caller context is local, returns a synthetic local space row.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "List spaces",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.SpaceListResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -10377,6 +10562,9 @@ const docTemplate = `{
                 "kind": {
                     "type": "string"
                 },
+                "parentThreadId": {
+                    "type": "string"
+                },
                 "runId": {
                     "type": "string"
                 },
@@ -12520,6 +12708,14 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "scope": {
+                    "description": "Scope is once (default) or session — session adds tool to allowedToolsSession.",
+                    "type": "string"
+                },
+                "tool": {
+                    "description": "Tool is the tool name for session-scoped allow; inferred from pending approval when empty.",
+                    "type": "string"
                 }
             }
         },
@@ -13237,6 +13433,12 @@ const docTemplate = `{
                 },
                 "reason": {
                     "type": "string"
+                },
+                "scope": {
+                    "type": "string"
+                },
+                "tool": {
+                    "type": "string"
                 }
             }
         },
@@ -13279,6 +13481,9 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.PatchRequest": {
             "type": "object",
             "properties": {
+                "agentMode": {
+                    "type": "string"
+                },
                 "disabledTools": {
                     "type": "array",
                     "items": {
@@ -13327,6 +13532,10 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.View": {
             "type": "object",
             "properties": {
+                "agentMode": {
+                    "description": "coding | general",
+                    "type": "string"
+                },
                 "createdAt": {
                     "type": "integer"
                 },
@@ -15565,6 +15774,41 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.MCPToolApprovalRequiredResponse": {
+            "type": "object",
+            "properties": {
+                "approvalToken": {
+                    "type": "string"
+                },
+                "error": {
+                    "$ref": "#/definitions/internal_api.APIError"
+                }
+            }
+        },
+        "internal_api.MCPToolExecuteResponse": {
+            "type": "object",
+            "properties": {
+                "durationMs": {
+                    "type": "integer"
+                },
+                "error": {
+                    "type": "string"
+                },
+                "failureClass": {
+                    "type": "string"
+                },
+                "ok": {
+                    "type": "boolean"
+                },
+                "output": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "tool": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.MCPToolListResponse": {
             "type": "object",
             "properties": {
@@ -15594,6 +15838,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_modelrouter.Provider"
+                    }
+                }
+            }
+        },
+        "internal_api.OrgListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Org"
                     }
                 }
             }
@@ -15887,6 +16142,12 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "dualWriteSource": {
+                    "type": "string"
+                },
+                "execPolicyLoaded": {
+                    "type": "boolean"
+                },
+                "execPolicySandboxFloor": {
                     "type": "string"
                 },
                 "lastMigrationSyncAtMs": {
@@ -16194,6 +16455,17 @@ const docTemplate = `{
                 },
                 "spaceId": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.SpaceListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.Space"
+                    }
                 }
             }
         },
@@ -16610,6 +16882,14 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.devLoginRequest": {
+            "type": "object",
+            "properties": {
+                "spaceId": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.diagnoseCIFailureRequest": {
             "type": "object",
             "properties": {
@@ -16657,6 +16937,25 @@ const docTemplate = `{
             "properties": {
                 "reportId": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.executeMCPToolRequest": {
+            "type": "object",
+            "properties": {
+                "approvalToken": {
+                    "description": "ApprovalToken is a server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED.",
+                    "type": "string"
+                },
+                "arguments": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "sessionId": {
+                    "type": "string"
+                },
+                "timeoutMs": {
+                    "type": "integer"
                 }
             }
         },

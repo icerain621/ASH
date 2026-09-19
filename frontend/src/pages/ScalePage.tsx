@@ -287,6 +287,16 @@ export function ScalePage() {
               </td>
             </tr>
             <tr>
+              <td>ExecPolicy</td>
+              <td data-testid="scale-exec-policy">
+                {r == null
+                  ? "-"
+                  : r.execPolicyLoaded
+                    ? `已加载${r.execPolicySandboxFloor ? ` · 地板 ${r.execPolicySandboxFloor}` : " · 无地板贡献"}`
+                    : "未配置"}
+              </td>
+            </tr>
+            <tr>
               <td>可观测性</td>
               <td>
                 {r

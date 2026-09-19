@@ -1,4 +1,5 @@
-import type { AgentSessionView } from "../api/session.api";
+import { sessionFollowUpQueue, type AgentSessionView } from "../api/session.api";
+import { permissionStripLabel, resolvePermissionMode } from "../permissionModeLabels";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 import { ChatSeats } from "./ChatSeats";
 
@@ -7,6 +8,7 @@ type Props = {
   busy?: boolean;
   canStop?: boolean;
   gateReason?: string;
+  gateTool?: string;
   session?: AgentSessionView | null;
   onIntent: (payload: IntentPayload) => void;
   onOpenTools?: () => void;
@@ -20,6 +22,7 @@ export function ChatComposer({
   busy,
   canStop,
   gateReason,
+  gateTool,
   session = null,
   onIntent,
   onOpenTools,
@@ -27,10 +30,16 @@ export function ChatComposer({
   onOpenSkills,
 }: Props) {
   const hasShortcuts = Boolean(onOpenTools || onOpenMcp || onOpenSkills);
+  const queueItems = sessionFollowUpQueue(session?.meta);
 
   return (
     <div className="agent-chat-composer" data-testid="agent-chat-composer">
       {mode === "prompt" ? <ChatSeats session={session} disabled={busy} /> : null}
+      {mode === "prompt" && session?.id ? (
+        <p className="muted-line agent-chat-permission-strip" data-testid="agent-chat-permission-strip">
+          审批：{permissionStripLabel(resolvePermissionMode(session.permissionMode))}
+        </p>
+      ) : null}
       {hasShortcuts && mode === "prompt" ? (
         <div className="agent-composer-shortcuts" data-testid="agent-composer-shortcuts">
           {onOpenTools ? (
@@ -73,6 +82,8 @@ export function ChatComposer({
         busy={busy}
         canStop={canStop}
         gateReason={gateReason}
+        gateTool={gateTool}
+        queueItems={queueItems}
         onIntent={onIntent}
       />
     </div>

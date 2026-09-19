@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryPage } from "./MemoryPage";
+import { listCandidates } from "@/modules/memory/api/memory.api";
 import { renderPage } from "@/test/renderPage";
 
 vi.mock("@/modules/memory/api/memory.api", () => ({
@@ -73,6 +74,22 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+vi.mock("@/modules/interactions/api/interactions.api", () => ({
+  getInteractionByRun: vi.fn(async () => ({
+    runId: "run_link",
+    thread: { id: "th_link", spaceId: "local", runId: "run_link", kind: "main", status: "open" },
+  })),
+  getInteractionThread: vi.fn(async () => ({
+    threadId: "th_link",
+    runId: "run_link",
+    spaceId: "local",
+    nodes: [],
+  })),
+  listInteractionMemoryLinks: vi.fn(async () => ({ threadId: "th_link", items: [] })),
+  sealInteractionThread: vi.fn(),
+  replayInteractionThread: vi.fn(),
+}));
+
 describe("MemoryPage", () => {
   it("renders memory console and TTL queue section", async () => {
     renderPage(<MemoryPage />);
@@ -108,8 +125,44 @@ describe("MemoryPage", () => {
 
     fireEvent.click(screen.getByTestId("memory-perspective-skill"));
     expect(screen.getByTestId("memory-perspective-skill")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("memory-perspective-hint")).toHaveTextContent(/Skill/);
+    expect(screen.getByTestId("memory-perspective-hint")).toHaveTextContent(/skill/);
     expect(screen.queryByTestId("memory-layer-filter")).not.toBeInTheDocument();
+  });
+
+  it("shows L0/L1/L2 counts on layer filters", async () => {
+    renderPage(<MemoryPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("memory-layer-全部")).toHaveTextContent("2");
+    });
+    expect(screen.getByTestId("memory-layer-L0")).toHaveTextContent("1");
+    expect(screen.getByTestId("memory-layer-L2")).toHaveTextContent("1");
+  });
+
+  it("links candidate 厚审 to reviews memory queue", async () => {
+    renderPage(<MemoryPage />);
+    const link = await screen.findByTestId("memory-thick-review-mem_l2");
+    expect(link).toHaveAttribute("href", "/ui/reviews?queue=memory&memoryId=mem_l2");
+  });
+
+  it("groups skill perspective when skill tags exist", async () => {
+    vi.mocked(listCandidates).mockResolvedValueOnce({
+      items: [
+        {
+          id: "mem_skill",
+          layer: "L1",
+          title: "skill tip",
+          status: "candidate",
+          tags: ["skill:doctor"],
+        },
+      ],
+      limit: 50,
+      offset: 0,
+      total: 1,
+    });
+    renderPage(<MemoryPage />);
+    fireEvent.click(screen.getByTestId("memory-perspective-skill"));
+    expect(await screen.findByTestId("memory-perspective-group")).toHaveTextContent("doctor");
+    expect(screen.queryByTestId("memory-perspective-hint")).not.toBeInTheDocument();
   });
 
   it("links 去评审 to /reviews", () => {
@@ -117,5 +170,23 @@ describe("MemoryPage", () => {
     const link = screen.getByTestId("memory-goto-reviews");
     expect(link).toHaveTextContent("去评审");
     expect(link).toHaveAttribute("href", "/reviews");
+  });
+
+  it("opens MemoryLink tab from query params", async () => {
+    const prev = window.location.search;
+    window.history.replaceState({}, "", "/ui/memory?tab=links&runId=run_link");
+    renderPage(<MemoryPage />);
+    expect(screen.getByTestId("memory-tab-links")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("memory-links-run")).toHaveValue("run_link");
+    expect(await screen.findByTestId("memory-links-pane")).toBeInTheDocument();
+    window.history.replaceState({}, "", `/ui/memory${prev}`);
+  });
+
+  it("switches to 关联 tab manually", () => {
+    renderPage(<MemoryPage />);
+    fireEvent.click(screen.getByTestId("memory-tab-links"));
+    expect(screen.getByTestId("memory-tab-links")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("memory-links-pane")).toBeInTheDocument();
+    expect(screen.queryByTestId("memory-perspective")).not.toBeInTheDocument();
   });
 });

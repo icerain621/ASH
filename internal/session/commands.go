@@ -32,6 +32,12 @@ const (
 	PermissionFull           = "full"
 )
 
+// AgentMode values for session UX (coding vs general assistant).
+const (
+	AgentModeCoding  = "coding"
+	AgentModeGeneral = "general"
+)
+
 // CommandItem is one slash/skill/mcp command catalog entry.
 type CommandItem struct {
 	Name        string `json:"name"`
@@ -61,6 +67,7 @@ func BuiltinCommands() []CommandItem {
 	return []CommandItem{
 		{Name: "/help", Description: "列出可用命令", Source: CommandSourceBuiltin},
 		{Name: "/clear", Description: "清空当前会话 transcript", Source: CommandSourceBuiltin},
+		{Name: "/compact", Description: "压缩会话 transcript（保留摘要）", Source: CommandSourceBuiltin},
 	}
 }
 
@@ -261,6 +268,18 @@ func normalizePermissionMode(mode string) (string, error) {
 	}
 }
 
+func normalizeAgentMode(mode string) (string, error) {
+	m := strings.ToLower(strings.TrimSpace(mode))
+	switch m {
+	case "", AgentModeCoding:
+		return AgentModeCoding, nil
+	case AgentModeGeneral:
+		return AgentModeGeneral, nil
+	default:
+		return "", fmt.Errorf("invalid agentMode %q (want coding|general)", mode)
+	}
+}
+
 func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
@@ -315,6 +334,25 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
 		s.emitAssistantReply(view, turn, "已清空会话", "command")
+	case "/compact":
+		priorTurns := len(view.Turns)
+		priorReplies := len(view.Replies)
+		summary := fmt.Sprintf("compacted %d turns / %d replies", priorTurns, priorReplies)
+		view.Turns = []Turn{}
+		view.Replies = []AssistantReply{}
+		view.Turns = append(view.Turns, turn)
+		view.UpdatedAt = now
+		if view.RunID != "" && s.events != nil {
+			trace := firstNonEmpty(view.TraceID, view.RunID)
+			_, _ = s.events.Append(view.RunID, trace, "harness.compaction", "info", map[string]any{
+				"summary":      summary,
+				"source":       "session.command",
+				"priorTurns":   priorTurns,
+				"priorReplies": priorReplies,
+				"sessionId":    view.ID,
+			}, events.WithVisibility(events.VisibilityUIOnly))
+		}
+		s.emitAssistantReply(view, turn, "已压缩会话：\n"+summary, "command")
 	default:
 		sk, lookupErr := lookupSkillCommand(view.RepoRoot, cmd)
 		if lookupErr == nil && sk != nil {
@@ -332,18 +370,7 @@ func (s *Service) intentCommand(sessionID string, req IntentRequest) (*View, err
 		view.Turns = append(view.Turns, turn)
 		view.UpdatedAt = now
 		parsed := parseMCPArguments(args)
-		res := toolbus.DefaultBus().Call(toolbus.Context{
-			RunID:    view.RunID,
-			TraceID:  view.TraceID,
-			RepoRoot: view.RepoRoot,
-		}, toolbus.CallRequest{
-			Tool: "mcp.call",
-			Args: map[string]any{
-				"serverURL": mcpTool.Server,
-				"name":      mcpTool.Name,
-				"arguments": parsed,
-			},
-		})
+		res := toolbus.CallMCP(mcpTool.Server, mcpTool.Name, parsed, 0, nil)
 		s.emitMCPToolEvents(view, mcpTool, parsed, res)
 		s.emitAssistantReply(view, turn, formatMCPResultText(res), "mcp")
 	}

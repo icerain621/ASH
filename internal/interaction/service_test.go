@@ -100,3 +100,32 @@ func TestService_ListThreads(t *testing.T) {
 		t.Fatalf("byRun=%+v err=%v", byRun, err)
 	}
 }
+
+func TestService_ForkKeepsParentAndAllowsMany(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := interaction.NewService(db, events.NewService(db))
+	parent, _, err := svc.EnsureThread(interaction.EnsureRequest{
+		SpaceID: "local", SessionID: "sess_fork", RunID: "run_fork",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	a, err := svc.Fork(parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	b, err := svc.Fork(parent.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if a.ID == b.ID || a.ID == parent.ID || a.Kind != interaction.ThreadKindFork || a.ParentThreadID != parent.ID {
+		t.Fatalf("fork a=%+v", a)
+	}
+	if b.ParentThreadID != parent.ID || b.RunID != parent.RunID || b.SessionID != parent.SessionID {
+		t.Fatalf("fork b=%+v", b)
+	}
+	listed, err := svc.ListThreads("sess_fork")
+	if err != nil || len(listed) != 3 {
+		t.Fatalf("listed=%d err=%v", len(listed), err)
+	}
+}

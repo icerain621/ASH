@@ -30,7 +30,7 @@ func TestListCommands_builtin(t *testing.T) {
 			t.Fatalf("item=%+v", it)
 		}
 	}
-	if !found["/help"] || !found["/clear"] {
+	if !found["/help"] || !found["/clear"] || !found["/compact"] {
 		t.Fatalf("builtins missing: %v", found)
 	}
 }
@@ -91,6 +91,53 @@ func TestIntent_commandHelpClearUnknown(t *testing.T) {
 		t.Fatalf("status=%s want active", cleared.Status)
 	}
 
+	view2Run := "run_compact_1"
+	now := time.Now().UTC()
+	if err := db.Create(&store.RunRecord{
+		ID: view2Run, TraceID: "trace_" + view2Run,
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	view2, err := svc.Create(session.CreateRequest{RunID: view2Run, SpaceID: "local", CreatedBy: "actor1", ProviderKind: "static"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = svc.PromptTurn(view2.ID, session.TurnRequest{Prompt: "old a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = svc.PromptTurn(view2.ID, session.TurnRequest{Prompt: "old b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	compacted, err := svc.Intent(view2.ID, session.IntentRequest{Action: "command", Command: "/compact", ActorID: "actor1"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(compacted.Turns) != 1 || compacted.Turns[0].Prompt != "/compact" {
+		t.Fatalf("after compact turns=%+v", compacted.Turns)
+	}
+	evs, err := ev.ListAfter(view2Run, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	foundCompact := false
+	foundAssistant := false
+	for _, e := range evs {
+		if e.Type == "harness.compaction" {
+			foundCompact = true
+		}
+		if e.Type == "assistant.message" {
+			foundAssistant = true
+		}
+	}
+	if !foundCompact || !foundAssistant {
+		t.Fatalf("expected harness.compaction + assistant.message; events=%+v", evs)
+	}
+
 	_, err = svc.Intent(view.ID, session.IntentRequest{Action: "command", Command: "/nope", ActorID: "actor1"})
 	if err == nil {
 		t.Fatal("expected unknown command reject")
@@ -133,6 +180,46 @@ func TestUpdate_seats(t *testing.T) {
 	_, err = svc.Update(view.ID, session.PatchRequest{PermissionMode: &bad})
 	if err == nil {
 		t.Fatal("expected invalid permissionMode")
+	}
+}
+
+func TestUpdate_agentMode(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := session.NewService(db, nil, ev)
+
+	view, err := svc.Create(session.CreateRequest{SpaceID: "local", CreatedBy: "actor1", ProviderKind: "static"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.AgentMode != session.AgentModeCoding {
+		t.Fatalf("default agentMode=%q want coding", view.AgentMode)
+	}
+
+	got, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.AgentMode != session.AgentModeCoding {
+		t.Fatalf("get agentMode=%q", got.AgentMode)
+	}
+
+	general := session.AgentModeGeneral
+	patched, err := svc.Update(view.ID, session.PatchRequest{AgentMode: &general})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if patched.AgentMode != session.AgentModeGeneral {
+		t.Fatalf("patched agentMode=%q", patched.AgentMode)
+	}
+	if patched.Meta["agentMode"] != session.AgentModeGeneral {
+		t.Fatalf("meta agentMode=%v", patched.Meta["agentMode"])
+	}
+
+	bad := "voice"
+	_, err = svc.Update(view.ID, session.PatchRequest{AgentMode: &bad})
+	if err == nil {
+		t.Fatal("expected invalid agentMode")
 	}
 }
 

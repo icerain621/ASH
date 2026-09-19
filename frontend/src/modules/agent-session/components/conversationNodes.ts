@@ -11,6 +11,11 @@ export type ConversationNodeKind =
   | "tool.card"
   | "tool"
   | "step"
+  | "hook.pre_tool_use"
+  | "hook.post_tool_use"
+  | "hook.decision"
+  | "hook"
+  | "compact"
   | "default";
 
 export type ConversationNodeDescriptor = {
@@ -25,11 +30,19 @@ export function isThreadVisibleEvent(ev: SessionEventEnvelope): boolean {
   return eventVisibility(ev) !== "audit";
 }
 
-/** Chat transcript omits step.* (DSH: steps live in Trajectory, not mixed with bubbles). */
+/** Chat transcript omits step.* / hook.* (DSH: steps & hooks live in Trajectory). */
 export function isChatBubbleEvent(ev: SessionEventEnvelope): boolean {
   if (!isThreadVisibleEvent(ev)) return false;
   const type = ev.type || "";
-  return !type.startsWith("step.");
+  return !type.startsWith("step.") && !type.startsWith("hook.");
+}
+
+function hookEventSummary(p: Record<string, unknown>): string {
+  const tool = str(p.tool) || "tool";
+  const action = str(p.action) || "—";
+  const reason = str(p.reason);
+  const base = `${tool} · ${action}`;
+  return reason ? `${base} — ${reason}` : base;
 }
 
 function payloadRecord(payload: unknown): Record<string, unknown> {
@@ -112,6 +125,34 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
         summary: str(p.output) || str(p.result) || str(p.error) || compactJSON(p) || type,
         visibility,
       };
+    case "hook.pre_tool_use":
+      return {
+        kind: "hook.pre_tool_use",
+        title: "Hook · PreToolUse",
+        summary: hookEventSummary(p),
+        visibility,
+      };
+    case "hook.post_tool_use":
+      return {
+        kind: "hook.post_tool_use",
+        title: "Hook · PostToolUse",
+        summary: hookEventSummary(p),
+        visibility,
+      };
+    case "hook.decision":
+      return {
+        kind: "hook.decision",
+        title: `Hook 决策 · ${str(p.action) || "—"}`,
+        summary: hookEventSummary(p),
+        visibility,
+      };
+    case "harness.compaction":
+      return {
+        kind: "compact",
+        title: "Compact",
+        summary: str(p.summary) || `tokens ${str(p.estimatedTokens)}/${str(p.budgetTokens)}`,
+        visibility,
+      };
     default:
       break;
   }
@@ -130,6 +171,15 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
       kind: "step",
       title: `步骤 · ${phase}`,
       summary: str(p.name) || str(p.step) || str(p.message) || compactJSON(p) || type,
+      visibility,
+    };
+  }
+  if (type.startsWith("hook.")) {
+    const phase = type.replace(/^hook\./, "");
+    return {
+      kind: "hook",
+      title: `Hook · ${phase}`,
+      summary: hookEventSummary(p) || compactJSON(p) || type,
       visibility,
     };
   }

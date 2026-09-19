@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -46,16 +47,24 @@ func (s *Service) executeVerifyStep(
 		_, _ = s.eventsFor().Append(runID, traceID, "verify.attempt", "info", map[string]any{
 			"stepId": step.ID, "attempt": attempt, "maxAttempts": attempts,
 		})
-		ok, detail := s.runVerifyChecks(rec, runID, traceID, step, toolCtx, req, attempt, scenarioMin)
-		if ok {
+		checks := s.runVerifyChecks(rec, runID, traceID, step, toolCtx, req, attempt, scenarioMin, stepRow, stepStart)
+		if checks.waitErr != nil {
+			return checks.waitErr
+		}
+		if checks.hookDeny {
+			s.finishStep(stepRow, "failed", stepStart, errorCodeHookDenied, checks.detail)
+			_, err := s.failRun(rec, runID, traceID, runStarted, errorCodeHookDenied, checks.detail)
+			return err
+		}
+		if checks.ok {
 			_, _ = s.eventsFor().Append(runID, traceID, "verify.passed", "info", map[string]any{
 				"stepId": step.ID, "attempt": attempt,
 			})
 			return nil
 		}
-		lastErr = detail
+		lastErr = checks.detail
 		_, _ = s.eventsFor().Append(runID, traceID, "verify.failed", "warn", map[string]any{
-			"stepId": step.ID, "attempt": attempt, "error": detail,
+			"stepId": step.ID, "attempt": attempt, "error": checks.detail,
 		})
 		if attempt < attempts {
 			if d := verifyBackoff(step); d > 0 {
@@ -76,6 +85,13 @@ func (s *Service) executeVerifyStep(
 	return err
 }
 
+type verifyChecksResult struct {
+	ok       bool
+	detail   string
+	hookDeny bool
+	waitErr  error
+}
+
 func (s *Service) runVerifyChecks(
 	rec *store.RunRecord,
 	runID, traceID string,
@@ -84,14 +100,23 @@ func (s *Service) runVerifyChecks(
 	req CreateRequest,
 	attempt int,
 	scenarioMin string,
-) (bool, string) {
+	stepRow *store.RunStep,
+	stepStart time.Time,
+) verifyChecksResult {
 	for _, item := range step.Verify.Checks {
 		if denied, reason := s.scenarioToolDenied(rec, item.Tool); denied {
-			return false, reason
+			return verifyChecksResult{detail: reason}
 		}
 		risk := string(s.tools.ToolRisk(item.Tool))
-		if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
-			return false, fmt.Sprintf("tool %s has danger risk and requires approval", item.Tool)
+		gate, msg, gateErr := s.applyPreToolUseGate(rec, runID, traceID, req.Inputs, step.ID, item, risk, stepRow, stepStart)
+		if gateErr != nil {
+			return verifyChecksResult{waitErr: gateErr}
+		}
+		if gate == preToolUseGateDeny {
+			return verifyChecksResult{hookDeny: true, detail: msg}
+		}
+		if !s.dangerousToolAllowed(rec, req.Inputs, step.ID, item, risk) {
+			return verifyChecksResult{detail: fmt.Sprintf("tool %s has danger risk and requires approval", item.Tool)}
 		}
 		res := s.callToolWithRetry(runID, traceID, step.ID, risk, rec.SpaceID, rec.PolicyProfile, scenarioMin, toolCtx, item, nil)
 		if !res.OK {
@@ -99,10 +124,23 @@ func (s *Service) runVerifyChecks(
 			if msg == "" {
 				msg = "tool failed"
 			}
-			return false, fmt.Sprintf("%s: %s (attempt %d)", item.Tool, msg, attempt)
+			return verifyChecksResult{detail: fmt.Sprintf("%s: %s (attempt %d)", item.Tool, msg, attempt)}
+		}
+		postDec := s.evaluatePostToolUse(rec, step.ID, item.Tool, risk)
+		if postDec.Action != hooks.ActionAllow || postDec.RuleIndex >= 0 {
+			payload := hookPostDecisionPayload(step.ID, item.Tool, risk, postDec)
+			_, _ = s.eventsFor().Append(runID, traceID, "hook.post_tool_use", "info", payload)
+			_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+		}
+		if postDec.Action == hooks.ActionDeny {
+			msg := postDec.Reason
+			if msg == "" {
+				msg = fmt.Sprintf("PostToolUse hook denied tool %s", item.Tool)
+			}
+			return verifyChecksResult{hookDeny: true, detail: msg}
 		}
 	}
-	return true, ""
+	return verifyChecksResult{ok: true}
 }
 
 func (s *Service) maybeDraftImprove(rec *store.RunRecord, runID, stepID, detail string) {

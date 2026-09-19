@@ -117,9 +117,19 @@ type CancelResponse struct {
 	Status string `json:"status"`
 }
 
+// Approval scopes for tool gates (EW04). Empty / unknown defaults to once (fail-closed).
+const (
+	ApproveScopeOnce    = "once"
+	ApproveScopeSession = "session"
+)
+
 type ApproveRequest struct {
 	ActorID string `json:"actorId,omitempty"`
 	Reason  string `json:"reason,omitempty"`
+	// Scope is once (default) or session — session adds tool to allowedToolsSession.
+	Scope string `json:"scope,omitempty"`
+	// Tool is the tool name for session-scoped allow; inferred from pending approval when empty.
+	Tool string `json:"tool,omitempty"`
 }
 
 type ApproveResponse struct {
@@ -348,6 +358,7 @@ func (s *Service) failRun(rec *store.RunRecord, runID, traceID string, started t
 	rec.ErrorMessage = msg
 	rec.UpdatedAt = finished
 	_ = s.gdb().Save(rec).Error
+	s.notifyFollowUpDrain(runID)
 	_, _ = s.eventsFor().Append(runID, traceID, "run.failed", "error", map[string]any{
 		"ok":         false,
 		"durationMs": finished.Sub(started).Milliseconds(),
@@ -578,6 +589,12 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	if meta.Inputs == nil {
 		meta.Inputs = map[string]any{}
 	}
+	scope := normalizeApproveScope(req.Scope)
+	evidenceTool := pendingApprovalTool(s, runID, step.StepID)
+	tool, err := resolveApproveTool(evidenceTool, req.Tool)
+	if err != nil {
+		return nil, err
+	}
 	approvalKind := "human"
 	if step.ErrorCode == "GATE_CITATION_MISSING" {
 		approvalKind = "citation"
@@ -585,6 +602,21 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 	} else if step.ErrorCode == "TOOL_DANGEROUS_APPROVAL_REQUIRED" {
 		approvalKind = "tool"
 		appendApprovedStep(meta.Inputs, "_approvedDangerousToolSteps", step.StepID)
+		if scope == ApproveScopeSession && tool != "" {
+			appendAllowedToolSession(meta.Inputs, tool)
+			if s.sessionSvc != nil {
+				_ = s.sessionSvc.AddAllowedToolSession(runID, tool)
+			}
+		}
+	} else if step.ErrorCode == errorCodeHookAskApprovalRequired {
+		approvalKind = "hook"
+		appendApprovedStep(meta.Inputs, approvedHookPreToolUseStepsKey, step.StepID)
+		if scope == ApproveScopeSession && tool != "" {
+			appendAllowedToolSession(meta.Inputs, tool)
+			if s.sessionSvc != nil {
+				_ = s.sessionSvc.AddAllowedToolSession(runID, tool)
+			}
+		}
 	} else {
 		appendApprovedStep(meta.Inputs, "_approvedHumanSteps", step.StepID)
 	}
@@ -592,17 +624,31 @@ func (s *Service) Approve(runID string, req ApproveRequest) (*ApproveResponse, e
 		return nil, err
 	}
 
+	decisionPayload := map[string]any{
+		"actorId": req.ActorID,
+		"reason":  req.Reason,
+		"stepId":  step.StepID,
+		"kind":    approvalKind,
+		"scope":   scope,
+		"action":  "allow_" + scope,
+		"tool":    tool,
+	}
+	_, _ = s.eventsFor().Append(runID, rec.TraceID, "gate.decision", "info", decisionPayload)
 	_, _ = s.eventsFor().Append(runID, rec.TraceID, "gate.approved", "info", map[string]any{
 		"actorId": req.ActorID,
 		"reason":  req.Reason,
 		"stepId":  step.StepID,
 		"kind":    approvalKind,
+		"scope":   scope,
+		"tool":    tool,
 	})
 	_ = s.writeAudit(runID, rec.TraceID, "gate.approved", map[string]any{
 		"actorId": req.ActorID,
 		"reason":  req.Reason,
 		"stepId":  step.StepID,
 		"kind":    approvalKind,
+		"scope":   scope,
+		"tool":    tool,
 	})
 	s.decidePendingApproval(runID, step.StepID, "approved", req.ActorID, req.Reason)
 

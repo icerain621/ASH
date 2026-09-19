@@ -10,7 +10,6 @@ x-ash-contract:
   role: product-draft
   implementationSource: internal/api/docs/swagger.yaml
   enforcedPathPrefix: /api/v1/
-  legacyPlannedPathPrefix: /v1/
 servers:
   - url: https://api.ash.local
 tags:
@@ -347,6 +346,12 @@ components:
         sandboxRemoteReason:
           type: string
           description: Probe reason when disabled or unavailable.
+        execPolicyLoaded:
+          type: boolean
+          description: SpacePolicy bodyJson has a non-empty ash.execpolicy.v1 (EW15).
+        execPolicySandboxFloor:
+          type: string
+          description: Effective sandbox mode floor derived from SpacePolicy execPolicy (raise-only).
         ragPathEntryCount:
           type: integer
           format: int64
@@ -1137,8 +1142,8 @@ components:
       properties:
         action:
           type: string
-          enum: [prompt, approve, cancel, stop, reject, command]
-          description: "stop is an alias of cancel; command runs slash commands fail-closed"
+          enum: [prompt, steer, queue, approve, cancel, stop, reject, command]
+          description: "steer and queue are mutually exclusive. steer cancels in-flight/active run then prompts (requires active work; idle → 409). queue never cancels: busy (in-flight turn or non-terminal run) appends meta.followUpQueue and drains one item after a successful PromptTurn or when the bound run finishes/fails; idle queue is treated as prompt. stop/cancel stops only the current turn/run and does not clear or drain followUpQueue. command runs slash commands fail-closed"
         prompt: { type: string }
         reason: { type: string }
         actorId: { type: string }
@@ -1152,6 +1157,7 @@ components:
         sessionId: { type: string }
         runId: { type: string }
         kind: { type: string }
+        parentThreadId: { type: string }
         status: { type: string }
         digest: { type: string }
         headSeq: { type: integer, format: int64 }
@@ -1700,6 +1706,10 @@ components:
           type: string
           description: "Seat permission: read-only | workspace-write | full"
           enum: [read-only, workspace-write, full]
+        agentMode:
+          type: string
+          description: "Agent UX mode: coding | general"
+          enum: [coding, general]
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }
@@ -1723,6 +1733,10 @@ components:
           type: string
           description: "Permission seat"
           enum: [read-only, workspace-write, full]
+        agentMode:
+          type: string
+          description: "Agent UX mode seat"
+          enum: [coding, general]
     AgentCommandItem:
       type: object
       required: [name, description, source]
@@ -2223,6 +2237,32 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/MCPToolItem" }
+    MCPToolExecuteRequest:
+      type: object
+      properties:
+        arguments:
+          type: object
+          additionalProperties: true
+        timeoutMs: { type: integer }
+        sessionId: { type: string, description: "Optional agent session for EW04 allow-list / permissionMode gate" }
+        approvalToken: { type: string, description: "Server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED; client approve:true is ignored" }
+    MCPToolApprovalRequiredResponse:
+      type: object
+      required: [error, approvalToken]
+      properties:
+        error: { $ref: "#/components/schemas/APIError" }
+        approvalToken: { type: string }
+    MCPToolExecuteResponse:
+      type: object
+      properties:
+        tool: { type: string }
+        ok: { type: boolean }
+        output:
+          type: object
+          additionalProperties: true
+        error: { type: string }
+        failureClass: { type: string }
+        durationMs: { type: integer }
     ToolRiskEntry:
       type: object
       properties:
@@ -2680,6 +2720,13 @@ components:
       properties:
         name: { type: string }
         slug: { type: string }
+    OrgListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/OrgItem" }
     OrgTemplate:
       type: object
       properties:
@@ -2746,6 +2793,13 @@ components:
         kind: { type: string, enum: [user, team], description: "Space kind (GV07); no separate Team table" }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
+    SpaceListResponse:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: "#/components/schemas/SpaceItem" }
     CreateSpaceRequest:
       type: object
       required: [orgId, name]
@@ -3127,6 +3181,8 @@ components:
       properties:
         actorId: { type: string }
         reason: { type: string }
+        scope: { type: string, description: "once (default) or session — session adds tool to allowedToolsSession" }
+        tool: { type: string, description: "Tool name for session-scoped allow; inferred from pending approval when empty" }
     ApproveResponse:
       type: object
       properties:
@@ -3236,6 +3292,12 @@ components:
         email: { type: string }
         password: { type: string }
         spaceId: { type: string }
+    DevLoginRequest:
+      type: object
+      properties:
+        spaceId:
+          type: string
+          description: Target space id; defaults to local when omitted.
     AuthGatewaySession:
       type: object
       description: Multi-end auth session metadata (DX57)
@@ -3542,175 +3604,9 @@ components:
         contentType: { type: string }
         sizeBytes: { type: integer }
         expiresAt: { type: integer, format: int64 }
-    TaskDetailResponse:
-      type: object
-      description: M0 legacy task detail (planned /v1/tasks; not implemented).
-      properties:
-        taskId: { type: integer, format: int64 }
-        title: { type: string }
-        goal: { type: string }
-        projectId: { type: string }
-        mode: { type: string, enum: [assist, auto] }
-        status: { type: string }
-        createdAt: { type: string, format: date-time }
-    TaskCancelResponse:
-      type: object
-      description: M0 legacy task cancel ack.
-      properties:
-        status: { type: string, example: CANCELLED }
-    LegacyMemoryCreateResponse:
-      type: object
-      description: M0 legacy memory create ack (maps to /api/v1/memory/candidates in implementation).
-      properties:
-        memoryId: { type: string }
-    LegacySpaceCreateRequest:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, maxLength: 128 }
-        description: { type: string, maxLength: 512 }
-    LegacySpaceMemberRequest:
-      type: object
-      required: [userId, role]
-      properties:
-        userId: { type: integer, format: int64 }
-        role: { type: string, enum: [owner, developer, viewer] }
 security:
   - bearerAuth: []
 paths:
-  /v1/tasks:
-    post:
-      tags: [Tasks]
-      summary: Create task
-      description: M0 legacy planned path. Implementation uses /api/v1/runs and task orchestration APIs.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateTaskRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/CreateTaskResponseData" }
-  /v1/tasks/{taskId}:
-    get:
-      tags: [Tasks]
-      summary: Get task detail
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TaskDetailResponse" }
-  /v1/tasks/{taskId}/start:
-    post:
-      tags: [Tasks]
-      summary: Start task
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      requestBody:
-        required: false
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/StartTaskRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/StartTaskResponseData" }
-  /v1/tasks/{taskId}/cancel:
-    post:
-      tags: [Tasks]
-      summary: Cancel task
-      description: M0 legacy planned path.
-      parameters:
-        - in: path
-          name: taskId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/TaskCancelResponse" }
-  /v1/agent-runs/{runId}:
-    get:
-      tags: [AgentRuns]
-      summary: Get agent run detail
-      description: M0 legacy planned path. Use GET /api/v1/runs/{runId} in implementation.
-      parameters:
-        - in: path
-          name: runId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/AgentRun" }
-  /v1/runs/{runId}/stream:
-    get:
-      tags: [AgentRuns]
-      summary: Stream run logs (SSE)
-      parameters:
-        - in: path
-          name: runId
-          required: true
-          schema: { type: integer, format: int64 }
-      responses:
-        "200":
-          description: text/event-stream
-          content:
-            text/event-stream:
-              schema:
-                type: string
-  /v1/memories:
-    post:
-      tags: [Memories]
-      summary: Create memory
-      description: M0 legacy planned path. Use POST /api/v1/memory/candidates in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/CreateMemoryRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/LegacyMemoryCreateResponse" }
-  /v1/memories/search:
-    post:
-      tags: [Memories]
-      summary: Search memories
-      description: M0 legacy planned path. Use POST /api/v1/memory/query in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/MemorySearchRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/MemoryQueryResponse" }
   /api/v1/repo/connections:
     post:
       tags: [Repo]
@@ -3978,7 +3874,7 @@ paths:
     post:
       tags: [Agents]
       summary: Apply thin session intent
-      description: prompt|approve|cancel|stop|reject|command. stop is an alias of cancel. Unknown slash commands fail closed (409). Approve without an approvable gate fails closed (409).
+      description: prompt|steer|queue|approve|cancel|stop|reject|command. steer and queue are mutually exclusive — steer cancels in-flight/active run then prompts (requires active work; idle → 409); queue never cancels (busy appends meta.followUpQueue, drained one item after successful PromptTurn or run finished/failed; idle treated as prompt). stop is an alias of cancel and does not clear or drain the follow-up queue. Unknown slash commands fail closed (409). Approve without an approvable gate fails closed (409).
       parameters:
         - in: path
           name: sessionId
@@ -4316,6 +4212,26 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InteractionThread" }
+  /api/v1/interactions/threads/{threadId}/fork:
+    post:
+      tags: [Interactions]
+      summary: Fork an interaction thread
+      parameters:
+        - in: path
+          name: threadId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: forked thread
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/InteractionThread" }
+        "404":
+          description: not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
   /api/v1/interactions/threads/{threadId}/replay:
     post:
       tags: [Interactions]
@@ -4356,59 +4272,6 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InteractionCompareResult" }
-  /v1/spaces:
-    post:
-      tags: [Spaces]
-      summary: Create space
-      description: M0 legacy planned path. Use POST /api/v1/spaces in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/LegacySpaceCreateRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SpaceItem" }
-  /v1/spaces/{spaceId}/members:
-    post:
-      tags: [Spaces]
-      summary: Add space member
-      description: M0 legacy planned path. Use POST /api/v1/spaces/{spaceId}/members in implementation.
-      parameters:
-        - in: path
-          name: spaceId
-          required: true
-          schema: { type: integer, format: int64 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/LegacySpaceMemberRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/MemberItem" }
-  /v1/feedback:
-    post:
-      tags: [Feedback]
-      summary: Submit feedback
-      description: M0 legacy planned path. Use POST /api/v1/feedback in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/SubmitFeedbackRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FeedbackItem" }
   /api/v1/metrics/prometheus:
     get:
       tags: [Metrics]
@@ -4876,6 +4739,31 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+
+  /api/v1/auth/dev-login:
+    post:
+      tags: [Auth]
+      summary: Issue a development JWT without credentials
+      description: |
+        Local/non-production helper only. Returns an admin-scoped access token for the requested space (default `local`).
+        Not a supported production auth path; console Dev Token controls are hidden when `ASH_CONSOLE_AUTH_REQUIRED=1`.
+        Optional future gate: `ASH_DEV_LOGIN=0` to disable the route in hardened deployments.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/DevLoginRequest" }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/AuthSessionResponse" }
+        "500":
+          description: token signing failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
 
   /api/v1/auth/oidc/login:
     get:
@@ -5560,6 +5448,51 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/MCPToolItem" }
 
+  /api/v1/mcp/tools/{toolId}/execute:
+    post:
+      tags: [Mcp]
+      summary: Execute a registered MCP tool via toolbus mcp.call
+      description: |
+        Fail-closed for catalog risk ≥ medium unless SpacePolicy toolApprovalPresets allow,
+        session permissionMode is workspace-write|full, session allowedToolsSession matches,
+        or body.approvalToken echoes a server-issued one-time token from a prior 409.
+        Client body.approve=true is ignored (not a durable gate). Disabled tools return 409.
+        Shares URL/argument whitelist with slash mcp.call.
+      parameters:
+        - in: path
+          name: toolId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/MCPToolExecuteRequest" }
+      responses:
+        "200":
+          description: toolbus mcp.call result
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/MCPToolExecuteResponse" }
+        "409":
+          description: approval required (includes approvalToken) or tool disabled
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - { $ref: "#/components/schemas/MCPToolApprovalRequiredResponse" }
+                  - { $ref: "#/components/schemas/APIErrorResponse" }
+        "404":
+          description: tool or session not found
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "400":
+          description: invalid request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+
   /api/v1/memory/candidates:
     get:
       tags: [Memory]
@@ -5948,6 +5881,20 @@ paths:
               schema: { $ref: "#/components/schemas/WaterfallResponse" }
 
   /api/v1/orgs:
+    get:
+      tags: [Orgs]
+      summary: List organizations
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/OrgListResponse" }
+        "500":
+          description: list failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
     post:
       tags: [Orgs]
       summary: Create organization
@@ -7238,6 +7185,21 @@ paths:
               schema: { $ref: "#/components/schemas/SecretResponse" }
 
   /api/v1/spaces:
+    get:
+      tags: [Spaces]
+      summary: List spaces
+      description: When the database is empty and the caller context is `local`, returns a synthetic local space row.
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceListResponse" }
+        "500":
+          description: list failed
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
     post:
       tags: [Spaces]
       summary: Create space

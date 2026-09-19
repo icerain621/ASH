@@ -37,12 +37,19 @@ function isToolSelection(selection: ChatBubbleSelection): boolean {
   );
 }
 
+function isHookSelection(selection: ChatBubbleSelection): boolean {
+  return selection.kind.startsWith("hook") || selection.type.startsWith("hook.");
+}
+
+const HOOK_DETAIL_KEYS = ["event", "tool", "action", "risk", "stepId", "ruleIndex", "reason"] as const;
+
 /** Right details pane for selected chat/trajectory node. */
 export function DetailsPane({ open, selection }: Props) {
   const payload = selection ? readablePayload(selection.payload) : null;
   const rec = asRecord(payload);
   const source = str(rec.source);
   const toolView = selection && isToolSelection(selection);
+  const hookView = selection && isHookSelection(selection);
 
   return (
     <aside
@@ -68,6 +75,35 @@ export function DetailsPane({ open, selection }: Props) {
             </p>
           ) : null}
 
+          {hookView ? (
+            <dl className="agent-details-hook" data-testid="agent-details-hook">
+              {HOOK_DETAIL_KEYS.map((key) => {
+                const val = rec[key];
+                if (val == null || val === "") return null;
+                return (
+                  <div key={key} className="agent-details-kv">
+                    <dt>{key}</dt>
+                    <dd>{str(val)}</dd>
+                  </div>
+                );
+              })}
+            </dl>
+          ) : null}
+
+          {selection.kind === "compact" ? (
+            <div className="agent-details-compact" data-testid="agent-details-compact">
+              <p className="muted-line">压缩摘要（可回放）</p>
+              <pre data-testid="agent-details-compact-summary">
+                {str(rec.summary) || selection.summary || "（无摘要）"}
+              </pre>
+              {(str(rec.priorTurns) || str(rec.priorReplies)) && (
+                <p className="muted-line">
+                  prior turns={str(rec.priorTurns) || "0"} · replies={str(rec.priorReplies) || "0"}
+                </p>
+              )}
+            </div>
+          ) : null}
+
           {toolView ? (
             <div className="agent-details-tool" data-testid="agent-details-tool">
               <p className="muted-line">
@@ -91,7 +127,7 @@ export function DetailsPane({ open, selection }: Props) {
                 </div>
               )}
             </div>
-          ) : (
+          ) : hookView ? null : (
             <p className="muted-line">{selection.summary}</p>
           )}
 

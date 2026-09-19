@@ -54,8 +54,41 @@ func TestScaleReadiness(t *testing.T) {
 	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
 		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)
 	}
+	if resp.ExecPolicyLoaded {
+		t.Fatalf("execPolicyLoaded should be false without SpacePolicy execPolicy")
+	}
 	if resp.RAGVectorBackend == "" {
 		t.Fatal("ragVectorBackend is empty")
+	}
+}
+
+func TestScaleReadinessExecPolicyFloor(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	space := "space_execpolicy_ready"
+	if err := db.Create(&store.SpacePolicyPack{
+		SpaceID: space, CitationMode: "optional",
+		BodyJSON: `{"execPolicy":{"version":"ash.execpolicy.v1","fs":{"mode":"none"}}}`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/scale/readiness", nil)
+	req.Header.Set("X-ASH-Space-ID", space)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp ScaleReadinessResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.ExecPolicyLoaded {
+		t.Fatal("expected execPolicyLoaded")
+	}
+	if resp.ExecPolicySandboxFloor != "isolated" {
+		t.Fatalf("execPolicySandboxFloor=%q want isolated", resp.ExecPolicySandboxFloor)
 	}
 }
 

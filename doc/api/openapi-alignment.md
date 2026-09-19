@@ -7,7 +7,7 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 | 产物 | 路径 | 角色 |
 |------|------|------|
 | **实现真相（SoT）** | `internal/api/docs/swagger.{yaml,json}` | 由 `swaggo/swag` 从 Go handler 注释生成；Worker 通过 `/openapi.json` 对外提供 |
-| **产品契约草稿** | `doc/api/openapi-ash-v1.yaml` | 对外/前端联调用的精简契约；含 M0 愿景端点（`/v1/*`）与已落地子集（`/api/v1/*`） |
+| **产品契约草稿** | `doc/api/openapi-ash-v1.yaml` | 对外/前端联调用的精简契约；仅 `/api/v1/*`（及运维 health）受强制校验 |
 | **端点边界清单** | `doc/appendices/G-OpenAPI-端点清单(M0).md` | 里程碑级端点范围与验收说明 |
 
 **运行时与集成测试以 swag 输出为准。** 手写 YAML 描述「产品承诺」与「规划路径」，其中 `/api/v1/*` 段落必须在实现中存在。
@@ -15,14 +15,15 @@ ASH 同时维护两份 OpenAPI 相关产物，职责不同，**不追求字节�
 ## 2. 路径前缀约定
 
 - **`/api/v1/*`**：当前平台已实现的真实 Base Path（与 Gin 路由一致）。手写草稿中此前缀下的 path+method **受 `make openapi-check` 强制校验**；所有 2xx JSON 成功响应均已绑定具体 `components.schemas`（不再使用泛型 `ApiResponse`），并由 `TestApiV1SuccessResponsesAvoidGenericEnvelope` 防回归。
-- **`/v1/*`**：M0 产品愿景（Tasks、AgentRuns、旧版 Memories/Spaces 等），**尚未实现或路径已迁移**。仅作规划参考，检查器会统计但不失败；规划路径的成功响应已改为具体 schema 并注明实现对照（见 §2 迁移表）。
+- **`/v1/*`**：历史 M0 愿景前缀，**已从契约草稿 paths 移除**（2026-09-19）；映射见下表，细节可查 git 历史。
 - **运维面**：`GET /healthz`、`GET /readyz`、`GET /metrics` 由 swag 覆盖；手写草稿已补 `HealthResponse` schema 与 `/healthz`/`/readyz` path（不参与 `/api/v1/*` 强制校验）。
 
-常见迁移对照（规划 → 实现）：
+常见迁移对照（旧规划 → 实现）：
 
-| 契约草稿（规划） | 实现（swag） |
-|------------------|--------------|
+| 旧规划（已删） | 实现（swag） |
+|----------------|--------------|
 | `POST /v1/feedback` | `POST /api/v1/feedback` |
+| `POST /v1/spaces` | `POST /api/v1/spaces` |
 | `GET /v1/agent-runs/{runId}` | `GET /api/v1/runs/{runId}` |
 | `GET /v1/runs/{runId}/stream` | `GET /api/v1/runs/{runId}/stream` |
 | `POST /v1/memories` | `POST /api/v1/memory/candidates` 等治理面 |
@@ -83,6 +84,6 @@ make openapi-check
 
 ## 6. 长期演进
 
-- **P1**：逐步将 `/v1/*` 规划端点从草稿中迁出到独立 `openapi-ash-v2-planned.yaml`，或标注 `deprecated`。
+- **P1**：`/v1/*` 已从契约草稿 paths 移除；若需愿景草案，另开 `openapi-ash-v2-planned.yaml`。
 - **P2**：若需对外只发布精简契约，可从 swag 输出过滤生成 `openapi-ash-v1.yaml`（codegen），手写稿转为 overlay；当前阶段以「手写子集 + swag 全量」成本最低。
 - **Schema 深度对齐**：不在 `openapi-check` 范围；依赖 handler 测试与前端类型生成。必要时可对关键 DTO 增加 JSON schema 快照测试。

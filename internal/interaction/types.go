@@ -43,16 +43,17 @@ type MemoryLink struct {
 
 // Thread is the persisted interaction thread (main per run for GV04).
 type Thread struct {
-	ID        string `json:"id"`
-	SpaceID   string `json:"spaceId"`
-	SessionID string `json:"sessionId,omitempty"`
-	RunID     string `json:"runId"`
-	Kind      string `json:"kind"`
-	Status    string `json:"status"`
-	Digest    string `json:"digest,omitempty"`
-	HeadSeq   int64  `json:"headSeq,omitempty"`
-	CreatedAt int64  `json:"createdAt"`
-	UpdatedAt int64  `json:"updatedAt"`
+	ID             string `json:"id"`
+	SpaceID        string `json:"spaceId"`
+	SessionID      string `json:"sessionId,omitempty"`
+	RunID          string `json:"runId"`
+	Kind           string `json:"kind"`
+	ParentThreadID string `json:"parentThreadId,omitempty"`
+	Status         string `json:"status"`
+	Digest         string `json:"digest,omitempty"`
+	HeadSeq        int64  `json:"headSeq,omitempty"`
+	CreatedAt      int64  `json:"createdAt"`
+	UpdatedAt      int64  `json:"updatedAt"`
 }
 
 // FoldResult is the pure FoldThread output.

@@ -30,6 +30,12 @@ import { TrajectoryPane } from "./TrajectoryPane";
 import { deriveGateFromEvents } from "./deriveGateFromEvents";
 import { useChatColumnWidths } from "./useChatColumnWidths";
 import { shortId } from "@/shared/utils/format";
+import {
+  EMPTY_HERO_DISMISS_KEY,
+  resolveAgentMode,
+  type AgentMode,
+} from "../agentModeLabels";
+import { AgentEmptyHero } from "./AgentEmptyHero";
 import { reorderSessionIds } from "./reorderSessionIds";
 
 export type AgentChatShellProps = {
@@ -133,6 +139,10 @@ export function AgentChatShell({
   const [editingTitle, setEditingTitle] = useState(false);
   const [titleDraft, setTitleDraft] = useState("");
   const [showJumpBottom, setShowJumpBottom] = useState(false);
+  const [localAgentMode, setLocalAgentMode] = useState<AgentMode>("coding");
+  const [heroDismissed, setHeroDismissed] = useState(
+    () => localStorage.getItem(EMPTY_HERO_DISMISS_KEY) === "1",
+  );
   const { shellStyle, startResize } = useChatColumnWidths();
 
   const listQuery = useQuery({
@@ -218,6 +228,8 @@ export function AgentChatShell({
         reason: payload.reason,
         command: payload.command,
         args: payload.args,
+        scope: payload.scope,
+        tool: payload.tool,
         actorId: "console",
       });
     },
@@ -227,6 +239,17 @@ export function AgentChatShell({
       void qc.invalidateQueries({ queryKey: ["agent-session", selectedSessionId] });
       void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
       onIntentSuccess?.();
+    },
+    onError: (e: Error) => setError(e.message),
+  });
+
+  const agentModeMut = useMutation({
+    mutationFn: ({ sessionId, agentMode }: { sessionId: string; agentMode: AgentMode }) =>
+      patchAgentSession(sessionId, { agentMode }),
+    onSuccess: (session) => {
+      setError("");
+      void qc.invalidateQueries({ queryKey: ["agent-sessions"] });
+      void qc.invalidateQueries({ queryKey: ["agent-session", session.id] });
     },
     onError: (e: Error) => setError(e.message),
   });
@@ -355,6 +378,36 @@ export function AgentChatShell({
       shortId(activeSession.id)
     : "选择或新建会话";
 
+  const sessionAgentMode = resolveAgentMode(
+    activeSession?.agentMode ??
+      (typeof activeSession?.meta?.agentMode === "string"
+        ? activeSession.meta.agentMode
+        : undefined),
+  );
+  const effectiveAgentMode = selectedSessionId ? sessionAgentMode : localAgentMode;
+
+  const transcriptHasContent = useMemo(() => {
+    if (events.length > 0) return true;
+    const turns = activeSession?.turns?.length ?? 0;
+    const replies = activeSession?.replies?.length ?? 0;
+    return turns + replies > 0;
+  }, [events.length, activeSession?.turns, activeSession?.replies]);
+
+  const showBrandHero = !heroDismissed && !transcriptHasContent;
+
+  const handleAgentModeChange = (mode: AgentMode) => {
+    if (selectedSessionId) {
+      agentModeMut.mutate({ sessionId: selectedSessionId, agentMode: mode });
+    } else {
+      setLocalAgentMode(mode);
+    }
+  };
+
+  const dismissBrandHero = () => {
+    setHeroDismissed(true);
+    localStorage.setItem(EMPTY_HERO_DISMISS_KEY, "1");
+  };
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
 
@@ -435,6 +488,9 @@ export function AgentChatShell({
         onCloseWorkspace={(workspaceId) => closeWorkspaceMut.mutate(workspaceId)}
         includeClosed={includeClosed}
         onIncludeClosedChange={setIncludeClosed}
+        agentMode={effectiveAgentMode}
+        agentModeBusy={agentModeMut.isPending}
+        onAgentModeChange={handleAgentModeChange}
       />
 
       <div
@@ -509,6 +565,18 @@ export function AgentChatShell({
                 Trajectory
               </button>
             </div>
+            <a
+              className="btn mini"
+              data-testid="agent-goto-session-memory"
+              title="当前会话记忆 · MemoryLink"
+              href={
+                runId
+                  ? `/ui/memory?tab=links&runId=${encodeURIComponent(runId)}`
+                  : "/ui/memory?tab=links"
+              }
+            >
+              记忆
+            </a>
             <button
               type="button"
               className="btn mini"
@@ -529,15 +597,21 @@ export function AgentChatShell({
 
         {!selectedSessionId ? (
           <div className="agent-chat-empty hero" data-testid="agent-chat-empty">
-            <p>选择左侧会话，或新建空白会话直接对话</p>
-            <button
-              type="button"
-              className="btn mini"
-              disabled={createMut.isPending}
-              onClick={() => createMut.mutate()}
-            >
-              新建会话
-            </button>
+            {showBrandHero ? (
+              <AgentEmptyHero agentMode={effectiveAgentMode} onDismiss={dismissBrandHero} />
+            ) : (
+              <>
+                <p>选择左侧会话，或新建空白会话直接对话</p>
+                <button
+                  type="button"
+                  className="btn mini"
+                  disabled={createMut.isPending}
+                  onClick={() => createMut.mutate()}
+                >
+                  新建会话
+                </button>
+              </>
+            )}
           </div>
         ) : (
           <>
@@ -559,6 +633,9 @@ export function AgentChatShell({
                   <ChatTranscript
                     events={events}
                     selectedId={selection?.id}
+                    agentMode={effectiveAgentMode}
+                    showBrandHero={showBrandHero}
+                    onDismissBrandHero={dismissBrandHero}
                     onSelect={(node) => {
                       setSelection(node);
                       if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
@@ -596,6 +673,7 @@ export function AgentChatShell({
               busy={intentMut.isPending || !selectedSessionId}
               canStop={runBusy}
               gateReason={effectiveGateReason}
+              gateTool={eventGate.tool}
               session={activeSession}
               onIntent={(payload) => intentMut.mutate(payload)}
               onOpenTools={onOpenTools}

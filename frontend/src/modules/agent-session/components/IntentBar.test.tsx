@@ -38,23 +38,36 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "prompt", prompt: "continue" });
   });
 
-  it("shows approve/cancel takeover when waiting approval", () => {
+  it("shows four gate buttons: once / session / reject / cancel run", () => {
     const onIntent = vi.fn();
     wrap(
       <IntentBar
         mode="gate"
         busy={false}
         gateReason="need human review"
+        gateTool="danger.tool"
         onIntent={onIntent}
       />,
     );
     expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-mode", "gate");
-    fireEvent.click(screen.getByTestId("agent-intent-approve"));
-    expect(onIntent).toHaveBeenCalledWith({ action: "approve", reason: "approved from IntentBar" });
+    fireEvent.click(screen.getByTestId("agent-intent-allow-once"));
+    expect(onIntent).toHaveBeenCalledWith({
+      action: "approve",
+      scope: "once",
+      tool: "danger.tool",
+      reason: "allow once from IntentBar",
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-allow-session"));
+    expect(onIntent).toHaveBeenCalledWith({
+      action: "approve",
+      scope: "session",
+      tool: "danger.tool",
+      reason: "allow session from IntentBar",
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-reject"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "reject", reason: "rejected from IntentBar" });
     fireEvent.click(screen.getByTestId("agent-intent-cancel"));
     expect(onIntent).toHaveBeenCalledWith({ action: "cancel" });
-    fireEvent.click(screen.getByTestId("agent-intent-stop"));
-    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
   });
 
   it("shows stop in prompt mode when canStop", () => {
@@ -62,6 +75,55 @@ describe("IntentBar", () => {
     wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
     fireEvent.click(screen.getByTestId("agent-intent-stop"));
     expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
+  });
+
+  it("sends steer intent when canStop (running)", () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
+    expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-steer", "true");
+    expect(screen.getByTestId("agent-intent-steer-hint")).toBeInTheDocument();
+    expect(screen.getByTestId("agent-intent-send")).toHaveTextContent("续写");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
+      target: { value: "go another way" },
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-send"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "steer", prompt: "go another way" });
+  });
+
+  it("shows queue chip and enqueues without stop clearing it", () => {
+    const onIntent = vi.fn();
+    wrap(
+      <IntentBar
+        mode="prompt"
+        canStop
+        busy={false}
+        queueItems={["after this"]}
+        onIntent={onIntent}
+      />,
+    );
+    const chip = screen.getByTestId("agent-intent-queue-chip");
+    expect(chip).toHaveTextContent("队列 1");
+    expect(chip).toHaveTextContent("after this");
+    expect(chip).toHaveTextContent("停止只结束当前");
+    expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-queue-count", "1");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "next please" } });
+    fireEvent.click(screen.getByTestId("agent-intent-queue"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "queue", prompt: "next please" });
+    fireEvent.click(screen.getByTestId("agent-intent-stop"));
+    expect(onIntent).toHaveBeenCalledWith({ action: "stop" });
+    expect(onIntent).not.toHaveBeenCalledWith(expect.objectContaining({ action: "steer" }));
+  });
+
+  it("alt+enter queues while running and enter still steers", () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    fireEvent.change(area, { target: { value: "hold" } });
+    fireEvent.keyDown(area, { key: "Enter", altKey: true });
+    expect(onIntent).toHaveBeenCalledWith({ action: "queue", prompt: "hold" });
+    fireEvent.change(area, { target: { value: "interrupt" } });
+    fireEvent.keyDown(area, { key: "Enter", altKey: false });
+    expect(onIntent).toHaveBeenCalledWith({ action: "steer", prompt: "interrupt" });
   });
 
   it("opens command menu on slash and fills without sending", async () => {

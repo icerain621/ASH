@@ -25,9 +25,12 @@ type RouteRequest struct {
 	ModeOverride       string
 	ScenarioMinMode    string
 	PolicyProfile      string
-	RepoRoot           string
-	RunID              string
-	StepID             string
+	// ExecPolicyFloor is a sandbox mode floor from ash.execpolicy.v1 (EW15).
+	// Empty means no ExecPolicy contribution (must not lower isolation).
+	ExecPolicyFloor string
+	RepoRoot        string
+	RunID           string
+	StepID          string
 	// PreferRemote overrides env prefer for this call: "remote"/"1"/"prefer" forces
 	// prefer when remote is enabled; "local"/"0"/"never" skips remote; empty uses env.
 	PreferRemote string
@@ -50,7 +53,7 @@ type Router interface {
 type NoopRouter struct{}
 
 func (NoopRouter) Route(req RouteRequest) (Decision, error) {
-	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile)
+	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile, req.ExecPolicyFloor)
 	if err := Authorize(req.Risk, mode); err != nil {
 		return Decision{Mode: mode, Executor: "none", Reason: err.Error(), Denied: true}, err
 	}
@@ -95,7 +98,7 @@ func NewDefaultRouter() DefaultRouter {
 }
 
 func (r DefaultRouter) Route(req RouteRequest) (Decision, error) {
-	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile)
+	mode := ResolveSandboxModeExt(req.Risk, req.ProfileDefaultMode, req.ModeOverride, req.ScenarioMinMode, req.PolicyProfile, req.ExecPolicyFloor)
 	if err := Authorize(req.Risk, mode); err != nil {
 		return Decision{Mode: mode, Executor: "none", Reason: err.Error(), Denied: true}, err
 	}

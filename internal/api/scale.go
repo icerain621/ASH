@@ -5,10 +5,13 @@ import (
 	"net/http"
 
 	"github.com/gin-gonic/gin"
+	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/execpolicy"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	sbxremote "github.com/ash-repwiki/ash/internal/sandbox/remote"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/store/sqlmigrations"
@@ -75,6 +78,8 @@ type ScaleReadinessResponse struct {
 	SandboxRemoteDenyOnFail       bool     `json:"sandboxRemoteDenyOnFail,omitempty"`
 	SandboxRemoteBackend          string   `json:"sandboxRemoteBackend,omitempty"`
 	SandboxRemoteReason           string   `json:"sandboxRemoteReason,omitempty"`
+	ExecPolicyLoaded              bool     `json:"execPolicyLoaded"`
+	ExecPolicySandboxFloor        string   `json:"execPolicySandboxFloor,omitempty"`
 	RAGPathEntryCount             int64    `json:"ragPathEntryCount,omitempty"`
 	RAGSymbolCount                int64    `json:"ragSymbolCount,omitempty"`
 	RAGFallbackQueryCount         int64    `json:"ragFallbackQueryCount,omitempty"`
@@ -134,6 +139,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 	ragProf := ragSvc.Profile(space)
 	ragFallbacks := rag.CountChunkFallbackQueries(db, space)
 	remoteSt := sbxremote.ProbeStatus()
+	execLoaded, execFloor := spaceExecPolicyReadiness(db, space)
 	ops := workerOpsSnapshot()
 	var lastSyncMs, lastSyncErrMs *int64
 	if migSnap.LastSyncAt != nil {
@@ -208,6 +214,8 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		SandboxRemoteDenyOnFail:       remoteSt.DenyOnFail,
 		SandboxRemoteBackend:          remoteSt.Backend,
 		SandboxRemoteReason:           remoteSt.Reason,
+		ExecPolicyLoaded:              execLoaded,
+		ExecPolicySandboxFloor:        execFloor,
 		RAGPathEntryCount:             ragProf.PathEntryCount,
 		RAGSymbolCount:                ragProf.SymbolCount,
 		RAGFallbackQueryCount:         ragFallbacks,
@@ -229,6 +237,23 @@ func rlsCatalogSummary(profile store.DatabaseProfileInfo) string {
 		return store.FormatRLSCatalogSummary()
 	}
 	return ""
+}
+
+// spaceExecPolicyReadiness reports whether SpacePolicy bodyJson has a non-empty
+// ash.execpolicy.v1 and the derived sandbox mode floor (EW15).
+func spaceExecPolicyReadiness(db *gorm.DB, spaceID string) (loaded bool, floor string) {
+	if db == nil {
+		return false, ""
+	}
+	var row store.SpacePolicyPack
+	if err := db.First(&row, "space_id = ?", spaceID).Error; err != nil {
+		return false, ""
+	}
+	p, err := execpolicy.FromSpaceBodyJSON(row.BodyJSON)
+	if err != nil || p.Empty() {
+		return false, ""
+	}
+	return true, sandbox.FloorFromExecPolicy(p)
 }
 
 func scaleReadinessWarnings(profile store.DatabaseProfileInfo, mig store.MigrationSnapshot) []string {

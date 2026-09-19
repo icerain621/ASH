@@ -687,6 +687,30 @@ export function patchMCPTool(
   }).then(normalizeMCPTool);
 }
 
+export type MCPToolExecuteResult = {
+  tool: string;
+  ok: boolean;
+  output?: Record<string, unknown>;
+  error?: string;
+  failureClass?: string;
+  durationMs: number;
+};
+
+export function executeMCPTool(
+  toolId: string,
+  body: {
+    arguments?: Record<string, unknown>;
+    timeoutMs?: number;
+    sessionId?: string;
+    approvalToken?: string;
+  } = {},
+) {
+  return api<MCPToolExecuteResult>(`/mcp/tools/${encodeURIComponent(toolId)}/execute`, {
+    method: "POST",
+    body: JSON.stringify(body),
+  });
+}
+
 export function listPlugins() {
   return api<{ items?: RawRecord[]; Items?: RawRecord[] }>("/plugins").then((res) => ({
     items: itemsFrom(res).map(normalizePlugin),

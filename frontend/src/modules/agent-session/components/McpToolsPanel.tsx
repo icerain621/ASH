@@ -1,24 +1,34 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import {
+  executeMCPTool,
   listMCPTools,
   patchMCPTool,
   registerMCPTool,
   type MCPTool,
 } from "@/modules/platform/api/platform.api";
+import { ApiError } from "@/services/http/client";
 
 type Props = {
   open: boolean;
   onClose: () => void;
+  /** Optional agent session for EW04 permissionMode / allow-list gating. */
+  sessionId?: string | null;
 };
 
-/** Agent Chat first-class MCP tools panel (list / register / enable-disable). */
-export function McpToolsPanel({ open, onClose }: Props) {
+function riskNeedsConfirm(risk: string) {
+  const r = (risk || "").toLowerCase().trim();
+  return r !== "low" && r !== "safe";
+}
+
+/** Agent Chat first-class MCP tools panel (list / register / enable-disable / try-exec). */
+export function McpToolsPanel({ open, onClose, sessionId }: Props) {
   const qc = useQueryClient();
   const [name, setName] = useState("");
   const [server, setServer] = useState("");
   const [risk, setRisk] = useState("medium");
   const [error, setError] = useState("");
+  const [execResult, setExecResult] = useState("");
 
   const toolsQuery = useQuery({
     queryKey: ["mcp-tools"],
@@ -53,6 +63,44 @@ export function McpToolsPanel({ open, onClose }: Props) {
     onError: (e: Error) => setError(e.message),
   });
 
+  const execMut = useMutation({
+    mutationFn: async (tool: MCPTool) => {
+      const base = {
+        arguments: {} as Record<string, unknown>,
+        sessionId: sessionId || undefined,
+      };
+      try {
+        return await executeMCPTool(tool.id, base);
+      } catch (e) {
+        if (
+          e instanceof ApiError &&
+          e.code === "MCP_TOOL_APPROVAL_REQUIRED" &&
+          e.approvalToken &&
+          riskNeedsConfirm(tool.risk)
+        ) {
+          const ok = window.confirm(
+            `工具「${tool.name}」风险为 ${tool.risk || "medium"}，确认试执行？（需服务端一次性 approvalToken，非客户端自证）`,
+          );
+          if (!ok) throw e;
+          return executeMCPTool(tool.id, { ...base, approvalToken: e.approvalToken });
+        }
+        throw e;
+      }
+    },
+    onSuccess: (res) => {
+      setError("");
+      setExecResult(
+        res.ok
+          ? `OK · ${res.tool} · ${res.durationMs}ms`
+          : `失败 · ${res.error || res.failureClass || "unknown"}`,
+      );
+    },
+    onError: (e: Error) => {
+      setExecResult("");
+      setError(e.message);
+    },
+  });
+
   if (!open) return null;
 
   const items: MCPTool[] = toolsQuery.data?.items ?? [];
@@ -66,10 +114,19 @@ export function McpToolsPanel({ open, onClose }: Props) {
             关闭
           </button>
         </div>
-        <p className="muted-line">登记后可通过 Chat slash `/name` 执行（status=disabled 时不出现在命令目录）。</p>
+        <p className="muted-line">
+          登记后可通过 Chat slash `/name` 或「试执行」调用（status=disabled 时不出现在命令目录）。medium+
+          风险需 SpacePolicy preset、会话 allow-list，或服务端一次性 approvalToken（禁止客户端
+          approve:true 自证）。
+        </p>
         {error ? (
           <p className="error-text" data-testid="agent-mcp-error">
             {error}
+          </p>
+        ) : null}
+        {execResult ? (
+          <p className="muted-line" data-testid="agent-mcp-exec-result">
+            {execResult}
           </p>
         ) : null}
 
@@ -128,20 +185,31 @@ export function McpToolsPanel({ open, onClose }: Props) {
                     {tool.server} · {tool.risk} · {tool.status}
                   </span>
                 </div>
-                <button
-                  type="button"
-                  className="btn mini"
-                  data-testid={`agent-mcp-toggle-${tool.id}`}
-                  disabled={patchMut.isPending}
-                  onClick={() =>
-                    patchMut.mutate({
-                      id: tool.id,
-                      status: disabled ? "registered" : "disabled",
-                    })
-                  }
-                >
-                  {disabled ? "启用" : "停用"}
-                </button>
+                <div className="agent-mcp-row-actions">
+                  <button
+                    type="button"
+                    className="btn mini"
+                    data-testid={`agent-mcp-try-${tool.id}`}
+                    disabled={disabled || execMut.isPending}
+                    onClick={() => execMut.mutate(tool)}
+                  >
+                    试执行
+                  </button>
+                  <button
+                    type="button"
+                    className="btn mini"
+                    data-testid={`agent-mcp-toggle-${tool.id}`}
+                    disabled={patchMut.isPending}
+                    onClick={() =>
+                      patchMut.mutate({
+                        id: tool.id,
+                        status: disabled ? "registered" : "disabled",
+                      })
+                    }
+                  >
+                    {disabled ? "启用" : "停用"}
+                  </button>
+                </div>
               </li>
             );
           })}

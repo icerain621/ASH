@@ -131,6 +131,16 @@ type MCPToolListResponse struct {
 	Items []store.MCPTool `json:"items"`
 }
 
+// MCPToolExecuteResponse mirrors toolbus.Result for OpenAPI / swag parity.
+type MCPToolExecuteResponse struct {
+	Tool         string         `json:"tool"`
+	OK           bool           `json:"ok"`
+	Output       map[string]any `json:"output,omitempty"`
+	Error        string         `json:"error,omitempty"`
+	FailureClass string         `json:"failureClass,omitempty"`
+	DurationMs   int64          `json:"durationMs"`
+}
+
 type AuditLogListResponse struct {
 	Items []store.AuditLog `json:"items"`
 }
@@ -164,6 +174,14 @@ type AuditExportAccessResponse struct {
 
 type PluginRegistryListResponse struct {
 	Items []store.PluginRegistry `json:"items"`
+}
+
+type OrgListResponse struct {
+	Items []store.Org `json:"items"`
+}
+
+type SpaceListResponse struct {
+	Items []store.Space `json:"items"`
 }
 
 type RoleListResponse struct {

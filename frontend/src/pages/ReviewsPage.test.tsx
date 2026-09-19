@@ -132,12 +132,21 @@ function renderReviews() {
 describe("ReviewsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    window.history.replaceState({}, "", "/reviews");
     vi.mocked(getAuthMe).mockResolvedValue({
       user: { id: "u1", displayName: "Reviewer" },
       space: { id: "local", name: "local" },
       role: "reviewer",
       permissions: ["reviews:assign", "memory:review"],
     });
+  });
+
+  it("reads memoryId query into deeplink banner and memory queue", async () => {
+    window.history.replaceState({}, "", "/reviews?queue=memory&memoryId=mem_deeplink");
+    renderReviews();
+    expect(await screen.findByTestId("reviews-memory-deeplink")).toHaveTextContent("mem_deeplink");
+    expect(screen.getByTestId("reviews-queue-filter")).toHaveValue("memory");
+    expect(listReviewsQueue).toHaveBeenCalledWith("memory", 80);
   });
 
   it("renders pillar sub-nav and defaults to queue workbench", async () => {

@@ -16,6 +16,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
@@ -38,6 +39,10 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		return nil, fmt.Errorf("scenario not found: %w", err)
 	}
 	eng := rules.NewEngine(doc)
+	if req.Inputs == nil {
+		req.Inputs = map[string]any{}
+	}
+	stripClientApprovalInputs(req.Inputs)
 	for _, key := range eng.RequiredInputs() {
 		if _, ok := req.Inputs[key]; !ok {
 			return nil, fmt.Errorf("missing required input %q", key)
@@ -316,7 +321,45 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					return ferr
 				}
 				risk := string(s.tools.ToolRisk(item.Tool))
-				if !s.dangerousToolAllowed(req.Inputs, step.ID, item, risk) {
+				hookDec := s.evaluatePreToolUse(rec, req.Inputs, step.ID, item.Tool, risk)
+				if hookDec.Action != hooks.ActionAllow || hookDec.RuleIndex >= 0 {
+					payload := hookDecisionPayload(step.ID, item.Tool, risk, hookDec)
+					_, _ = s.eventsFor().Append(runID, traceID, "hook.pre_tool_use", "info", payload)
+					_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+				}
+				if hookDec.Action == hooks.ActionDeny {
+					msg := hookDec.Reason
+					if msg == "" {
+						msg = fmt.Sprintf("PreToolUse hook denied tool %s", item.Tool)
+					}
+					_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+						"target": "tool", "reason": msg, "action": "deny", "ref": item.Tool,
+						"matrix": "hooks.pre_tool_use",
+					})
+					s.finishStep(stepRow, "failed", stepStart, errorCodeHookDenied, msg)
+					_, ferr := s.failRun(rec, runID, traceID, started, errorCodeHookDenied, msg)
+					return ferr
+				}
+				if hookDec.Action == hooks.ActionAsk {
+					msg := hookDec.Reason
+					if msg == "" {
+						msg = fmt.Sprintf("PreToolUse hook requires approval for tool %s", item.Tool)
+					}
+					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
+						return setErr
+					}
+					rec.UpdatedAt = time.Now().UTC()
+					_ = s.gdb().Save(rec).Error
+					s.finishStep(stepRow, "waiting_approval", stepStart, errorCodeHookAskApprovalRequired, msg)
+					_, _ = s.eventsFor().Append(runID, traceID, "gate.waiting_approval", "warn", map[string]any{
+						"stepId": step.ID, "gate": gateHookPreToolUse, "tool": item.Tool, "risk": risk, "reason": msg,
+					})
+					s.requestApproval(rec, stepRow, gateHookPreToolUse, risk, msg, map[string]any{
+						"stepId": step.ID, "tool": item.Tool, "policy": item.Policy,
+					})
+					return ErrWaitingApproval
+				}
+				if !s.dangerousToolAllowed(rec, req.Inputs, step.ID, item, risk) {
 					msg := fmt.Sprintf("tool %s has danger risk and requires human approval or policy allow_dangerous", item.Tool)
 					if setErr := s.trySetRunStatus(rec, StatusWaitingApproval); setErr != nil {
 						return setErr
@@ -355,6 +398,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					s.finishStep(stepRow, "failed", stepStart, "TOOL_FAILED", res.Error)
 					_, ferr := s.failRun(rec, runID, traceID, started, "TOOL_FAILED", res.Error)
 					return ferr
+				}
+				if err := s.applyPostToolUseAfterSuccess(rec, runID, traceID, step.ID, item.Tool, risk, stepRow, stepStart, started); err != nil {
+					return err
 				}
 			}
 		case "llm":
@@ -470,6 +516,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 	if err := s.gdb().Save(rec).Error; err != nil {
 		return err
 	}
+	s.notifyFollowUpDrain(runID)
 
 	artifactRefs := make([]map[string]any, 0, len(manifest.Artifacts))
 	for _, a := range manifest.Artifacts {
@@ -793,6 +840,7 @@ func (s *Service) callToolWithRetry(runID, traceID, stepID, risk, spaceID, polic
 			RunID: runID, TraceID: traceID, StepID: stepID, SpaceID: spaceID,
 			Tool: item.Tool, Risk: risk, RepoRoot: ctx.RepoRoot,
 			PolicyProfile: policyProfile, ScenarioMinMode: scenarioMin,
+			ExecPolicyFloor: s.spaceExecPolicyFloor(spaceID),
 		}
 		dec, routeErr := s.loopFor().OnBeforeTool(hookCtx)
 		if dec.Denied || routeErr != nil {
@@ -1069,14 +1117,35 @@ func (s *Service) sessionToolDisabled(runID, tool string) (bool, string) {
 	return false, ""
 }
 
-func (s *Service) dangerousToolAllowed(inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {
+func (s *Service) dangerousToolAllowed(rec *store.RunRecord, inputs map[string]any, stepID string, item rules.ToolChainItem, risk string) bool {
 	if risk != string(toolbus.RiskDanger) {
 		return true
 	}
 	if explicitDangerousToolPolicy(item.Policy) {
 		return true
 	}
-	return approvedStep(inputs, "_approvedDangerousToolSteps", stepID)
+	if approvedStep(inputs, "_approvedDangerousToolSteps", stepID) {
+		return true
+	}
+	tool := strings.TrimSpace(item.Tool)
+	if tool == "" {
+		return false
+	}
+	if toolInAllowedSessionList(inputs["_allowedToolsSession"], tool) {
+		return true
+	}
+	if s.sessionSvc != nil {
+		for _, name := range s.sessionSvc.AllowedToolsSessionForRun(rec.ID) {
+			if strings.TrimSpace(name) == tool {
+				return true
+			}
+		}
+	}
+	spaceID := ""
+	if rec != nil {
+		spaceID = rec.SpaceID
+	}
+	return spaceToolPresetAllows(s, spaceID, tool)
 }
 
 func explicitDangerousToolPolicy(policy string) bool {

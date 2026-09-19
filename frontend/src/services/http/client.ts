@@ -5,9 +5,11 @@ const SPACE_KEY = "ash.space.id";
 
 export class ApiError extends Error {
   code: string;
-  constructor(code: string, message: string) {
+  approvalToken?: string;
+  constructor(code: string, message: string, approvalToken?: string) {
     super(message);
     this.code = code;
+    if (approvalToken) this.approvalToken = approvalToken;
   }
 }
 
@@ -34,12 +36,12 @@ export async function api<T>(path: string, opts: RequestInit = {}): Promise<T> {
     }
   }
   if (!res.ok) {
-    const err = data as { error?: { code?: string; message?: string } };
+    const err = data as { error?: { code?: string; message?: string }; approvalToken?: string };
     const code = err?.error?.code || "REQUEST_FAILED";
     if (res.status === 401) {
       await handleAuthUnauthorized(code);
     }
-    throw new ApiError(code, err?.error?.message || res.statusText);
+    throw new ApiError(code, err?.error?.message || res.statusText, err?.approvalToken);
   }
   return data as T;
 }

@@ -5,6 +5,8 @@
 
 本目录存放“规范/Schema/指标/验收用例”等稳定材料，避免主文档过长。
 
+- `ash-hooks-v1.md`：声明式 `ash.hooks.v1`（PreToolUse）、SpacePolicy `bodyJson.hooks`、allow/deny/ask 与 fail-closed
+- `ash-execpolicy-v1.md`：声明式 `ash.execpolicy.v1`（network/fs/process）、SpacePolicy `bodyJson.execPolicy`、更严合并（V6-D3）
 - `A-事件协议与Schema.md`：事件类型表、payload schema、SSE 续传规则
 - `B-RulesDSL规范与Schema.md`：`ash.rules/v0.1` DSL 语义与 JSON Schema
 - `C-MemorySchema(SQLite)+迁移.md`：DDL、评审流、迁移与兼容策略

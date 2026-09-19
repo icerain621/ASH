@@ -3,6 +3,7 @@ package runs
 import (
 	"context"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -14,9 +15,10 @@ import (
 )
 
 type fakeSessionLinker struct {
-	lastBind SessionProviderBind
-	lastRun  string
-	id       string
+	lastBind     SessionProviderBind
+	lastRun      string
+	id           string
+	allowedTools []string
 }
 
 func (f *fakeSessionLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy string, bind SessionProviderBind) (string, bool, error) {
@@ -29,6 +31,27 @@ func (f *fakeSessionLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy str
 }
 
 func (f *fakeSessionLinker) DisabledToolsForRun(runID string) []string { return nil }
+
+func (f *fakeSessionLinker) AllowedToolsSessionForRun(runID string) []string {
+	out := make([]string, len(f.allowedTools))
+	copy(out, f.allowedTools)
+	return out
+}
+
+func (f *fakeSessionLinker) AddAllowedToolSession(runID, tool string) error {
+	tool = strings.TrimSpace(tool)
+	if tool == "" {
+		return nil
+	}
+	for _, existing := range f.allowedTools {
+		if existing == tool {
+			return nil
+		}
+	}
+	f.allowedTools = append(f.allowedTools, tool)
+	f.lastRun = runID
+	return nil
+}
 
 func (f *fakeSessionLinker) WithContext(ctx context.Context) SessionLinker { return f }
 

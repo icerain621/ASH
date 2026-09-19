@@ -8,6 +8,7 @@ export type InteractionThread = {
   sessionId?: string;
   runId: string;
   kind: string;
+  parentThreadId?: string;
   status: string;
   digest?: string;
   headSeq?: number;
@@ -96,6 +97,12 @@ export async function sealInteractionThread(threadId: string) {
 
 export async function replayInteractionThread(threadId: string) {
   return api<InteractionReplayResult>(`/interactions/threads/${encodeURIComponent(threadId)}/replay`, {
+    method: "POST",
+  });
+}
+
+export async function forkInteractionThread(threadId: string) {
+  return api<InteractionThread>(`/interactions/threads/${encodeURIComponent(threadId)}/fork`, {
     method: "POST",
   });
 }

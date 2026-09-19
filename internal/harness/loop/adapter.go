@@ -34,6 +34,8 @@ type ToolHookContext struct {
 	ModeOverride       string
 	ScenarioMinMode    string
 	PolicyProfile      string
+	// ExecPolicyFloor is the sandbox mode floor from SpacePolicy execPolicy (EW15).
+	ExecPolicyFloor string
 }
 
 // Adapter is the Harness Loop Adapter (thin hooks; does not own the run loop).
@@ -82,7 +84,7 @@ func (a *Adapter) OnBeforeTool(ctx ToolHookContext) (sandbox.Decision, error) {
 	if a == nil {
 		return sandbox.NoopRouter{}.Route(sandbox.RouteRequest{
 			Tool: ctx.Tool, Risk: ctx.Risk, ProfileDefaultMode: ctx.ProfileDefaultMode, ModeOverride: ctx.ModeOverride,
-			ScenarioMinMode: ctx.ScenarioMinMode, PolicyProfile: ctx.PolicyProfile,
+			ScenarioMinMode: ctx.ScenarioMinMode, PolicyProfile: ctx.PolicyProfile, ExecPolicyFloor: ctx.ExecPolicyFloor,
 		})
 	}
 	mode := ctx.ProfileDefaultMode
@@ -102,6 +104,7 @@ func (a *Adapter) OnBeforeTool(ctx ToolHookContext) (sandbox.Decision, error) {
 		ModeOverride:       ctx.ModeOverride,
 		ScenarioMinMode:    ctx.ScenarioMinMode,
 		PolicyProfile:      ctx.PolicyProfile,
+		ExecPolicyFloor:    ctx.ExecPolicyFloor,
 		RepoRoot:           ctx.RepoRoot,
 		RunID:              ctx.RunID,
 		StepID:             ctx.StepID,

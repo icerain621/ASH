@@ -201,10 +201,10 @@ func TestListAndProvisionOrgTemplates(t *testing.T) {
 		t.Fatalf("provision status=%d body=%s", provResp.Code, provResp.Body.String())
 	}
 	var result struct {
-		TemplateID string         `json:"templateId"`
-		Org        store.Org      `json:"org"`
-		Spaces     []store.Space  `json:"spaces"`
-		Roles      []store.Role   `json:"roles"`
+		TemplateID string        `json:"templateId"`
+		Org        store.Org     `json:"org"`
+		Spaces     []store.Space `json:"spaces"`
+		Roles      []store.Role  `json:"roles"`
 	}
 	if err := json.Unmarshal(provResp.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
@@ -404,6 +404,274 @@ func TestRegisterMCPToolUsesMemberPermission(t *testing.T) {
 	if patched.Status != "disabled" {
 		t.Fatalf("patched=%+v", patched)
 	}
+}
+
+func TestExecuteMCPToolHTTP(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+		var body map[string]any
+		if err := json.NewDecoder(req.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		if body["method"] != "tools/call" {
+			t.Fatalf("method=%v", body["method"])
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"jsonrpc": "2.0",
+			"id":      body["id"],
+			"result":  map[string]any{"content": []any{map[string]any{"type": "text", "text": "ok"}}},
+		})
+	}))
+	defer srv.Close()
+
+	now := time.Now().UTC()
+	low := store.MCPTool{
+		ID: "mcp_exec_low", SpaceID: "local", Name: "demo.low",
+		Server: srv.URL, SchemaJSON: "{}", Risk: "low",
+		Status: "registered", CreatedAt: now, UpdatedAt: now,
+	}
+	medium := store.MCPTool{
+		ID: "mcp_exec_med", SpaceID: "local", Name: "demo.med",
+		Server: srv.URL, SchemaJSON: `{"allowedArgs":["q"]}`, Risk: "medium",
+		Status: "registered", CreatedAt: now, UpdatedAt: now,
+	}
+	disabled := store.MCPTool{
+		ID: "mcp_exec_off", SpaceID: "local", Name: "demo.off",
+		Server: srv.URL, SchemaJSON: "{}", Risk: "low",
+		Status: "disabled", CreatedAt: now, UpdatedAt: now,
+	}
+	for _, row := range []store.MCPTool{low, medium, disabled} {
+		if err := db.Create(&row).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	t.Run("unknown_tool_404", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/mcp_missing/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusNotFound {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("disabled_409", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+disabled.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("medium_without_approval_409_token", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{"q":"hi"}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var errBody struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
+			t.Fatal(err)
+		}
+		if errBody.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" {
+			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+		if strings.TrimSpace(errBody.ApprovalToken) == "" {
+			t.Fatalf("expected approvalToken body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("low_risk_200", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var res struct {
+			OK   bool           `json:"ok"`
+			Tool string         `json:"tool"`
+			Out  map[string]any `json:"output"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &res); err != nil {
+			t.Fatal(err)
+		}
+		if !res.OK || res.Tool != "mcp.call" {
+			t.Fatalf("res=%+v", res)
+		}
+	})
+
+	t.Run("medium_approve_true_alone_still_denied", func(t *testing.T) {
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{"q":"hi"},"approve":true}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s want 409 (approve:true must not bypass)", w.Code, w.Body.String())
+		}
+		var errBody struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
+			t.Fatal(err)
+		}
+		if errBody.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" {
+			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+		if strings.TrimSpace(errBody.ApprovalToken) == "" {
+			t.Fatalf("expected approvalToken body=%s", w.Body.String())
+		}
+	})
+
+	t.Run("medium_with_approval_token_200", func(t *testing.T) {
+		w1 := httptest.NewRecorder()
+		req1 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{"q":"hi"}}`)))
+		req1.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w1, req1)
+		if w1.Code != http.StatusConflict {
+			t.Fatalf("challenge status=%d body=%s", w1.Code, w1.Body.String())
+		}
+		var challenge struct {
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w1.Body.Bytes(), &challenge); err != nil {
+			t.Fatal(err)
+		}
+		if challenge.ApprovalToken == "" {
+			t.Fatal("missing approvalToken")
+		}
+		body, _ := json.Marshal(map[string]any{
+			"arguments":     map[string]any{"q": "hi"},
+			"approvalToken": challenge.ApprovalToken,
+		})
+		w2 := httptest.NewRecorder()
+		req2 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader(body))
+		req2.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w2, req2)
+		if w2.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w2.Code, w2.Body.String())
+		}
+		var res struct {
+			OK bool `json:"ok"`
+		}
+		if err := json.Unmarshal(w2.Body.Bytes(), &res); err != nil {
+			t.Fatal(err)
+		}
+		if !res.OK {
+			t.Fatalf("res=%+v body=%s", res, w2.Body.String())
+		}
+		// token is one-time
+		w3 := httptest.NewRecorder()
+		req3 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader(body))
+		req3.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w3, req3)
+		if w3.Code != http.StatusConflict {
+			t.Fatalf("replay status=%d body=%s want 409", w3.Code, w3.Body.String())
+		}
+	})
+
+	t.Run("medium_space_preset_200", func(t *testing.T) {
+		if err := db.Create(&store.SpacePolicyPack{
+			SpaceID: "local", CitationMode: "optional",
+			BodyJSON:  `{"toolApprovalPresets":[{"tool":"demo.med","default":"allow"}]}`,
+			CreatedAt: now, UpdatedAt: now,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+medium.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{"q":"preset"}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("hook_deny_blocks_low", func(t *testing.T) {
+		body := `{"hooks":{"version":"ash.hooks.v1","rules":[{"event":"PreToolUse","tool":"demo.low","action":"deny","reason":"nope"}]}}`
+		if err := db.Model(&store.SpacePolicyPack{}).Where("space_id = ?", "local").Update("body_json", body).Error; err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var errBody struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
+			t.Fatal(err)
+		}
+		if errBody.Error.Code != "MCP_TOOL_HOOK_DENIED" {
+			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+	})
+
+	t.Run("hook_ask_low_needs_token", func(t *testing.T) {
+		body := `{"hooks":{"version":"ash.hooks.v1","rules":[{"event":"PreToolUse","tool":"demo.low","action":"ask"}]}}`
+		if err := db.Model(&store.SpacePolicyPack{}).Where("space_id = ?", "local").Update("body_json", body).Error; err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var challenge struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &challenge); err != nil {
+			t.Fatal(err)
+		}
+		if challenge.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" || challenge.ApprovalToken == "" {
+			t.Fatalf("challenge=%s", w.Body.String())
+		}
+		payload, _ := json.Marshal(map[string]any{"arguments": map[string]any{}, "approvalToken": challenge.ApprovalToken})
+		w2 := httptest.NewRecorder()
+		req2 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute", bytes.NewReader(payload))
+		req2.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w2, req2)
+		if w2.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w2.Code, w2.Body.String())
+		}
+	})
 }
 
 func TestCreateAuditExportUsesOrgMemberPermission(t *testing.T) {

@@ -40,6 +40,8 @@ doc/
 | [`v4.x-program.md`](plan/v4.x-program.md) | **v4.x** 四代分冻（Auth → 企业 Agentic → Stage-1 → 生态） | 项目经理/架构 |
 | [`v4.0-release-scope.md`](plan/v4.0-release-scope.md) | v4.0 Auth 硬化范围（**已冻结**） | 产品/发布 |
 | [`v5-governance-program.md`](plan/v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互（设计评审中） | 项目经理/架构 |
+| [`platform-quad-comparison.md`](plan/platform-quad-comparison.md) | 四产品综合分析（DSH·Pi·Codex·Hermes→ASH；v6 输入） | 架构/产品 |
+| [`ash-feature-inventory.md`](plan/ash-feature-inventory.md) | 原型对照：功能/接口状态 · 工时 · 交付波次 | 产品/架构 |
 | [`v2-dual-core-evolution-plan.md`](plan/v2-dual-core-evolution-plan.md) | **v2** 双核心 + Harness 排期 | 项目经理/架构 |
 | [`sprint-dh-harness-implementation.md`](plan/sprint-dh-harness-implementation.md) | Sprint DH Harness 骨架任务板 | 后端 |
 | [`sprint-di-loop-implementation.md`](plan/sprint-di-loop-implementation.md) | Sprint DI Loop Adapter 任务板 | 后端 |

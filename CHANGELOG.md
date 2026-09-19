@@ -8,6 +8,42 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW121–EW122：记忆候选「厚审」深链到 `/reviews?queue=memory&memoryId=`；设置运维菜单增加「任务板」→ `/quest`；inventory 勾销 S01–S03/S07 与任务板陈旧状态。
+
+### Changed
+
+- EW05 harden：MCP execute 移除客户端 `approve:true` 自证旁路；medium+ 仅 SpacePolicy preset / session allow-list / permissionMode，或回显服务端一次性 `approvalToken`（409 签发）。
+
+### Changed
+
+- Sprint EW101–EW102：产品契约草稿删除无实现的 `/v1/spaces*`、`/v1/feedback` 及孤儿 Legacy schema；`openapi-check` 要求 legacy 计数为 0。
+- 顶栏设置入口改为齿轮图标（无文字），保留 `aria-label` / `title`。
+- 记忆分层滤镜显示 L0/L1/L2 条数。
+
+### Added
+
+- Sprint EW111–EW112：`ash.hooks.v1` 支持 `PostToolUse`；工具成功后求值，`deny` 失败步骤（不回滚副作用），`ask` 仅审计；事件 `hook.post_tool_use`。
+- Sprint EW91–EW92：Composer Model 席位投影 `GET /model-router/providers` 健康位（未配置仍显示，不算错误）。
+- Sprint EW81–EW82：顶栏「更多」改为「设置」，工作区 + 运维分组，并挂上指标/可观测入口。
+- Sprint EW71–EW72（P06）：Builtin `/compact` 压缩会话 transcript，有 bound run 时发 `harness.compaction`；Details 突出压缩摘要。
+- Sprint EW61–EW62：Agent Chat「记忆」深链到 `/memory?tab=links&runId=`；记忆页新增「关联」页签渲染 MemoryLinkPanel。
+- Sprint EW51–EW52（P16）：Chat Trajectory 谱系区可 `spawnSubRun`（复用父 scenario）并「回主」聚焦 root；无新 HTTP 路径。
+- Sprint EW41–EW42（P15）：MCP HTTP execute 走 SpacePolicy PreToolUse。`deny` 返回 `MCP_TOOL_HOOK_DENIED`，一次性 approvalToken 不能绕过；`ask` 且风险为 low 时复用现有 approvalToken。无 hooks 时行为不变。
+- Sprint EW33–EW34（W3）：Doctor `M4-MDL-01` 探针模型 Provider 目录（未配置仍通过）；M4 **12/12**，ALL **62/62**。W3 板签字。
+- Sprint EW31–EW32（W3）：Chat Trajectory 投影 Run 树谱系；Thread 时间线可按可见性与事件类过滤。
+- Sprint EW24–EW25（W2 v6.1 吸收）：记忆列表按 `scenario:` / `skill:` / `tool:` 标签和 `scopeRepo` 分组；带 Run 新建时回填场景名与空仓库。W2 板签字（无新 HTTP 路径）。
+- Sprint EW23（W2 v6.1 吸收）：`harness.compaction` 投影为 Chat/Trajectory 的 Compact 节点（`ui_only`）。
+- Sprint EW22（W2 v6.1 吸收）：评审管控台双 Thread 比对可选择同会话 fork，并从此线程 Fork。
+- Sprint EW21（W2 v6.1 吸收）：交互线程 `Fork` — `parentThreadId`、同 run 多次分支；`POST /api/v1/interactions/threads/{threadId}/fork`；SQL rev 39 去掉 `(run_id, kind)` 唯一以便多 fork。分支仍折同一 run 事件（独立事件流留给后续）。
+- Sprint EW17（W1 v6.0 吸收）：Session intent `queue` — 运行中把 follow-up 写入 `meta.followUpQueue`（不打断，与 `steer` 互斥）；空闲视为 prompt；成功结束的 turn 或 bound run finished/failed 后自动消费一条；`stop`/`cancel` 只停当前、不清空也不消费队列。Chat 队列 chip。
+- Sprint EW16（W1 v6.0 吸收）：Session intent `steer` — 运行中打断 in-flight turn / 活跃 bound run 后以新 prompt 续写；审计事件 `session.steer`；空闲拒绝（非 prompt 别名）；Chat Composer 运行中 Steer 文案。
+- Sprint EW15（W1 v6.0 吸收）：`sandbox.FloorFromExecPolicy` → `ResolveSandboxModeExt` 地板仅抬升；Run 从 SpacePolicy `bodyJson.execPolicy` 加载；Scale `execPolicyLoaded` / `execPolicySandboxFloor`；Doctor `M4-SBX-06`；无配置不降级隔离。
+- Sprint EW14（W1 v6.0 吸收）：`internal/execpolicy` — 声明式 `ash.execpolicy.v1`（network/fs/process 能力地板）、SpacePolicy `bodyJson.execPolicy` 与 Harness Spec 合成解析、`Merge` 更严者优先（V6-D3）；附录 [`doc/appendices/ash-execpolicy-v1.md`](doc/appendices/ash-execpolicy-v1.md)。
+- Sprint EW13（W1 v6.0 吸收）：Hooks 决策审计可观测 — 附录稳定 `hook.pre_tool_use` / `hook.decision` payload 字段；Agent Chat Trajectory/Details 识别 `hook.*`；Reviews 编排流程只读投影 `bodyJson.hooks` 规则表。
+- Sprint EW12（W1 v6.0 吸收）：`runs/execute` 工具链在调用前加载 SpacePolicy `bodyJson.hooks` 并求值 PreToolUse；`deny` 失败闭合（`HOOK_DENIED` + `hook.pre_tool_use`/`hook.decision`）；`ask` 进入既有 `waiting_approval`（`HOOK_ASK_APPROVAL_REQUIRED`）；无 hooks 配置行为不变。
+- Sprint EW11（W1 v6.0 吸收）：`internal/hooks` — 声明式 `ash.hooks.v1`（PreToolUse）配置解析、SpacePolicy `bodyJson.hooks` 加载与 tool/risk 规则求值（缺省 allow；错误 version / 匹配规则 action 无效 fail-closed → deny）；附录 [`doc/appendices/ash-hooks-v1.md`](doc/appendices/ash-hooks-v1.md)。
+- Sprint EW05（W0 harden）：`POST /api/v1/mcp/tools/{toolId}/execute` — 查库 → toolbus `mcp.call`；medium+ 失败闭合（SpacePolicy preset / session allow-list / permissionMode workspace-write+ / 服务端 `approvalToken`）；FE MCP「试执行」；OpenAPI + 审计事件。
+- Sprint EW01（W0 harden）：OpenAPI 漂移清理 — 删除 8 条无 handler 的 legacy `/v1/tasks|agent-runs|runs/stream|memories*` 路径；契约补齐 `GET /orgs` · `GET /spaces` · `POST /auth/dev-login` 与 swag 对齐。
 - Sprint DX66（v4.0）：范围冻结 + 签字门禁 — `v4.0-release-scope` **已冻结**；`make v4.0-signoff`（Doctor ALL **57** / M4 **10** + Auth 硬化 smoke + rag-* / sandbox / skill-pack / rag-lsp / remote-sandbox）；清单/签字模板；**不自动**打 `v4.0.0` tag。
 - Sprint DX65（v4.0 草案）：Device **mint UI** — Space Auth Sessions 表单 mint；一次展示 access/refresh（不切换控制台会话）；`make device-session-smoke`；**无新表**。
 - Sprint DX64（v4.0 草案）：控制台可选 **强制登录** — `ASH_CONSOLE_AUTH_REQUIRED` → `/readyz.consoleAuthRequired`；SPA 无 token 跳 `/ui/login`；门闸开时隐藏 Dev Token；auth `401` 清会话并跳登录；默认 **off**。

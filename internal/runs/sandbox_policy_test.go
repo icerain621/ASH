@@ -179,3 +179,168 @@ scenario:
 	}
 	t.Fatal("missing harness.tool.routed")
 }
+
+func TestExecPolicyRaisesSandboxFloorFromSpacePolicy(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "execpolicy_raise"
+  scenarioVersion: "1.0.0"
+  policyProfile: "default"
+  roles: { Worker: { maxParallel: 1 } }
+  inputs:
+    required: [issueOrSpec]
+  artifacts:
+    required: []
+  steps:
+    - id: "do.read"
+      role: "Worker"
+      kind: "tool_chain"
+      chain:
+        - tool: "safe.tool"
+          timeoutMs: 5000
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "execpolicy_raise.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	reg := toolbus.NewRegistry()
+	reg.Register("safe.tool", toolbus.RiskSafe, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		return map[string]any{"ok": true}, nil
+	})
+	ev := events.NewService(db)
+	svc := NewService(db, ev, loader, toolbus.NewBus(reg)).
+		WithAgentExecutor(agentexec.StaticExecutor{}).
+		WithSandboxRouter(sandbox.NoopRouter{})
+
+	if err := db.Create(&store.SpacePolicyPack{
+		SpaceID: "local", CitationMode: "optional",
+		BodyJSON: `{"execPolicy":{"version":"ash.execpolicy.v1","fs":{"mode":"none"}}}`,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	spec := harness.DefaultSpec()
+	spec.Sandbox.DefaultMode = sandbox.ModeOff
+	createdProf, err := svc.harnessSvc.Create(harness.CreateRequest{Name: "default", Spec: spec, CreatedBy: "tester"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.harnessSvc.SubmitReview(createdProf.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.harnessSvc.Promote(createdProf.ID, "tester"); err != nil {
+		t.Fatal(err)
+	}
+
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "execpolicy_raise", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": "execpolicy floor"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := svc.events.ListAfter(created.RunID, 0, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range evs {
+		if e.Type != "harness.tool.routed" {
+			continue
+		}
+		var payload map[string]any
+		_ = json.Unmarshal(e.Payload, &payload)
+		if payload["sandboxMode"] != sandbox.ModeIsolated {
+			t.Fatalf("payload=%v want isolated from execPolicy floor", payload)
+		}
+		return
+	}
+	t.Fatal("missing harness.tool.routed")
+}
+
+func TestExecPolicyAbsentDoesNotLowerSandbox(t *testing.T) {
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "execpolicy_absent"
+  scenarioVersion: "1.0.0"
+  policyProfile: "default"
+  roles: { Worker: { maxParallel: 1 } }
+  inputs:
+    required: [issueOrSpec]
+  artifacts:
+    required: []
+  steps:
+    - id: "do.read"
+      role: "Worker"
+      kind: "tool_chain"
+      chain:
+        - tool: "safe.tool"
+          timeoutMs: 5000
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "execpolicy_absent.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	reg := toolbus.NewRegistry()
+	reg.Register("safe.tool", toolbus.RiskSafe, func(_ toolbus.Context, _ map[string]any) (map[string]any, error) {
+		return map[string]any{"ok": true}, nil
+	})
+	ev := events.NewService(db)
+	svc := NewService(db, ev, loader, toolbus.NewBus(reg)).
+		WithAgentExecutor(agentexec.StaticExecutor{}).
+		WithSandboxRouter(sandbox.NoopRouter{})
+
+	spec := harness.DefaultSpec()
+	spec.Sandbox.DefaultMode = sandbox.ModeWorkspaceWrite
+	createdProf, err := svc.harnessSvc.Create(harness.CreateRequest{Name: "default", Spec: spec, CreatedBy: "tester"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.harnessSvc.SubmitReview(createdProf.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.harnessSvc.Promote(createdProf.ID, "tester"); err != nil {
+		t.Fatal(err)
+	}
+
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "execpolicy_absent", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": "no execpolicy"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := svc.events.ListAfter(created.RunID, 0, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range evs {
+		if e.Type != "harness.tool.routed" {
+			continue
+		}
+		var payload map[string]any
+		_ = json.Unmarshal(e.Payload, &payload)
+		if payload["sandboxMode"] != sandbox.ModeWorkspaceWrite {
+			t.Fatalf("payload=%v want workspace-write unchanged without execPolicy", payload)
+		}
+		return
+	}
+	t.Fatal("missing harness.tool.routed")
+}

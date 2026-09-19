@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -71,6 +72,8 @@ type Handler struct {
 	spacePolicy   *spacepolicy.Service
 	waker         *waker.Service
 	oidc          *idp.Client
+	// mcpApprovals holds short-lived one-time tokens for medium+ MCP try-exec (fail-closed).
+	mcpApprovals sync.Map
 }
 
 func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
@@ -186,6 +189,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/interactions/threads/:threadId", h.getInteractionThread)
 		v1.GET("/interactions/threads/:threadId/memory-links", h.listInteractionMemoryLinks)
 		v1.POST("/interactions/threads/:threadId/seal", h.sealInteractionThread)
+		v1.POST("/interactions/threads/:threadId/fork", h.forkInteractionThread)
 		v1.POST("/interactions/threads/:threadId/replay", h.replayInteractionThread)
 		v1.POST("/interactions/compare", h.compareInteractionThreads)
 		v1.GET("/runs", h.listRuns)
@@ -273,6 +277,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/mcp/tools", h.listMCPTools)
 		v1.POST("/mcp/tools", h.registerMCPTool)
 		v1.PATCH("/mcp/tools/:toolId", h.patchMCPTool)
+		v1.POST("/mcp/tools/:toolId/execute", h.executeMCPTool)
 		v1.POST("/feedback", h.createFeedback)
 		v1.GET("/feedback", h.listFeedback)
 		v1.PATCH("/feedback/:feedbackId", h.updateFeedback)

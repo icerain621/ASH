@@ -19,6 +19,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/evolve"
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
@@ -28,7 +29,10 @@ import (
 	"github.com/ash-repwiki/ash/internal/pluginabi"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
 	"github.com/ash-repwiki/ash/internal/security"
+	"github.com/ash-repwiki/ash/internal/session"
+	"github.com/ash-repwiki/ash/internal/spacepolicy"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
 type registerMCPToolRequest struct {
@@ -43,6 +47,29 @@ type patchMCPToolRequest struct {
 	Status *string `json:"status,omitempty"`
 	Risk   *string `json:"risk,omitempty"`
 	Server *string `json:"server,omitempty"`
+}
+
+type executeMCPToolRequest struct {
+	Arguments map[string]any `json:"arguments,omitempty"`
+	TimeoutMs int64          `json:"timeoutMs,omitempty"`
+	SessionID string         `json:"sessionId,omitempty"`
+	// ApprovalToken is a server-issued one-time token from a prior 409 MCP_TOOL_APPROVAL_REQUIRED.
+	ApprovalToken string `json:"approvalToken,omitempty"`
+}
+
+// mcpApprovalPending is an in-memory one-time gate for medium+ MCP execute.
+type mcpApprovalPending struct {
+	ToolID  string
+	SpaceID string
+	Expires time.Time
+}
+
+const mcpApprovalTTL = 2 * time.Minute
+
+// MCPToolApprovalRequiredResponse is returned on 409 when medium+ needs a durable once-token.
+type MCPToolApprovalRequiredResponse struct {
+	Error         APIError `json:"error"`
+	ApprovalToken string   `json:"approvalToken"`
 }
 
 type createFeedbackRequest struct {
@@ -364,6 +391,272 @@ func (h *Handler) patchMCPTool(c *gin.Context) {
 	c.JSON(http.StatusOK, row)
 }
 
+// ExecuteMCPTool godoc
+// @Summary Execute a registered MCP tool via toolbus mcp.call
+// @Description Fail-closed for catalog risk ≥ medium unless SpacePolicy preset, session allow-list / workspace-write+, or a server-issued approvalToken (from prior 409) is echoed. Client approve:true is ignored.
+// @Tags mcp
+// @Accept json
+// @Produce json
+// @Param toolId path string true "tool id"
+// @Param body body executeMCPToolRequest true "execute"
+// @Success 200 {object} MCPToolExecuteResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Failure 409 {object} MCPToolApprovalRequiredResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/mcp/tools/{toolId}/execute [post]
+func (h *Handler) executeMCPTool(c *gin.Context) {
+	var req executeMCPToolRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	var row store.MCPTool
+	if err := h.dbFor(c).First(&row, "id = ?", c.Param("toolId")).Error; err != nil {
+		c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_NOT_FOUND", "mcp tool not found"))
+		return
+	}
+	if !h.requireTargetSpace(c, row.SpaceID) {
+		return
+	}
+	if !h.requirePermission(c, permMCPWrite, row.SpaceID) {
+		return
+	}
+	if strings.EqualFold(strings.TrimSpace(row.Status), "disabled") {
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "reason": "disabled",
+		})).Error
+		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_DISABLED", "mcp tool is disabled"))
+		return
+	}
+	hookDec := h.mcpPreToolUse(c, &row)
+	if hookDec.Action == hooks.ActionDeny {
+		msg := hookDec.Reason
+		if msg == "" {
+			msg = "PreToolUse hook denied mcp tool"
+		}
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": "hook_deny",
+			"hookReason": msg,
+		})).Error
+		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_HOOK_DENIED", msg))
+		return
+	}
+	gateReason, gateOK := h.mcpExecuteGateAllows(c, &row, req.SessionID, req.ApprovalToken)
+	if hookDec.Action == hooks.ActionAsk && gateOK && gateReason == "risk_low" {
+		if h.consumeMCPApprovalToken(req.ApprovalToken, row.ID, row.SpaceID) {
+			gateReason = "hook_ask_token"
+		} else {
+			gateOK = false
+			gateReason = "hook_ask"
+		}
+	}
+	if !gateOK {
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": gateReason,
+			"sessionId": strings.TrimSpace(req.SessionID),
+		})).Error
+		if gateReason == "session_not_found" {
+			c.JSON(http.StatusNotFound, errorBody("MCP_TOOL_SESSION_NOT_FOUND", "session not found for MCP gate"))
+			return
+		}
+		token := h.issueMCPApprovalToken(row.ID, row.SpaceID)
+		body := errorBody("MCP_TOOL_APPROVAL_REQUIRED", "mcp tool risk requires SpacePolicy preset, session allow-list, or echoed approvalToken")
+		body["approvalToken"] = token
+		c.JSON(http.StatusConflict, body)
+		return
+	}
+
+	args := req.Arguments
+	if args == nil {
+		args = map[string]any{}
+	}
+	res := toolbus.CallMCP(row.Server, row.Name, args, req.TimeoutMs, allowedArgsFromMCPSchema(row.SchemaJSON))
+	_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_executed", map[string]any{
+		"toolId": row.ID, "name": row.Name, "risk": row.Risk, "ok": res.OK,
+		"durationMs": res.DurationMs, "sessionId": strings.TrimSpace(req.SessionID),
+		"gate": gateReason,
+	})).Error
+	if !res.OK {
+		c.JSON(http.StatusOK, res)
+		return
+	}
+	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) mcpPreToolUse(c *gin.Context, row *store.MCPTool) hooks.Decision {
+	if row == nil {
+		return hooks.Decision{Action: hooks.ActionDeny, Reason: "missing tool", RuleIndex: -1}
+	}
+	cfg, err := hooks.ConfigFromSpaceBodyJSON(h.spacePolicyBody(c, row.SpaceID))
+	if err != nil {
+		return hooks.Decision{Action: hooks.ActionDeny, Reason: "hooks config load failed", RuleIndex: -1}
+	}
+	return hooks.Evaluate(cfg, hooks.EventPreToolUse, hooks.ToolContext{
+		Tool: row.Name, Risk: row.Risk, SpaceID: row.SpaceID,
+	})
+}
+
+func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessionID, approvalToken string) (reason string, ok bool) {
+	if row == nil {
+		return "missing_tool", false
+	}
+	if !mcpRiskNeedsApproval(row.Risk) {
+		return "risk_low", true
+	}
+	if h.consumeMCPApprovalToken(approvalToken, row.ID, row.SpaceID) {
+		return "approval_token", true
+	}
+	if spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), row.Name) ||
+		spacepolicy.PresetAllowsTool(h.spacePolicyBody(c, row.SpaceID), "mcp.call") {
+		return "space_preset", true
+	}
+	sessionID = strings.TrimSpace(sessionID)
+	if sessionID == "" {
+		return "approval_required", false
+	}
+	if h.session == nil {
+		return "approval_required", false
+	}
+	view, err := h.session.WithContext(c.Request.Context()).Get(sessionID)
+	if err != nil || view == nil {
+		return "session_not_found", false
+	}
+	if view.SpaceID != "" && view.SpaceID != row.SpaceID {
+		return "approval_required", false
+	}
+	mode := strings.ToLower(strings.TrimSpace(view.PermissionMode))
+	if mode == session.PermissionWorkspaceWrite || mode == session.PermissionFull {
+		return "permission_mode", true
+	}
+	for _, name := range sessionAllowedTools(view) {
+		if name == row.Name || name == "mcp.call" {
+			return "session_allowlist", true
+		}
+	}
+	return "approval_required", false
+}
+
+func (h *Handler) issueMCPApprovalToken(toolID, spaceID string) string {
+	token := "mcpap_" + uuid.NewString()
+	h.mcpApprovals.Store(token, mcpApprovalPending{
+		ToolID:  toolID,
+		SpaceID: spaceID,
+		Expires: time.Now().UTC().Add(mcpApprovalTTL),
+	})
+	return token
+}
+
+func (h *Handler) consumeMCPApprovalToken(token, toolID, spaceID string) bool {
+	token = strings.TrimSpace(token)
+	if token == "" {
+		return false
+	}
+	raw, ok := h.mcpApprovals.LoadAndDelete(token)
+	if !ok {
+		return false
+	}
+	entry, ok := raw.(mcpApprovalPending)
+	if !ok {
+		return false
+	}
+	if time.Now().UTC().After(entry.Expires) {
+		return false
+	}
+	if entry.ToolID != toolID || entry.SpaceID != spaceID {
+		return false
+	}
+	return true
+}
+
+func (h *Handler) spacePolicyBody(c *gin.Context, spaceID string) string {
+	spaceID = firstNonEmptyAPI(strings.TrimSpace(spaceID), "local")
+	var pack store.SpacePolicyPack
+	if err := h.dbFor(c).First(&pack, "space_id = ?", spaceID).Error; err != nil {
+		return ""
+	}
+	return pack.BodyJSON
+}
+
+func sessionAllowedTools(view *session.View) []string {
+	if view == nil || view.Meta == nil {
+		return nil
+	}
+	raw, ok := view.Meta[session.MetaAllowedToolsSession]
+	if !ok {
+		return nil
+	}
+	switch v := raw.(type) {
+	case []string:
+		return v
+	case []any:
+		out := make([]string, 0, len(v))
+		for _, item := range v {
+			if s, ok := item.(string); ok {
+				s = strings.TrimSpace(s)
+				if s != "" {
+					out = append(out, s)
+				}
+			}
+		}
+		return out
+	default:
+		return nil
+	}
+}
+
+func mcpRiskNeedsApproval(risk string) bool {
+	switch strings.ToLower(strings.TrimSpace(risk)) {
+	case "low", "safe":
+		return false
+	default:
+		// medium / high / danger / empty / unknown → fail-closed
+		return true
+	}
+}
+
+func allowedArgsFromMCPSchema(schemaJSON string) []string {
+	schemaJSON = strings.TrimSpace(schemaJSON)
+	if schemaJSON == "" || schemaJSON == "{}" {
+		return nil
+	}
+	var root map[string]any
+	if err := json.Unmarshal([]byte(schemaJSON), &root); err != nil {
+		return nil
+	}
+	if keys, ok := stringListFromAny(root["allowedArgs"]); ok {
+		return keys
+	}
+	if keys, ok := stringListFromAny(root["allowedArgumentKeys"]); ok {
+		return keys
+	}
+	if props, ok := root["properties"].(map[string]any); ok && len(props) > 0 {
+		out := make([]string, 0, len(props))
+		for key := range props {
+			out = append(out, key)
+		}
+		return out
+	}
+	return nil
+}
+
+func stringListFromAny(v any) ([]string, bool) {
+	switch items := v.(type) {
+	case []string:
+		return items, true
+	case []any:
+		out := make([]string, 0, len(items))
+		for _, item := range items {
+			if s, ok := item.(string); ok && strings.TrimSpace(s) != "" {
+				out = append(out, strings.TrimSpace(s))
+			}
+		}
+		return out, true
+	default:
+		return nil, false
+	}
+}
+
 // CreateFeedback godoc
 // @Summary Create feedback
 // @Tags feedback
@@ -546,6 +839,16 @@ type devLoginRequest struct {
 	SpaceID string `json:"spaceId,omitempty"`
 }
 
+// DevLogin godoc
+// @Summary Issue a development JWT without credentials
+// @Description Local/non-production helper only. Returns an admin-scoped access token for the requested space (default local). Not for production; console Dev Token is hidden when ASH_CONSOLE_AUTH_REQUIRED=1. Optional future gate ASH_DEV_LOGIN=0.
+// @Tags auth
+// @Accept json
+// @Produce json
+// @Param body body devLoginRequest false "optional target space"
+// @Success 200 {object} AuthSessionResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/auth/dev-login [post]
 func (h *Handler) devLogin(c *gin.Context) {
 	var req devLoginRequest
 	_ = c.ShouldBindJSON(&req)
@@ -573,13 +876,20 @@ func (h *Handler) devLogin(c *gin.Context) {
 	})
 }
 
+// ListOrgs godoc
+// @Summary List organizations
+// @Tags orgs
+// @Produce json
+// @Success 200 {object} OrgListResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/orgs [get]
 func (h *Handler) listOrgs(c *gin.Context) {
 	var rows []store.Org
 	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
 		c.JSON(http.StatusInternalServerError, errorBody("ORG_LIST_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": rows})
+	c.JSON(http.StatusOK, OrgListResponse{Items: rows})
 }
 
 // CreateOrg godoc
@@ -699,6 +1009,14 @@ func (h *Handler) provisionOrgTemplate(c *gin.Context) {
 	c.JSON(http.StatusCreated, result)
 }
 
+// ListSpaces godoc
+// @Summary List spaces
+// @Description When the database is empty and caller context is local, returns a synthetic local space row.
+// @Tags spaces
+// @Produce json
+// @Success 200 {object} SpaceListResponse
+// @Failure 500 {object} APIErrorResponse
+// @Router /api/v1/spaces [get]
 func (h *Handler) listSpaces(c *gin.Context) {
 	var rows []store.Space
 	if err := h.dbFor(c).Order("created_at desc").Find(&rows).Error; err != nil {
@@ -706,10 +1024,12 @@ func (h *Handler) listSpaces(c *gin.Context) {
 		return
 	}
 	if len(rows) == 0 && currentSpace(c) == "local" {
-		c.JSON(http.StatusOK, gin.H{"items": []gin.H{{"id": "local", "name": "Local", "slug": "local", "kind": "team"}}})
+		c.JSON(http.StatusOK, SpaceListResponse{Items: []store.Space{{
+			ID: "local", Name: "Local", Slug: "local", Kind: "team",
+		}}})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"items": rows})
+	c.JSON(http.StatusOK, SpaceListResponse{Items: rows})
 }
 
 // CreateSpace godoc
@@ -740,8 +1060,8 @@ func (h *Handler) createSpace(c *gin.Context) {
 	now := time.Now().UTC()
 	space := store.Space{
 		ID: "space_" + uuid.NewString(), OrgID: org.ID, Name: strings.TrimSpace(req.Name),
-		Slug: firstNonEmptyAPI(req.Slug, slugify(req.Name)),
-		Kind: orgtemplates.NormalizeSpaceKind(req.Kind),
+		Slug:      firstNonEmptyAPI(req.Slug, slugify(req.Name)),
+		Kind:      orgtemplates.NormalizeSpaceKind(req.Kind),
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if space.Name == "" {

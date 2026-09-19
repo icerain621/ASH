@@ -29,6 +29,10 @@ describe("eventVisibility", () => {
   it("maps tool and step events to ui_only by default", () => {
     expect(eventVisibility({ type: "tool.called" })).toBe("ui_only");
     expect(eventVisibility({ type: "step.finished" })).toBe("ui_only");
+    expect(eventVisibility({ type: "hook.decision" })).toBe("ui_only");
+    expect(eventVisibility({ type: "hook.pre_tool_use" })).toBe("ui_only");
+    expect(eventVisibility({ type: "hook.post_tool_use" })).toBe("ui_only");
+    expect(eventVisibility({ type: "harness.compaction" })).toBe("ui_only");
   });
 });
 

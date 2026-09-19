@@ -42,6 +42,7 @@ type View struct {
 	ProviderFallback bool           `json:"providerFallback,omitempty"`
 	ProviderReason   string         `json:"providerReason,omitempty"`
 	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
+	AgentMode        string         `json:"agentMode,omitempty"`      // coding | general
 	DisabledTools    []string       `json:"disabledTools,omitempty"`
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
@@ -57,6 +58,7 @@ type PatchRequest struct {
 	ProviderKind   *string   `json:"providerKind"`
 	PlanID         *string   `json:"planId"`
 	PermissionMode *string   `json:"permissionMode"`
+	AgentMode      *string   `json:"agentMode"`
 	DisabledTools  *[]string `json:"disabledTools"`
 }
 
@@ -202,6 +204,11 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 	}
 	view.StreamURL = sessionStreamURL(view.ID)
 	s.applyProviderKind(view, req.ProviderKind)
+	view.AgentMode = AgentModeCoding
+	if view.Meta == nil {
+		view.Meta = map[string]any{}
+	}
+	view.Meta["agentMode"] = AgentModeCoding
 	s.ensureMainThread(view)
 	if err := s.save(view); err != nil {
 		return nil, err
@@ -277,6 +284,8 @@ func (s *Service) List(spaceID string, limit int, includeClosed bool) ([]View, e
 
 // PromptTurn records a turn and emits session.turn on the bound run when present.
 // Reply priority: OpenAI-compatible LLM (ASH_LLM_BASE_URL) → provider executor → echo stub.
+// After a successful (non-canceled) turn, one meta.followUpQueue item is drained when the
+// session is idle. A canceled turn does not drain; steer and queue stay mutually exclusive.
 func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, error) {
 	prompt := strings.TrimSpace(req.Prompt)
 	if prompt == "" {
@@ -299,7 +308,15 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	}
 
 	flightCtx, flight := s.flights.begin(sessionID)
-	defer s.flights.end(sessionID, flight)
+	defer func() {
+		// end() cancels the flight context; capture stop/cancel before that.
+		canceled := flightCtx.Err() != nil
+		s.flights.end(sessionID, flight)
+		if canceled {
+			return
+		}
+		s.drainOneFollowUp(sessionID)
+	}()
 	flight.turnID = turn.ID
 
 	usedLLM := false
@@ -326,7 +343,7 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 		}
 	}
 
-	if err := s.save(view); err != nil {
+	if err := s.saveMergingFollowUpQueue(view); err != nil {
 		return nil, nil, err
 	}
 	view.StreamURL = sessionStreamURL(view.ID)
@@ -347,7 +364,7 @@ func (s *Service) emitSessionTurn(view *View, turn Turn, prompt string, extra ma
 	_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 }
 
-// Update applies a partial patch (title / providerKind / planId / permissionMode).
+// Update applies a partial patch (title / providerKind / planId / permissionMode / agentMode).
 func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
@@ -376,6 +393,17 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 		} else {
 			delete(view.Meta, "permissionMode")
 		}
+	}
+	if req.AgentMode != nil {
+		mode, err := normalizeAgentMode(*req.AgentMode)
+		if err != nil {
+			return nil, err
+		}
+		view.AgentMode = mode
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		view.Meta["agentMode"] = mode
 	}
 	if req.DisabledTools != nil {
 		cleaned := normalizeDisabledTools(*req.DisabledTools)
@@ -645,7 +673,24 @@ func decodeView(row store.AuditLog) (*View, error) {
 			view.DisabledTools = coerceStringSlice(raw)
 		}
 	}
+	hydrateAgentMode(&view)
 	return &view, nil
+}
+
+func hydrateAgentMode(view *View) {
+	if view == nil {
+		return
+	}
+	if view.AgentMode == "" && view.Meta != nil {
+		if raw, ok := view.Meta["agentMode"].(string); ok {
+			view.AgentMode = strings.TrimSpace(raw)
+		}
+	}
+	if mode, err := normalizeAgentMode(view.AgentMode); err == nil {
+		view.AgentMode = mode
+	} else {
+		view.AgentMode = AgentModeCoding
+	}
 }
 
 // sessionStreamURL returns the session-scoped SSE path (always, even for blank sessions).
@@ -764,6 +809,71 @@ func (s *Service) DisabledToolsForRun(runID string) []string {
 		}
 		if tools := view.effectiveDisabledTools(); len(tools) > 0 {
 			return tools
+		}
+	}
+	return nil
+}
+
+// AllowedToolsSessionForRun returns session-scoped tool allows for any session bound to runID.
+func (s *Service) AllowedToolsSessionForRun(runID string) []string {
+	runID = strings.TrimSpace(runID)
+	if s == nil || runID == "" {
+		return nil
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return nil
+	}
+	var out []string
+	seen := map[string]bool{}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil || view.Meta == nil {
+			continue
+		}
+		for _, tool := range coerceStringSlice(view.Meta[MetaAllowedToolsSession]) {
+			if tool == "" || seen[tool] {
+				continue
+			}
+			seen[tool] = true
+			out = append(out, tool)
+		}
+	}
+	return out
+}
+
+// AddAllowedToolSession appends tool to allowedToolsSession on sessions bound to runID.
+func (s *Service) AddAllowedToolSession(runID, tool string) error {
+	runID = strings.TrimSpace(runID)
+	tool = strings.TrimSpace(tool)
+	if s == nil || runID == "" || tool == "" {
+		return nil
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return err
+	}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil {
+			continue
+		}
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		list := coerceStringSlice(view.Meta[MetaAllowedToolsSession])
+		exists := false
+		for _, existing := range list {
+			if existing == tool {
+				exists = true
+				break
+			}
+		}
+		if !exists {
+			view.Meta[MetaAllowedToolsSession] = append(list, tool)
+			if err := s.save(view); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

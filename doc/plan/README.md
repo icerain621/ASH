@@ -30,6 +30,21 @@
 | [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |
 | [`deepseek-harness-ash-comparison.md`](deepseek-harness-ash-comparison.md) | DeepSeek Harness 与 ASH 能力比对（调研稿） | DSH 重大版本或 ASH Agentic 架构调整时 |
 | [`pi-ash-comparison.md`](pi-ash-comparison.md) | Pi 与 ASH 能力比对（调研稿） | Pi 重大版本或 ASH 集成/CLI 调整时 |
+| [`platform-quad-comparison.md`](platform-quad-comparison.md) | **四产品综合分析**（DSH·Pi·Codex·Hermes→ASH；v6 输入） | 外部平台大版本或 ASH v6 规格启动时 |
+| [`ash-feature-inventory.md`](ash-feature-inventory.md) | 原型对照：功能/接口状态 · 人时 · 交付波次 | 排期或吸收项评审时 |
+| [`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) | **W0 硬化** Sprint 板（EW01–EW05）✅ | 已完成 |
+| [`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) | **W1 v6.0 吸收** Sprint 板（EW11–EW18） | 开工勾选 |
+| [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) | **W2 v6.1 吸收** Sprint 板（EW21–EW25） | 开工勾选 |
+| [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) | **W3** Sprint 板（EW31–EW34） | ✅ |
+| [`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md) | **P15** MCP execute 走 Hooks | ✅ |
+| [`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md) | **P16** Trajectory 派生子 Run | ✅ |
+| [`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md) | Agent → MemoryLink 深链 | ✅ |
+| [`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md) | **P06** `/compact` 语义 | ✅ |
+| [`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md) | 顶栏「设置」聚合运维 | ✅ |
+| [`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md) | Composer Provider 健康位 | ✅ |
+| [`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md) | OpenAPI 去掉 legacy `/v1/*` | ✅ |
+| [`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md) | Hooks PostToolUse | ✅ |
+| [`../prototypes/agent-absorb/`](../prototypes/agent-absorb/README.md) | 吸收交互原型（Agent 薄壳 + **管控&评审** 工作台） | 对照吸收项或 IA 演进时 |
 | [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
 | [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |
 

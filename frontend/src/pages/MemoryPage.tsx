@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, Clock, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { KnowledgePanel } from "@/modules/knowledge/components/KnowledgePanel";
+import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import {
   createCandidate,
   getMemoryRecord,
@@ -17,11 +18,12 @@ import {
 import { getCurrentSpaceId } from "@/services/http/client";
 import { fmtTime, shortId } from "@/shared/utils/format";
 
-type MemoryPillarTab = "memory" | "knowledge";
+type MemoryPillarTab = "memory" | "knowledge" | "links";
 type MemoryPerspective = "layer" | "scenario" | "skill" | "tools" | "project";
 
 const PILLAR_TABS: { id: MemoryPillarTab; label: string }[] = [
   { id: "memory", label: "记忆体" },
+  { id: "links", label: "关联" },
   { id: "knowledge", label: "知识" },
 ];
 
@@ -36,11 +38,24 @@ const PERSPECTIVES: { id: MemoryPerspective; label: string }[] = [
 const LAYER_FILTERS = ["全部", "L0", "L1", "L2"] as const;
 
 const PERSPECTIVE_HINTS: Partial<Record<MemoryPerspective, string>> = {
-  scenario: "当前候选列表尚无场景字段，视角已切换；后续将按场景过滤。",
-  skill: "当前候选列表尚无 Skill 字段，视角已切换；后续将按 Skill 过滤。",
-  tools: "当前候选列表尚无 Tools 字段，视角已切换；后续将按 Tools 过滤。",
-  project: "当前候选列表尚无项目字段，视角已切换；后续将按项目过滤。",
+  scenario: "这些候选还没有 scenario: 标签；带 Run 新建时会从场景名回填。",
+  skill: "这些候选还没有 skill: 标签。",
+  tools: "这些候选还没有 tool: 标签。",
+  project: "这些候选还没有 scopeRepo。",
 };
+
+function tagValue(tags: string[] | undefined, prefix: string) {
+  const hit = (tags ?? []).find((tag) => tag.startsWith(prefix));
+  return hit ? hit.slice(prefix.length) : "";
+}
+
+function perspectiveKey(item: MemoryRecord, perspective: MemoryPerspective) {
+  if (perspective === "scenario") return tagValue(item.tags, "scenario:") || "未标注";
+  if (perspective === "skill") return tagValue(item.tags, "skill:") || "未标注";
+  if (perspective === "tools") return tagValue(item.tags, "tool:") || "未标注";
+  if (perspective === "project") return item.scopeRepo || "未标注";
+  return "";
+}
 
 function memoryStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -92,10 +107,21 @@ export function MemoryPage() {
   const [perspective, setPerspective] = useState<MemoryPerspective>("layer");
   const [layerFilter, setLayerFilter] = useState<(typeof LAYER_FILTERS)[number]>("全部");
   const [runId, setRunId] = useState("");
+  const [linkRunId, setLinkRunId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [governanceMsg, setGovernanceMsg] = useState("");
   const [ttlMsg, setTtlMsg] = useState("");
   const [queryText, setQueryText] = useState("doctor release");
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("tab") === "links") setPillarTab("links");
+    const rid = q.get("runId")?.trim();
+    if (rid) {
+      setLinkRunId(rid);
+      setRunId(rid);
+    }
+  }, []);
 
   const candidatesQuery = useQuery({
     queryKey: ["memory", "candidates", activeSpaceId],
@@ -168,6 +194,14 @@ export function MemoryPage() {
     };
     const formRunId = String(fd.get("runId") || "");
     if (formRunId) body.runId = formRunId;
+    const tags: string[] = [];
+    const scenario = String(fd.get("scenario") || "").trim();
+    const skill = String(fd.get("skill") || "").trim();
+    const tool = String(fd.get("tool") || "").trim();
+    if (scenario) tags.push(`scenario:${scenario}`);
+    if (skill) tags.push(`skill:${skill}`);
+    if (tool) tags.push(`tool:${tool}`);
+    if (tags.length) body.tags = tags;
     const ref = String(fd.get("evidenceRef") || "");
     if (layer !== "L0" && ref) {
       body.evidence = [{ kind: "file", ref }];
@@ -178,15 +212,26 @@ export function MemoryPage() {
   };
 
   const rawItems = candidatesQuery.data?.items ?? [];
+  const layerCounts = useMemo(() => {
+    const counts = { 全部: rawItems.length, L0: 0, L1: 0, L2: 0 };
+    for (const item of rawItems) {
+      if (item.layer === "L0" || item.layer === "L1" || item.layer === "L2") {
+        counts[item.layer] += 1;
+      }
+    }
+    return counts;
+  }, [rawItems]);
   const items = useMemo(() => {
     const scoped =
       perspective === "layer" && layerFilter !== "全部"
         ? rawItems.filter((m) => m.layer === layerFilter)
         : rawItems;
     if (perspective === "layer") return sortByLayer(scoped);
-    return scoped;
+    return [...scoped].sort((a, b) => perspectiveKey(a, perspective).localeCompare(perspectiveKey(b, perspective)));
   }, [perspective, layerFilter, rawItems]);
-  const perspectiveHint = PERSPECTIVE_HINTS[perspective];
+  const unlabeled =
+    perspective !== "layer" && items.every((item) => perspectiveKey(item, perspective) === "未标注");
+  const perspectiveHint = unlabeled ? PERSPECTIVE_HINTS[perspective] : undefined;
   const selected = detailQuery.data;
   const ttlQueue = ttlQueueQuery.data;
   const ttlReviewItems = ttlQueue?.reviewDue ?? [];
@@ -246,6 +291,27 @@ export function MemoryPage() {
 
       {pillarTab === "knowledge" ? (
         <KnowledgePanel embedded />
+      ) : pillarTab === "links" ? (
+        <div className="pane" data-testid="memory-links-pane">
+          <div className="pane-title">
+            <h2>MemoryLink</h2>
+          </div>
+          <p className="muted-line">按 Run 查看 Thread 关联的记忆；可从 Agent Chat「记忆」深链进入。</p>
+          <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
+            Run ID
+            <input
+              data-testid="memory-links-run"
+              value={linkRunId}
+              placeholder="run_…"
+              onChange={(e) => setLinkRunId(e.target.value)}
+            />
+          </label>
+          {linkRunId.trim() ? (
+            <MemoryLinkPanel runId={linkRunId.trim()} />
+          ) : (
+            <p className="muted-line">输入 Run ID 后加载 MemoryLink。</p>
+          )}
+        </div>
       ) : (
         <>
           <div
@@ -288,9 +354,13 @@ export function MemoryPage() {
                   type="button"
                   className={layerFilter === layer ? "btn mini primary" : "btn mini"}
                   aria-pressed={layerFilter === layer}
+                  data-testid={`memory-layer-${layer}`}
                   onClick={() => setLayerFilter(layer)}
                 >
                   {layer}
+                  <span className="muted" style={{ marginLeft: 4 }}>
+                    {layerCounts[layer]}
+                  </span>
                 </button>
               ))}
             </div>
@@ -307,6 +377,7 @@ export function MemoryPage() {
                   <tr>
                     <th>ID</th>
                     <th>层级</th>
+                    {perspective !== "layer" ? <th>分组</th> : null}
                     <th>标题</th>
                     <th>状态</th>
                     <th></th>
@@ -321,33 +392,46 @@ export function MemoryPage() {
                     >
                       <td title={m.id}>{shortId(m.id)}</td>
                       <td>{m.layer}</td>
+                      {perspective !== "layer" ? (
+                        <td data-testid="memory-perspective-group">{perspectiveKey(m, perspective)}</td>
+                      ) : null}
                       <td>{m.title}</td>
                       <td>{memoryStatusLabel(m.status)}</td>
                       <td>
-                        {m.status === "candidate" && (
-                          <div className="row-actions" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              className="btn small icon-only ok"
-                              aria-label="通过候选"
-                              onClick={() => reviewMut.mutate({ id: m.id, decision: "approve" })}
-                            >
-                              <Check size={14} strokeWidth={2} />
-                            </button>
-                            <button
-                              className="btn small icon-only err"
-                              aria-label="拒绝候选"
-                              onClick={() => reviewMut.mutate({ id: m.id, decision: "reject" })}
-                            >
-                              <X size={14} strokeWidth={2} />
-                            </button>
-                          </div>
-                        )}
+                        <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                          <a
+                            className="btn small"
+                            data-testid={`memory-thick-review-${m.id}`}
+                            href={`/ui/reviews?queue=memory&memoryId=${encodeURIComponent(m.id)}`}
+                            title="到管控台厚评审"
+                          >
+                            厚审
+                          </a>
+                          {m.status === "candidate" && (
+                            <>
+                              <button
+                                className="btn small icon-only ok"
+                                aria-label="通过候选"
+                                onClick={() => reviewMut.mutate({ id: m.id, decision: "approve" })}
+                              >
+                                <Check size={14} strokeWidth={2} />
+                              </button>
+                              <button
+                                className="btn small icon-only err"
+                                aria-label="拒绝候选"
+                                onClick={() => reviewMut.mutate({ id: m.id, decision: "reject" })}
+                              >
+                                <X size={14} strokeWidth={2} />
+                              </button>
+                            </>
+                          )}
+                        </div>
                       </td>
                     </tr>
                   ))}
                   {!items.length && (
                     <tr className="empty-row">
-                      <td colSpan={5}>暂无记忆候选。</td>
+                      <td colSpan={perspective === "layer" ? 5 : 6}>暂无记忆候选。</td>
                     </tr>
                   )}
                 </tbody>
@@ -414,6 +498,12 @@ export function MemoryPage() {
                 <label>
                   内容
                   <textarea name="body" rows={3} required defaultValue="合并前始终运行测试与 doctor。" />
+                </label>
+                <label>
+                  场景 / Skill / 工具 <span className="muted">(可选，用于视角分组)</span>
+                  <input name="scenario" placeholder="scenario，如 hotfix" />
+                  <input name="skill" placeholder="skill" />
+                  <input name="tool" placeholder="tool" />
                 </label>
                 <label>
                   证据引用 (L1+)

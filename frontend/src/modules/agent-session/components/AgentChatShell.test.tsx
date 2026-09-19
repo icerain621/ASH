@@ -51,6 +51,14 @@ vi.mock("@/services/sse/runStream", () => ({
     url || `/api/v1/agents/sessions/${id}/stream`,
 }));
 
+const getRunTree = vi.fn();
+const spawnSubRun = vi.fn();
+
+vi.mock("@/modules/runs/api/runs.api", () => ({
+  getRunTree: (...a: unknown[]) => getRunTree(...a),
+  spawnSubRun: (...a: unknown[]) => spawnSubRun(...a),
+}));
+
 vi.mock("@/modules/interactions/api/interactions.api", () => ({
   getInteractionByRun: vi.fn(async () => ({
     runId: "run_1",
@@ -85,6 +93,34 @@ function renderShell(props: Partial<ComponentProps<typeof AgentChatShell>> = {})
 describe("AgentChatShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getRunTree.mockResolvedValue({
+      rootRunId: "run_1",
+      tree: {
+        summary: {
+          runId: "run_1",
+          traceId: "tr",
+          scenario: { name: "hotfix", scenarioVersion: "1" },
+          policyProfile: "default",
+          status: "running",
+          startedAt: 1,
+        },
+        children: [
+          {
+            summary: {
+              runId: "run_child",
+              traceId: "tr",
+              scenario: { name: "hotfix", scenarioVersion: "1" },
+              policyProfile: "default",
+              status: "running",
+              startedAt: 2,
+              parentRunId: "run_1",
+              depth: 1,
+            },
+          },
+        ],
+      },
+    });
+    spawnSubRun.mockResolvedValue({ runId: "run_spawned", traceId: "tr2" });
     listAgentWorkspaces.mockResolvedValue({
       items: [
         {
@@ -244,8 +280,39 @@ describe("AgentChatShell", () => {
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
     fireEvent.click(screen.getByTestId("agent-chat-tab-trajectory"));
     expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    expect(await screen.findByTestId("subrun-lineage")).toHaveTextContent("run_child");
     fireEvent.click(screen.getByTestId("agent-chat-tab-chat"));
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
+  });
+
+  it("spawns a sub-run from Trajectory lineage", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    fireEvent.click(await screen.findByTestId("agent-chat-tab-trajectory"));
+    await waitFor(() => {
+      expect(screen.getByTestId("subrun-lineage")).toHaveTextContent("run_child");
+    });
+    const spawnBtn = screen.getByTestId("subrun-spawn");
+    expect(spawnBtn).not.toBeDisabled();
+    fireEvent.click(spawnBtn);
+    await waitFor(() => {
+      expect(spawnSubRun).toHaveBeenCalledWith(
+        "run_1",
+        expect.objectContaining({
+          scenario: { name: "hotfix", scenarioVersion: "1" },
+          reason: "chat-spawn",
+        }),
+      );
+    });
+    fireEvent.click(screen.getByTestId("subrun-focus-root"));
+    expect(screen.getByTestId("subrun-lineage-select-run_1")).toBeTruthy();
+  });
+
+  it("links session memory deep-link with runId", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    const link = await screen.findByTestId("agent-goto-session-memory");
+    await waitFor(() => {
+      expect(link).toHaveAttribute("href", "/ui/memory?tab=links&runId=run_1");
+    });
   });
 
   it("toggles details pane", async () => {

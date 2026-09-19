@@ -12,6 +12,8 @@ export type IntentPayload = {
   reason?: string;
   command?: string;
   args?: string;
+  scope?: "once" | "session";
+  tool?: string;
 };
 
 type Props = {
@@ -20,6 +22,10 @@ type Props = {
   /** Show Stop when run is generating / waiting. */
   canStop?: boolean;
   gateReason?: string;
+  /** Tool name from open gate (for allow_session). */
+  gateTool?: string;
+  /** Follow-up prompts already queued on the session (chip only; Stop does not clear them). */
+  queueItems?: string[];
   onIntent: (payload: IntentPayload) => void;
 };
 
@@ -32,6 +38,7 @@ function ensureSlash(name: string): string {
 function submitText(
   text: string,
   onIntent: (payload: IntentPayload) => void,
+  opts?: { steer?: boolean; queue?: boolean },
 ): boolean {
   const trimmed = text.trim();
   if (!trimmed) return false;
@@ -40,14 +47,27 @@ function submitText(
     const command = sp < 0 ? trimmed : trimmed.slice(0, sp);
     const args = sp < 0 ? "" : trimmed.slice(sp + 1).trim();
     onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
+  } else if (opts?.queue) {
+    onIntent({ action: "queue", prompt: trimmed });
   } else {
-    onIntent({ action: "prompt", prompt: trimmed });
+    onIntent({
+      action: opts?.steer ? "steer" : "prompt",
+      prompt: trimmed,
+    });
   }
   return true;
 }
 
 /** Thin composer: prompt input or gate takeover (DSH-aligned). */
-export function IntentBar({ mode, busy = false, canStop = false, gateReason, onIntent }: Props) {
+export function IntentBar({
+  mode,
+  busy = false,
+  canStop = false,
+  gateReason,
+  gateTool,
+  queueItems = [],
+  onIntent,
+}: Props) {
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -91,13 +111,22 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
 
   const sendCurrent = () => {
     if (busy) return;
-    if (submitText(prompt, onIntent)) {
+    if (submitText(prompt, onIntent, { steer: canStop })) {
+      setPrompt("");
+      setMenuOpen(false);
+    }
+  };
+
+  const queueCurrent = () => {
+    if (busy || !canStop) return;
+    if (submitText(prompt, onIntent, { queue: true })) {
       setPrompt("");
       setMenuOpen(false);
     }
   };
 
   if (mode === "gate") {
+    const tool = (gateTool || "").trim();
     return (
       <div className="agent-intent-bar" data-testid="agent-intent-bar" data-mode="gate">
         <p className="muted-line" data-testid="agent-intent-gate-reason">
@@ -108,10 +137,34 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             type="button"
             className="btn mini ok"
             disabled={busy}
-            data-testid="agent-intent-approve"
-            onClick={() => onIntent({ action: "approve", reason: "approved from IntentBar" })}
+            data-testid="agent-intent-allow-once"
+            onClick={() =>
+              onIntent({
+                action: "approve",
+                scope: "once",
+                tool: tool || undefined,
+                reason: "allow once from IntentBar",
+              })
+            }
           >
-            批准
+            允许一次
+          </button>
+          <button
+            type="button"
+            className="btn mini ok"
+            disabled={busy}
+            data-testid="agent-intent-allow-session"
+            title={tool ? `本会话允许 ${tool}` : "本会话允许此类工具"}
+            onClick={() =>
+              onIntent({
+                action: "approve",
+                scope: "session",
+                tool: tool || undefined,
+                reason: "allow session from IntentBar",
+              })
+            }
+          >
+            本会话允许此类
           </button>
           <button
             type="button"
@@ -126,19 +179,10 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
             type="button"
             className="btn mini"
             disabled={busy}
-            data-testid="agent-intent-stop"
-            onClick={() => onIntent({ action: "stop" })}
-          >
-            停止
-          </button>
-          <button
-            type="button"
-            className="btn mini"
-            disabled={busy}
             data-testid="agent-intent-cancel"
             onClick={() => onIntent({ action: "cancel" })}
           >
-            取消
+            取消 Run
           </button>
         </div>
       </div>
@@ -146,17 +190,39 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
   }
 
   return (
-    <div className="agent-intent-bar" data-testid="agent-intent-bar" data-mode="prompt">
+    <div
+      className="agent-intent-bar"
+      data-testid="agent-intent-bar"
+      data-mode="prompt"
+      data-steer={canStop ? "true" : "false"}
+      data-queue-count={queueItems.length}
+    >
       <div className="agent-intent-prompt-wrap">
+        {queueItems.length > 0 ? (
+          <p className="agent-intent-queue-chip muted-line" data-testid="agent-intent-queue-chip">
+            队列 {queueItems.length}
+            {queueItems[0] ? ` · ${queueItems[0].trim().slice(0, 24)}` : ""}
+            {" · 停止只结束当前"}
+          </p>
+        ) : null}
+        {canStop ? (
+          <p className="muted-line" data-testid="agent-intent-steer-hint">
+            运行中：发送将打断当前生成并以新提示续写（Steer）
+          </p>
+        ) : null}
         <label className="wide-field">
-          意图
+          {canStop ? "Steer" : "意图"}
           <textarea
             ref={textareaRef}
             rows={2}
             value={prompt}
             disabled={busy}
             data-testid="agent-intent-prompt"
-            placeholder="Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
+            placeholder={
+              canStop
+                ? "打断并续写 · Enter 续写 · Alt+Enter 排队 · Shift+Enter 换行"
+                : "Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
+            }
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);
@@ -188,6 +254,10 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
               }
               if (e.key === "Enter" && !e.shiftKey) {
                 e.preventDefault();
+                if (e.altKey && canStop) {
+                  queueCurrent();
+                  return;
+                }
                 sendCurrent();
               }
             }}
@@ -238,15 +308,28 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
           /
         </button>
         {canStop ? (
-          <button
-            type="button"
-            className="btn mini err"
-            disabled={busy}
-            data-testid="agent-intent-stop"
-            onClick={() => onIntent({ action: "stop" })}
-          >
-            停止
-          </button>
+          <>
+            <button
+              type="button"
+              className="btn mini err"
+              disabled={busy}
+              data-testid="agent-intent-stop"
+              title="只停止当前生成或 Run，不清空 follow-up 队列"
+              onClick={() => onIntent({ action: "stop" })}
+            >
+              停止
+            </button>
+            <button
+              type="button"
+              className="btn mini"
+              disabled={busy || !prompt.trim()}
+              data-testid="agent-intent-queue"
+              title="当前结束后再发送，不打断 Steer"
+              onClick={queueCurrent}
+            >
+              排队
+            </button>
+          </>
         ) : null}
         <button
           type="button"
@@ -255,7 +338,7 @@ export function IntentBar({ mode, busy = false, canStop = false, gateReason, onI
           data-testid="agent-intent-send"
           onClick={sendCurrent}
         >
-          发送
+          {canStop ? "续写" : "发送"}
         </button>
       </div>
     </div>

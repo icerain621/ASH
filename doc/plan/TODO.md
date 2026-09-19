@@ -1,16 +1,136 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-07  
+> 更新：2026-09-19  
 > **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
+
+## 已完成 · PostToolUse（EW111+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW111 | PostToolUse Run 接入 | `go test ./internal/hooks` | ✅ |
+| EW112 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md)
+
+## 已完成 · OpenAPI 卫生（EW101+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW101 | 去掉 legacy `/v1/*` | `make openapi-check` | ✅ |
+| EW102 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md)
+
+## 已完成 · 模型健康位（EW91+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW91 | ChatSeats Provider 健康 | ChatSeats test | ✅ |
+| EW92 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md)
+
+## 已完成 · 设置 IA（EW81+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW81 | 设置菜单分组 | AppLayout test | ✅ |
+| EW82 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md)
+
+## 已完成 · P06 Compact（EW71+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW71 | `/compact` | `go test ./internal/session` | ✅ |
+| EW72 | Details 摘要 + 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md)
+
+## 已完成 · MemoryLink 深链（EW61+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW61 | Agent → 记忆关联 | AgentChatShell + MemoryPage | ✅ |
+| EW62 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md)
+
+## 已完成 · P16 谱系台（EW51+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW51 | Trajectory 派生子 Run | AgentChatShell test | ✅ |
+| EW52 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md)
+
+## 已完成 · P15 闭环（EW41+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW41 | MCP execute 走 PreToolUse | `go test ./internal/api -run TestExecuteMCPToolHTTP` | ✅ |
+| EW42 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md)
+
+## 已完成 · W3 v6.2（EW31+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW31 | 子 Run 谱系 | Trajectory | ✅ |
+| EW32 | 时间线过滤 | ThreadTimeline | ✅ |
+| EW33 | Provider / Doctor | 探针 | ✅ |
+| EW34 | W3 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md)
+
+## 已完成 · W2 v6.1 吸收（EW21+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW21 | 会话线程 Fork | `go test ./internal/interaction` | ✅ |
+| EW22 | Compare 投影 | 管控台 | ✅ |
+| EW23 | Compact UX | Chat/Trajectory | ✅ |
+| EW24 | 记忆四视角字段 | 列表可分组 | ✅ |
+| EW25 | W2 签字 | openapi + CHANGELOG | ✅ |
+
+板：[`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md)
+
+## 已完成 · W1 v6.0 吸收（EW11+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW11 | Hooks 协议骨架 ash.hooks.v1 | `go test ./internal/hooks` | ✅ |
+| EW12 | PreToolUse 接入 Run | execute + 事件 | ✅ |
+| EW13 | Hooks 审计 + 薄投影 | Trajectory/FE | ✅ |
+| EW14 | ExecPolicy schema | 解析 + 合并 | ✅ |
+| EW15 | ExecPolicy → sandbox/Doctor | 地板不降级 | ✅ |
+| EW16 | Steer 意图 | session.steer | ✅ |
+| EW17 | Queue + Chat | meta queue | ✅ |
+| EW18 | W1 签字 | openapi + CHANGELOG | ✅ |
+
+板：[`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) · 计划：[`docs/superpowers/plans/2026-09-19-w1-v60-absorb.md`](../../docs/superpowers/plans/2026-09-19-w1-v60-absorb.md)
+
+## 已完成 · W0 硬化（EW）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW01–EW05 | OpenAPI · 席位 · 空态 · 审批预设 · MCP execute | 见 W0 板 | ✅ |
+
+板：[`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md)
+
+---
 
 ## 基线
 
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **60/60** · M3 11/11 · M4 **10/10** · M5 4/4 · TR3 **13/13** |
+| Doctor | ALL **62/62** · M3 11/11 · M4 **12/12** · M5 4/4 · TR3 **13/13** |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 

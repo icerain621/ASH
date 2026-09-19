@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/ash-repwiki/ash/internal/execpolicy"
 )
 
 // ErrPolicyDenied is returned when tool risk is incompatible with sandbox mode.
@@ -64,14 +66,52 @@ func ModeAtLeast(got, want string) bool {
 	return modeRank(got) >= modeRank(want)
 }
 
+// FloorFromExecPolicy maps ash.execpolicy.v1 capability floors to a sandbox mode floor.
+// Empty / unset policy → "" (no contribution; never lowers existing isolation).
+// Axes are merged by taking the max mode rank (V6-D3 / EW15).
+func FloorFromExecPolicy(p execpolicy.Policy) string {
+	best := ""
+	raise := func(m string) {
+		m = normalizeMode(m)
+		if m == "" {
+			return
+		}
+		if modeRank(m) > modeRank(best) {
+			best = m
+		}
+	}
+	switch strings.ToLower(strings.TrimSpace(p.FS.Mode)) {
+	case execpolicy.FSNone:
+		raise(ModeIsolated)
+	case execpolicy.FSReadOnly:
+		raise(ModeReadOnly)
+	case execpolicy.FSWorkspaceWrite:
+		raise(ModeWorkspaceWrite)
+		// unrestricted / empty: no FS floor (must not lower isolation)
+	}
+	switch strings.ToLower(strings.TrimSpace(p.Network.Egress)) {
+	case execpolicy.NetworkDeny, execpolicy.NetworkAsk:
+		// Align with MinModeForRisk("network") → isolated.
+		raise(ModeIsolated)
+	}
+	switch strings.ToLower(strings.TrimSpace(p.Process.Exec)) {
+	case execpolicy.ProcessDeny:
+		raise(ModeIsolated)
+	case execpolicy.ProcessAsk:
+		raise(ModeWorkspaceWrite)
+	}
+	return best
+}
+
 // ResolveSandboxMode picks effective mode as max of profile, risk floor, and optional override.
 // Override can only raise the floor (DX2); it cannot lower below risk requirements.
 func ResolveSandboxMode(toolRisk, profileDefault, override string) string {
-	return ResolveSandboxModeExt(toolRisk, profileDefault, override, "", "")
+	return ResolveSandboxModeExt(toolRisk, profileDefault, override, "", "", "")
 }
 
-// ResolveSandboxModeExt merges scenario minMode and policyProfile force into the floor.
-func ResolveSandboxModeExt(toolRisk, profileDefault, override, scenarioMin, policyProfile string) string {
+// ResolveSandboxModeExt merges scenario minMode, policyProfile force, and optional
+// ExecPolicy sandbox floor (execFloor) into the effective mode. Floors only rise.
+func ResolveSandboxModeExt(toolRisk, profileDefault, override, scenarioMin, policyProfile, execFloor string) string {
 	best := profileDefault
 	if strings.TrimSpace(best) == "" {
 		best = ModeOff
@@ -90,6 +130,7 @@ func ResolveSandboxModeExt(toolRisk, profileDefault, override, scenarioMin, poli
 	if ForceIsolatedPolicy(policyProfile) {
 		raise(ModeIsolated)
 	}
+	raise(execFloor)
 	raise(override)
 	return normalizeMode(best)
 }
