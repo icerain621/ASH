@@ -62,6 +62,16 @@ export type SpacePolicyResponse = {
   };
 };
 
+export type SpaceQuotaStatus = {
+  spaceId: string;
+  limits: { maxConcurrentRuns: number; tokenBudgetProxy: number };
+  usage: { activeConcurrentRuns: number; tokenBudgetProxyUsed: number };
+};
+
+export function getSpaceQuotas(spaceId: string) {
+  return api<SpaceQuotaStatus>(`/spaces/${encodeURIComponent(spaceId)}/quotas`);
+}
+
 export function getSpacePolicy(spaceId: string) {
   return api<SpacePolicyResponse>(`/spaces/${encodeURIComponent(spaceId)}/policy`);
 }

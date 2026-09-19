@@ -1,21 +1,21 @@
-# Sprint DX68 — 配额只读投影
+# Sprint DX68 — 配额只读投影 / Quota projection
 
-> **前置：** DX67  
-> **状态：** ⬜  
-> **设计：** [`../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md`](../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md)
+> **前置 / Pref：** DX67  
+> **状态 / Status：** ✅  
+> **设计 / Design：** [`../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md`](../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md)
 
-## 任务板
+## 任务板 / Board
 
-| ID | 任务 | 状态 |
-|----|------|------|
-| DX68-1 | `GET /api/v1/spaces/{id}/quotas`（limit + usage） | ⬜ |
-| DX68-2 | OpenAPI | ⬜ |
-| DX68-3 | Space/控制台只读投影 | ⬜ |
-| DX68-4 | 签字测 | ⬜ |
+| ID | 任务 / Task | 状态 |
+|----|-------------|------|
+| DX68-1 | `GET /api/v1/spaces/{id}/quotas` | ✅ |
+| DX68-2 | OpenAPI 契约 · contract | ✅ |
+| DX68-3 | Space 登记面板只读投影 · console card | ✅ |
+| DX68-4 | 签字测 · tests | ✅ |
 
-## 验收
+## 验收 / Verify
 
 ```bash
-make openapi-check
-# FE: Space 页可见配额卡片（未配置显示「不限」）
+go test ./internal/api/ ./internal/spacepolicy/ -count=1 -run 'Quota|BuildQuota'
+# FE: Space registry panel shows 配额 summary
 ```

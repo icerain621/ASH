@@ -4,6 +4,7 @@ import {
   createAgentAsset,
   createMemoryAsset,
   getSpacePolicy,
+  getSpaceQuotas,
   listAgentAssets,
   listMemoryAssets,
   patchAgentAssetStatus,
@@ -34,6 +35,10 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
   const policyQuery = useQuery({
     queryKey: ["space-policy", spaceId],
     queryFn: () => getSpacePolicy(spaceId),
+  });
+  const quotasQuery = useQuery({
+    queryKey: ["space-quotas", spaceId],
+    queryFn: () => getSpaceQuotas(spaceId),
   });
 
   useEffect(() => {
@@ -69,11 +74,23 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
     onSuccess: () => {
       setBodyError("");
       qc.invalidateQueries({ queryKey: ["space-policy", spaceId] });
+      qc.invalidateQueries({ queryKey: ["space-quotas", spaceId] });
     },
     onError: (e: Error) => setBodyError(e.message),
   });
 
   const eff = policyQuery.data?.effective;
+  const quotas = quotasQuery.data;
+  const concurrentLabel =
+    quotas && quotas.limits.maxConcurrentRuns > 0
+      ? `${quotas.usage.activeConcurrentRuns} / ${quotas.limits.maxConcurrentRuns}`
+      : quotas
+        ? `${quotas.usage.activeConcurrentRuns} / 不限`
+        : "…";
+  const tokenLabel =
+    quotas && quotas.limits.tokenBudgetProxy > 0
+      ? `${quotas.usage.tokenBudgetProxyUsed} / ${quotas.limits.tokenBudgetProxy}`
+      : "不限";
 
   const saveBodyJson = () => {
     try {
@@ -99,6 +116,10 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
           <div>来源：{(eff.sources ?? []).join(" → ")}</div>
         </div>
       ) : null}
+
+      <div className="muted-line" data-testid="space-quotas-summary" style={{ marginBottom: 8 }}>
+        配额：并发 Run {concurrentLabel} · token 代理 {tokenLabel}
+      </div>
 
       <div className="row-actions" style={{ marginBottom: 8 }}>
         <button type="button" className="btn mini" onClick={() => createAgent.mutate()} data-testid="registry-create-agent">

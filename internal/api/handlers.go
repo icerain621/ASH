@@ -362,6 +362,7 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/spaces/:spaceId/evaluation", h.getSpaceEvaluation)
 		v1.GET("/spaces/:spaceId/policy", h.getSpacePolicy)
 		v1.PUT("/spaces/:spaceId/policy", h.putSpacePolicy)
+		v1.GET("/spaces/:spaceId/quotas", h.getSpaceQuotas)
 		v1.GET("/scores/rubrics", h.getScoreRubrics)
 		v1.POST("/scores/:scoreEventId/appeal", h.createScoreAppeal)
 		v1.GET("/audit/logs", h.listAuditLogs)

@@ -27,14 +27,24 @@ func (s *Service) enforceSpaceQuotas(spaceID string) error {
 	if q.MaxConcurrentRuns <= 0 {
 		return nil
 	}
-	var n int64
-	if err := s.gdb().Model(&store.RunRecord{}).
-		Where("space_id = ? AND status IN ?", spaceID, []string{StatusRunning, StatusWaitingApproval}).
-		Count(&n).Error; err != nil {
-		return fmt.Errorf("count active runs: %w", err)
+	n, err := s.CountActiveRuns(spaceID)
+	if err != nil {
+		return err
 	}
 	if int(n) >= q.MaxConcurrentRuns {
 		return fmt.Errorf("%w: concurrent runs %d >= maxConcurrentRuns %d", ErrSpaceQuotaExceeded, n, q.MaxConcurrentRuns)
 	}
 	return nil
+}
+
+// CountActiveRuns returns runs in space with status running or waiting_approval (DX68 usage).
+func (s *Service) CountActiveRuns(spaceID string) (int64, error) {
+	spaceID = firstNonEmpty(spaceID, "local")
+	var n int64
+	if err := s.gdb().Model(&store.RunRecord{}).
+		Where("space_id = ? AND status IN ?", spaceID, []string{StatusRunning, StatusWaitingApproval}).
+		Count(&n).Error; err != nil {
+		return 0, err
+	}
+	return n, nil
 }

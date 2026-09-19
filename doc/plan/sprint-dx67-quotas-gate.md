@@ -7,8 +7,8 @@
 ## 任务板 / Board
 
 | ID | 任务 / Task | 状态 |
-|----|------|------|
-| DX67-1 | `quotas` 解析/校验 | ✅ |
+|----|-------------|------|
+| DX67-1 | `quotas` 解析/校验 · parse/validate | ✅ |
 | DX67-2 | StricterQuotas helper | ✅ |
 | DX67-3 | Create/Spawn + `SPACE_QUOTA_EXCEEDED` (409) | ✅ |
 | DX67-4 | 单测 / tests | ✅ |

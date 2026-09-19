@@ -1583,6 +1583,24 @@ components:
         dataQuality:
           type: array
           items: { $ref: "#/components/schemas/DataQualityNote" }
+    SpaceQuotaStatus:
+      type: object
+      description: |
+        Space quota limits and usage (DX68). Zero limit fields mean unlimited.
+        空间配额上限与占用（DX68）；limit 为 0 表示不限。
+      required: [spaceId, limits, usage]
+      properties:
+        spaceId: { type: string }
+        limits:
+          type: object
+          properties:
+            maxConcurrentRuns: { type: integer, minimum: 0 }
+            tokenBudgetProxy: { type: integer, minimum: 0 }
+        usage:
+          type: object
+          properties:
+            activeConcurrentRuns: { type: integer, minimum: 0 }
+            tokenBudgetProxyUsed: { type: integer, minimum: 0 }
     MetricsOverviewResponse:
       type: object
       description: KPI dashboard overview for a space/project window.
@@ -7334,6 +7352,36 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SpaceEvaluationResponse" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+
+  /api/v1/spaces/{spaceId}/quotas:
+    get:
+      tags: [Spaces]
+      summary: Space quota limits and usage
+      description: |
+        DX68 · bodyJson.quotas 上限与活跃并发占用。limit 为 0 表示不限。
+        DX68 · bodyJson.quotas limits plus active concurrent-run usage. Zero limit means unlimited.
+        tokenBudgetProxyUsed stays 0 until token accounting ships.
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceQuotaStatus" }
         "400":
           description: bad request
           content:

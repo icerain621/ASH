@@ -3144,6 +3144,29 @@ definitions:
       reviewSlaHours:
         type: integer
     type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.QuotaStatus:
+    properties:
+      limits:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.Quotas'
+      spaceId:
+        type: string
+      usage:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.QuotaUsage'
+    type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.QuotaUsage:
+    properties:
+      activeConcurrentRuns:
+        type: integer
+      tokenBudgetProxyUsed:
+        type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_spacepolicy.Quotas:
+    properties:
+      maxConcurrentRuns:
+        type: integer
+      tokenBudgetProxy:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_spacerules.Defaults:
     properties:
       inputs:
@@ -10866,6 +10889,38 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.spacePolicyResponse'
       summary: Upsert space policy pack
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/quotas:
+    get:
+      description: 'DX68: bodyJson.quotas limits plus active concurrent run count.
+        Zero limit = unlimited. Token proxy usage is 0 until accounting ships.'
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.QuotaStatus'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Space quota limits and usage
       tags:
       - spaces
   /api/v1/spaces/{spaceId}/resource-scopes:

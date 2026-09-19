@@ -93,6 +93,11 @@ vi.mock("@/modules/registry/api/registry.api", () => ({
       sources: ["kind:team"],
     },
   }),
+  getSpaceQuotas: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    limits: { maxConcurrentRuns: 0, tokenBudgetProxy: 0 },
+    usage: { activeConcurrentRuns: 0, tokenBudgetProxyUsed: 0 },
+  }),
   putSpacePolicy: vi.fn(),
   createAgentAsset: vi.fn(),
   createMemoryAsset: vi.fn(),
@@ -169,6 +174,7 @@ describe("SpacePage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("registry-assets-panel")).toBeInTheDocument();
       expect(screen.getByText("管控登记 / 策略")).toBeInTheDocument();
+      expect(screen.getByTestId("space-quotas-summary")).toHaveTextContent("配额");
       expect(screen.getByTestId("effective-policy-summary")).toHaveTextContent("生效策略");
       expect(screen.getByTestId("effective-policy-summary")).toHaveTextContent("引用=required");
       expect(screen.getByTestId("agent-assets-list")).toBeInTheDocument();

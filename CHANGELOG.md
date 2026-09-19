@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX68：`GET /api/v1/spaces/{id}/quotas` 配额上限与并发占用投影；Space 登记面板只读卡片。 / DX68: quotas projection API + console card.
 - Sprint DX67：`SpacePolicy.bodyJson.quotas`（`maxConcurrentRuns` / `tokenBudgetProxy`）；Create/Spawn 超限返回 `SPACE_QUOTA_EXCEEDED`（409）。
 - Sprint 草案：v4.1 企业 Agentic（DX67–DX72）范围与设计 spec；配额 / 审计薄报表 / spawn 策略占位，无新表。
 - Cursor 规则：生产文档须中英双语（`.cursor/rules/docs-bilingual.mdc`）。

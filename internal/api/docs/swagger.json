@@ -8196,6 +8196,53 @@
                 }
             }
         },
+        "/api/v1/spaces/{spaceId}/quotas": {
+            "get": {
+                "description": "DX68: bodyJson.quotas limits plus active concurrent run count. Zero limit = unlimited. Token proxy usage is 0 until accounting ships.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Space quota limits and usage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.QuotaStatus"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/spaces/{spaceId}/resource-scopes": {
             "get": {
                 "produces": [
@@ -13809,6 +13856,42 @@
                     "type": "boolean"
                 },
                 "reviewSlaHours": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacepolicy.QuotaStatus": {
+            "type": "object",
+            "properties": {
+                "limits": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.Quotas"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "usage": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.QuotaUsage"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacepolicy.QuotaUsage": {
+            "type": "object",
+            "properties": {
+                "activeConcurrentRuns": {
+                    "type": "integer"
+                },
+                "tokenBudgetProxyUsed": {
+                    "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_spacepolicy.Quotas": {
+            "type": "object",
+            "properties": {
+                "maxConcurrentRuns": {
+                    "type": "integer"
+                },
+                "tokenBudgetProxy": {
                     "type": "integer"
                 }
             }
