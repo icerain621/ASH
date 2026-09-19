@@ -4,8 +4,10 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -128,6 +130,11 @@ func TestInstallFromCatalogHTTP(t *testing.T) {
 		_, _ = w.Write(zipBytes)
 	}))
 	defer srv.Close()
+	host, err := url.Parse(srv.URL)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv(envCatalogHosts, host.Hostname())
 
 	repo := t.TempDir()
 	cat := Catalog{
@@ -183,5 +190,36 @@ func TestListCatalogBadJSONKeepsMarkers(t *testing.T) {
 	}
 	if out.OK || out.Marketplace != MarketplacePrivate || out.Billing != BillingNone {
 		t.Fatalf("%+v want private/none", out)
+	}
+}
+
+func TestFetchCatalogBytesRejectsRemoteWhenHostsUnset(t *testing.T) {
+	t.Setenv(envCatalogHosts, "")
+	_, err := fetchCatalogBytes("https://example.com/pack.zip", "")
+	if err == nil || !strings.Contains(err.Error(), "ASH_SKILL_CATALOG_HOSTS") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestFetchCatalogBytesRejectsUnlistedHost(t *testing.T) {
+	t.Setenv(envCatalogHosts, "packs.example")
+	_, err := fetchCatalogBytes("https://evil.example/pack.zip", "")
+	if err == nil || !strings.Contains(err.Error(), "evil.example") {
+		t.Fatalf("err=%v", err)
+	}
+}
+
+func TestFetchCatalogBytesLocalWhenHostsUnset(t *testing.T) {
+	t.Setenv(envCatalogHosts, "")
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "pack.zip"), []byte("local"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	got, err := fetchCatalogBytes("pack.zip", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != "local" {
+		t.Fatalf("%q", got)
 	}
 }

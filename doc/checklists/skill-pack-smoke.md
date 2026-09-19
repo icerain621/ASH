@@ -21,6 +21,7 @@ make skill-pack-smoke
 | `ASH_SKILL_PACK_SPACES` | 允许安装的 spaceId；空/`*`=任意 |
 | `ASH_SKILL_CATALOG_PATH` | 组织 catalog 本地 JSON（覆盖默认 `.ash/skill-catalog.json`） |
 | `ASH_SKILL_CATALOG_URL` | 组织 catalog HTTPS（优先于 PATH） |
+| `ASH_SKILL_CATALOG_HOSTS` | HTTP(S) 主机白名单；未配置则拒绝远程 URL。 / Host allowlist; unset refuses remote URLs. |
 
 ## 相关
 

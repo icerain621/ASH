@@ -21,6 +21,7 @@ const (
 	DefaultCatalogRelPath = ".ash/skill-catalog.json"
 	envCatalogURL         = "ASH_SKILL_CATALOG_URL"
 	envCatalogPath        = "ASH_SKILL_CATALOG_PATH"
+	envCatalogHosts       = "ASH_SKILL_CATALOG_HOSTS"
 	catalogFetchTimeout   = 30 * time.Second
 	catalogFetchMaxBytes  = 8 << 20
 )
@@ -268,7 +269,18 @@ func fetchCatalogBytes(rawURL, baseDir string) ([]byte, error) {
 	}
 	lower := strings.ToLower(rawURL)
 	if strings.HasPrefix(lower, "http://") || strings.HasPrefix(lower, "https://") {
-		client := &http.Client{Timeout: catalogFetchTimeout}
+		if err := catalogRemoteAllowed(rawURL); err != nil {
+			return nil, err
+		}
+		client := &http.Client{
+			Timeout: catalogFetchTimeout,
+			CheckRedirect: func(req *http.Request, via []*http.Request) error {
+				if len(via) >= 5 {
+					return fmt.Errorf("too many redirects")
+				}
+				return catalogRemoteAllowed(req.URL.String())
+			},
+		}
 		resp, err := client.Get(rawURL)
 		if err != nil {
 			return nil, err
@@ -295,6 +307,24 @@ func fetchCatalogBytes(rawURL, baseDir string) ([]byte, error) {
 		path = filepath.Join(baseDir, path)
 	}
 	return os.ReadFile(filepath.Clean(path))
+}
+
+func catalogRemoteAllowed(rawURL string) error {
+	u, err := url.Parse(rawURL)
+	if err != nil || u.Hostname() == "" {
+		return fmt.Errorf("invalid remote url")
+	}
+	list := strings.TrimSpace(os.Getenv(envCatalogHosts))
+	if list == "" {
+		return fmt.Errorf("remote url refused: ASH_SKILL_CATALOG_HOSTS unset")
+	}
+	host := u.Hostname()
+	for _, item := range strings.Split(list, ",") {
+		if strings.EqualFold(strings.TrimSpace(item), host) {
+			return nil
+		}
+	}
+	return fmt.Errorf("host %q not in ASH_SKILL_CATALOG_HOSTS", host)
 }
 
 func runtimeIsWindows() bool {
