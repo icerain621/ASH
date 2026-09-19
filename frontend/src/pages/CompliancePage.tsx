@@ -4,7 +4,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Download, EyeOff, Play, ScanSearch, ShieldCheck } from "lucide-react";
 import { useState } from "react";
 import { DoctorReportView } from "@/components/DoctorReportView";
-import { exportComplianceBundle, scanSecrets } from "@/modules/compliance/api/compliance.api";
+import { exportComplianceBundle, getSpaceAuditReport, scanSecrets } from "@/modules/compliance/api/compliance.api";
 import { getDoctorReport, runDoctor, type DoctorReport } from "@/modules/doctor/api/doctor.api";
 import { listRuns } from "@/modules/runs/api/runs.api";
 import {
@@ -96,6 +96,7 @@ export function CompliancePage() {
   const [reportId, setReportId] = useState<string | null>(null);
   const [exportMsg, setExportMsg] = useState("");
   const [exportSuite, setExportSuite] = useState<"TR2" | "TR3" | "ALL">("TR2");
+  const [auditWindow, setAuditWindow] = useState<"24h" | "7d" | "30d">("7d");
 
   const meQuery = useQuery({ queryKey: ["auth-me", activeSpaceId], queryFn: getAuthMe });
   const scopesQuery = useQuery({
@@ -120,6 +121,10 @@ export function CompliancePage() {
   const scanQuery = useQuery({
     queryKey: ["compliance", "secret-scan", activeSpaceId],
     queryFn: () => scanSecrets(200),
+  });
+  const auditReportQuery = useQuery({
+    queryKey: ["audit-report", activeSpaceId, auditWindow],
+    queryFn: () => getSpaceAuditReport(activeSpaceId, auditWindow),
   });
   const matrixQuery = useQuery({
     queryKey: ["permissions-matrix", activeSpaceId],
@@ -249,6 +254,39 @@ export function CompliancePage() {
         </div>
       </div>
       {exportMsg && <p className="muted-line">{exportMsg}</p>}
+
+      <div className="pane" data-testid="audit-report-card" style={{ marginBottom: 16 }}>
+        <div className="pane-title">
+          <h2>审计薄报表</h2>
+          <label className="scenario-picker">
+            窗口
+            <select
+              data-testid="audit-report-window"
+              value={auditWindow}
+              onChange={(e) => setAuditWindow(e.target.value as "24h" | "7d" | "30d")}
+            >
+              <option value="24h">24h</option>
+              <option value="7d">7d</option>
+              <option value="30d">30d</option>
+            </select>
+          </label>
+        </div>
+        {auditReportQuery.isError ? (
+          <p className="error-text" data-testid="audit-report-error">
+            报表加载失败
+          </p>
+        ) : !auditReportQuery.data || auditReportQuery.data.total === 0 ? (
+          <p className="muted-line" data-testid="audit-report-empty">
+            该窗口内无审计事件。
+          </p>
+        ) : (
+          <p className="muted-line" data-testid="audit-report-counts">
+            合计 {auditReportQuery.data.total} · 批准 {auditReportQuery.data.buckets.approve} · 拒绝{" "}
+            {auditReportQuery.data.buckets.deny} · Hook {auditReportQuery.data.buckets.hook} · Spawn{" "}
+            {auditReportQuery.data.buckets.spawn}
+          </p>
+        )}
+      </div>
 
       <div className="pane-title subhead">
         <h2>M3 多租户 / Postgres</h2>

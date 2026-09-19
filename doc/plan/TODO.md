@@ -227,7 +227,7 @@
 | DX67 | 配额 schema + 门禁（v4.1 草案） | `bodyJson.quotas`；Create/Spawn fail-closed | ✅ |
 | DX68 | 配额投影（v4.1 草案） | `GET …/quotas` + 控制台 | ✅ |
 | DX69 | 审计薄报表 API（v4.1 草案） | 扫 audit；无新表 | ✅ |
-| DX70 | 审计报表 UI（v4.1 草案） | Compliance/Space 卡片 | ⬜ |
+| DX70 | 审计报表 UI（v4.1 草案） | Compliance/Space 卡片 | ✅ |
 | DX71 | spawn 策略（v4.1 草案） | `bodyJson.subRun` + 可见字段 | ⬜ |
 | DX72 | v4.1 冻结 + 签字 | `v4.1-release-scope`；`make v4.1-signoff`；tag 人工 | ⬜ |
 | 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.1-release-scope.md`](v4.1-release-scope.md)（草案） · [`../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md`](../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md) | — |

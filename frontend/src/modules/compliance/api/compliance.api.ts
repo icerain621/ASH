@@ -29,3 +29,15 @@ export function exportComplianceBundle(body: { suite?: string; reportId?: string
     },
   );
 }
+
+export type AuditReport = {
+  spaceId: string;
+  window: string;
+  total: number;
+  buckets: { approve: number; deny: number; hook: number; spawn: number; other: number };
+};
+
+export function getSpaceAuditReport(spaceId: string, window = "7d") {
+  const q = new URLSearchParams({ window });
+  return api<AuditReport>(`/spaces/${encodeURIComponent(spaceId)}/audit-report?${q}`);
+}

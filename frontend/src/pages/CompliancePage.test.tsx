@@ -1,6 +1,7 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { CompliancePage } from "./CompliancePage";
+import { getSpaceAuditReport } from "@/modules/compliance/api/compliance.api";
 import { renderPage } from "@/test/renderPage";
 
 vi.mock("@tanstack/react-router", () => ({
@@ -14,6 +15,12 @@ vi.mock("@tanstack/react-router", () => ({
 vi.mock("@/modules/compliance/api/compliance.api", () => ({
   scanSecrets: vi.fn().mockResolvedValue({ findings: [], leakCount: 0 }),
   exportComplianceBundle: vi.fn(),
+  getSpaceAuditReport: vi.fn().mockResolvedValue({
+    spaceId: "local",
+    window: "7d",
+    total: 0,
+    buckets: { approve: 0, deny: 0, hook: 0, spawn: 0, other: 0 },
+  }),
 }));
 
 vi.mock("@/modules/doctor/api/doctor.api", () => ({
@@ -60,5 +67,30 @@ describe("CompliancePage", () => {
       expect(screen.getByRole("button", { name: "运行 TR2" })).toBeInTheDocument();
       expect(screen.getByText("M3-01")).toBeInTheDocument();
     });
+    expect(screen.getByTestId("audit-report-empty")).toHaveTextContent("无审计事件");
+  });
+
+  it("switches audit report window and shows bucket counts", async () => {
+    vi.mocked(getSpaceAuditReport).mockImplementation(async (_space, window) => {
+      if (window === "24h") {
+        return {
+          spaceId: "local",
+          window: "24h",
+          total: 3,
+          buckets: { approve: 1, deny: 1, hook: 1, spawn: 0, other: 0 },
+        };
+      }
+      return {
+        spaceId: "local",
+        window: "7d",
+        total: 0,
+        buckets: { approve: 0, deny: 0, hook: 0, spawn: 0, other: 0 },
+      };
+    });
+    renderPage(<CompliancePage />);
+    expect(await screen.findByTestId("audit-report-empty")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("audit-report-window"), { target: { value: "24h" } });
+    expect(await screen.findByTestId("audit-report-counts")).toHaveTextContent("合计 3");
+    expect(getSpaceAuditReport).toHaveBeenCalledWith("local", "24h");
   });
 });
