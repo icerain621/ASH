@@ -201,10 +201,10 @@ func TestListAndProvisionOrgTemplates(t *testing.T) {
 		t.Fatalf("provision status=%d body=%s", provResp.Code, provResp.Body.String())
 	}
 	var result struct {
-		TemplateID string         `json:"templateId"`
-		Org        store.Org      `json:"org"`
-		Spaces     []store.Space  `json:"spaces"`
-		Roles      []store.Role   `json:"roles"`
+		TemplateID string        `json:"templateId"`
+		Org        store.Org     `json:"org"`
+		Spaces     []store.Space `json:"spaces"`
+		Roles      []store.Role  `json:"roles"`
 	}
 	if err := json.Unmarshal(provResp.Body.Bytes(), &result); err != nil {
 		t.Fatal(err)
@@ -609,6 +609,67 @@ func TestExecuteMCPToolHTTP(t *testing.T) {
 		r.ServeHTTP(w, req)
 		if w.Code != http.StatusOK {
 			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+	})
+
+	t.Run("hook_deny_blocks_low", func(t *testing.T) {
+		body := `{"hooks":{"version":"ash.hooks.v1","rules":[{"event":"PreToolUse","tool":"demo.low","action":"deny","reason":"nope"}]}}`
+		if err := db.Model(&store.SpacePolicyPack{}).Where("space_id = ?", "local").Update("body_json", body).Error; err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var errBody struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &errBody); err != nil {
+			t.Fatal(err)
+		}
+		if errBody.Error.Code != "MCP_TOOL_HOOK_DENIED" {
+			t.Fatalf("code=%q", errBody.Error.Code)
+		}
+	})
+
+	t.Run("hook_ask_low_needs_token", func(t *testing.T) {
+		body := `{"hooks":{"version":"ash.hooks.v1","rules":[{"event":"PreToolUse","tool":"demo.low","action":"ask"}]}}`
+		if err := db.Model(&store.SpacePolicyPack{}).Where("space_id = ?", "local").Update("body_json", body).Error; err != nil {
+			t.Fatal(err)
+		}
+		w := httptest.NewRecorder()
+		req := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute",
+			bytes.NewReader([]byte(`{"arguments":{}}`)))
+		req.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w, req)
+		if w.Code != http.StatusConflict {
+			t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+		}
+		var challenge struct {
+			Error struct {
+				Code string `json:"code"`
+			} `json:"error"`
+			ApprovalToken string `json:"approvalToken"`
+		}
+		if err := json.Unmarshal(w.Body.Bytes(), &challenge); err != nil {
+			t.Fatal(err)
+		}
+		if challenge.Error.Code != "MCP_TOOL_APPROVAL_REQUIRED" || challenge.ApprovalToken == "" {
+			t.Fatalf("challenge=%s", w.Body.String())
+		}
+		payload, _ := json.Marshal(map[string]any{"arguments": map[string]any{}, "approvalToken": challenge.ApprovalToken})
+		w2 := httptest.NewRecorder()
+		req2 := httptest.NewRequest(http.MethodPost, "/api/v1/mcp/tools/"+low.ID+"/execute", bytes.NewReader(payload))
+		req2.Header.Set("Content-Type", "application/json")
+		r.ServeHTTP(w2, req2)
+		if w2.Code != http.StatusOK {
+			t.Fatalf("status=%d body=%s", w2.Code, w2.Body.String())
 		}
 	})
 }

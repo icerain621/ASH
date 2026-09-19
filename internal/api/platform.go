@@ -19,6 +19,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/evolve"
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
@@ -428,7 +429,28 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_DISABLED", "mcp tool is disabled"))
 		return
 	}
+	hookDec := h.mcpPreToolUse(c, &row)
+	if hookDec.Action == hooks.ActionDeny {
+		msg := hookDec.Reason
+		if msg == "" {
+			msg = "PreToolUse hook denied mcp tool"
+		}
+		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
+			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": "hook_deny",
+			"hookReason": msg,
+		})).Error
+		c.JSON(http.StatusConflict, errorBody("MCP_TOOL_HOOK_DENIED", msg))
+		return
+	}
 	gateReason, gateOK := h.mcpExecuteGateAllows(c, &row, req.SessionID, req.ApprovalToken)
+	if hookDec.Action == hooks.ActionAsk && gateOK && gateReason == "risk_low" {
+		if h.consumeMCPApprovalToken(req.ApprovalToken, row.ID, row.SpaceID) {
+			gateReason = "hook_ask_token"
+		} else {
+			gateOK = false
+			gateReason = "hook_ask"
+		}
+	}
 	if !gateOK {
 		_ = h.dbFor(c).Create(auditRow(row.SpaceID, currentActor(c), "mcp.tool_execute_denied", map[string]any{
 			"toolId": row.ID, "name": row.Name, "risk": row.Risk, "reason": gateReason,
@@ -460,6 +482,19 @@ func (h *Handler) executeMCPTool(c *gin.Context) {
 		return
 	}
 	c.JSON(http.StatusOK, res)
+}
+
+func (h *Handler) mcpPreToolUse(c *gin.Context, row *store.MCPTool) hooks.Decision {
+	if row == nil {
+		return hooks.Decision{Action: hooks.ActionDeny, Reason: "missing tool", RuleIndex: -1}
+	}
+	cfg, err := hooks.ConfigFromSpaceBodyJSON(h.spacePolicyBody(c, row.SpaceID))
+	if err != nil {
+		return hooks.Decision{Action: hooks.ActionDeny, Reason: "hooks config load failed", RuleIndex: -1}
+	}
+	return hooks.Evaluate(cfg, hooks.EventPreToolUse, hooks.ToolContext{
+		Tool: row.Name, Risk: row.Risk, SpaceID: row.SpaceID,
+	})
 }
 
 func (h *Handler) mcpExecuteGateAllows(c *gin.Context, row *store.MCPTool, sessionID, approvalToken string) (reason string, ok bool) {
@@ -1025,8 +1060,8 @@ func (h *Handler) createSpace(c *gin.Context) {
 	now := time.Now().UTC()
 	space := store.Space{
 		ID: "space_" + uuid.NewString(), OrgID: org.ID, Name: strings.TrimSpace(req.Name),
-		Slug: firstNonEmptyAPI(req.Slug, slugify(req.Name)),
-		Kind: orgtemplates.NormalizeSpaceKind(req.Kind),
+		Slug:      firstNonEmptyAPI(req.Slug, slugify(req.Name)),
+		Kind:      orgtemplates.NormalizeSpaceKind(req.Kind),
 		CreatedAt: now, UpdatedAt: now,
 	}
 	if space.Name == "" {

@@ -111,7 +111,7 @@
 | Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 部分交付 | 160 | P0 | EW11–EW13 MVP |
 | ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 部分交付 | 120 | P0 | EW14–EW15 MVP |
 | 子代理谱系 | 图 / 中断 / 回主（P16） | `runs/…/sub-runs` · threads | 待开发 | 64 | P1 | FE 未接 `spawnSubRun` |
-| MCP 执行 | 工具真实执行收尾（P15） | `mcp/tools*` + ToolBus | 待开发 | 48 | P0 | 规格仍 open |
+| MCP 执行 | 工具真实执行收尾（P15） | `mcp/tools*` + ToolBus | 有 | — | — | PreToolUse deny/ask 与 Run 同源 |
 | Harness / Improve | 配置演进 | `harness/*` · `improve/*` | 有 | — | — | Automation 内嵌 |
 
 **管控待投入小计：~640 人时**（条目加总约 792，波次并行与复用折减后）
@@ -165,6 +165,8 @@
    → 任务板 [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) · **✅**（EW21–EW25）  
 4. **W3（~1 月 · 1 人）**：子代理谱系台 · Trajectory 过滤器工作台 · Provider/Doctor 探针  
    → 任务板 [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) · **✅**（EW31–EW34）  
+5. **P15 闭环**：MCP HTTP execute 走同一 PreToolUse（deny 不可用 token 绕过）  
+   → 任务板 [`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md) · **✅**（EW41–EW42）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -180,3 +182,4 @@
 | 2026-09-19 | W1 ✅（EW18 签字）：Hooks / ExecPolicy / Steer-Queue MVP 已落地；上表三行 待开发→部分交付 |
 | 2026-09-19 | W2 开工：EW21 会话线程 Fork |
 | 2026-09-19 | W3 ✅（EW31–EW34）：谱系、时间线过滤、Doctor `M4-MDL-01` |
+| 2026-09-19 | P15 ✅（EW41–EW42）：MCP execute 走 PreToolUse |

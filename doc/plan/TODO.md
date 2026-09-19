@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · P15 闭环（EW41+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW41 | MCP execute 走 PreToolUse | `go test ./internal/api -run TestExecuteMCPToolHTTP` | ✅ |
+| EW42 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md)
+
 ## 已完成 · W3 v6.2（EW31+）
 
 | # | 项 | 验收 | 状态 |
