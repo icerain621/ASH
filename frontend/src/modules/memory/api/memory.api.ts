@@ -28,6 +28,8 @@ export type MemoryRecord = {
   title: string;
   body?: string;
   status: string;
+  scopeRepo?: string;
+  tags?: string[];
   dedupeKey?: string;
   edges?: MemoryEdge[];
   evidence?: { id: string; kind: string; ref: string }[];

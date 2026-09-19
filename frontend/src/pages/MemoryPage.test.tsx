@@ -2,6 +2,7 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryPage } from "./MemoryPage";
+import { listCandidates } from "@/modules/memory/api/memory.api";
 import { renderPage } from "@/test/renderPage";
 
 vi.mock("@/modules/memory/api/memory.api", () => ({
@@ -108,8 +109,29 @@ describe("MemoryPage", () => {
 
     fireEvent.click(screen.getByTestId("memory-perspective-skill"));
     expect(screen.getByTestId("memory-perspective-skill")).toHaveAttribute("aria-pressed", "true");
-    expect(screen.getByTestId("memory-perspective-hint")).toHaveTextContent(/Skill/);
+    expect(screen.getByTestId("memory-perspective-hint")).toHaveTextContent(/skill/);
     expect(screen.queryByTestId("memory-layer-filter")).not.toBeInTheDocument();
+  });
+
+  it("groups skill perspective when skill tags exist", async () => {
+    vi.mocked(listCandidates).mockResolvedValueOnce({
+      items: [
+        {
+          id: "mem_skill",
+          layer: "L1",
+          title: "skill tip",
+          status: "candidate",
+          tags: ["skill:doctor"],
+        },
+      ],
+      limit: 50,
+      offset: 0,
+      total: 1,
+    });
+    renderPage(<MemoryPage />);
+    fireEvent.click(screen.getByTestId("memory-perspective-skill"));
+    expect(await screen.findByTestId("memory-perspective-group")).toHaveTextContent("doctor");
+    expect(screen.queryByTestId("memory-perspective-hint")).not.toBeInTheDocument();
   });
 
   it("links 去评审 to /reviews", () => {

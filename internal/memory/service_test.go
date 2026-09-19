@@ -482,3 +482,37 @@ func TestQueryRanksByConfidenceAndFiltersFloor(t *testing.T) {
 		t.Fatalf("items=%+v want only high-confidence record", q.Items)
 	}
 }
+
+func TestCreateCandidateFillsScenarioFromRun(t *testing.T) {
+	svc, _, _ := newTestMemory(t)
+	now := time.Now().UTC()
+	if err := svc.gdb().Create(&store.RunRecord{
+		ID: "run_mem_fill", TraceID: "tr_fill", ScenarioName: "hotfix", ScenarioVersion: "1",
+		PolicyProfile: "default", Status: "running", SpaceID: "local", ActorRole: "maintainer",
+		RepoRoot: "repo/ash", StartedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	created, err := svc.CreateCandidate(CreateCandidateRequest{
+		Layer: "L0", Title: "from run", Body: "body", RunID: "run_mem_fill",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	rec, err := svc.Get(created.CandidateID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rec.ScopeRepo != "repo/ash" {
+		t.Fatalf("scopeRepo=%q", rec.ScopeRepo)
+	}
+	found := false
+	for _, tag := range rec.Tags {
+		if tag == "scenario:hotfix" {
+			found = true
+		}
+	}
+	if !found {
+		t.Fatalf("tags=%v", rec.Tags)
+	}
+}

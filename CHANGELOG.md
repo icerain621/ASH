@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW24–EW25（W2 v6.1 吸收）：记忆列表按 `scenario:` / `skill:` / `tool:` 标签和 `scopeRepo` 分组；带 Run 新建时回填场景名与空仓库。W2 板签字（无新 HTTP 路径）。
 - Sprint EW23（W2 v6.1 吸收）：`harness.compaction` 投影为 Chat/Trajectory 的 Compact 节点（`ui_only`）。
 - Sprint EW22（W2 v6.1 吸收）：评审管控台双 Thread 比对可选择同会话 fork，并从此线程 Fork。
 - Sprint EW21（W2 v6.1 吸收）：交互线程 `Fork` — `parentThreadId`、同 run 多次分支；`POST /api/v1/interactions/threads/{threadId}/fork`；SQL rev 39 去掉 `(run_id, kind)` 唯一以便多 fork。分支仍折同一 run 事件（独立事件流留给后续）。

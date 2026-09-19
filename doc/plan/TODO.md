@@ -5,15 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
-## 现行 · W2 v6.1 吸收（EW21+）
+## 已完成 · W2 v6.1 吸收（EW21+）
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
 | EW21 | 会话线程 Fork | `go test ./internal/interaction` | ✅ |
 | EW22 | Compare 投影 | 管控台 | ✅ |
 | EW23 | Compact UX | Chat/Trajectory | ✅ |
-| EW24 | 记忆四视角字段 | 列表可分组 | ⬜ |
-| EW25 | W2 签字 | openapi + CHANGELOG | ⬜ |
+| EW24 | 记忆四视角字段 | 列表可分组 | ✅ |
+| EW25 | W2 签字 | openapi + CHANGELOG | ✅ |
 
 板：[`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md)
 

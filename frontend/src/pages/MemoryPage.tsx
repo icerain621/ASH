@@ -36,11 +36,24 @@ const PERSPECTIVES: { id: MemoryPerspective; label: string }[] = [
 const LAYER_FILTERS = ["全部", "L0", "L1", "L2"] as const;
 
 const PERSPECTIVE_HINTS: Partial<Record<MemoryPerspective, string>> = {
-  scenario: "当前候选列表尚无场景字段，视角已切换；后续将按场景过滤。",
-  skill: "当前候选列表尚无 Skill 字段，视角已切换；后续将按 Skill 过滤。",
-  tools: "当前候选列表尚无 Tools 字段，视角已切换；后续将按 Tools 过滤。",
-  project: "当前候选列表尚无项目字段，视角已切换；后续将按项目过滤。",
+  scenario: "这些候选还没有 scenario: 标签；带 Run 新建时会从场景名回填。",
+  skill: "这些候选还没有 skill: 标签。",
+  tools: "这些候选还没有 tool: 标签。",
+  project: "这些候选还没有 scopeRepo。",
 };
+
+function tagValue(tags: string[] | undefined, prefix: string) {
+  const hit = (tags ?? []).find((tag) => tag.startsWith(prefix));
+  return hit ? hit.slice(prefix.length) : "";
+}
+
+function perspectiveKey(item: MemoryRecord, perspective: MemoryPerspective) {
+  if (perspective === "scenario") return tagValue(item.tags, "scenario:") || "未标注";
+  if (perspective === "skill") return tagValue(item.tags, "skill:") || "未标注";
+  if (perspective === "tools") return tagValue(item.tags, "tool:") || "未标注";
+  if (perspective === "project") return item.scopeRepo || "未标注";
+  return "";
+}
 
 function memoryStatusLabel(status: string) {
   const labels: Record<string, string> = {
@@ -168,6 +181,14 @@ export function MemoryPage() {
     };
     const formRunId = String(fd.get("runId") || "");
     if (formRunId) body.runId = formRunId;
+    const tags: string[] = [];
+    const scenario = String(fd.get("scenario") || "").trim();
+    const skill = String(fd.get("skill") || "").trim();
+    const tool = String(fd.get("tool") || "").trim();
+    if (scenario) tags.push(`scenario:${scenario}`);
+    if (skill) tags.push(`skill:${skill}`);
+    if (tool) tags.push(`tool:${tool}`);
+    if (tags.length) body.tags = tags;
     const ref = String(fd.get("evidenceRef") || "");
     if (layer !== "L0" && ref) {
       body.evidence = [{ kind: "file", ref }];
@@ -184,9 +205,11 @@ export function MemoryPage() {
         ? rawItems.filter((m) => m.layer === layerFilter)
         : rawItems;
     if (perspective === "layer") return sortByLayer(scoped);
-    return scoped;
+    return [...scoped].sort((a, b) => perspectiveKey(a, perspective).localeCompare(perspectiveKey(b, perspective)));
   }, [perspective, layerFilter, rawItems]);
-  const perspectiveHint = PERSPECTIVE_HINTS[perspective];
+  const unlabeled =
+    perspective !== "layer" && items.every((item) => perspectiveKey(item, perspective) === "未标注");
+  const perspectiveHint = unlabeled ? PERSPECTIVE_HINTS[perspective] : undefined;
   const selected = detailQuery.data;
   const ttlQueue = ttlQueueQuery.data;
   const ttlReviewItems = ttlQueue?.reviewDue ?? [];
@@ -307,6 +330,7 @@ export function MemoryPage() {
                   <tr>
                     <th>ID</th>
                     <th>层级</th>
+                    {perspective !== "layer" ? <th>分组</th> : null}
                     <th>标题</th>
                     <th>状态</th>
                     <th></th>
@@ -321,6 +345,9 @@ export function MemoryPage() {
                     >
                       <td title={m.id}>{shortId(m.id)}</td>
                       <td>{m.layer}</td>
+                      {perspective !== "layer" ? (
+                        <td data-testid="memory-perspective-group">{perspectiveKey(m, perspective)}</td>
+                      ) : null}
                       <td>{m.title}</td>
                       <td>{memoryStatusLabel(m.status)}</td>
                       <td>
@@ -347,7 +374,7 @@ export function MemoryPage() {
                   ))}
                   {!items.length && (
                     <tr className="empty-row">
-                      <td colSpan={5}>暂无记忆候选。</td>
+                      <td colSpan={perspective === "layer" ? 5 : 6}>暂无记忆候选。</td>
                     </tr>
                   )}
                 </tbody>
@@ -414,6 +441,12 @@ export function MemoryPage() {
                 <label>
                   内容
                   <textarea name="body" rows={3} required defaultValue="合并前始终运行测试与 doctor。" />
+                </label>
+                <label>
+                  场景 / Skill / 工具 <span className="muted">(可选，用于视角分组)</span>
+                  <input name="scenario" placeholder="scenario，如 hotfix" />
+                  <input name="skill" placeholder="skill" />
+                  <input name="tool" placeholder="tool" />
                 </label>
                 <label>
                   证据引用 (L1+)

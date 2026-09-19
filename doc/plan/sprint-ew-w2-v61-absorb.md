@@ -9,8 +9,8 @@
 | **EW21** | 会话线程 Fork（parentThreadId） | 40 | — | ✅ |
 | **EW22** | Compare 投影到管控台 | 40 | EW21 | ✅ |
 | **EW23** | Compact 事件进 Chat/Trajectory | 48 | — | ✅ |
-| **EW24** | 记忆四视角字段回填 | 80 | — | ⬜ |
-| **EW25** | W2 签字 | 16 | EW22+EW23+EW24 | ⬜ |
+| **EW24** | 记忆四视角字段回填 | 80 | — | ✅ |
+| **EW25** | W2 签字 | 16 | EW22+EW23+EW24 | ✅ |
 
 ## EW21 — Fork
 
@@ -34,3 +34,14 @@
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
 | EW23-1 | `harness.compaction` → Chat/Trajectory 节点 | vitest | ✅ |
+
+## EW24 — 记忆视角
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW24-1 | 场景/Skill/Tools/项目分组 | 标签 + scopeRepo；无字段才提示 | ✅ |
+| EW24-2 | 带 Run 新建时回填 `scenario:` 与空的 scopeRepo | `TestCreateCandidateFillsScenarioFromRun` | ✅ |
+
+## EW25 — 签字
+
+无新 HTTP 路径。CHANGELOG 与本板勾选即完成。
