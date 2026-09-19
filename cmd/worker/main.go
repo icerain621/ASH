@@ -97,6 +97,9 @@ func main() {
 	h := api.NewHandler(db, loader)
 	h.Register(r, cfg.WebDir)
 
+	if err := pluginabi.ProductionPluginGRPCListen(cfg.AuthMode, cfg.PluginGRPCAddr); err != nil {
+		log.Fatalf("%v", err)
+	}
 	if cfg.PluginGRPCAddr != "" {
 		startPluginGRPC(cfg.PluginGRPCAddr, db)
 	}

@@ -230,7 +230,7 @@
 | DX70 | 审计报表 UI（v4.1 草案） | Compliance/Space 卡片 | ✅ |
 | DX71 | spawn 策略（v4.1 草案） | `bodyJson.subRun` + 可见字段 | ✅ |
 | DX72 | v4.1 冻结 + 签字 | `v4.1-release-scope`；`make v4.1-signoff`；tag 人工 | ✅ |
-| DX73 | 插件 gRPC 生产监听（v4.2 草案） | 非 dev 缺签名则拒绝启动 | ⬜ |
+| DX73 | 插件 gRPC 生产监听（v4.2 草案） | 非 dev 缺签名则拒绝启动 | ✅ |
 | DX74 | gRPC Register 签名（v4.2 草案） | 强制签名下拒绝无签名插件 | ⬜ |
 | DX75 | RAG Indexer proto（v4.2 草案） | `rag_indexer.proto`；无新表 | ⬜ |
 | DX76 | 进程内 Indexer（v4.2 草案） | 可选本机 gRPC；默认关闭 | ⬜ |
