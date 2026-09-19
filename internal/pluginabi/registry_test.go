@@ -13,6 +13,72 @@ import (
 	"google.golang.org/grpc/test/bufconn"
 )
 
+func TestRegistryServerRejectsUnsignedWhenSigningRequired(t *testing.T) {
+	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "dx74-key")
+	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "1")
+	db := store.OpenTest(t, t.TempDir())
+	client, cleanup := registryClient(t, db)
+	defer cleanup()
+
+	ctx := context.Background()
+	space := "space_dx74"
+	unsigned, err := client.Register(ctx, &ashv1.RegisterRequest{
+		Name:     "unsigned",
+		Version:  "1.0.0",
+		Protocol: "grpc",
+		Abi:      CurrentABI,
+		Endpoint: "127.0.0.1:7444",
+		Context:  &ashv1.TraceContext{SpaceId: space},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if unsigned.GetAccepted() || unsigned.GetCompatible() || unsigned.GetStatus().GetCode() != "PLUGIN_SIGNATURE_INVALID" {
+		t.Fatalf("unsigned=%+v want PLUGIN_SIGNATURE_INVALID", unsigned)
+	}
+	var n int64
+	if err := db.Model(&store.PluginRegistry{}).Where("space_id = ?", space).Count(&n).Error; err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("persisted %d rows want 0", n)
+	}
+
+	sig := SignHMAC("dx74-key", "signed", "1.0.0", "grpc", CurrentABI, "127.0.0.1:7444")
+	ok, err := client.Register(ctx, &ashv1.RegisterRequest{
+		Name:      "signed",
+		Version:   "1.0.0",
+		Protocol:  "grpc",
+		Abi:       CurrentABI,
+		Endpoint:  "127.0.0.1:7444",
+		Signature: sig,
+		Context:   &ashv1.TraceContext{SpaceId: space},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !ok.GetAccepted() || !ok.GetCompatible() {
+		t.Fatalf("signed=%+v want accepted", ok)
+	}
+
+	capSig := SignHMAC("dx74-key", "cap-signed", "1.0.0", "grpc", CurrentABI, "127.0.0.1:7445")
+	viaCap, err := client.Register(ctx, &ashv1.RegisterRequest{
+		Name:         "cap-signed",
+		Version:      "1.0.0",
+		Protocol:     "grpc",
+		Abi:          CurrentABI,
+		Endpoint:     "127.0.0.1:7445",
+		Capabilities: []string{CapabilitySignPrefix + capSig},
+		Context:      &ashv1.TraceContext{SpaceId: space},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !viaCap.GetAccepted() {
+		t.Fatalf("capability signature=%+v want accepted", viaCap)
+	}
+}
+
 func TestRegistryServerRegisterHeartbeatStatus(t *testing.T) {
 	t.Setenv("ASH_PLUGIN_SIGNING_KEY", "")
 	t.Setenv("ASH_PLUGIN_SIGNING_REQUIRED", "")

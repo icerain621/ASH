@@ -36,12 +36,10 @@ func (s *RegistryServer) Register(ctx context.Context, req *ashv1.RegisterReques
 		sig = SignatureFromCapabilities(req.GetCapabilities())
 	}
 	if err := VerifyRegistrationSignature(sig, req.GetName(), req.GetVersion(), protocol, abi, req.GetEndpoint()); err != nil {
-		compatible = false
-		if reason == "" {
-			reason = err.Error()
-		} else {
-			reason = reason + "; " + err.Error()
-		}
+		return &ashv1.RegisterResponse{
+			Accepted: false, Compatible: false,
+			Status: status("PLUGIN_SIGNATURE_INVALID", err.Error()),
+		}, nil
 	}
 	pluginID := strings.TrimSpace(req.GetId())
 	if pluginID == "" {
@@ -71,13 +69,9 @@ func (s *RegistryServer) Register(ctx context.Context, req *ashv1.RegisterReques
 		return nil, err
 	}
 	if !compatible {
-		code := "INCOMPATIBLE"
-		if strings.Contains(reason, "signature") || strings.Contains(reason, "SIGNING") {
-			code = "PLUGIN_SIGNATURE_INVALID"
-		}
 		return &ashv1.RegisterResponse{
 			Accepted: false, Compatible: false, PluginId: pluginID,
-			Status: status(code, reason),
+			Status: status("INCOMPATIBLE", reason),
 		}, nil
 	}
 	return &ashv1.RegisterResponse{
