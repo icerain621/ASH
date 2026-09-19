@@ -39,7 +39,7 @@
 | S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**；视角聚合待改进 |
 | S08 | 检索已批准记忆 / hit_used | 记忆 | queryMemory | **有** |
 | S09 | TTL 到期复核 | 记忆 | ttl-queue / sweep | **有** |
-| S10 | 会话 MemoryLink 三性 | 记忆 + 交互 | seal / replay / links | **有**；Agent 深链 UX 待改进 |
+| S10 | 会话 MemoryLink 三性 | 记忆 + 交互 | seal / replay / links | **有**（Agent 深链已接） |
 | S11 | 知识注入（RAG/Wiki/LSP） | 记忆·知识 | rag · wiki · lsp | **有** |
 | S12 | 策略包 / 资产启停 | 管控 + Space | SpacePolicy · registry assets · Workbench | **有**（v5） |
 | S13 | 多签评分 / 申诉 | 管控 | reviews · scores · appeal | **有** |
@@ -85,7 +85,7 @@
 | 记忆体 | 检索已批准 | `POST /memory/query` | 有 | — | — | |
 | 记忆体 | TTL 队列 / sweep | `memory/ttl-queue` · `ttl-sweep` | 有 | — | — | |
 | MemoryLink | 列表 / seal / replay | `interactions/…/memory-links` · seal · replay | 有 | — | — | |
-| MemoryLink | Agent → Link 深链 | 前端路由 | 待改进 | 16 | P2 | 原型已示意；Console 跳转可硬化 |
+| MemoryLink | Agent → Link 深链 | 前端路由 | 有 | — | — | Chat「记忆」→ `/memory?tab=links&runId=` |
 | 资产 | MemoryAsset 登记 / 启停 | `memory/assets*` | 有 | — | — | 厚启停在评审/Space |
 | 知识 | RAG profile / 重建索引 | `rag/profile` · `rag/symbols/rebuild` | 有 | — | — | |
 | 知识 | Wiki 投影 | `wiki/pages*` | 有 | — | — | `/knowledge` 深链存在、顶栏无独立柱 |
@@ -169,6 +169,8 @@
    → 任务板 [`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md) · **✅**（EW41–EW42）  
 6. **P16 谱系台**：Trajectory 派生子 Run + 回主聚焦  
    → 任务板 [`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md) · **✅**（EW51–EW52）  
+7. **MemoryLink 深链**：Agent Chat「记忆」→ 记忆页关联页签  
+   → 任务板 [`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md) · **✅**（EW61–EW62）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -186,3 +188,4 @@
 | 2026-09-19 | W3 ✅（EW31–EW34）：谱系、时间线过滤、Doctor `M4-MDL-01` |
 | 2026-09-19 | P15 ✅（EW41–EW42）：MCP execute 走 PreToolUse |
 | 2026-09-19 | P16 ✅（EW51–EW52）：Trajectory 派生子 Run |
+| 2026-09-19 | MemoryLink 深链 ✅（EW61–EW62） |

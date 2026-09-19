@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW61–EW62：Agent Chat「记忆」深链到 `/memory?tab=links&runId=`；记忆页新增「关联」页签渲染 MemoryLinkPanel。
 - Sprint EW51–EW52（P16）：Chat Trajectory 谱系区可 `spawnSubRun`（复用父 scenario）并「回主」聚焦 root；无新 HTTP 路径。
 - Sprint EW41–EW42（P15）：MCP HTTP execute 走 SpacePolicy PreToolUse。`deny` 返回 `MCP_TOOL_HOOK_DENIED`，一次性 approvalToken 不能绕过；`ask` 且风险为 low 时复用现有 approvalToken。无 hooks 时行为不变。
 - Sprint EW33–EW34（W3）：Doctor `M4-MDL-01` 探针模型 Provider 目录（未配置仍通过）；M4 **12/12**，ALL **62/62**。W3 板签字。

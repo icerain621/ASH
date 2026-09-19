@@ -565,6 +565,18 @@ export function AgentChatShell({
                 Trajectory
               </button>
             </div>
+            <a
+              className="btn mini"
+              data-testid="agent-goto-session-memory"
+              title="当前会话记忆 · MemoryLink"
+              href={
+                runId
+                  ? `/ui/memory?tab=links&runId=${encodeURIComponent(runId)}`
+                  : "/ui/memory?tab=links"
+              }
+            >
+              记忆
+            </a>
             <button
               type="button"
               className="btn mini"

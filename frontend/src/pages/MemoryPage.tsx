@@ -1,8 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 import { Check, Clock, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { KnowledgePanel } from "@/modules/knowledge/components/KnowledgePanel";
+import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import {
   createCandidate,
   getMemoryRecord,
@@ -17,11 +18,12 @@ import {
 import { getCurrentSpaceId } from "@/services/http/client";
 import { fmtTime, shortId } from "@/shared/utils/format";
 
-type MemoryPillarTab = "memory" | "knowledge";
+type MemoryPillarTab = "memory" | "knowledge" | "links";
 type MemoryPerspective = "layer" | "scenario" | "skill" | "tools" | "project";
 
 const PILLAR_TABS: { id: MemoryPillarTab; label: string }[] = [
   { id: "memory", label: "记忆体" },
+  { id: "links", label: "关联" },
   { id: "knowledge", label: "知识" },
 ];
 
@@ -105,10 +107,21 @@ export function MemoryPage() {
   const [perspective, setPerspective] = useState<MemoryPerspective>("layer");
   const [layerFilter, setLayerFilter] = useState<(typeof LAYER_FILTERS)[number]>("全部");
   const [runId, setRunId] = useState("");
+  const [linkRunId, setLinkRunId] = useState("");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [governanceMsg, setGovernanceMsg] = useState("");
   const [ttlMsg, setTtlMsg] = useState("");
   const [queryText, setQueryText] = useState("doctor release");
+
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    if (q.get("tab") === "links") setPillarTab("links");
+    const rid = q.get("runId")?.trim();
+    if (rid) {
+      setLinkRunId(rid);
+      setRunId(rid);
+    }
+  }, []);
 
   const candidatesQuery = useQuery({
     queryKey: ["memory", "candidates", activeSpaceId],
@@ -269,6 +282,27 @@ export function MemoryPage() {
 
       {pillarTab === "knowledge" ? (
         <KnowledgePanel embedded />
+      ) : pillarTab === "links" ? (
+        <div className="pane" data-testid="memory-links-pane">
+          <div className="pane-title">
+            <h2>MemoryLink</h2>
+          </div>
+          <p className="muted-line">按 Run 查看 Thread 关联的记忆；可从 Agent Chat「记忆」深链进入。</p>
+          <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
+            Run ID
+            <input
+              data-testid="memory-links-run"
+              value={linkRunId}
+              placeholder="run_…"
+              onChange={(e) => setLinkRunId(e.target.value)}
+            />
+          </label>
+          {linkRunId.trim() ? (
+            <MemoryLinkPanel runId={linkRunId.trim()} />
+          ) : (
+            <p className="muted-line">输入 Run ID 后加载 MemoryLink。</p>
+          )}
+        </div>
       ) : (
         <>
           <div

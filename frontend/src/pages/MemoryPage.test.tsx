@@ -74,6 +74,22 @@ vi.mock("@tanstack/react-router", () => ({
   ),
 }));
 
+vi.mock("@/modules/interactions/api/interactions.api", () => ({
+  getInteractionByRun: vi.fn(async () => ({
+    runId: "run_link",
+    thread: { id: "th_link", spaceId: "local", runId: "run_link", kind: "main", status: "open" },
+  })),
+  getInteractionThread: vi.fn(async () => ({
+    threadId: "th_link",
+    runId: "run_link",
+    spaceId: "local",
+    nodes: [],
+  })),
+  listInteractionMemoryLinks: vi.fn(async () => ({ threadId: "th_link", items: [] })),
+  sealInteractionThread: vi.fn(),
+  replayInteractionThread: vi.fn(),
+}));
+
 describe("MemoryPage", () => {
   it("renders memory console and TTL queue section", async () => {
     renderPage(<MemoryPage />);
@@ -139,5 +155,23 @@ describe("MemoryPage", () => {
     const link = screen.getByTestId("memory-goto-reviews");
     expect(link).toHaveTextContent("去评审");
     expect(link).toHaveAttribute("href", "/reviews");
+  });
+
+  it("opens MemoryLink tab from query params", async () => {
+    const prev = window.location.search;
+    window.history.replaceState({}, "", "/ui/memory?tab=links&runId=run_link");
+    renderPage(<MemoryPage />);
+    expect(screen.getByTestId("memory-tab-links")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("memory-links-run")).toHaveValue("run_link");
+    expect(await screen.findByTestId("memory-links-pane")).toBeInTheDocument();
+    window.history.replaceState({}, "", `/ui/memory${prev}`);
+  });
+
+  it("switches to 关联 tab manually", () => {
+    renderPage(<MemoryPage />);
+    fireEvent.click(screen.getByTestId("memory-tab-links"));
+    expect(screen.getByTestId("memory-tab-links")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("memory-links-pane")).toBeInTheDocument();
+    expect(screen.queryByTestId("memory-perspective")).not.toBeInTheDocument();
   });
 });

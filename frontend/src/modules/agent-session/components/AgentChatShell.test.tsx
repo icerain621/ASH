@@ -307,6 +307,14 @@ describe("AgentChatShell", () => {
     expect(screen.getByTestId("subrun-lineage-select-run_1")).toBeTruthy();
   });
 
+  it("links session memory deep-link with runId", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    const link = await screen.findByTestId("agent-goto-session-memory");
+    await waitFor(() => {
+      expect(link).toHaveAttribute("href", "/ui/memory?tab=links&runId=run_1");
+    });
+  });
+
   it("toggles details pane", async () => {
     renderShell({ selectedSessionId: "sess_a" });
     const details = await screen.findByTestId("agent-chat-details");
