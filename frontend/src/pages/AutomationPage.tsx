@@ -434,6 +434,9 @@ export function AutomationPage() {
               <h3 style={{ margin: 0, fontSize: "1rem" }}>组织 Catalog</h3>
               <span>{skillCatalogQuery.data?.items.length ?? 0} 项</span>
             </div>
+            <p className="muted-line" data-testid="catalog-private-marker">
+              私有 · 不计费
+            </p>
             {skillCatalogQuery.data?.source && (
               <p className="muted-line">
                 source: <code>{skillCatalogQuery.data.source}</code>

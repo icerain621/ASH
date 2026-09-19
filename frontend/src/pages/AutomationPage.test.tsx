@@ -111,6 +111,7 @@ describe("AutomationPage", () => {
       expect(screen.getByTestId("skills-catalog")).toBeInTheDocument();
       expect(screen.getAllByText("ash-test-discipline").length).toBeGreaterThan(0);
       expect(screen.getByTestId("skills-org-catalog")).toBeInTheDocument();
+      expect(screen.getByTestId("catalog-private-marker")).toHaveTextContent("私有 · 不计费");
       expect(screen.getByTestId("skills-pack-verify-btn")).toBeInTheDocument();
       expect(screen.getByText("已安装")).toBeInTheDocument();
     });

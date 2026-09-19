@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX81：组织 Catalog 面板标明「私有 · 不计费」，不新开市场页。 / DX81: catalog panels say private and no billing; no marketplace page.
 - Sprint DX80：HTTP(S) 包与目录只允许 `ASH_SKILL_CATALOG_HOSTS`；未配置则拒绝远程 URL，本地路径不变。 / DX80: remote catalog fetches require `ASH_SKILL_CATALOG_HOSTS`; local paths stay allowed.
 - Sprint DX79：`GET /skills/catalog` 固定 `marketplace=private`、`billing=none`。 / DX79: catalog list is marked private with no billing.
 - Sprint 草案：v4.3 生态薄切片（DX79–DX84）。私有技能目录标记与远程包源白名单；`multiRegion=disabled`。无计费、非 Active-Active。 / v4.3 draft: private catalog marker, host allowlist, multi-region disabled.

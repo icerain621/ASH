@@ -89,6 +89,7 @@ describe("SkillsCatalogPanel", () => {
     expect(await screen.findByTestId("agent-skills-panel")).toBeTruthy();
     expect(await screen.findByTestId("agent-skills-row-ash-test")).toBeTruthy();
     expect(screen.getByTestId("agent-skills-catalog-row-pack-demo")).toBeTruthy();
+    expect(screen.getByTestId("catalog-private-marker")).toHaveTextContent("私有 · 不计费");
     expect(screen.getByTestId("agent-skills-pack")).toBeTruthy();
   });
 
