@@ -34,7 +34,7 @@
 | S02 | 运行中打断 / 后续排队 | 管控 | Steer / Queue | **部分交付**（steer/queue 意图 + Chat 投影；W2+ 深化） |
 | S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | 门禁有；once/会话/空间预设 **待改进** |
 | S04 | 长会话压缩可回放 | 管控 | Compact / spill | **有**（`/compact` + Trajectory/Details） |
-| S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | interactions compare 有；产品化会话树 **待开发** |
+| S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | **有**（Fork/Compare；独立事件流待深化） |
 | S06 | 子代理协作 | 管控 + Runs | sub-run · 谱系 | **有**（Trajectory 派生 + 谱系列表） |
 | S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**；视角聚合待改进 |
 | S08 | 检索已批准记忆 / hit_used | 记忆 | queryMemory | **有** |
@@ -80,8 +80,8 @@
 |----|---------|----------|------|------|--------|------|
 | 记忆体 | 候选列表 / 薄通过拒绝 | `memory/candidates*` · `…/review` | 有 | — | — | MemoryPage |
 | 记忆体 | 新建候选 | `POST /memory/candidates` | 有 | — | — | |
-| 记忆体 | 分层 L0/L1/L2 浏览 | candidates + records | 待改进 | 32 | P1 | 有列表；原型分层树/治理边需强化 |
-| 记忆体 | 场景/Skill/Tools/项目视角 | query 扩展字段 | 待开发 | 80 | P1 | 原型明确「字段尚未全量回填」 |
+| 记忆体 | 分层 L0/L1/L2 浏览 | candidates + records | 有 | — | — | 分层滤镜 + 计数 |
+| 记忆体 | 场景/Skill/Tools/项目视角 | query 扩展字段 | 有 | — | — | EW24 标签/scopeRepo 分组 |
 | 记忆体 | 检索已批准 | `POST /memory/query` | 有 | — | — | |
 | 记忆体 | TTL 队列 / sweep | `memory/ttl-queue` · `ttl-sweep` | 有 | — | — | |
 | MemoryLink | 列表 / seal / replay | `interactions/…/memory-links` · seal · replay | 有 | — | — | |

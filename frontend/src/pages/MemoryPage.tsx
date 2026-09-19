@@ -212,6 +212,15 @@ export function MemoryPage() {
   };
 
   const rawItems = candidatesQuery.data?.items ?? [];
+  const layerCounts = useMemo(() => {
+    const counts = { 全部: rawItems.length, L0: 0, L1: 0, L2: 0 };
+    for (const item of rawItems) {
+      if (item.layer === "L0" || item.layer === "L1" || item.layer === "L2") {
+        counts[item.layer] += 1;
+      }
+    }
+    return counts;
+  }, [rawItems]);
   const items = useMemo(() => {
     const scoped =
       perspective === "layer" && layerFilter !== "全部"
@@ -345,9 +354,13 @@ export function MemoryPage() {
                   type="button"
                   className={layerFilter === layer ? "btn mini primary" : "btn mini"}
                   aria-pressed={layerFilter === layer}
+                  data-testid={`memory-layer-${layer}`}
                   onClick={() => setLayerFilter(layer)}
                 >
                   {layer}
+                  <span className="muted" style={{ marginLeft: 4 }}>
+                    {layerCounts[layer]}
+                  </span>
                 </button>
               ))}
             </div>

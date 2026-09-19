@@ -182,6 +182,14 @@ button.work-mode-btn:last-child {
   color: var(--muted);
 }
 
+.nav-dropdown-trigger-icon {
+  padding: 0.4rem 0.5rem;
+}
+
+.nav-dropdown-trigger-icon::after {
+  content: none;
+}
+
 .nav-dropdown-menu {
   position: absolute;
   right: 0;

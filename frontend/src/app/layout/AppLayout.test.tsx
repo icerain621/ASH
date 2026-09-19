@@ -49,7 +49,8 @@ describe("AppLayout three-pillar shell", () => {
     expect(screen.getByTestId("work-mode-review")).toHaveTextContent("评审管控");
 
     const settings = screen.getByTestId("nav-settings");
-    expect(within(settings).getByText("设置")).toBeInTheDocument();
+    expect(within(settings).getByLabelText("设置")).toBeInTheDocument();
+    expect(within(settings).queryByText("设置")).not.toBeInTheDocument();
     expect(within(settings).getByTestId("nav-settings-workspace-hdr")).toHaveTextContent(
       "账号与工作区",
     );

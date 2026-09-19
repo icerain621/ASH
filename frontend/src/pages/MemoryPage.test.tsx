@@ -129,6 +129,15 @@ describe("MemoryPage", () => {
     expect(screen.queryByTestId("memory-layer-filter")).not.toBeInTheDocument();
   });
 
+  it("shows L0/L1/L2 counts on layer filters", async () => {
+    renderPage(<MemoryPage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("memory-layer-全部")).toHaveTextContent("2");
+    });
+    expect(screen.getByTestId("memory-layer-L0")).toHaveTextContent("1");
+    expect(screen.getByTestId("memory-layer-L2")).toHaveTextContent("1");
+  });
+
   it("groups skill perspective when skill tags exist", async () => {
     vi.mocked(listCandidates).mockResolvedValueOnce({
       items: [

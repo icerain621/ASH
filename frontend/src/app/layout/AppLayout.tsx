@@ -1,5 +1,5 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
-import { RadioTower } from "lucide-react";
+import { RadioTower, Settings } from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { persistWorkMode, workModeFromPath } from "./workMode";
 
@@ -82,7 +82,13 @@ export function AppLayout() {
         </div>
         <div className="header-actions">
           <details className="nav-dropdown" data-testid="nav-settings">
-            <summary className="nav-dropdown-trigger">设置</summary>
+            <summary
+              className="nav-dropdown-trigger nav-dropdown-trigger-icon"
+              title="设置"
+              aria-label="设置"
+            >
+              <Settings size={16} strokeWidth={1.8} aria-hidden="true" />
+            </summary>
             <div className="nav-dropdown-menu" role="menu">
               <div className="nav-dropdown-meta" data-testid="nav-settings-workspace-hdr">
                 账号与工作区

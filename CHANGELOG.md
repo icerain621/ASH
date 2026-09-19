@@ -10,6 +10,11 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 - EW05 harden：MCP execute 移除客户端 `approve:true` 自证旁路；medium+ 仅 SpacePolicy preset / session allow-list / permissionMode，或回显服务端一次性 `approvalToken`（409 签发）。
 
+### Changed
+
+- 顶栏设置入口改为齿轮图标（无文字），保留 `aria-label` / `title`。
+- 记忆分层滤镜显示 L0/L1/L2 条数。
+
 ### Added
 
 - Sprint EW81–EW82：顶栏「更多」改为「设置」，工作区 + 运维分组，并挂上指标/可观测入口。
