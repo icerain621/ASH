@@ -88,8 +88,9 @@ var Catalog = map[string]Entry{
 	"REGISTRY_LIST_FAILED":      {Domain: "registry", Summary: "Failed to list registry assets"},
 	"REGISTRY_CREATE_FAILED":    {Domain: "registry", Summary: "Failed to create registry asset"},
 	"REGISTRY_PATCH_FAILED":     {Domain: "registry", Summary: "Failed to patch registry asset status"},
-	"SPACE_POLICY_FAILED":  {Domain: "spaces", Summary: "Failed to load or update space policy pack"},
-	"SPACE_QUOTA_EXCEEDED": {Domain: "spaces", Summary: "Space concurrent-run quota would be exceeded"},
+	"SPACE_POLICY_FAILED":       {Domain: "spaces", Summary: "Failed to load or update space policy pack"},
+	"SPACE_QUOTA_EXCEEDED":      {Domain: "spaces", Summary: "Space concurrent-run quota would be exceeded"},
+	"SPACE_QUOTA_STATUS_FAILED": {Domain: "spaces", Summary: "Failed to load space quota status"},
 
 	// rag
 	"RAG_INDEX_FAILED":           {Domain: "rag", Summary: "Repository index build failed"},
@@ -266,6 +267,8 @@ var Catalog = map[string]Entry{
 	"AUDIT_EXPORT_NOT_READY":           {Domain: "audit", Summary: "Audit export not ready for download"},
 	"AUDIT_EXPORT_ACCESS_FAILED":       {Domain: "audit", Summary: "Failed to build audit export access URL"},
 	"AUDIT_LOG_LIST_FAILED":            {Domain: "audit", Summary: "Failed to list audit logs"},
+	"AUDIT_REPORT_FAILED":              {Domain: "audit", Summary: "Failed to build space audit report"},
+	"INVALID_WINDOW":                   {Domain: "audit", Summary: "Audit report window is not 24h, 7d, or 30d"},
 	"AUDIT_POLICY_GET_FAILED":          {Domain: "audit", Summary: "Failed to load audit policy"},
 	"INVALID_AUDIT_POLICY":             {Domain: "audit", Summary: "Audit retention policy out of range"},
 	"AUDIT_POLICY_LOCKED":              {Domain: "audit", Summary: "Audit policy is locked"},

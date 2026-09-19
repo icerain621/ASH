@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX71：空间 `subRun` 覆盖 spawn 深度，工具取交集，响应露出预算。 / DX71: space subRun overrides spawn depth; tools intersect; budget on response.
+- Sprint DX72：v4.1 范围已冻结；`make v4.1-signoff` 不自动打 `v4.1.0` tag。 / DX72: v4.1 scope frozen; sign-off gate does not tag.
 - Sprint DX70：合规页展示审计薄报表（24h/7d/30d，空态与分桶计数）。 / DX70: compliance audit-report card.
 - Sprint DX69：`GET /api/v1/spaces/{id}/audit-report` 按窗口聚合现有 audit（approve/deny/hook/spawn）。无新表。 / DX69: windowed audit counts, no new table.
 - Sprint DX68：`GET /api/v1/spaces/{id}/quotas` 配额上限与并发占用投影；Space 登记面板只读卡片。 / DX68: quotas projection API + console card.
