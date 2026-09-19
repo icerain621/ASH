@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · 设置 IA（EW81+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW81 | 设置菜单分组 | AppLayout test | ✅ |
+| EW82 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md)
+
 ## 已完成 · P06 Compact（EW71+）
 
 | # | 项 | 验收 | 状态 |

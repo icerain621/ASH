@@ -3,7 +3,9 @@ import { RadioTower } from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
 import { persistWorkMode, workModeFromPath } from "./workMode";
 
-const moreLinks = [
+const workspaceLinks = [{ to: "/space", label: "空间设置", testId: "nav-settings-space" }] as const;
+
+const opsLinks = [
   { to: "/runs", label: "运行" },
   { to: "/automation", label: "自动化" },
   { to: "/feedback", label: "反馈" },
@@ -12,6 +14,8 @@ const moreLinks = [
   { to: "/compliance", label: "合规" },
   { to: "/scale", label: "规模化" },
   { to: "/doctor", label: "诊断" },
+  { to: "/metrics", label: "指标" },
+  { to: "/observability", label: "可观测" },
 ] as const;
 
 export function AppLayout() {
@@ -77,10 +81,27 @@ export function AppLayout() {
           </Link>
         </div>
         <div className="header-actions">
-          <details className="nav-dropdown" data-testid="nav-more">
-            <summary className="nav-dropdown-trigger">更多</summary>
+          <details className="nav-dropdown" data-testid="nav-settings">
+            <summary className="nav-dropdown-trigger">设置</summary>
             <div className="nav-dropdown-menu" role="menu">
-              {moreLinks.map((item) => (
+              <div className="nav-dropdown-meta" data-testid="nav-settings-workspace-hdr">
+                账号与工作区
+              </div>
+              {workspaceLinks.map((item) => (
+                <Link
+                  key={item.to}
+                  to={item.to}
+                  className="nav-dropdown-item"
+                  role="menuitem"
+                  data-testid={item.testId}
+                >
+                  {item.label}
+                </Link>
+              ))}
+              <div className="nav-dropdown-meta" data-testid="nav-settings-ops-hdr">
+                运维与合规
+              </div>
+              {opsLinks.map((item) => (
                 <Link key={item.to} to={item.to} className="nav-dropdown-item" role="menuitem">
                   {item.label}
                 </Link>

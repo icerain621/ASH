@@ -123,7 +123,7 @@
 | 认证 | login / me / sessions / device | `auth/*` | 有 | — | — | |
 | 空间 | orgs / spaces / members / scopes | `orgs*` · `spaces*` | 有 | — | — | |
 | 密钥 | secrets CRUD / rotate | `secrets*` | 有 | — | — | |
-| 设置 IA | 顶栏「设置」聚合运维入口 | — | 待改进 | 16 | P2 | 原型菜单；生产为「更多」分散 |
+| 设置 IA | 顶栏「设置」聚合运维入口 | — | 有 | — | — | EW81 分组菜单 |
 | 运行 | runs 全生命周期 | `runs*` | 有 | — | — | |
 | 自动化 | waker · skills · improve | `waker*` · skills · improve | 有 | — | — | |
 | CI / 反馈 | diagnoses · feedback | `ci*` · `feedback*` | 有 | — | — | |
@@ -173,6 +173,8 @@
    → 任务板 [`sprint-ew-w6-memorylink-deeplink.md`](sprint-ew-w6-memorylink-deeplink.md) · **✅**（EW61–EW62）  
 8. **P06 Compact**：`/compact` 压缩 transcript + Details 回放摘要  
    → 任务板 [`sprint-ew-w7-compact.md`](sprint-ew-w7-compact.md) · **✅**（EW71–EW72）  
+9. **设置 IA**：顶栏「设置」聚合运维入口  
+   → 任务板 [`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md) · **✅**（EW81–EW82）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -192,3 +194,4 @@
 | 2026-09-19 | P16 ✅（EW51–EW52）：Trajectory 派生子 Run |
 | 2026-09-19 | MemoryLink 深链 ✅（EW61–EW62） |
 | 2026-09-19 | P06 ✅（EW71–EW72）：`/compact` + Details 摘要 |
+| 2026-09-19 | 设置 IA ✅（EW81–EW82）；同步勾销已交付清单行 |

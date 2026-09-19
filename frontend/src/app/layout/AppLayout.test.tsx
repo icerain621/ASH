@@ -41,22 +41,30 @@ describe("AppLayout three-pillar shell", () => {
     routerState.pathname = "/quest";
   });
 
-  it("renders three pillar buttons and dropdowns", () => {
+  it("renders three pillar buttons and settings dropdown", () => {
     render(<AppLayout />);
 
     expect(screen.getByTestId("work-mode-agent")).toHaveTextContent("Agent");
     expect(screen.getByTestId("work-mode-memory")).toHaveTextContent("记忆");
     expect(screen.getByTestId("work-mode-review")).toHaveTextContent("评审管控");
 
-    const more = screen.getByTestId("nav-more");
-    expect(within(more).getByText("运行")).toBeInTheDocument();
-    expect(within(more).getByText("自动化")).toBeInTheDocument();
-    expect(within(more).getByText("反馈")).toBeInTheDocument();
-    expect(within(more).getByText("CI")).toBeInTheDocument();
-    expect(within(more).getByText("发布")).toBeInTheDocument();
-    expect(within(more).getByText("合规")).toBeInTheDocument();
-    expect(within(more).getByText("规模化")).toBeInTheDocument();
-    expect(within(more).getByText("诊断")).toBeInTheDocument();
+    const settings = screen.getByTestId("nav-settings");
+    expect(within(settings).getByText("设置")).toBeInTheDocument();
+    expect(within(settings).getByTestId("nav-settings-workspace-hdr")).toHaveTextContent(
+      "账号与工作区",
+    );
+    expect(within(settings).getByTestId("nav-settings-ops-hdr")).toHaveTextContent("运维与合规");
+    expect(within(settings).getByTestId("nav-settings-space")).toHaveTextContent("空间设置");
+    expect(within(settings).getByText("运行")).toBeInTheDocument();
+    expect(within(settings).getByText("自动化")).toBeInTheDocument();
+    expect(within(settings).getByText("反馈")).toBeInTheDocument();
+    expect(within(settings).getByText("CI")).toBeInTheDocument();
+    expect(within(settings).getByText("发布")).toBeInTheDocument();
+    expect(within(settings).getByText("合规")).toBeInTheDocument();
+    expect(within(settings).getByText("规模化")).toBeInTheDocument();
+    expect(within(settings).getByText("诊断")).toBeInTheDocument();
+    expect(within(settings).getByText("指标")).toBeInTheDocument();
+    expect(within(settings).getByText("可观测")).toBeInTheDocument();
 
     const account = screen.getByTestId("nav-account");
     expect(within(account).getByTestId("nav-account-space")).toHaveTextContent("local");
@@ -70,8 +78,8 @@ describe("AppLayout three-pillar shell", () => {
 
     const header = container.querySelector("header.header");
     expect(header).not.toBeNull();
-    const more = screen.getByTestId("nav-more");
-    expect(within(more).getByText("规模化")).toBeInTheDocument();
+    const settings = screen.getByTestId("nav-settings");
+    expect(within(settings).getByText("规模化")).toBeInTheDocument();
     expect(header!.querySelectorAll(":scope > nav.tabs .tab")).toHaveLength(0);
   });
 
