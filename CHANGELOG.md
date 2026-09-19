@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Changed
 
+- Sprint EW101–EW102：产品契约草稿删除无实现的 `/v1/spaces*`、`/v1/feedback` 及孤儿 Legacy schema；`openapi-check` 要求 legacy 计数为 0。
 - 顶栏设置入口改为齿轮图标（无文字），保留 `aria-label` / `title`。
 - 记忆分层滤镜显示 L0/L1/L2 条数。
 

@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · OpenAPI 卫生（EW101+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW101 | 去掉 legacy `/v1/*` | `make openapi-check` | ✅ |
+| EW102 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md)
+
 ## 已完成 · 模型健康位（EW91+）
 
 | # | 项 | 验收 | 状态 |

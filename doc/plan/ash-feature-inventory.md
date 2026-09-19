@@ -131,7 +131,7 @@
 | 规模 / 诊断 | scale · doctor | `scale/readiness` · `doctor/*` | 有 | — | — | |
 | 可观测 | alerts · trace · metrics | observability · metrics | 有 | — | — | Reviews 内嵌 |
 | LLM 实机 | `ASH_LLM_BASE_URL` | — | 待改进 | 8 | P1 | 环境依赖，非功能缺口 |
-| OpenAPI 漂移 | legacy `/v1/*` · 缺 `GET /spaces` 等 | openapi yaml | 待改进 | 16 | P2 | 文档卫生 |
+| OpenAPI 漂移 | legacy `/v1/*` · 缺 `GET /spaces` 等 | openapi yaml | 有 | — | — | EW01+EW101：契约仅 `/api/v1/*` |
 
 **平台待投入小计：~40 人时**
 
@@ -177,6 +177,8 @@
    → 任务板 [`sprint-ew-w8-settings-ia.md`](sprint-ew-w8-settings-ia.md) · **✅**（EW81–EW82）  
 10. **模型健康位**：Composer 投影 `model-router/providers`  
    → 任务板 [`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md) · **✅**（EW91–EW92）  
+11. **OpenAPI 卫生**：契约草稿去掉无 handler 的 `/v1/*`  
+   → 任务板 [`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md) · **✅**（EW101–EW102）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -198,3 +200,4 @@
 | 2026-09-19 | P06 ✅（EW71–EW72）：`/compact` + Details 摘要 |
 | 2026-09-19 | 设置 IA ✅（EW81–EW82）；同步勾销已交付清单行 |
 | 2026-09-19 | 模型健康位 ✅（EW91–EW92） |
+| 2026-09-19 | OpenAPI 卫生 ✅（EW101–EW102）：去掉 legacy `/v1/*` |

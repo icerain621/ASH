@@ -10,7 +10,6 @@ x-ash-contract:
   role: product-draft
   implementationSource: internal/api/docs/swagger.yaml
   enforcedPathPrefix: /api/v1/
-  legacyPlannedPathPrefix: /v1/
 servers:
   - url: https://api.ash.local
 tags:
@@ -3605,39 +3604,6 @@ components:
         contentType: { type: string }
         sizeBytes: { type: integer }
         expiresAt: { type: integer, format: int64 }
-    TaskDetailResponse:
-      type: object
-      description: M0 legacy task detail (planned /v1/tasks; not implemented).
-      properties:
-        taskId: { type: integer, format: int64 }
-        title: { type: string }
-        goal: { type: string }
-        projectId: { type: string }
-        mode: { type: string, enum: [assist, auto] }
-        status: { type: string }
-        createdAt: { type: string, format: date-time }
-    TaskCancelResponse:
-      type: object
-      description: M0 legacy task cancel ack.
-      properties:
-        status: { type: string, example: CANCELLED }
-    LegacyMemoryCreateResponse:
-      type: object
-      description: M0 legacy memory create ack (maps to /api/v1/memory/candidates in implementation).
-      properties:
-        memoryId: { type: string }
-    LegacySpaceCreateRequest:
-      type: object
-      required: [name]
-      properties:
-        name: { type: string, maxLength: 128 }
-        description: { type: string, maxLength: 512 }
-    LegacySpaceMemberRequest:
-      type: object
-      required: [userId, role]
-      properties:
-        userId: { type: integer, format: int64 }
-        role: { type: string, enum: [owner, developer, viewer] }
 security:
   - bearerAuth: []
 paths:
@@ -4306,59 +4272,6 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/InteractionCompareResult" }
-  /v1/spaces:
-    post:
-      tags: [Spaces]
-      summary: Create space
-      description: M0 legacy planned path. Use POST /api/v1/spaces in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/LegacySpaceCreateRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/SpaceItem" }
-  /v1/spaces/{spaceId}/members:
-    post:
-      tags: [Spaces]
-      summary: Add space member
-      description: M0 legacy planned path. Use POST /api/v1/spaces/{spaceId}/members in implementation.
-      parameters:
-        - in: path
-          name: spaceId
-          required: true
-          schema: { type: integer, format: int64 }
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/LegacySpaceMemberRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/MemberItem" }
-  /v1/feedback:
-    post:
-      tags: [Feedback]
-      summary: Submit feedback
-      description: M0 legacy planned path. Use POST /api/v1/feedback in implementation.
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: "#/components/schemas/SubmitFeedbackRequest" }
-      responses:
-        "200":
-          description: ok
-          content:
-            application/json:
-              schema: { $ref: "#/components/schemas/FeedbackItem" }
   /api/v1/metrics/prometheus:
     get:
       tags: [Metrics]

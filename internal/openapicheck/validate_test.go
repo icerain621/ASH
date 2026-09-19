@@ -16,8 +16,8 @@ func TestValidateContract(t *testing.T) {
 	if len(rep.GenericEnvelope) > 0 {
 		t.Fatalf("generic=%v", rep.GenericEnvelope)
 	}
-	if rep.LegacyPlanned < 1 {
-		t.Fatal("expected legacy /v1 planned paths")
+	if rep.LegacyPlanned != 0 {
+		t.Fatalf("legacy planned=%d want 0", rep.LegacyPlanned)
 	}
 	if err := ValidateContractOrError(root); err != nil {
 		t.Fatal(err)

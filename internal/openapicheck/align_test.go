@@ -30,13 +30,12 @@ func TestContractMatchesSwagger(t *testing.T) {
 	if len(rep.Missing) > 0 {
 		t.Fatalf("hand-written /api/v1 contract not satisfied by swag output:\n%s", strings.Join(rep.Missing, "\n"))
 	}
-	if len(rep.LegacyPlanned) == 0 {
-		t.Fatal("expected legacy /v1 planned paths in contract draft")
+	if len(rep.LegacyPlanned) != 0 {
+		t.Fatalf("legacy /v1 paths should be removed from contract draft: %v", rep.LegacyPlanned)
 	}
 	if len(rep.Undocumented) > 0 {
 		t.Fatalf("contract missing %d implemented /api/v1 ops", len(rep.Undocumented))
 	}
-	t.Logf("legacy planned: %d", len(rep.LegacyPlanned))
 }
 
 func TestAlignContractSubset(t *testing.T) {
