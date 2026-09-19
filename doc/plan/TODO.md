@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · P16 谱系台（EW51+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW51 | Trajectory 派生子 Run | AgentChatShell test | ✅ |
+| EW52 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md)
+
 ## 已完成 · P15 闭环（EW41+）
 
 | # | 项 | 验收 | 状态 |

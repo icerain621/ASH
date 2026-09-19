@@ -35,7 +35,7 @@
 | S03 | 危险工具审批 | Agent + 管控 | waiting_approval · 审批预设 · SpacePolicy | 门禁有；once/会话/空间预设 **待改进** |
 | S04 | 长会话压缩可回放 | 管控 | Compact / spill | 事件侧 Partial；Chat/评审 UX **待开发** |
 | S05 | 分支探索 / 对比 | 管控 | Fork · Compare · 会话树 | interactions compare 有；产品化会话树 **待开发** |
-| S06 | 子代理协作 | 管控 + Runs | sub-run · 谱系 | API `spawnSubRun` 有；谱系台 **待开发** |
+| S06 | 子代理协作 | 管控 + Runs | sub-run · 谱系 | **有**（Trajectory 派生 + 谱系列表） |
 | S07 | 记忆候选薄批 → 厚评审 | 记忆 → 管控 | candidates · review · reviews queue | **有**；视角聚合待改进 |
 | S08 | 检索已批准记忆 / hit_used | 记忆 | queryMemory | **有** |
 | S09 | TTL 到期复核 | 记忆 | ttl-queue / sweep | **有** |
@@ -110,7 +110,7 @@
 | 审批预设 | once / 会话 / 写入策略（P12） | approvals · SpacePolicy | 待改进 | 80 | P0 | waiting_approval 有；预设档不足 |
 | Hooks | ash.hooks.v1（P13） | 新协议 + 审计 | 部分交付 | 160 | P0 | EW11–EW13 MVP |
 | ExecPolicy | 声明式沙箱能力位（P11） | policy + Doctor | 部分交付 | 120 | P0 | EW14–EW15 MVP |
-| 子代理谱系 | 图 / 中断 / 回主（P16） | `runs/…/sub-runs` · threads | 待开发 | 64 | P1 | FE 未接 `spawnSubRun` |
+| 子代理谱系 | 图 / 中断 / 回主（P16） | `runs/…/sub-runs` · threads | 有 | — | — | Trajectory 派生 + 回主聚焦；中断仍用既有 cancel |
 | MCP 执行 | 工具真实执行收尾（P15） | `mcp/tools*` + ToolBus | 有 | — | — | PreToolUse deny/ask 与 Run 同源 |
 | Harness / Improve | 配置演进 | `harness/*` · `improve/*` | 有 | — | — | Automation 内嵌 |
 
@@ -167,6 +167,8 @@
    → 任务板 [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) · **✅**（EW31–EW34）  
 5. **P15 闭环**：MCP HTTP execute 走同一 PreToolUse（deny 不可用 token 绕过）  
    → 任务板 [`sprint-ew-w4-p15-loop.md`](sprint-ew-w4-p15-loop.md) · **✅**（EW41–EW42）  
+6. **P16 谱系台**：Trajectory 派生子 Run + 回主聚焦  
+   → 任务板 [`sprint-ew-w5-p16-lineage.md`](sprint-ew-w5-p16-lineage.md) · **✅**（EW51–EW52）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -183,3 +185,4 @@
 | 2026-09-19 | W2 开工：EW21 会话线程 Fork |
 | 2026-09-19 | W3 ✅（EW31–EW34）：谱系、时间线过滤、Doctor `M4-MDL-01` |
 | 2026-09-19 | P15 ✅（EW41–EW42）：MCP execute 走 PreToolUse |
+| 2026-09-19 | P16 ✅（EW51–EW52）：Trajectory 派生子 Run |
