@@ -75,6 +75,14 @@ describe("conversationNodes", () => {
     expect(pre.kind).toBe("hook.pre_tool_use");
     expect(pre.title).toContain("PreToolUse");
     expect(pre.summary).toContain("bash");
+    const post = resolveConversationNode(
+      ev({
+        type: "hook.post_tool_use",
+        payload: { tool: "bash", action: "deny", reason: "cite", stepId: "s1", ruleIndex: 0 },
+      }),
+    );
+    expect(post.kind).toBe("hook.post_tool_use");
+    expect(post.title).toContain("PostToolUse");
     const dec = resolveConversationNode(
       ev({ type: "hook.decision", payload: { tool: "bash", action: "deny", reason: "policy" } }),
     );

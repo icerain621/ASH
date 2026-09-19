@@ -65,3 +65,20 @@ func TestEvaluate_NoConfigAllow(t *testing.T) {
 		t.Fatalf("ruleIndex=%d want -1", dec.RuleIndex)
 	}
 }
+
+func TestEvaluate_postToolUseDeny(t *testing.T) {
+	cfg := Config{
+		Version: SchemaVersion,
+		Rules: []Rule{
+			{Event: EventPostToolUse, Tool: "bash", Action: ActionDeny, Reason: "cite"},
+		},
+	}
+	dec := Evaluate(cfg, EventPostToolUse, ToolContext{Tool: "bash", Risk: "high"})
+	if dec.Action != ActionDeny || dec.Reason != "cite" || dec.RuleIndex != 0 {
+		t.Fatalf("%+v", dec)
+	}
+	pre := Evaluate(cfg, EventPreToolUse, ToolContext{Tool: "bash", Risk: "high"})
+	if pre.Action != ActionAllow || pre.RuleIndex != -1 {
+		t.Fatalf("pre=%+v", pre)
+	}
+}

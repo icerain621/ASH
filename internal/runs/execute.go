@@ -399,6 +399,9 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 					_, ferr := s.failRun(rec, runID, traceID, started, "TOOL_FAILED", res.Error)
 					return ferr
 				}
+				if err := s.applyPostToolUseAfterSuccess(rec, runID, traceID, step.ID, item.Tool, risk, stepRow, stepStart, started); err != nil {
+					return err
+				}
 			}
 		case "llm":
 			decision := modelrouter.NewFromEnv().Route(modelrouter.Request{

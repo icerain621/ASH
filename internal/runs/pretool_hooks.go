@@ -68,6 +68,70 @@ func hookDecisionPayload(stepID, tool, risk string, dec hooks.Decision) map[stri
 	}
 }
 
+func hookPostDecisionPayload(stepID, tool, risk string, dec hooks.Decision) map[string]any {
+	return map[string]any{
+		"stepId":    stepID,
+		"tool":      tool,
+		"risk":      risk,
+		"event":     string(hooks.EventPostToolUse),
+		"action":    string(dec.Action),
+		"reason":    dec.Reason,
+		"ruleIndex": dec.RuleIndex,
+	}
+}
+
+func (s *Service) evaluatePostToolUse(rec *store.RunRecord, stepID, tool, risk string) hooks.Decision {
+	spaceID := ""
+	runID := ""
+	if rec != nil {
+		spaceID = rec.SpaceID
+		runID = rec.ID
+	}
+	cfg, err := s.loadSpaceHooksConfig(spaceID)
+	if err != nil {
+		return hooks.Decision{
+			Action:    hooks.ActionDeny,
+			Reason:    fmt.Sprintf("hooks config load failed: %v", err),
+			RuleIndex: -1,
+		}
+	}
+	return hooks.Evaluate(cfg, hooks.EventPostToolUse, hooks.ToolContext{
+		Tool: tool, Risk: risk, SpaceID: firstNonEmpty(spaceID, "local"),
+		RunID: runID, StepID: stepID,
+	})
+}
+
+// applyPostToolUseAfterSuccess evaluates PostToolUse after a successful tool call.
+// deny fails the step/run; ask is audit-only (side effects already applied).
+func (s *Service) applyPostToolUseAfterSuccess(
+	rec *store.RunRecord,
+	runID, traceID, stepID, tool, risk string,
+	stepRow *store.RunStep,
+	stepStart time.Time,
+	started time.Time,
+) error {
+	hookDec := s.evaluatePostToolUse(rec, stepID, tool, risk)
+	if hookDec.Action != hooks.ActionAllow || hookDec.RuleIndex >= 0 {
+		payload := hookPostDecisionPayload(stepID, tool, risk, hookDec)
+		_, _ = s.eventsFor().Append(runID, traceID, "hook.post_tool_use", "info", payload)
+		_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+	}
+	if hookDec.Action != hooks.ActionDeny {
+		return nil
+	}
+	msg := hookDec.Reason
+	if msg == "" {
+		msg = fmt.Sprintf("PostToolUse hook denied tool %s", tool)
+	}
+	_, _ = s.eventsFor().Append(runID, traceID, "policy.denied", "warn", map[string]any{
+		"target": "tool", "reason": msg, "action": "deny", "ref": tool,
+		"matrix": "hooks.post_tool_use",
+	})
+	s.finishStep(stepRow, "failed", stepStart, errorCodeHookDenied, msg)
+	_, ferr := s.failRun(rec, runID, traceID, started, errorCodeHookDenied, msg)
+	return ferr
+}
+
 type preToolUseGateOutcome int
 
 const (

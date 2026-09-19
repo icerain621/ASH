@@ -37,6 +37,7 @@ const STREAM_EVENT_TYPES = [
   "run.checkpoint_saved",
   "policy.denied",
   "hook.pre_tool_use",
+  "hook.post_tool_use",
   "hook.decision",
   "gate.waiting_approval",
   "memory.candidate_created",

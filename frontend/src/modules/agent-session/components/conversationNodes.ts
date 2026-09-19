@@ -12,6 +12,7 @@ export type ConversationNodeKind =
   | "tool"
   | "step"
   | "hook.pre_tool_use"
+  | "hook.post_tool_use"
   | "hook.decision"
   | "hook"
   | "compact"
@@ -128,6 +129,13 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
       return {
         kind: "hook.pre_tool_use",
         title: "Hook · PreToolUse",
+        summary: hookEventSummary(p),
+        visibility,
+      };
+    case "hook.post_tool_use":
+      return {
+        kind: "hook.post_tool_use",
+        title: "Hook · PostToolUse",
         summary: hookEventSummary(p),
         visibility,
       };

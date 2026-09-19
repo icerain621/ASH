@@ -5,6 +5,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/hooks"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -124,6 +125,19 @@ func (s *Service) runVerifyChecks(
 				msg = "tool failed"
 			}
 			return verifyChecksResult{detail: fmt.Sprintf("%s: %s (attempt %d)", item.Tool, msg, attempt)}
+		}
+		postDec := s.evaluatePostToolUse(rec, step.ID, item.Tool, risk)
+		if postDec.Action != hooks.ActionAllow || postDec.RuleIndex >= 0 {
+			payload := hookPostDecisionPayload(step.ID, item.Tool, risk, postDec)
+			_, _ = s.eventsFor().Append(runID, traceID, "hook.post_tool_use", "info", payload)
+			_, _ = s.eventsFor().Append(runID, traceID, "hook.decision", "info", payload)
+		}
+		if postDec.Action == hooks.ActionDeny {
+			msg := postDec.Reason
+			if msg == "" {
+				msg = fmt.Sprintf("PostToolUse hook denied tool %s", item.Tool)
+			}
+			return verifyChecksResult{hookDeny: true, detail: msg}
 		}
 	}
 	return verifyChecksResult{ok: true}

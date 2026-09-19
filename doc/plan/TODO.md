@@ -5,6 +5,15 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
+## 已完成 · PostToolUse（EW111+）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW111 | PostToolUse Run 接入 | `go test ./internal/hooks` | ✅ |
+| EW112 | 签字 | CHANGELOG | ✅ |
+
+板：[`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md)
+
 ## 已完成 · OpenAPI 卫生（EW101+）
 
 | # | 项 | 验收 | 状态 |

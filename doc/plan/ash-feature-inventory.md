@@ -46,8 +46,8 @@
 | S14 | CI 失败诊断 → 反馈闭环 | 运维 | ci · feedback · improve | **有** |
 | S15 | 发布门禁 / 合规导出 | 运维 | releases · compliance · audit | **有** |
 | S16 | 空间成员与密钥 | 平台 | spaces · secrets · auth | **有** |
-| S17 | Hooks 扩展（cite-guard 等） | 管控 | ash.hooks.v1 | **部分交付**（PreToolUse MVP + 审计；扩展事件待 W3） |
-| S18 | 声明式 execpolicy / 沙箱能力位 | 管控 | policy · Doctor | **部分交付**（schema/合并 + 沙箱地板 + Doctor；全生命周期待 W3） |
+| S17 | Hooks 扩展（cite-guard 等） | 管控 | ash.hooks.v1 | **有**（Pre/PostToolUse；cite-guard 可用 Post deny） |
+| S18 | 声明式 execpolicy / 沙箱能力位 | 管控 | policy · Doctor | **有**（schema/合并 + 沙箱地板 + Doctor） |
 
 ---
 
@@ -149,7 +149,7 @@
 | Reviews / Harness / Scores | ~21 | ReviewsPage | 有（v5） |
 | Spaces / Policy / Auth | ~29 | Space / Login | 有 |
 | Platform ops（CI/审计/Doctor/Waker…） | ~40+ | 更多菜单各页 | 有 |
-| Hooks / Steer / Compact / ExecPolicy | 弱→中 | Agent Chat / Run | **部分交付**（Compact `/compact` + 投影已有） |
+| Hooks / Steer / Compact / ExecPolicy | 中 | Agent Chat / Run | **有**（Pre/PostToolUse · Compact · Steer/Queue · ExecPolicy） |
 
 遗留：OpenAPI 中 **8 条 legacy `/v1/*`**（tasks/memories…）无 handler，不计入交付。
 
@@ -179,6 +179,8 @@
    → 任务板 [`sprint-ew-w9-model-health.md`](sprint-ew-w9-model-health.md) · **✅**（EW91–EW92）  
 11. **OpenAPI 卫生**：契约草稿去掉无 handler 的 `/v1/*`  
    → 任务板 [`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md) · **✅**（EW101–EW102）  
+12. **PostToolUse**：工具成功后声明式钩子  
+   → 任务板 [`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md) · **✅**（EW111–EW112）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -201,3 +203,4 @@
 | 2026-09-19 | 设置 IA ✅（EW81–EW82）；同步勾销已交付清单行 |
 | 2026-09-19 | 模型健康位 ✅（EW91–EW92） |
 | 2026-09-19 | OpenAPI 卫生 ✅（EW101–EW102）：去掉 legacy `/v1/*` |
+| 2026-09-19 | PostToolUse ✅（EW111–EW112） |

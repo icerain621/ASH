@@ -1,6 +1,6 @@
-# ash.hooks.v1 — 声明式 PreToolUse 策略
+# ash.hooks.v1 — 声明式 PreToolUse / PostToolUse 策略
 
-> **实现**：`internal/hooks` · **Sprint**：EW11  
+> **实现**：`internal/hooks` · **Sprint**：EW11 · EW111  
 > **挂载**：SpacePolicy `bodyJson` 内嵌 JSON 对象键 `hooks`（非独立 HTTP 资源）
 
 ## 版本与形状
@@ -21,7 +21,7 @@
 
 | 字段 | 说明 |
 |------|------|
-| `event` | 目前仅 `PreToolUse`（工具调用前） |
+| `event` | `PreToolUse`（调用前）或 `PostToolUse`（成功返回后） |
 | `tool` | 工具名匹配：精确名、`*`（任意）、`prefix*`、`*suffix`；空/省略 = 任意 |
 | `risk` | 可选；若填写则与上下文 risk 大小写不敏感相等才匹配 |
 | `action` | `allow` \| `deny` \| `ask`（大小写不敏感） |
@@ -29,11 +29,11 @@
 
 ## 决策语义
 
-| action | 含义（EW12 接入 Run 后） |
-|--------|-------------------------|
-| `allow` | 继续执行工具 |
-| `deny` | 拒绝工具调用（fail-closed） |
-| `ask` | 进入既有 waiting_approval 流程 |
+| action | PreToolUse | PostToolUse |
+|--------|------------|-------------|
+| `allow` | 继续执行工具 | 继续后续步骤 |
+| `deny` | 拒绝调用 | 步骤失败并 fail run（**不回滚**已执行副作用） |
+| `ask` | 进入 waiting_approval | **仅审计**（副作用已发生，不打断） |
 
 **缺省**：无任何规则匹配 → **`allow`**（与「空间未配置 hooks」一致：不阻断）。
 
@@ -63,16 +63,14 @@
 
 ## 与 OpenAPI 的关系
 
-Hooks 配置随 **既有** SpacePolicy 读写携带；EW11 不新增专用 Hooks HTTP 路径。Run 侧 PreToolUse 接入见 Sprint EW12。
+Hooks 配置随 **既有** SpacePolicy 读写携带；不新增专用 Hooks HTTP 路径。
 
-## 审计事件（EW12+ / EW13）
+## 审计事件
 
-Run 在 PreToolUse 求值且 **非默认 allow**（`action != allow` 或 `ruleIndex >= 0`）时，同一 payload 追加两条事件（severity `info`）：
-
-| 事件 type | 用途 |
-|-----------|------|
-| `hook.pre_tool_use` | 生命周期锚点：PreToolUse 已求值 |
-| `hook.decision` | 决策锚点：与上条 payload 相同，便于管控/检索按「决策」过滤 |
+| 时机 | 事件 type |
+|------|-----------|
+| PreToolUse 非默认 allow | `hook.pre_tool_use` + `hook.decision` |
+| PostToolUse 非默认 allow | `hook.post_tool_use` + `hook.decision` |
 
 **Payload 字段（稳定 JSON 键，camelCase）：**
 
@@ -80,15 +78,16 @@ Run 在 PreToolUse 求值且 **非默认 allow**（`action != allow` 或 `ruleIn
 |------|------|------|
 | `stepId` | string | 当前 Run 步骤 ID |
 | `tool` | string | 工具名 |
-| `risk` | string | 工具风险级别（与 tool_chain 一致） |
-| `event` | string | 固定 `PreToolUse`（hooks 事件枚举，非 SSE type） |
+| `risk` | string | 工具风险级别 |
+| `event` | string | `PreToolUse` 或 `PostToolUse` |
 | `action` | string | `allow` \| `deny` \| `ask` |
 | `reason` | string | 规则或 fail-closed 说明 |
-| `ruleIndex` | number | 命中规则下标；`-1` 表示无规则匹配（如配置加载失败 deny） |
+| `ruleIndex` | number | 命中规则下标；`-1` 表示无规则匹配 |
 
 **关联事件：**
 
-- `deny` 另发 `policy.denied`（`matrix`: `hooks.pre_tool_use`）。
-- `ask` 另发 `gate.waiting_approval`（`gate`: `hook_pre_tool_use`）。
+- Pre `deny` 另发 `policy.denied`（`matrix`: `hooks.pre_tool_use`）。
+- Pre `ask` 另发 `gate.waiting_approval`（`gate`: `hook_pre_tool_use`）。
+- Post `deny` 另发 `policy.denied`（`matrix`: `hooks.post_tool_use`）。
 
-控制台：**Agent Chat → Trajectory** 展示 `hook.*`；**Details** 侧栏只读 KV；**Reviews → 编排流程** 可读空间 `bodyJson.hooks` 规则列表（薄投影）。交互原型 `#gov/hooks` 见 [`doc/prototypes/agent-absorb/README.md`](../prototypes/agent-absorb/README.md)。
+控制台：**Agent Chat → Trajectory** 展示 `hook.*`；**Details** 侧栏只读 KV；**Reviews → 编排流程** 可读空间 `bodyJson.hooks` 规则列表。

@@ -5,7 +5,8 @@ const SchemaVersion = "ash.hooks.v1"
 type Event string
 
 const (
-	EventPreToolUse Event = "PreToolUse"
+	EventPreToolUse  Event = "PreToolUse"
+	EventPostToolUse Event = "PostToolUse"
 )
 
 type DecisionAction string
