@@ -7923,6 +7923,53 @@
                 }
             }
         },
+        "/api/v1/spaces/{spaceId}/audit-report": {
+            "get": {
+                "description": "DX69: counts existing audit_log rows in a window. No new table.",
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "spaces"
+                ],
+                "summary": "Thin space audit report",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "24h, 7d (default), or 30d",
+                        "name": "window",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.AuditReport"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/spaces/{spaceId}/evaluation": {
             "get": {
                 "description": "Aggregate Quality/Safety/Efficiency/Governance plus seal/replay/memory-link health and scenario ranking (GV06–07).",
@@ -15409,6 +15456,17 @@
                 }
             }
         },
+        "internal_api.AuditEventCount": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "eventType": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.AuditExportAccessResponse": {
             "type": "object",
             "properties": {
@@ -15454,6 +15512,52 @@
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_store.AuditLog"
                     }
+                }
+            }
+        },
+        "internal_api.AuditReport": {
+            "type": "object",
+            "properties": {
+                "buckets": {
+                    "$ref": "#/definitions/internal_api.AuditReportBuckets"
+                },
+                "byEvent": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/internal_api.AuditEventCount"
+                    }
+                },
+                "from": {
+                    "type": "string"
+                },
+                "spaceId": {
+                    "type": "string"
+                },
+                "total": {
+                    "type": "integer"
+                },
+                "window": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.AuditReportBuckets": {
+            "type": "object",
+            "properties": {
+                "approve": {
+                    "type": "integer"
+                },
+                "deny": {
+                    "type": "integer"
+                },
+                "hook": {
+                    "type": "integer"
+                },
+                "other": {
+                    "type": "integer"
+                },
+                "spawn": {
+                    "type": "integer"
                 }
             }
         },

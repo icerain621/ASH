@@ -1601,6 +1601,32 @@ components:
           properties:
             activeConcurrentRuns: { type: integer, minimum: 0 }
             tokenBudgetProxyUsed: { type: integer, minimum: 0 }
+    SpaceAuditReport:
+      type: object
+      description: |
+        Thin audit counts over existing audit_log (DX69). No new table.
+        扫描现有 audit_log 的薄计数（DX69）；无新表。
+      required: [spaceId, window, total, buckets]
+      properties:
+        spaceId: { type: string }
+        window: { type: string, enum: ["24h", "7d", "30d"] }
+        from: { type: string, format: date-time }
+        total: { type: integer, minimum: 0 }
+        buckets:
+          type: object
+          properties:
+            approve: { type: integer, minimum: 0 }
+            deny: { type: integer, minimum: 0 }
+            hook: { type: integer, minimum: 0 }
+            spawn: { type: integer, minimum: 0 }
+            other: { type: integer, minimum: 0 }
+        byEvent:
+          type: array
+          items:
+            type: object
+            properties:
+              eventType: { type: string }
+              count: { type: integer, minimum: 0 }
     MetricsOverviewResponse:
       type: object
       description: KPI dashboard overview for a space/project window.
@@ -7382,6 +7408,38 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/SpaceQuotaStatus" }
+        "400":
+          description: bad request
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+        "403":
+          description: forbidden
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/APIErrorResponse" }
+
+  /api/v1/spaces/{spaceId}/audit-report:
+    get:
+      tags: [Spaces]
+      summary: Thin space audit report
+      description: |
+        DX69 · 按窗口聚合现有 audit_log：approve / deny / hook / spawn。无新表。
+        DX69 · Windowed counts of existing audit_log rows. No new table.
+      parameters:
+        - in: path
+          name: spaceId
+          required: true
+          schema: { type: string }
+        - in: query
+          name: window
+          schema: { type: string, enum: ["24h", "7d", "30d"], default: 7d }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/SpaceAuditReport" }
         "400":
           description: bad request
           content:

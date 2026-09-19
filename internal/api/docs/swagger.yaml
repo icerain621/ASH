@@ -4163,6 +4163,13 @@ definitions:
       uri:
         type: string
     type: object
+  internal_api.AuditEventCount:
+    properties:
+      count:
+        type: integer
+      eventType:
+        type: string
+    type: object
   internal_api.AuditExportAccessResponse:
     properties:
       contentType:
@@ -4193,6 +4200,36 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_store.AuditLog'
         type: array
+    type: object
+  internal_api.AuditReport:
+    properties:
+      buckets:
+        $ref: '#/definitions/internal_api.AuditReportBuckets'
+      byEvent:
+        items:
+          $ref: '#/definitions/internal_api.AuditEventCount'
+        type: array
+      from:
+        type: string
+      spaceId:
+        type: string
+      total:
+        type: integer
+      window:
+        type: string
+    type: object
+  internal_api.AuditReportBuckets:
+    properties:
+      approve:
+        type: integer
+      deny:
+        type: integer
+      hook:
+        type: integer
+      other:
+        type: integer
+      spawn:
+        type: integer
     type: object
   internal_api.AuditRetentionApplyResponse:
     properties:
@@ -10709,6 +10746,37 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Create space
+      tags:
+      - spaces
+  /api/v1/spaces/{spaceId}/audit-report:
+    get:
+      description: 'DX69: counts existing audit_log rows in a window. No new table.'
+      parameters:
+      - description: space id
+        in: path
+        name: spaceId
+        required: true
+        type: string
+      - description: 24h, 7d (default), or 30d
+        in: query
+        name: window
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.AuditReport'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Thin space audit report
       tags:
       - spaces
   /api/v1/spaces/{spaceId}/evaluation:

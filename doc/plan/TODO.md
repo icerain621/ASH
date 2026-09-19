@@ -226,7 +226,7 @@
 | DX66 | v4.0 冻结 + 签字 | `v4.0-release-scope`；`make v4.0-signoff`；tag 人工 | ✅ |
 | DX67 | 配额 schema + 门禁（v4.1 草案） | `bodyJson.quotas`；Create/Spawn fail-closed | ✅ |
 | DX68 | 配额投影（v4.1 草案） | `GET …/quotas` + 控制台 | ✅ |
-| DX69 | 审计薄报表 API（v4.1 草案） | 扫 audit；无新表 | ⬜ |
+| DX69 | 审计薄报表 API（v4.1 草案） | 扫 audit；无新表 | ✅ |
 | DX70 | 审计报表 UI（v4.1 草案） | Compliance/Space 卡片 | ⬜ |
 | DX71 | spawn 策略（v4.1 草案） | `bodyJson.subRun` + 可见字段 | ⬜ |
 | DX72 | v4.1 冻结 + 签字 | `v4.1-release-scope`；`make v4.1-signoff`；tag 人工 | ⬜ |
