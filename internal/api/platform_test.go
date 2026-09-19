@@ -1095,8 +1095,11 @@ func TestPluginABIProfileReportsProtoDigests(t *testing.T) {
 	if !resp.GRPCEnabled || resp.PluginGRPCAddr != "127.0.0.1:19090" {
 		t.Fatalf("resp=%+v want configured plugin gRPC listener metadata", resp)
 	}
-	if len(resp.ProtoFiles) < 2 {
-		t.Fatalf("proto files=%+v want common and plugin registry protos", resp.ProtoFiles)
+	if resp.RagIndexerEnabled || resp.RagIndexerGRPCAddr != "" {
+		t.Fatalf("resp=%+v want indexer off by default", resp)
+	}
+	if len(resp.ProtoFiles) < 3 {
+		t.Fatalf("proto files=%+v want common, plugin registry, and rag indexer protos", resp.ProtoFiles)
 	}
 	byPath := map[string]PluginProtoFile{}
 	for _, file := range resp.ProtoFiles {
@@ -1107,6 +1110,35 @@ func TestPluginABIProfileReportsProtoDigests(t *testing.T) {
 	}
 	if byPath["proto/ash/v1/plugin_registry.proto"].Digest == "" || byPath["proto/ash/v1/common.proto"].Digest == "" {
 		t.Fatalf("proto files=%+v missing required ABI files", resp.ProtoFiles)
+	}
+	if byPath["proto/ash/v1/rag_indexer.proto"].Digest == "" {
+		t.Fatalf("proto files=%+v missing rag_indexer.proto", resp.ProtoFiles)
+	}
+}
+
+func TestPluginABIProfileReportsRagIndexerListen(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "jwt")
+	t.Setenv("ASH_JWT_SECRET", "test-secret")
+	t.Setenv("ASH_PLUGIN_GRPC_ADDR", "")
+	t.Setenv("ASH_RAG_INDEXER_GRPC_ADDR", "127.0.0.1:19092")
+	r, _ := newPlatformTestRouter(t)
+	token, err := signToken(tokenClaims{Sub: "plugin-maintainer", SpaceID: "local", Role: "maintainer"}, "test-secret")
+	if err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/plugins/abi", nil)
+	req.Header.Set("Authorization", "Bearer "+token)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var resp PluginABIProfileResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if !resp.RagIndexerEnabled || resp.RagIndexerGRPCAddr != "127.0.0.1:19092" {
+		t.Fatalf("resp=%+v want indexer listen posture", resp)
 	}
 }
 

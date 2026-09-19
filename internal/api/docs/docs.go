@@ -16087,6 +16087,12 @@ const docTemplate = `{
                 "protoPackage": {
                     "type": "string"
                 },
+                "ragIndexerEnabled": {
+                    "type": "boolean"
+                },
+                "ragIndexerGrpcAddr": {
+                    "type": "string"
+                },
                 "signCapabilityPrefix": {
                     "type": "string"
                 },

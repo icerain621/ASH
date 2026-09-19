@@ -215,6 +215,8 @@ type PluginABIProfileResponse struct {
 	SupportedProtocols   []string          `json:"supportedProtocols"`
 	GRPCEnabled          bool              `json:"grpcEnabled"`
 	PluginGRPCAddr       string            `json:"pluginGrpcAddr,omitempty"`
+	RagIndexerEnabled    bool              `json:"ragIndexerEnabled"`
+	RagIndexerGRPCAddr   string            `json:"ragIndexerGrpcAddr,omitempty"`
 	ProtoPackage         string            `json:"protoPackage"`
 	GoPackage            string            `json:"goPackage"`
 	BreakingPolicy       string            `json:"breakingPolicy"`

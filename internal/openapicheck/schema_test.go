@@ -47,7 +47,7 @@ func TestContractSchemasMatchSwagger(t *testing.T) {
 		{"CIRunListResponse", "internal_api.CIRunListResponse", 1},
 		{"CIJobListResponse", "internal_api.CIJobListResponse", 1},
 		{"FeedbackListResponse", "internal_api.FeedbackListResponse", 1},
-		{"PluginABIProfileResponse", "internal_api.PluginABIProfileResponse", 8},
+		{"PluginABIProfileResponse", "internal_api.PluginABIProfileResponse", 10},
 		{"MCPToolListResponse", "internal_api.MCPToolListResponse", 1},
 		{"MCPToolExecuteResponse", "internal_api.MCPToolExecuteResponse", 2},
 		{"ModelProviderListResponse", "internal_api.ModelProviderListResponse", 1},

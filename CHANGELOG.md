@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX77：`GET /plugins/abi` 增加 `ragIndexerEnabled` / `ragIndexerGrpcAddr`（与 `grpcEnabled` 对称）。 / DX77: ABI profile reports indexer listen posture.
 - Sprint DX76：`ASH_RAG_INDEXER_GRPC_ADDR` 为空不监听；设置后本机委托现有 RAG（无新表）。 / DX76: optional in-process RAG indexer gRPC; off by default.
 - Sprint DX75：`proto/ash/v1/rag_indexer.proto`（`IndexRepo` / `Query`）与 Go 生成物；`make proto-check` 绿。本 Sprint 不开监听。 / DX75: rag indexer proto + stubs; no listen yet.
 - Sprint DX74：强制签名时 gRPC `Register` 返回 `PLUGIN_SIGNATURE_INVALID` 且不落库（与 HTTP 一致）。 / DX74: signed gRPC Register rejects unsigned plugins without persisting.

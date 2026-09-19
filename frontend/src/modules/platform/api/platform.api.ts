@@ -91,6 +91,10 @@ export type PluginABIProfile = {
   currentAbi: string;
   supportedAbis: string[];
   supportedProtocols: string[];
+  grpcEnabled?: boolean;
+  pluginGrpcAddr?: string;
+  ragIndexerEnabled?: boolean;
+  ragIndexerGrpcAddr?: string;
   protoPackage: string;
   goPackage: string;
   breakingPolicy: string;
