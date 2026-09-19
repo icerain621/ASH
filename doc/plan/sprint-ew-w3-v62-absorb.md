@@ -8,8 +8,8 @@
 |---|--------|------|
 | **EW31** | Trajectory 显示子 Run 谱系 | ✅ |
 | **EW32** | Thread 时间线过滤器 | ✅ |
-| **EW33** | Provider / Doctor 探针 | ⬜ |
-| **EW34** | W3 签字 | ⬜ |
+| **EW33** | Provider / Doctor 探针 | ✅ |
+| **EW34** | W3 签字 | ✅ |
 
 ## EW31
 
@@ -21,4 +21,8 @@ Chat Trajectory 在有 `runId` 时拉 `GET /runs/{id}/tree`，列出 root 与子
 
 ## EW33
 
-未做：模型 Provider 健康位进 Doctor。
+`M4-MDL-01`：Doctor 读取 `modelrouter.NewFromEnv()` 目录。未配置记为 pass（`available=0`），目录为空才 fail。M4 **12/12**，ALL **62/62**。
+
+## EW34
+
+CHANGELOG 与本板勾选。无新 HTTP 路径。

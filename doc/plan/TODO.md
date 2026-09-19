@@ -5,14 +5,14 @@
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
-## 现行 · W3 v6.2（EW31+）
+## 已完成 · W3 v6.2（EW31+）
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
 | EW31 | 子 Run 谱系 | Trajectory | ✅ |
 | EW32 | 时间线过滤 | ThreadTimeline | ✅ |
-| EW33 | Provider / Doctor | 探针 | ⬜ |
-| EW34 | W3 签字 | CHANGELOG | ⬜ |
+| EW33 | Provider / Doctor | 探针 | ✅ |
+| EW34 | W3 签字 | CHANGELOG | ✅ |
 
 板：[`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md)
 
@@ -58,7 +58,7 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **61/61** · M3 11/11 · M4 **11/11** · M5 4/4 · TR3 **13/13** |
+| Doctor | ALL **62/62** · M3 11/11 · M4 **12/12** · M5 4/4 · TR3 **13/13** |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 

@@ -15,6 +15,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/improve"
+	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/sandbox/landlock"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -31,6 +32,7 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Sbx04LandlockAvailable(),
 		s.m4Sbx05LandlockDefaultSeccomp(),
 		s.m4Sbx06ExecPolicyFloor(),
+		s.m4Mdl01ProviderCatalog(),
 		s.m4Acp01TaskSchema(),
 		s.m4Acp02ProbeUnconfigured(),
 	}
@@ -242,6 +244,25 @@ func (s *Service) m4Sbx06ExecPolicyFloor() CaseResult {
 		Evidence{Kind: "execPolicyFloor", Ref: "FloorFromExecPolicy+Resolve"},
 		Evidence{Kind: "execPolicyLoaded", Ref: "capability"},
 	)
+	return res
+}
+
+func (s *Service) m4Mdl01ProviderCatalog() CaseResult {
+	res := CaseResult{ID: "M4-MDL-01", Status: "fail"}
+	providers := modelrouter.NewFromEnv().Providers()
+	if len(providers) == 0 {
+		res.Message = "model provider catalog is empty"
+		return res
+	}
+	available := 0
+	for _, p := range providers {
+		if p.Status == "available" || p.Status == "configured" {
+			available++
+		}
+	}
+	res.Status = "pass"
+	res.Message = fmt.Sprintf("catalog=%d available=%d", len(providers), available)
+	res.Evidence = append(res.Evidence, Evidence{Kind: "providerCatalog", Ref: fmt.Sprintf("%d", len(providers))})
 	return res
 }
 

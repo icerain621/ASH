@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint EW33–EW34（W3）：Doctor `M4-MDL-01` 探针模型 Provider 目录（未配置仍通过）；M4 **12/12**，ALL **62/62**。W3 板签字。
 - Sprint EW31–EW32（W3）：Chat Trajectory 投影 Run 树谱系；Thread 时间线可按可见性与事件类过滤。
 - Sprint EW24–EW25（W2 v6.1 吸收）：记忆列表按 `scenario:` / `skill:` / `tool:` 标签和 `scopeRepo` 分组；带 Run 新建时回填场景名与空仓库。W2 板签字（无新 HTTP 路径）。
 - Sprint EW23（W2 v6.1 吸收）：`harness.compaction` 投影为 Chat/Trajectory 的 Compact 节点（`ui_only`）。

@@ -164,7 +164,7 @@
 3. **W2（~1.5 月 · 1.5 人）**：会话树 fork/compare · Compact UX · 记忆四视角字段回填  
    → 任务板 [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) · **✅**（EW21–EW25）  
 4. **W3（~1 月 · 1 人）**：子代理谱系台 · Trajectory 过滤器工作台 · Provider/Doctor 探针  
-   → 任务板 [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) · **现行**（EW31–EW32 ✅，EW33 待做）  
+   → 任务板 [`sprint-ew-w3-v62-absorb.md`](sprint-ew-w3-v62-absorb.md) · **✅**（EW31–EW34）  
 
 明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认。
 
@@ -179,3 +179,4 @@
 | 2026-09-19 | W0 ✅；W1 → Sprint 板 EW11–EW18 + 实现计划 |
 | 2026-09-19 | W1 ✅（EW18 签字）：Hooks / ExecPolicy / Steer-Queue MVP 已落地；上表三行 待开发→部分交付 |
 | 2026-09-19 | W2 开工：EW21 会话线程 Fork |
+| 2026-09-19 | W3 ✅（EW31–EW34）：谱系、时间线过滤、Doctor `M4-MDL-01` |
