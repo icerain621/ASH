@@ -8,6 +8,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX67：`SpacePolicy.bodyJson.quotas`（`maxConcurrentRuns` / `tokenBudgetProxy`）；Create/Spawn 超限返回 `SPACE_QUOTA_EXCEEDED`（409）。
+- Sprint 草案：v4.1 企业 Agentic（DX67–DX72）范围与设计 spec；配额 / 审计薄报表 / spawn 策略占位，无新表。
+- Cursor 规则：生产文档须中英双语（`.cursor/rules/docs-bilingual.mdc`）。
+
 - Sprint EW121–EW122：记忆候选「厚审」深链到 `/reviews?queue=memory&memoryId=`；设置运维菜单增加「任务板」→ `/quest`；inventory 勾销 S01–S03/S07 与任务板陈旧状态。
 
 ### Changed

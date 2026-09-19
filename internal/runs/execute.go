@@ -34,6 +34,9 @@ import (
 )
 
 func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*CreateResponse, error) {
+	if err := s.enforceSpaceQuotas(firstNonEmpty(req.SpaceID, "local")); err != nil {
+		return nil, err
+	}
 	doc, err := s.scenarios.Get(req.Scenario.Name, req.Scenario.ScenarioVersion)
 	if err != nil {
 		return nil, fmt.Errorf("scenario not found: %w", err)

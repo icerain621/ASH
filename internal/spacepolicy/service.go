@@ -363,5 +363,8 @@ func validateBodyJSON(raw string) error {
 	if _, err := ExecPolicyFromBodyJSON(raw); err != nil {
 		return fmt.Errorf("bodyJson.execPolicy: %w", err)
 	}
+	if _, err := QuotasFromBodyJSON(raw); err != nil {
+		return fmt.Errorf("bodyJson.quotas: %w", err)
+	}
 	return nil
 }

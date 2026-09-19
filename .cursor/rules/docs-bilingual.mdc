@@ -1,0 +1,42 @@
+---
+description: 生产文档须中英双语（doc/docs/计划规格签字）
+alwaysApply: true
+---
+
+# 生产文档 · 中英双语
+
+ASH **生产文档**（给人读、进仓、可签字/发布的文档）须 **中英双语**，不得只写单语。
+
+## 范围（In）
+
+- `doc/**`（design / plan / api 说明 / checklists / progress / appendices / prototypes README 等）
+- `docs/superpowers/**`（specs / plans）
+- 根目录与发布相关：`CHANGELOG.md`、`README.md`（若存在产品说明段）
+- Sprint 板、release-scope、签字清单、设计 spec
+
+## 不强制（Out）
+
+- 源码注释、测试名、OpenAPI `summary`/`description` 机器契约字段（可英文；人读导读另文双语）
+- 纯生成物（`internal/api/docs/*` swag 输出）
+- 临时笔记、`.superpowers/sdd` 草稿、未入库草稿
+
+## 写法
+
+1. **同一文件内双语**：标题与正文关键段落提供中文 + English（可中英对照小节，或段内「中文。 / English.»）。
+2. **勿拆成两套目录**（不要 `doc/zh/` + `doc/en/` 镜像），除非用户明确要求。
+3. **专有名词**可保留英文（API 路径、Sprint ID、错误码、表名）；解释句仍双语。
+4. **新增或大幅改写**生产文档时同步补齐双语；只改一处语义时两边一起改，避免中英漂移。
+5. Commit 说明仍可按仓库约定用中文；**文档正文**遵守本规则。
+
+## 反例 / 正例
+
+```markdown
+<!-- ❌ 仅中文 -->
+## 发布目标
+交付企业配额占位。
+
+<!-- ✅ 双语 -->
+## 发布目标 / Release goal
+交付企业配额占位。  
+Deliver org/space quota placeholders (no real billing).
+```

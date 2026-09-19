@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strconv"
 	"strings"
@@ -487,6 +488,10 @@ func (h *Handler) createRun(c *gin.Context) {
 	}
 	resp, err := h.runsFor(c).Create(req)
 	if resp == nil {
+		if err != nil && errors.Is(err, runs.ErrSpaceQuotaExceeded) {
+			c.JSON(http.StatusConflict, errorBody("SPACE_QUOTA_EXCEEDED", err.Error()))
+			return
+		}
 		c.JSON(http.StatusInternalServerError, errorBody("RUN_CREATE_FAILED", err.Error()))
 		return
 	}

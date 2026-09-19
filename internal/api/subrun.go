@@ -1,6 +1,7 @@
 package api
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -33,6 +34,10 @@ func (h *Handler) spawnSubRun(c *gin.Context) {
 	}
 	resp, err := h.runsFor(c).Spawn(parentID, req)
 	if resp == nil {
+		if err != nil && errors.Is(err, runs.ErrSpaceQuotaExceeded) {
+			c.JSON(http.StatusConflict, errorBody("SPACE_QUOTA_EXCEEDED", err.Error()))
+			return
+		}
 		code := http.StatusBadRequest
 		msg := err.Error()
 		if strings.Contains(msg, "not found") {

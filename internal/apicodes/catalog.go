@@ -88,7 +88,8 @@ var Catalog = map[string]Entry{
 	"REGISTRY_LIST_FAILED":      {Domain: "registry", Summary: "Failed to list registry assets"},
 	"REGISTRY_CREATE_FAILED":    {Domain: "registry", Summary: "Failed to create registry asset"},
 	"REGISTRY_PATCH_FAILED":     {Domain: "registry", Summary: "Failed to patch registry asset status"},
-	"SPACE_POLICY_FAILED":       {Domain: "spaces", Summary: "Failed to load or update space policy pack"},
+	"SPACE_POLICY_FAILED":  {Domain: "spaces", Summary: "Failed to load or update space policy pack"},
+	"SPACE_QUOTA_EXCEEDED": {Domain: "spaces", Summary: "Space concurrent-run quota would be exceeded"},
 
 	// rag
 	"RAG_INDEX_FAILED":           {Domain: "rag", Summary: "Repository index build failed"},

@@ -60,6 +60,10 @@ func (s *Service) Spawn(parentRunID string, req SpawnRequest) (*CreateResponse, 
 		return nil, fmt.Errorf("sub-run depth %d exceeds maxDepth %d", childDepth, maxDepth)
 	}
 
+	if err := s.enforceSpaceQuotas(firstNonEmpty(parent.SpaceID, "local")); err != nil {
+		return nil, err
+	}
+
 	allow := normalizeAllowlist(req.AllowedTools)
 	if len(allow) == 0 {
 		allow = append([]string(nil), DefaultSubRunAllowlist...)
