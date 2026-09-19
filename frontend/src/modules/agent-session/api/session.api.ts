@@ -231,5 +231,6 @@ export function eventVisibility(ev: { type?: string; visibility?: string }): Eve
   if ((ev.type || "").startsWith("tool.") || (ev.type || "").startsWith("step.") || (ev.type || "").startsWith("hook.")) {
     return "ui_only";
   }
+  if (ev.type === "harness.compaction") return "ui_only";
   return "model_visible";
 }

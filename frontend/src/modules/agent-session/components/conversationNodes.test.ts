@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { eventVisibility, type SessionEventEnvelope } from "../api/session.api";
 import {
+  isChatBubbleEvent,
   isThreadVisibleEvent,
   mergeAssistantBubbles,
   resolveConversationNode,
@@ -79,6 +80,19 @@ describe("conversationNodes", () => {
     );
     expect(dec.kind).toBe("hook.decision");
     expect(dec.title).toContain("deny");
+  });
+
+  it("resolves harness.compaction for Chat and Trajectory", () => {
+    const node = resolveConversationNode(
+      ev({
+        type: "harness.compaction",
+        payload: { summary: "spilled", estimatedTokens: 900, budgetTokens: 1000 },
+      }),
+    );
+    expect(node.kind).toBe("compact");
+    expect(node.title).toBe("Compact");
+    expect(node.summary).toBe("spilled");
+    expect(isChatBubbleEvent(ev({ type: "harness.compaction" }))).toBe(true);
   });
 
   it("omits hook.* from chat bubbles (Trajectory-only)", () => {

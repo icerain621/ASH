@@ -14,6 +14,7 @@ export type ConversationNodeKind =
   | "hook.pre_tool_use"
   | "hook.decision"
   | "hook"
+  | "compact"
   | "default";
 
 export type ConversationNodeDescriptor = {
@@ -135,6 +136,13 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
         kind: "hook.decision",
         title: `Hook 决策 · ${str(p.action) || "—"}`,
         summary: hookEventSummary(p),
+        visibility,
+      };
+    case "harness.compaction":
+      return {
+        kind: "compact",
+        title: "Compact",
+        summary: str(p.summary) || `tokens ${str(p.estimatedTokens)}/${str(p.budgetTokens)}`,
         visibility,
       };
     default:

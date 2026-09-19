@@ -11,7 +11,7 @@
 |---|-----|------|------|
 | EW21 | 会话线程 Fork | `go test ./internal/interaction` | ✅ |
 | EW22 | Compare 投影 | 管控台 | ✅ |
-| EW23 | Compact UX | Chat/Trajectory | ⬜ |
+| EW23 | Compact UX | Chat/Trajectory | ✅ |
 | EW24 | 记忆四视角字段 | 列表可分组 | ⬜ |
 | EW25 | W2 签字 | openapi + CHANGELOG | ⬜ |
 

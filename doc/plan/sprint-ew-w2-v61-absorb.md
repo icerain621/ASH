@@ -8,7 +8,7 @@
 |---|--------|------|------|------|
 | **EW21** | 会话线程 Fork（parentThreadId） | 40 | — | ✅ |
 | **EW22** | Compare 投影到管控台 | 40 | EW21 | ✅ |
-| **EW23** | Compact 事件进 Chat/Trajectory | 48 | — | ⬜ |
+| **EW23** | Compact 事件进 Chat/Trajectory | 48 | — | ✅ |
 | **EW24** | 记忆四视角字段回填 | 80 | — | ⬜ |
 | **EW25** | W2 签字 | 16 | EW22+EW23+EW24 | ⬜ |
 
@@ -28,3 +28,9 @@
 |---|-----|------|------|
 | EW22-1 | 管控台比对可选同会话 fork | ThreadComparePanel vitest | ✅ |
 | EW22-2 | Fork 按钮调用 `POST …/fork` | 客户端 `forkInteractionThread` | ✅ |
+
+## EW23 — Compact 投影
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| EW23-1 | `harness.compaction` → Chat/Trajectory 节点 | vitest | ✅ |
