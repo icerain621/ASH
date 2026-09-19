@@ -235,8 +235,8 @@
 | DX75 | RAG Indexer proto（v4.2 草案） | `rag_indexer.proto`；无新表 | ✅ |
 | DX76 | 进程内 Indexer（v4.2 草案） | 可选本机 gRPC；默认关闭 | ✅ |
 | DX77 | ABI 姿态（v4.2 草案） | 插件 / Indexer 是否在听 | ✅ |
-| DX78 | v4.2 冻结 + 签字 | `v4.2-release-scope`；`make v4.2-signoff`；tag 人工 | ⬜ |
-| 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.1-release-scope.md`](v4.1-release-scope.md)（已冻结） · [`v4.2-release-scope.md`](v4.2-release-scope.md)（草案） | — |
+| DX78 | v4.2 冻结 + 签字 | `v4.2-release-scope`；`make v4.2-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.1-release-scope.md`](v4.1-release-scope.md)（已冻结） · [`v4.2-release-scope.md`](v4.2-release-scope.md)（已冻结） | — |
 
 ---
 
