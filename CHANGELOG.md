@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint 草案：v4.2 Stage-1（DX73–DX78）范围。非 dev 插件 gRPC 缺签名则拒绝启动；Indexer 仅 proto 与进程内适配。 / DX73–DX78 draft: production plugin listen fails closed; Indexer is a contract plus an in-process adapter.
 - Sprint DX71：空间 `subRun` 覆盖 spawn 深度，工具取交集，响应露出预算。 / DX71: space subRun overrides spawn depth; tools intersect; budget on response.
 - Sprint DX72：v4.1 范围已冻结；`make v4.1-signoff` 不自动打 `v4.1.0` tag。 / DX72: v4.1 scope frozen; sign-off gate does not tag.
 - Sprint DX70：合规页展示审计薄报表（24h/7d/30d，空态与分桶计数）。 / DX70: compliance audit-report card.

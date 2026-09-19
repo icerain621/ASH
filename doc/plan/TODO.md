@@ -230,7 +230,13 @@
 | DX70 | 审计报表 UI（v4.1 草案） | Compliance/Space 卡片 | ✅ |
 | DX71 | spawn 策略（v4.1 草案） | `bodyJson.subRun` + 可见字段 | ✅ |
 | DX72 | v4.1 冻结 + 签字 | `v4.1-release-scope`；`make v4.1-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.1-release-scope.md`](v4.1-release-scope.md)（已冻结） · [`../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md`](../../docs/superpowers/specs/2026-09-19-v41-enterprise-agentic-design.md) | — |
+| DX73 | 插件 gRPC 生产监听（v4.2 草案） | 非 dev 缺签名则拒绝启动 | ⬜ |
+| DX74 | gRPC Register 签名（v4.2 草案） | 强制签名下拒绝无签名插件 | ⬜ |
+| DX75 | RAG Indexer proto（v4.2 草案） | `rag_indexer.proto`；无新表 | ⬜ |
+| DX76 | 进程内 Indexer（v4.2 草案） | 可选本机 gRPC；默认关闭 | ⬜ |
+| DX77 | ABI 姿态（v4.2 草案） | 插件 / Indexer 是否在听 | ⬜ |
+| DX78 | v4.2 冻结 + 签字 | `v4.2-release-scope`；`make v4.2-signoff`；tag 人工 | ⬜ |
+| 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.1-release-scope.md`](v4.1-release-scope.md)（已冻结） · [`v4.2-release-scope.md`](v4.2-release-scope.md)（草案） | — |
 
 ---
 
