@@ -55,9 +55,11 @@ proto/
 - `ExportLogs(ExportLogsRequest) returns (ExportReply)`
 
 ### 4.4 RagIndexer（索引/检索插件，P1+）
-`service RagIndexer`
-- `IndexRepo(IndexRepoRequest) returns (IndexRepoReply)`
-- `Query(QueryRequest) returns (QueryReply)`
+`service RagIndexer`（落地为 `RagIndexerService`，响应类型 `*Response` 以过 buf STANDARD）
+- `IndexRepo(IndexRepoRequest) returns (IndexRepoResponse)`
+- `Query(QueryRequest) returns (QueryResponse)`
+
+契约文件：`proto/ash/v1/rag_indexer.proto`（DX75）。
 
 ## 5. Buf 集成建议
 - `buf lint`：保证风格一致

@@ -1,0 +1,58 @@
+syntax = "proto3";
+
+package ash.v1;
+
+import "ash/v1/common.proto";
+
+option go_package = "github.com/ash-repwiki/ash/proto/ash/v1;ashv1";
+
+// RagIndexerService is the Stage-1 in-process / optional loopback indexer contract (DX75).
+// Production default: no listen until ASH_RAG_INDEXER_GRPC_ADDR is set (DX76).
+service RagIndexerService {
+  rpc IndexRepo(IndexRepoRequest) returns (IndexRepoResponse);
+  rpc Query(QueryRequest) returns (QueryResponse);
+}
+
+message IndexRepoRequest {
+  TraceContext context = 1;
+  string repo_root = 2;
+  bool embed = 3;
+}
+
+message IndexRepoResponse {
+  int32 documents = 1;
+  int32 chunks = 2;
+  int32 embedded = 3;
+  Status status = 4;
+}
+
+message QueryRequest {
+  TraceContext context = 1;
+  string repo_root = 2;
+  string text = 3;
+  int32 top_k = 4;
+  // "" | path | symbol | text | vector | hybrid+vector
+  string prefer = 5;
+  bool expand_refs = 6;
+}
+
+message QueryHit {
+  string ref = 1;
+  string path = 2;
+  string symbol = 3;
+  int32 start_line = 4;
+  int32 end_line = 5;
+  string digest = 6;
+  double score = 7;
+  string snippet = 8;
+}
+
+message QueryResponse {
+  repeated QueryHit items = 1;
+  string retrieval_mode = 2;
+  bool fts_available = 3;
+  bool vector_available = 4;
+  string vector_fallback = 5;
+  string prefer_applied = 6;
+  Status status = 7;
+}
