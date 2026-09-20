@@ -248,9 +248,9 @@
 | VX32 | RPC Doctor（v6.3 草案） | `M4-RPC-01`；M4 **13** / ALL **63** | ✅ |
 | VX33 | Notifier 缝（v6.3 草案） | `internal/notify` null/log；`ASH_NOTIFIER` | ✅ |
 | VX34 | Waker→Notifier（v6.3 草案） | duty 完成钩子 `waker.duty.*` | ✅ |
-| VX35 | Backend 枚举（v6.3 草案） | readyz/ABI 投影 | ⬜ |
-| VX36 | v6.3 冻结 + 签字 | `v6.3-release-scope`；`make v6.3-signoff` | ⬜ |
-| 详排 | — | [`v6.0-release-scope.md`](v6.0-release-scope.md)（已冻结） · [`v6.3-release-scope.md`](v6.3-release-scope.md)（草案） · [`v6.x-program.md`](v6.x-program.md) | — |
+| VX35 | Backend 枚举（v6.3 草案） | `sandboxBackends` on readyz/scale | ✅ |
+| VX36 | v6.3 冻结 + 签字 | `v6.3-release-scope`；`make v6.3-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v6.0-release-scope.md`](v6.0-release-scope.md)（已冻结） · [`v6.3-release-scope.md`](v6.3-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---
 

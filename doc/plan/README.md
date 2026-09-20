@@ -30,12 +30,14 @@
 | [`v5.0-release-scope.md`](v5.0-release-scope.md) | **v5.0** 范围（**已冻结**；GV06） | 冻结已落地的薄交互 + 管控/厚评审水位 |
 | [`v6.x-program.md`](v6.x-program.md) | **v6.x** 程序（可审计执行面；分冻 v6.0 / v6.3+） | Hooks / 会话语义 / 吸收收口 |
 | [`v6.0-release-scope.md`](v6.0-release-scope.md) | **v6.0** 范围（**已冻结**；EW130） | EW W0–W12 吸收水位冻结 |
-| [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**草案**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
+| [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**已冻结**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
 | [`sprint-ew130-v60-signoff.md`](sprint-ew130-v60-signoff.md) | **EW130** v6.0 冻结 + 签字 | ✅ |
 | [`sprint-vx31-rpc-cli-smoke.md`](sprint-vx31-rpc-cli-smoke.md) | **VX31** RPC CLI 烟测 | ✅ |
 | [`sprint-vx32-rpc-doctor.md`](sprint-vx32-rpc-doctor.md) | **VX32** RPC Doctor `M4-RPC-01` | ✅ |
 | [`sprint-vx33-notifier-seam.md`](sprint-vx33-notifier-seam.md) | **VX33** Notifier 缝 null/log | ✅ |
 | [`sprint-vx34-waker-notify.md`](sprint-vx34-waker-notify.md) | **VX34** Waker→Notifier | ✅ |
+| [`sprint-vx35-backend-enum.md`](sprint-vx35-backend-enum.md) | **VX35** Backend 枚举投影 | ✅ |
+| [`sprint-vx36-v63-signoff.md`](sprint-vx36-v63-signoff.md) | **VX36** v6.3 冻结 + 签字 | ✅ |
 | [v5 实现排期](../../docs/superpowers/plans/2026-09-13-v5-governance-implementation.md) | **v5** 全量改造排期与技术方案（GV01–12） | 可观测运行 / 记忆关联 / 评分管控 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
