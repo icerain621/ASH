@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/ingress"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -59,6 +60,9 @@ func TestScaleReadiness(t *testing.T) {
 	}
 	if !slices.Equal(resp.SandboxBackends, sandbox.KnownBackendIDs()) {
 		t.Fatalf("sandboxBackends=%v want %v", resp.SandboxBackends, sandbox.KnownBackendIDs())
+	}
+	if !slices.Equal(resp.IngressAdapters, ingress.KnownAdapterIDs()) {
+		t.Fatalf("ingressAdapters=%v want %v", resp.IngressAdapters, ingress.KnownAdapterIDs())
 	}
 	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
 		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)

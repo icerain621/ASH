@@ -435,7 +435,7 @@ export function AutomationPage() {
               <span>{skillCatalogQuery.data?.items.length ?? 0} 项</span>
             </div>
             <p className="muted-line" data-testid="catalog-private-marker">
-              私有 · 不计费
+              私有 · 组织 Hub · 不计费
             </p>
             {skillCatalogQuery.data?.source && (
               <p className="muted-line">

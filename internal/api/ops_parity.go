@@ -19,6 +19,9 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 	if err := sandboxBackendsParity(readyz.SandboxBackends, scale.SandboxBackends); err != nil {
 		return err
 	}
+	if err := stringSliceParity("ingressAdapters", readyz.IngressAdapters, scale.IngressAdapters); err != nil {
+		return err
+	}
 	if readyz.OtelEnabled != scale.OtelEnabled {
 		return fmt.Errorf("otel readyz=%v scale=%v", readyz.OtelEnabled, scale.OtelEnabled)
 	}
@@ -60,11 +63,15 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 }
 
 func sandboxBackendsParity(readyz, scale []string) error {
+	return stringSliceParity("sandboxBackends", readyz, scale)
+}
+
+func stringSliceParity(field string, readyz, scale []string) error {
 	if len(readyz) == 0 && len(scale) == 0 {
 		return nil
 	}
 	if !slices.Equal(readyz, scale) {
-		return fmt.Errorf("sandboxBackends readyz=%v scale=%v", readyz, scale)
+		return fmt.Errorf("%s readyz=%v scale=%v", field, readyz, scale)
 	}
 	return nil
 }

@@ -159,7 +159,11 @@ type registerPluginRequest struct {
 // @Success 200 {object} ModelProviderListResponse
 // @Router /api/v1/model-router/providers [get]
 func (h *Handler) listModelProviders(c *gin.Context) {
-	c.JSON(http.StatusOK, gin.H{"items": modelrouter.NewFromEnv().Providers()})
+	c.JSON(http.StatusOK, ModelProviderListResponse{
+		Items:   modelrouter.NewFromEnv().Providers(),
+		Catalog: "org",
+		Billing: "none",
+	})
 }
 
 // RouteModel godoc

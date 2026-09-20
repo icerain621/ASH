@@ -23,6 +23,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/idp"
 	"github.com/ash-repwiki/ash/internal/improve"
+	"github.com/ash-repwiki/ash/internal/ingress"
 	"github.com/ash-repwiki/ash/internal/interaction"
 	"github.com/ash-repwiki/ash/internal/knowledge"
 	"github.com/ash-repwiki/ash/internal/memory"
@@ -413,6 +414,7 @@ func (h *Handler) readyz(c *gin.Context) {
 			Status: "not_ready", Error: err.Error(),
 			Region: config.Region(), MultiRegion: config.MultiRegion(),
 			SandboxBackends: sandbox.KnownBackendIDs(),
+			IngressAdapters: ingress.KnownAdapterIDs(),
 		})
 		return
 	}
@@ -438,6 +440,7 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 		Region:                    config.Region(),
 		MultiRegion:               config.MultiRegion(),
 		SandboxBackends:           sandbox.KnownBackendIDs(),
+		IngressAdapters:           ingress.KnownAdapterIDs(),
 		Dialect:                   h.db.Dialect(),
 		Error:                     errMsg,
 		SchemaMode:                profile.SchemaMode,

@@ -13750,6 +13750,9 @@
                 "billing": {
                     "type": "string"
                 },
+                "hub": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -15903,6 +15906,16 @@
                 "error": {
                     "type": "string"
                 },
+                "ingressAdapters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "null",
+                        "webhook-github"
+                    ]
+                },
                 "liveGateHints": {
                     "type": "array",
                     "items": {
@@ -16050,6 +16063,14 @@
         "internal_api.ModelProviderListResponse": {
             "type": "object",
             "properties": {
+                "billing": {
+                    "type": "string",
+                    "example": "none"
+                },
+                "catalog": {
+                    "type": "string",
+                    "example": "org"
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -16371,6 +16392,12 @@
                 },
                 "execPolicySandboxFloor": {
                     "type": "string"
+                },
+                "ingressAdapters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "lastMigrationSyncAtMs": {
                     "type": "integer"

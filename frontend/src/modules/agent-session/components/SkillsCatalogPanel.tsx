@@ -188,7 +188,7 @@ export function SkillsCatalogPanel({ open, onClose, onRunSkill, canRun = false }
         <div className="agent-skills-section" data-testid="agent-skills-org-catalog">
           <h3 className="agent-skills-section-title">组织 Catalog</h3>
           <p className="muted-line" data-testid="catalog-private-marker">
-            私有 · 不计费
+            私有 · 组织 Hub · 不计费
           </p>
           {catalogQuery.data?.source ? (
             <p className="muted-line">

@@ -3042,6 +3042,8 @@ definitions:
     properties:
       billing:
         type: string
+      hub:
+        type: string
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_skills.CatalogItem'
@@ -4454,6 +4456,13 @@ definitions:
         type: string
       error:
         type: string
+      ingressAdapters:
+        example:
+        - "null"
+        - webhook-github
+        items:
+          type: string
+        type: array
       liveGateHints:
         items:
           type: string
@@ -4555,6 +4564,12 @@ definitions:
     type: object
   internal_api.ModelProviderListResponse:
     properties:
+      billing:
+        example: none
+        type: string
+      catalog:
+        example: org
+        type: string
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_modelrouter.Provider'
@@ -4764,6 +4779,10 @@ definitions:
         type: boolean
       execPolicySandboxFloor:
         type: string
+      ingressAdapters:
+        items:
+          type: string
+        type: array
       lastMigrationSyncAtMs:
         type: integer
       lastMigrationSyncError:

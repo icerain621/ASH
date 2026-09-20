@@ -8,6 +8,12 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX45：双语清单说明 `ingressAdapters` / Provider `catalog` / Skills `hub`。 / VX45: bilingual probe checklist for ingress/provider/hub markers.
+- Sprint VX44：`GET /skills/catalog` 增加 `hub=org`；控制台「私有 · 组织 Hub · 不计费」。无公网市场。 / VX44: skills catalog hub=org; console line; no public marketplace.
+- Sprint VX43：`GET /model-router/providers` 信封 `catalog=org`、`billing=none`。 / VX43: provider list marked org catalog with no billing.
+- Sprint VX42：`/readyz` 与 scale readiness 暴露 `ingressAdapters`。 / VX42: probes report ingressAdapters catalog.
+- Sprint VX41：`internal/ingress` 适配器缝（null / webhook-github）；`ASH_INGRESS`；未知值 fail-closed 到 null。无 IM SDK。 / VX41: ingress seam; unknown values fail closed to null.
+- Sprint 草案：v6.4（VX41–VX46）。单通道 Ingress 缝 · Provider 目录标记 · 组织 Skills Hub。无 Hermes 全 IM。 / v6.4 draft: ingress seam, provider catalog markers, org skills hub; no Hermes IM.
 - Sprint VX36：v6.3 范围已冻结；`make v6.3-signoff` 不自动打 `v6.3.0` tag。 / VX36: v6.3 scope frozen; sign-off gate does not tag.
 - Sprint VX35：`/readyz` 与 scale readiness 暴露 `sandboxBackends`（local/landlock/docker/remote-mock/remote-e2b）；不新开厂商。无新表。 / VX35: sandboxBackends catalog on readyz/scale; no new vendors.
 - Sprint VX34：Waker duty 完成后走 Notifier（`waker.duty.<status>`）；`ASH_NOTIFIER=log` 可观察；默认 null。无 IM、无新表。 / VX34: duty completion emits via Notifier; log optional; null default; no IM.

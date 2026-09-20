@@ -9,6 +9,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/execpolicy"
+	"github.com/ash-repwiki/ash/internal/ingress"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/sandbox"
@@ -22,6 +23,7 @@ type ScaleReadinessResponse struct {
 	Region                        string   `json:"region,omitempty"`
 	MultiRegion                   string   `json:"multiRegion,omitempty"`
 	SandboxBackends               []string `json:"sandboxBackends,omitempty"`
+	IngressAdapters               []string `json:"ingressAdapters,omitempty"`
 	MemorySchemaVersion           int      `json:"memorySchemaVersion"`
 	MemoryApprovedCount           int64    `json:"memoryApprovedCount"`
 	RunRunningCount               int64    `json:"runRunningCount"`
@@ -162,6 +164,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		Region:                        config.Region(),
 		MultiRegion:                   config.MultiRegion(),
 		SandboxBackends:               sandbox.KnownBackendIDs(),
+		IngressAdapters:               ingress.KnownAdapterIDs(),
 		MemorySchemaVersion:           memory.CurrentSchemaVersion,
 		MemoryApprovedCount:           memApproved,
 		RunRunningCount:               runRunning,

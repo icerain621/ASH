@@ -60,6 +60,7 @@ export type SkillCatalogList = {
   items: SkillCatalogItem[];
   marketplace: "private";
   billing: "none";
+  hub: "org";
 };
 
 export function verifySkillPack(body: {

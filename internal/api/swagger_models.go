@@ -28,6 +28,7 @@ type HealthResponse struct {
 	Region                    string   `json:"region,omitempty" example:"default"`
 	MultiRegion               string   `json:"multiRegion,omitempty" example:"disabled"`
 	SandboxBackends           []string `json:"sandboxBackends,omitempty" example:"local,landlock,docker,remote-mock,remote-e2b"`
+	IngressAdapters           []string `json:"ingressAdapters,omitempty" example:"null,webhook-github"`
 	Dialect                   string   `json:"dialect,omitempty" example:"postgres"`
 	Error                     string   `json:"error,omitempty"`
 	SchemaMode                string   `json:"schemaMode,omitempty" example:"sql"`
@@ -129,7 +130,9 @@ type CheckpointListResponse struct {
 }
 
 type ModelProviderListResponse struct {
-	Items []modelrouter.Provider `json:"items"`
+	Items   []modelrouter.Provider `json:"items"`
+	Catalog string                 `json:"catalog" example:"org"`
+	Billing string                 `json:"billing" example:"none"`
 }
 
 type MCPToolListResponse struct {

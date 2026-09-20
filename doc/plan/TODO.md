@@ -250,7 +250,13 @@
 | VX34 | Waker→Notifier（v6.3 草案） | duty 完成钩子 `waker.duty.*` | ✅ |
 | VX35 | Backend 枚举（v6.3 草案） | `sandboxBackends` on readyz/scale | ✅ |
 | VX36 | v6.3 冻结 + 签字 | `v6.3-release-scope`；`make v6.3-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v6.0-release-scope.md`](v6.0-release-scope.md)（已冻结） · [`v6.3-release-scope.md`](v6.3-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
+| VX41 | Ingress 缝（v6.4 草案） | `internal/ingress` null/webhook-github | ✅ |
+| VX42 | Ingress 探测（v6.4 草案） | `ingressAdapters` on readyz/scale | ✅ |
+| VX43 | Provider 目录标记（v6.4 草案） | catalog=org；billing=none | ✅ |
+| VX44 | Skills Hub 标记（v6.4 草案） | hub=org + 控制台一句 | ✅ |
+| VX45 | 探测清单（v6.4 草案） | `ingress-provider-hub.md` | ✅ |
+| VX46 | v6.4 冻结 + 签字 | `v6.4-release-scope`；`make v6.4-signoff` | ⬜ |
+| 详排 | — | [`v6.3-release-scope.md`](v6.3-release-scope.md)（已冻结） · [`v6.4-release-scope.md`](v6.4-release-scope.md)（草案） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---
 

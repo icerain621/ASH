@@ -183,6 +183,11 @@ components:
           description: Static catalog of known sandbox backend ids (VX35; not Active-Active; no new vendors).
           items: { type: string }
           example: [local, landlock, docker, remote-mock, remote-e2b]
+        ingressAdapters:
+          type: array
+          description: Static catalog of known ingress adapters (VX42; single-channel seam, not Hermes IM).
+          items: { type: string }
+          example: [null, webhook-github]
         memorySchemaVersion:
           type: integer
           description: Current memory record schema version.
@@ -589,6 +594,11 @@ components:
           description: Static catalog of known sandbox backend ids (VX35).
           items: { type: string }
           example: [local, landlock, docker, remote-mock, remote-e2b]
+        ingressAdapters:
+          type: array
+          description: Static catalog of known ingress adapters (VX42).
+          items: { type: string }
+          example: [null, webhook-github]
         dialect: { type: string, example: postgres }
         error: { type: string }
         schemaMode: { type: string, enum: [automigrate, sql] }
@@ -950,6 +960,7 @@ components:
           items: { $ref: "#/components/schemas/SkillCatalogItem" }
         marketplace: { type: string, example: private }
         billing: { type: string, example: none }
+        hub: { type: string, example: org, description: "Org Skills Hub posture (VX44); not a public marketplace." }
     SkillCatalogInstallRequest:
       type: object
       required: [name]
@@ -2362,11 +2373,13 @@ components:
         outputMicrosPer1K: { type: integer }
     ModelProviderListResponse:
       type: object
-      required: [items]
+      required: [items, catalog, billing]
       properties:
         items:
           type: array
           items: { $ref: "#/components/schemas/ModelProviderItem" }
+        catalog: { type: string, example: org, description: "Org provider catalog marker (VX43)." }
+        billing: { type: string, example: none }
     ModelRouterRequest:
       type: object
       properties:

@@ -15,6 +15,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/config"
+	"github.com/ash-repwiki/ash/internal/ingress"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
@@ -51,6 +52,9 @@ func TestHealthzAndReadyzSQLite(t *testing.T) {
 			}
 			if !slices.Equal(resp.SandboxBackends, sandbox.KnownBackendIDs()) {
 				t.Fatalf("readyz sandboxBackends=%v want %v", resp.SandboxBackends, sandbox.KnownBackendIDs())
+			}
+			if !slices.Equal(resp.IngressAdapters, ingress.KnownAdapterIDs()) {
+				t.Fatalf("readyz ingressAdapters=%v want %v", resp.IngressAdapters, ingress.KnownAdapterIDs())
 			}
 			if resp.OtelEnabled || resp.MetricsEventReplayEnabled || resp.AlertsEvalInterval != "" {
 				t.Fatalf("readyz=%+v want default ops flags unset", resp)

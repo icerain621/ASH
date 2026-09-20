@@ -45,7 +45,7 @@ type Catalog struct {
 }
 
 // CatalogListResponse is returned by GET /skills/catalog.
-// Marketplace and Billing are fixed markers (DX79): private catalog, no billing.
+// Marketplace, Billing, and Hub are fixed markers: private org hub, no billing.
 type CatalogListResponse struct {
 	OK          bool          `json:"ok"`
 	Source      string        `json:"source,omitempty"`
@@ -53,11 +53,13 @@ type CatalogListResponse struct {
 	Items       []CatalogItem `json:"items"`
 	Marketplace string        `json:"marketplace"`
 	Billing     string        `json:"billing"`
+	Hub         string        `json:"hub"`
 }
 
 const (
 	MarketplacePrivate = "private"
 	BillingNone        = "none"
+	HubOrg             = "org"
 )
 
 func catalogList(ok bool, source, message string, items []CatalogItem) *CatalogListResponse {
@@ -66,7 +68,7 @@ func catalogList(ok bool, source, message string, items []CatalogItem) *CatalogL
 	}
 	return &CatalogListResponse{
 		OK: ok, Source: source, Message: message, Items: items,
-		Marketplace: MarketplacePrivate, Billing: BillingNone,
+		Marketplace: MarketplacePrivate, Billing: BillingNone, Hub: HubOrg,
 	}
 }
 

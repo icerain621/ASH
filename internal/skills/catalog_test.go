@@ -172,8 +172,8 @@ func TestLoadCatalogMissingOK(t *testing.T) {
 	if !out.OK || len(out.Items) != 0 {
 		t.Fatalf("%+v", out)
 	}
-	if out.Marketplace != MarketplacePrivate || out.Billing != BillingNone {
-		t.Fatalf("%+v want private/none", out)
+	if out.Marketplace != MarketplacePrivate || out.Billing != BillingNone || out.Hub != HubOrg {
+		t.Fatalf("%+v want private/none/org", out)
 	}
 }
 
@@ -188,8 +188,8 @@ func TestListCatalogBadJSONKeepsMarkers(t *testing.T) {
 	if err == nil || out == nil {
 		t.Fatalf("err=%v out=%+v", err, out)
 	}
-	if out.OK || out.Marketplace != MarketplacePrivate || out.Billing != BillingNone {
-		t.Fatalf("%+v want private/none", out)
+	if out.OK || out.Marketplace != MarketplacePrivate || out.Billing != BillingNone || out.Hub != HubOrg {
+		t.Fatalf("%+v want private/none/org", out)
 	}
 }
 

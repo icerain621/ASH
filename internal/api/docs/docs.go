@@ -13756,6 +13756,9 @@ const docTemplate = `{
                 "billing": {
                     "type": "string"
                 },
+                "hub": {
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -15909,6 +15912,16 @@ const docTemplate = `{
                 "error": {
                     "type": "string"
                 },
+                "ingressAdapters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "null",
+                        "webhook-github"
+                    ]
+                },
                 "liveGateHints": {
                     "type": "array",
                     "items": {
@@ -16056,6 +16069,14 @@ const docTemplate = `{
         "internal_api.ModelProviderListResponse": {
             "type": "object",
             "properties": {
+                "billing": {
+                    "type": "string",
+                    "example": "none"
+                },
+                "catalog": {
+                    "type": "string",
+                    "example": "org"
+                },
                 "items": {
                     "type": "array",
                     "items": {
@@ -16377,6 +16398,12 @@ const docTemplate = `{
                 },
                 "execPolicySandboxFloor": {
                     "type": "string"
+                },
+                "ingressAdapters": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "lastMigrationSyncAtMs": {
                     "type": "integer"
