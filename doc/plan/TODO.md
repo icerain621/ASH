@@ -243,7 +243,8 @@
 | DX83 | 探测清单（v4.3 草案） | 非 Active-Active 文档 | ✅ |
 | DX84 | v4.3 冻结 + 签字 | `v4.3-release-scope`；`make v4.3-signoff`；tag 人工 | ✅ |
 | GV06 | v5.0 冻结 + 签字 | `v5.0-release-scope`；`make v5-signoff`；tag 人工 | ✅ |
-| 详排 | — | [`v4.x-program.md`](v4.x-program.md)（已收口） · [`v4.3-release-scope.md`](v4.3-release-scope.md)（已冻结） · [`v5.0-release-scope.md`](v5.0-release-scope.md)（已冻结） | — |
+| EW130 | v6.0 冻结 + 签字 | `v6.0-release-scope`；`make v6-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v4.x-program.md`](v4.x-program.md)（已收口） · [`v5.0-release-scope.md`](v5.0-release-scope.md)（已冻结） · [`v6.0-release-scope.md`](v6.0-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---
 

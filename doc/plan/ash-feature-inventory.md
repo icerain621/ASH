@@ -183,8 +183,10 @@
    → 任务板 [`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md) · **✅**（EW111–EW112）  
 13. **记忆厚审深链 + 任务板入口**：候选 → Reviews；设置 → Quest  
    → 任务板 [`sprint-ew-w12-memory-thick-review.md`](sprint-ew-w12-memory-thick-review.md) · **✅**（EW121–EW122）  
+14. **v6.0 冻结**：吸收水位签字门禁  
+   → [`v6.0-release-scope.md`](v6.0-release-scope.md) · [`sprint-ew130-v60-signoff.md`](sprint-ew130-v60-signoff.md) · **✅**（EW130）；`make v6-signoff`
 
-明确 **不做**：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认、语音输入占位。
+明确 **不做**（v6.0 Out）：Cordis、完整 DSH slash 一比一、Hermes 全 IM、YOLO 默认、语音输入占位；**v6.3+**（RPC / Cron / Backend）另开代际。
 
 ---
 
@@ -192,6 +194,7 @@
 
 | 日期 | 说明 |
 |------|------|
+| 2026-09-20 | **v6.0 已冻结**（EW130）：W0–W12 吸收收口；`make v6-signoff`；下一代 v6.3 |
 | 2026-09-18 | 初版：原型 × Console × OpenAPI × 四象限吸收优先级 |
 | 2026-09-18 | W0 → Sprint 板 EW01–EW05 + 实现计划 |
 | 2026-09-19 | W0 ✅；W1 → Sprint 板 EW11–EW18 + 实现计划 |

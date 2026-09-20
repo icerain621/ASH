@@ -71,11 +71,13 @@
 2. **v4.x** — **已收口**
 3. **v5.0** — **已冻结**（GV06）；人工 tag `v5.0.0`；可选 UI 扫一眼见 [`../checklists/v5.0-signoff.md`](../checklists/v5.0-signoff.md)
 4. 门禁：`make v5-signoff`（含 scope-freeze）
+5. **v6.0** — **已冻结**（EW130）；见 [`v6.0-release-scope.md`](v6.0-release-scope.md) / [`v6.x-program.md`](v6.x-program.md)；下一步 = 人工 tag 或起草 **v6.3**
 
 ## 6. 修订记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-09-20 | 挂接 **v6.0 已冻结**（EW130）；下一代见 v6.x 程序 |
 | 2026-09-20 | **v5.0 已冻结**（GV06）；`make v5-signoff` 接入 scope-freeze；不打 tag |
 | 2026-09-20 | v4.x 收口后挂接 v5.0 冻结草案（GV06）；下一步实现冻结门禁 |
 | 2026-09-13 | 初稿：设计轨立项；A/B/C/D 定义；图集与规格挂接 |
