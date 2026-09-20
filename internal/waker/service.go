@@ -11,6 +11,7 @@ import (
 
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/notify"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -79,10 +80,11 @@ type Service struct {
 	ctx        context.Context
 	doctor     DoctorRunner
 	kpiBacklog KPIBacklogFunc
+	notifier   notify.Notifier
 }
 
 func NewService(db *store.DB) *Service {
-	return &Service{db: db, doctor: defaultDoctorRunner}
+	return &Service{db: db, doctor: defaultDoctorRunner, notifier: notify.FromEnv()}
 }
 
 func (s *Service) WithContext(ctx context.Context) *Service {
@@ -93,6 +95,20 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	out.ctx = ctx
 	if s.db != nil {
 		out.db = s.db.BindContext(ctx)
+	}
+	return &out
+}
+
+// WithNotifier returns a copy that delivers duty completions via n (VX34).
+func (s *Service) WithNotifier(n notify.Notifier) *Service {
+	if s == nil {
+		return nil
+	}
+	out := *s
+	if n == nil {
+		out.notifier = notify.Null{}
+	} else {
+		out.notifier = n
 	}
 	return &out
 }

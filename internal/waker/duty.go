@@ -1,6 +1,7 @@
 package waker
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -10,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/notify"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -461,7 +463,34 @@ func (s *Service) persistDutyRun(duty store.WakerDuty, status string, resp Sweep
 		StartedAt:  started,
 		FinishedAt: time.Now().UTC(),
 	}
-	return s.q().Create(&row).Error
+	if err := s.q().Create(&row).Error; err != nil {
+		return err
+	}
+	s.emitDutyNotify(duty, status, resp, row.ID)
+	return nil
+}
+
+func (s *Service) emitDutyNotify(duty store.WakerDuty, status string, resp SweepResponse, runID string) {
+	n := s.notifier
+	if n == nil {
+		n = notify.Null{}
+	}
+	ctx := s.ctx
+	if ctx == nil {
+		ctx = context.Background()
+	}
+	_ = n.Notify(ctx, notify.Event{
+		Kind:    "waker.duty." + status,
+		Title:   fmt.Sprintf("waker %s %s", duty.Kind, status),
+		Body:    resp.Summary,
+		SpaceID: duty.SpaceID,
+		Meta: map[string]string{
+			"dutyId":    duty.ID,
+			"dutyRunId": runID,
+			"kind":      duty.Kind,
+			"status":    status,
+		},
+	})
 }
 
 // knownSpaces returns distinct space_id values from run records (cheap DX12 stretch).

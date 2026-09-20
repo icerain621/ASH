@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX34：Waker duty 完成后走 Notifier（`waker.duty.<status>`）；`ASH_NOTIFIER=log` 可观察；默认 null。无 IM、无新表。 / VX34: duty completion emits via Notifier; log optional; null default; no IM.
+- Sprint VX33：`internal/notify` 适配器缝（null/log）；`ASH_NOTIFIER`；未知值 fail-closed 到 null。无 IM SDK、无新表。 / VX33: notify seam (null/log); unknown values fail closed to null.
 - Sprint VX32：Doctor `M4-RPC-01` 进程内 ServeRPC 空闲起停；M4 **13/13**，ALL **63/63**。无新表。 / VX32: M4-RPC-01 ServeRPC idle probe; M4 13, ALL 63.
 - Sprint VX31：`make session-rpc-smoke` — ServeRPC idle `session.start`；可选 `ASH_SESSION_RPC_CLI=1` CLI 管道；写 evidence。无新表。 / VX31: session-rpc-smoke for ServeRPC; optional CLI pipe; no new tables.
 - Sprint 草案：v6.3（VX31–VX36）。RPC CLI 烟测 + Doctor；Notifier 缝（null/log）；Backend 枚举投影。无 IM、无新表。 / v6.3 draft: RPC smoke+Doctor, notifier seam, backend enum; no IM, no new tables.

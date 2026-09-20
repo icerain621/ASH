@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/notify"
 	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -120,6 +121,32 @@ func TestRunDueDutiesWritesDutyRun(t *testing.T) {
 	}
 	if len(st.RecentRuns) < 1 || st.RecentRuns[0].Kind != KindStaleRun {
 		t.Fatalf("want duty run: %+v", st)
+	}
+}
+
+func TestRunDutyNotifiesRecorder(t *testing.T) {
+	t.Setenv("ASH_WAKER_RUN_TTL", "1h")
+	t.Setenv("ASH_NOTIFIER", "null")
+	db := openTestDB(t)
+	seedStaleRunningRun(t, db)
+	rec := notify.NewRecorder()
+	svc := NewService(db).WithNotifier(rec)
+	duty, err := svc.EnsureStaleRunDuty("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := svc.RunDuty(duty.ID, true); err != nil {
+		t.Fatal(err)
+	}
+	evs := rec.Events()
+	if len(evs) != 1 {
+		t.Fatalf("events=%d want 1: %+v", len(evs), evs)
+	}
+	if !strings.HasPrefix(evs[0].Kind, "waker.duty.") {
+		t.Fatalf("kind=%s", evs[0].Kind)
+	}
+	if evs[0].Meta["dutyId"] != duty.ID || evs[0].Meta["kind"] != KindStaleRun {
+		t.Fatalf("meta=%+v", evs[0].Meta)
 	}
 }
 
