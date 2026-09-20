@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"testing"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/memory"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -54,6 +56,9 @@ func TestScaleReadiness(t *testing.T) {
 	}
 	if resp.MultiRegion != config.MultiRegionDisabled {
 		t.Fatalf("multiRegion=%q want %q", resp.MultiRegion, config.MultiRegionDisabled)
+	}
+	if !slices.Equal(resp.SandboxBackends, sandbox.KnownBackendIDs()) {
+		t.Fatalf("sandboxBackends=%v want %v", resp.SandboxBackends, sandbox.KnownBackendIDs())
 	}
 	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
 		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)

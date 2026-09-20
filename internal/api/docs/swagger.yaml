@@ -4495,6 +4495,16 @@ definitions:
         type: integer
       rlsCatalogSummary:
         type: string
+      sandboxBackends:
+        example:
+        - local
+        - landlock
+        - docker
+        - remote-mock
+        - remote-e2b
+        items:
+          type: string
+        type: array
       schemaMode:
         example: sql
         type: string
@@ -4858,6 +4868,10 @@ definitions:
         type: integer
       runtimeDsnHint:
         type: string
+      sandboxBackends:
+        items:
+          type: string
+        type: array
       sandboxRemoteAvailable:
         type: boolean
       sandboxRemoteBackend:

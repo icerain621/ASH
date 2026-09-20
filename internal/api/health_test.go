@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
+	"slices"
 	"sort"
 	"sync"
 	"testing"
@@ -15,6 +16,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/rules"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -46,6 +48,9 @@ func TestHealthzAndReadyzSQLite(t *testing.T) {
 			}
 			if resp.MultiRegion != config.MultiRegionDisabled {
 				t.Fatalf("readyz multiRegion=%q want %q", resp.MultiRegion, config.MultiRegionDisabled)
+			}
+			if !slices.Equal(resp.SandboxBackends, sandbox.KnownBackendIDs()) {
+				t.Fatalf("readyz sandboxBackends=%v want %v", resp.SandboxBackends, sandbox.KnownBackendIDs())
 			}
 			if resp.OtelEnabled || resp.MetricsEventReplayEnabled || resp.AlertsEvalInterval != "" {
 				t.Fatalf("readyz=%+v want default ops flags unset", resp)

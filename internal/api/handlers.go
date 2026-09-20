@@ -33,6 +33,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/releases"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/runs"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/scenariopatch"
 	"github.com/ash-repwiki/ash/internal/scoring"
 	"github.com/ash-repwiki/ash/internal/secrets"
@@ -411,6 +412,7 @@ func (h *Handler) readyz(c *gin.Context) {
 		c.JSON(http.StatusServiceUnavailable, HealthResponse{
 			Status: "not_ready", Error: err.Error(),
 			Region: config.Region(), MultiRegion: config.MultiRegion(),
+			SandboxBackends: sandbox.KnownBackendIDs(),
 		})
 		return
 	}
@@ -435,6 +437,7 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 		Status:                    status,
 		Region:                    config.Region(),
 		MultiRegion:               config.MultiRegion(),
+		SandboxBackends:           sandbox.KnownBackendIDs(),
 		Dialect:                   h.db.Dialect(),
 		Error:                     errMsg,
 		SchemaMode:                profile.SchemaMode,

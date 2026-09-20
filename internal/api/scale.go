@@ -21,6 +21,7 @@ type ScaleReadinessResponse struct {
 	SpaceID                       string   `json:"spaceId"`
 	Region                        string   `json:"region,omitempty"`
 	MultiRegion                   string   `json:"multiRegion,omitempty"`
+	SandboxBackends               []string `json:"sandboxBackends,omitempty"`
 	MemorySchemaVersion           int      `json:"memorySchemaVersion"`
 	MemoryApprovedCount           int64    `json:"memoryApprovedCount"`
 	RunRunningCount               int64    `json:"runRunningCount"`
@@ -160,6 +161,7 @@ func (h *Handler) scaleReadiness(c *gin.Context) {
 		SpaceID:                       space,
 		Region:                        config.Region(),
 		MultiRegion:                   config.MultiRegion(),
+		SandboxBackends:               sandbox.KnownBackendIDs(),
 		MemorySchemaVersion:           memory.CurrentSchemaVersion,
 		MemoryApprovedCount:           memApproved,
 		RunRunningCount:               runRunning,

@@ -15967,6 +15967,19 @@ const docTemplate = `{
                 "rlsCatalogSummary": {
                     "type": "string"
                 },
+                "sandboxBackends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    },
+                    "example": [
+                        "local",
+                        "landlock",
+                        "docker",
+                        "remote-mock",
+                        "remote-e2b"
+                    ]
+                },
                 "schemaMode": {
                     "type": "string",
                     "example": "sql"
@@ -16520,6 +16533,12 @@ const docTemplate = `{
                 },
                 "runtimeDsnHint": {
                     "type": "string"
+                },
+                "sandboxBackends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "sandboxRemoteAvailable": {
                     "type": "boolean"

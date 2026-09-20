@@ -178,6 +178,11 @@ components:
           type: string
           description: Active-Active / multi-region posture. Always "disabled" (DX82; not Active-Active).
           example: disabled
+        sandboxBackends:
+          type: array
+          description: Static catalog of known sandbox backend ids (VX35; not Active-Active; no new vendors).
+          items: { type: string }
+          example: [local, landlock, docker, remote-mock, remote-e2b]
         memorySchemaVersion:
           type: integer
           description: Current memory record schema version.
@@ -579,6 +584,11 @@ components:
           type: string
           description: Active-Active / multi-region posture. Always "disabled" (DX82).
           example: disabled
+        sandboxBackends:
+          type: array
+          description: Static catalog of known sandbox backend ids (VX35).
+          items: { type: string }
+          example: [local, landlock, docker, remote-mock, remote-e2b]
         dialect: { type: string, example: postgres }
         error: { type: string }
         schemaMode: { type: string, enum: [automigrate, sql] }

@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX36：v6.3 范围已冻结；`make v6.3-signoff` 不自动打 `v6.3.0` tag。 / VX36: v6.3 scope frozen; sign-off gate does not tag.
+- Sprint VX35：`/readyz` 与 scale readiness 暴露 `sandboxBackends`（local/landlock/docker/remote-mock/remote-e2b）；不新开厂商。无新表。 / VX35: sandboxBackends catalog on readyz/scale; no new vendors.
 - Sprint VX34：Waker duty 完成后走 Notifier（`waker.duty.<status>`）；`ASH_NOTIFIER=log` 可观察；默认 null。无 IM、无新表。 / VX34: duty completion emits via Notifier; log optional; null default; no IM.
 - Sprint VX33：`internal/notify` 适配器缝（null/log）；`ASH_NOTIFIER`；未知值 fail-closed 到 null。无 IM SDK、无新表。 / VX33: notify seam (null/log); unknown values fail closed to null.
 - Sprint VX32：Doctor `M4-RPC-01` 进程内 ServeRPC 空闲起停；M4 **13/13**，ALL **63/63**。无新表。 / VX32: M4-RPC-01 ServeRPC idle probe; M4 13, ALL 63.

@@ -1,6 +1,9 @@
 package api
 
-import "fmt"
+import (
+	"fmt"
+	"slices"
+)
 
 // AssertReadyzScaleParity checks shared ops fields between /readyz and /api/v1/scale/readiness.
 func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse) error {
@@ -12,6 +15,9 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 	}
 	if readyz.MultiRegion != "" && scale.MultiRegion != "" && readyz.MultiRegion != scale.MultiRegion {
 		return fmt.Errorf("multiRegion readyz=%q scale=%q", readyz.MultiRegion, scale.MultiRegion)
+	}
+	if err := sandboxBackendsParity(readyz.SandboxBackends, scale.SandboxBackends); err != nil {
+		return err
 	}
 	if readyz.OtelEnabled != scale.OtelEnabled {
 		return fmt.Errorf("otel readyz=%v scale=%v", readyz.OtelEnabled, scale.OtelEnabled)
@@ -49,6 +55,16 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 	}
 	if readyz.RetentionArtifactsMaxRuns != scale.RetentionArtifactsMaxRuns {
 		return fmt.Errorf("retentionArtifactsMaxRuns readyz=%d scale=%d", readyz.RetentionArtifactsMaxRuns, scale.RetentionArtifactsMaxRuns)
+	}
+	return nil
+}
+
+func sandboxBackendsParity(readyz, scale []string) error {
+	if len(readyz) == 0 && len(scale) == 0 {
+		return nil
+	}
+	if !slices.Equal(readyz, scale) {
+		return fmt.Errorf("sandboxBackends readyz=%v scale=%v", readyz, scale)
 	}
 	return nil
 }
