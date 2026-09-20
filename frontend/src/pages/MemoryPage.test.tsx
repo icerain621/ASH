@@ -155,9 +155,6 @@ describe("MemoryPage", () => {
           tags: ["skill:doctor"],
         },
       ],
-      limit: 50,
-      offset: 0,
-      total: 1,
     });
     renderPage(<MemoryPage />);
     fireEvent.click(screen.getByTestId("memory-perspective-skill"));
