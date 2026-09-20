@@ -7,6 +7,7 @@ vi.mock("@/modules/scale/api/scale.api", () => ({
   getScaleReadiness: vi.fn().mockResolvedValue({
     spaceId: "local",
     region: "default",
+    multiRegion: "disabled",
     memorySchemaVersion: 2,
     migrationReady: true,
     databaseDialect: "sqlite",
@@ -34,6 +35,7 @@ vi.mock("@/modules/health/api/health.api", () => ({
   getReadyz: vi.fn().mockResolvedValue({
     status: "ready",
     region: "default",
+    multiRegion: "disabled",
     dialect: "sqlite",
     sqlMigrationExpected: 20,
   }),
@@ -116,6 +118,14 @@ describe("ScalePage", () => {
     renderPage(<ScalePage />);
     await waitFor(() => {
       expect(screen.getByTestId("scale-sandbox-remote")).toHaveTextContent("关闭（默认本机）");
+    });
+  });
+
+  it("shows multiRegion disabled on scale and readyz", async () => {
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByTestId("scale-multi-region")).toHaveTextContent("disabled");
+      expect(screen.getByTestId("readyz-multi-region")).toHaveTextContent("disabled");
     });
   });
 

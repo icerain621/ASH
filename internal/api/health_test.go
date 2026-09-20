@@ -13,6 +13,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -42,6 +43,9 @@ func TestHealthzAndReadyzSQLite(t *testing.T) {
 			}
 			if resp.Region != "default" {
 				t.Fatalf("readyz region=%q want default", resp.Region)
+			}
+			if resp.MultiRegion != config.MultiRegionDisabled {
+				t.Fatalf("readyz multiRegion=%q want %q", resp.MultiRegion, config.MultiRegionDisabled)
 			}
 			if resp.OtelEnabled || resp.MetricsEventReplayEnabled || resp.AlertsEvalInterval != "" {
 				t.Fatalf("readyz=%+v want default ops flags unset", resp)
@@ -73,6 +77,9 @@ func TestReadyzRegionFromEnv(t *testing.T) {
 	}
 	if resp.Region != "cn-north-1" {
 		t.Fatalf("region=%q want cn-north-1", resp.Region)
+	}
+	if resp.MultiRegion != config.MultiRegionDisabled {
+		t.Fatalf("multiRegion=%q want %q", resp.MultiRegion, config.MultiRegionDisabled)
 	}
 }
 

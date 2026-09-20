@@ -349,6 +349,10 @@ export function ScalePage() {
               <td>{r?.region ?? "-"}</td>
             </tr>
             <tr>
+              <td>多区域 / Active-Active</td>
+              <td data-testid="scale-multi-region">{r?.multiRegion ?? "—"}</td>
+            </tr>
+            <tr>
               <td>数据库方言</td>
               <td>{r?.databaseDialect ?? "-"}</td>
             </tr>
@@ -500,6 +504,10 @@ export function ScalePage() {
             <tr>
               <td>区域 (ASH_REGION)</td>
               <td>{z?.region ?? "—"}</td>
+            </tr>
+            <tr>
+              <td>多区域 / Active-Active</td>
+              <td data-testid="readyz-multi-region">{z?.multiRegion ?? "—"}</td>
             </tr>
             <tr>
               <td>Schema / SQL 修订</td>

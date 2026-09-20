@@ -4463,6 +4463,9 @@ definitions:
         type: string
       metricsEventReplayEnabled:
         type: boolean
+      multiRegion:
+        example: disabled
+        type: string
       otelEnabled:
         type: boolean
       postgresRLSEnabled:
@@ -4783,6 +4786,8 @@ definitions:
         type: integer
       modelUsageRows:
         type: integer
+      multiRegion:
+        type: string
       otelEnabled:
         type: boolean
       postgresAppUrlConfigured:

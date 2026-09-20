@@ -26,6 +26,7 @@ type APIErrorResponse struct {
 type HealthResponse struct {
 	Status                    string   `json:"status" example:"ok"`
 	Region                    string   `json:"region,omitempty" example:"default"`
+	MultiRegion               string   `json:"multiRegion,omitempty" example:"disabled"`
 	Dialect                   string   `json:"dialect,omitempty" example:"postgres"`
 	Error                     string   `json:"error,omitempty"`
 	SchemaMode                string   `json:"schemaMode,omitempty" example:"sql"`

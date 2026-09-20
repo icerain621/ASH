@@ -1,6 +1,7 @@
 export type ReadyzResponse = {
   status: string;
   region?: string;
+  multiRegion?: "disabled";
   dialect?: string;
   error?: string;
   schemaMode?: string;

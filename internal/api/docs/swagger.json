@@ -15916,6 +15916,10 @@
                 "metricsEventReplayEnabled": {
                     "type": "boolean"
                 },
+                "multiRegion": {
+                    "type": "string",
+                    "example": "disabled"
+                },
                 "otelEnabled": {
                     "type": "boolean"
                 },
@@ -16402,6 +16406,9 @@
                 },
                 "modelUsageRows": {
                     "type": "integer"
+                },
+                "multiRegion": {
+                    "type": "string"
                 },
                 "otelEnabled": {
                     "type": "boolean"

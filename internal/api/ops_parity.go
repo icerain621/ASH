@@ -10,6 +10,9 @@ func AssertReadyzScaleParity(readyz HealthResponse, scale ScaleReadinessResponse
 	if readyz.Region != "" && scale.Region != "" && readyz.Region != scale.Region {
 		return fmt.Errorf("region readyz=%q scale=%q", readyz.Region, scale.Region)
 	}
+	if readyz.MultiRegion != "" && scale.MultiRegion != "" && readyz.MultiRegion != scale.MultiRegion {
+		return fmt.Errorf("multiRegion readyz=%q scale=%q", readyz.MultiRegion, scale.MultiRegion)
+	}
 	if readyz.OtelEnabled != scale.OtelEnabled {
 		return fmt.Errorf("otel readyz=%v scale=%v", readyz.OtelEnabled, scale.OtelEnabled)
 	}

@@ -174,6 +174,10 @@ components:
         region:
           type: string
           description: Deployment region from ASH_REGION (same as /readyz.region).
+        multiRegion:
+          type: string
+          description: Active-Active / multi-region posture. Always "disabled" (DX82; not Active-Active).
+          example: disabled
         memorySchemaVersion:
           type: integer
           description: Current memory record schema version.
@@ -571,6 +575,10 @@ components:
           type: string
           description: Deployment region identity from ASH_REGION (empty → default). Single-region only; not Active-Active.
           example: default
+        multiRegion:
+          type: string
+          description: Active-Active / multi-region posture. Always "disabled" (DX82).
+          example: disabled
         dialect: { type: string, example: postgres }
         error: { type: string }
         schemaMode: { type: string, enum: [automigrate, sql] }

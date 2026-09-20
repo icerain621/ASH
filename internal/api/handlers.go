@@ -11,8 +11,8 @@ import (
 
 	"github.com/gin-gonic/gin"
 
-	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/agentworkspace"
+	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/diffreview"
@@ -408,7 +408,10 @@ func (h *Handler) healthz(c *gin.Context) {
 func (h *Handler) readyz(c *gin.Context) {
 	sqlDB, err := h.db.DB.DB()
 	if err != nil {
-		c.JSON(http.StatusServiceUnavailable, HealthResponse{Status: "not_ready", Error: err.Error()})
+		c.JSON(http.StatusServiceUnavailable, HealthResponse{
+			Status: "not_ready", Error: err.Error(),
+			Region: config.Region(), MultiRegion: config.MultiRegion(),
+		})
 		return
 	}
 	if err := sqlDB.Ping(); err != nil {
@@ -431,6 +434,7 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 	resp := HealthResponse{
 		Status:                    status,
 		Region:                    config.Region(),
+		MultiRegion:               config.MultiRegion(),
 		Dialect:                   h.db.Dialect(),
 		Error:                     errMsg,
 		SchemaMode:                profile.SchemaMode,

@@ -14,6 +14,7 @@ var readyzHealthRequiredProps = []string{
 	"schemaMode",
 	"otelEnabled",
 	"metricsEventReplayEnabled",
+	"multiRegion",
 }
 
 // ValidateReadyzContract ensures /readyz documents HealthResponse with RLS/SQL drift fields.

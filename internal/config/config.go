@@ -61,6 +61,15 @@ func Region() string {
 	return v
 }
 
+// MultiRegionDisabled is the fixed Active-Active posture for v4.x (DX82).
+const MultiRegionDisabled = "disabled"
+
+// MultiRegion reports multi-region / Active-Active posture.
+// Always "disabled": single-region identity only; no cross-region replication.
+func MultiRegion() string {
+	return MultiRegionDisabled
+}
+
 // ConsoleAuthRequired reports whether the SPA should require a login token (DX64).
 // ASH_CONSOLE_AUTH_REQUIRED=1|true|yes (case-insensitive). Default false.
 func ConsoleAuthRequired() bool {

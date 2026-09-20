@@ -239,7 +239,7 @@
 | DX79 | 私有目录标记（v4.3 草案） | `marketplace=private`；`billing=none` | ✅ |
 | DX80 | 包源白名单（v4.3 草案） | 未配置则拒绝远程 URL | ✅ |
 | DX81 | 控制台私有提示（v4.3 草案） | 现有 catalog 面板一句 | ✅ |
-| DX82 | 多区域关闭（v4.3 草案） | `multiRegion=disabled` | ⬜ |
+| DX82 | 多区域关闭（v4.3 草案） | `multiRegion=disabled` | ✅ |
 | DX83 | 探测清单（v4.3 草案） | 非 Active-Active 文档 | ⬜ |
 | DX84 | v4.3 冻结 + 签字 | `v4.3-release-scope`；`make v4.3-signoff`；tag 人工 | ⬜ |
 | 详排 | — | [`v4.x-program.md`](v4.x-program.md) · [`v4.2-release-scope.md`](v4.2-release-scope.md)（已冻结） · [`v4.3-release-scope.md`](v4.3-release-scope.md)（草案） | — |

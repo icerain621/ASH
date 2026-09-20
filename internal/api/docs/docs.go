@@ -15922,6 +15922,10 @@ const docTemplate = `{
                 "metricsEventReplayEnabled": {
                     "type": "boolean"
                 },
+                "multiRegion": {
+                    "type": "string",
+                    "example": "disabled"
+                },
                 "otelEnabled": {
                     "type": "boolean"
                 },
@@ -16408,6 +16412,9 @@ const docTemplate = `{
                 },
                 "modelUsageRows": {
                     "type": "integer"
+                },
+                "multiRegion": {
+                    "type": "string"
                 },
                 "otelEnabled": {
                     "type": "boolean"

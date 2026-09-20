@@ -12,3 +12,9 @@ func TestRegionDefaultAndOverride(t *testing.T) {
 		t.Fatalf("Region()=%q want ap-east-1", got)
 	}
 }
+
+func TestMultiRegionAlwaysDisabled(t *testing.T) {
+	if got := MultiRegion(); got != MultiRegionDisabled {
+		t.Fatalf("MultiRegion()=%q want %q", got, MultiRegionDisabled)
+	}
+}

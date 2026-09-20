@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/config"
 	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/store"
 )
@@ -50,6 +51,9 @@ func TestScaleReadiness(t *testing.T) {
 	}
 	if resp.WorkerConnectionRole != "sqlite" {
 		t.Fatalf("workerConnectionRole=%q want sqlite", resp.WorkerConnectionRole)
+	}
+	if resp.MultiRegion != config.MultiRegionDisabled {
+		t.Fatalf("multiRegion=%q want %q", resp.MultiRegion, config.MultiRegionDisabled)
 	}
 	if resp.SandboxRemoteEnabled || resp.SandboxRemoteAvailable {
 		t.Fatalf("remote sandbox should be off by default: enabled=%v available=%v", resp.SandboxRemoteEnabled, resp.SandboxRemoteAvailable)
