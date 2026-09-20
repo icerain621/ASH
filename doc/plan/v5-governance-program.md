@@ -1,13 +1,14 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**hardening 已完成**；**三主题 IA 已落地**；**Agent Chat DSH 对标续推**（SSE/工具卡/Stop/标题 + P2 助手 LLM/Provider/echo 流）；下一步 = v5 freeze / v4.1  
+> 状态：**hardening 已完成**；**三主题 IA 已落地**；**Agent Chat DSH 对标续推**；下一步 = **[`v5.0-release-scope.md`](v5.0-release-scope.md) 草案 → GV06 冻结**  
+> Status: next step is the v5.0 freeze draft (GV06).  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > IA 升级：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md)  
 > Agent Chat 对标：[`../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md)（`874b0ce` · `6e88718` · `122b4c4` · `437e5d4`）  
 > 后端缺口：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
-> 前置：不打断现行 [`v4.x-program.md`](v4.x-program.md)；**业务代码默认等 v4.0 签字后再开 v5.0 Sprint**
+> 前置：[`v4.x-program.md`](v4.x-program.md) **已收口**；冻结轨见 [`v5.0-release-scope.md`](v5.0-release-scope.md) / [`sprint-gv06-v50-signoff.md`](sprint-gv06-v50-signoff.md)
 
 ## 0. 与 v4.x 的命名隔离
 
@@ -67,16 +68,17 @@
 ## 5. 下一步
 
 1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
-2. **控制台三主题 IA**：Tasks 1–4 **已落地**（壳层 `e0a8680` · Agent `bd0e60c` · 记忆 `1322bbb` · 评审 `bcb19a0`/`66fda66`）；规格 [`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md) 状态 **landed**
-3. **Agent Chat DSH 对标**：壳层已落地；**第二波** SSE 直播 · 工具卡 · Stop · 标题/关闭（`122b4c4` · `437e5d4`）
-4. **后端缺口清单**（P2–P5 已落地；session stream + skill exec 已落地；MCP exec 仍开）：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md) — 真 LLM：`ASH_LLM_BASE_URL` 等
-5. 并行可选：v5 **freeze** 或开 **v4.1**（见 [`v4.x-program.md`](v4.x-program.md)）
-6. 门禁：`make v5-signoff`
+2. **控制台三主题 IA**：Tasks 1–4 **已落地**
+3. **Agent Chat DSH 对标**：主路径 **已收口**（见 backend-gaps complete+polish）
+4. **v4.x**：四代 **已收口**（见 [`v4.x-program.md`](v4.x-program.md)）
+5. **现行**：[`v5.0-release-scope.md`](v5.0-release-scope.md) 草案 → **GV06** 冻结 + `make v5-signoff`
+6. 门禁：`make v5-signoff`（已存在）；scope-freeze 待 GV06 接入
 
 ## 6. 修订记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-09-20 | v4.x 收口后挂接 v5.0 冻结草案（GV06）；下一步实现冻结门禁 |
 | 2026-09-13 | 初稿：设计轨立项；A/B/C/D 定义；图集与规格挂接 |
 | 2026-09-13 | 挂接全量改造排期/技术方案；明确暂缓 Agent 打包迁移 |
 | 2026-09-13 | 实现计划增补 §0.1：全量 BE/FE 功能点拆分与 Sprint 对照 |
