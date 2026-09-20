@@ -255,8 +255,8 @@
 | VX43 | Provider 目录标记（v6.4 草案） | catalog=org；billing=none | ✅ |
 | VX44 | Skills Hub 标记（v6.4 草案） | hub=org + 控制台一句 | ✅ |
 | VX45 | 探测清单（v6.4 草案） | `ingress-provider-hub.md` | ✅ |
-| VX46 | v6.4 冻结 + 签字 | `v6.4-release-scope`；`make v6.4-signoff` | ⬜ |
-| 详排 | — | [`v6.3-release-scope.md`](v6.3-release-scope.md)（已冻结） · [`v6.4-release-scope.md`](v6.4-release-scope.md)（草案） · [`v6.x-program.md`](v6.x-program.md) | — |
+| VX46 | v6.4 冻结 + 签字 | `v6.4-release-scope`；`make v6.4-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v6.3-release-scope.md`](v6.3-release-scope.md)（已冻结） · [`v6.4-release-scope.md`](v6.4-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---
 

@@ -31,13 +31,13 @@
 | [`v6.x-program.md`](v6.x-program.md) | **v6.x** 程序（可审计执行面；分冻 v6.0 / v6.3+） | Hooks / 会话语义 / 吸收收口 |
 | [`v6.0-release-scope.md`](v6.0-release-scope.md) | **v6.0** 范围（**已冻结**；EW130） | EW W0–W12 吸收水位冻结 |
 | [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**已冻结**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
-| [`v6.4-release-scope.md`](v6.4-release-scope.md) | **v6.4** 范围（**草案**；VX41–VX46） | Ingress 缝 · Provider 目录 · 组织 Skills Hub |
+| [`v6.4-release-scope.md`](v6.4-release-scope.md) | **v6.4** 范围（**已冻结**；VX41–VX46） | Ingress 缝 · Provider 目录 · 组织 Skills Hub |
 | [`sprint-vx41-ingress-seam.md`](sprint-vx41-ingress-seam.md) | **VX41** Ingress 适配器缝 | ✅ |
 | [`sprint-vx42-ingress-probe.md`](sprint-vx42-ingress-probe.md) | **VX42** ingressAdapters 探测 | ✅ |
 | [`sprint-vx43-provider-catalog.md`](sprint-vx43-provider-catalog.md) | **VX43** Provider catalog 标记 | ✅ |
 | [`sprint-vx44-skills-hub.md`](sprint-vx44-skills-hub.md) | **VX44** Skills hub=org | ✅ |
 | [`sprint-vx45-probe-doc.md`](sprint-vx45-probe-doc.md) | **VX45** 探测清单 | ✅ |
-| [`sprint-vx46-v64-signoff.md`](sprint-vx46-v64-signoff.md) | **VX46** v6.4 冻结 + 签字 | ⬜ |
+| [`sprint-vx46-v64-signoff.md`](sprint-vx46-v64-signoff.md) | **VX46** v6.4 冻结 + 签字 | ✅ |
 | [`sprint-ew130-v60-signoff.md`](sprint-ew130-v60-signoff.md) | **EW130** v6.0 冻结 + 签字 | ✅ |
 | [`sprint-vx31-rpc-cli-smoke.md`](sprint-vx31-rpc-cli-smoke.md) | **VX31** RPC CLI 烟测 | ✅ |
 | [`sprint-vx32-rpc-doctor.md`](sprint-vx32-rpc-doctor.md) | **VX32** RPC Doctor `M4-RPC-01` | ✅ |

@@ -57,5 +57,6 @@ check_scope "$ROOT/doc/plan/v4.3-release-scope.md" "v4.3"
 check_scope "$ROOT/doc/plan/v5.0-release-scope.md" "v5.0"
 check_scope "$ROOT/doc/plan/v6.0-release-scope.md" "v6.0"
 check_scope "$ROOT/doc/plan/v6.3-release-scope.md" "v6.3"
+check_scope "$ROOT/doc/plan/v6.4-release-scope.md" "v6.4"
 
 echo "OK scope-freeze-gate"

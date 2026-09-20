@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX46：v6.4 范围已冻结；`make v6.4-signoff` 不自动打 `v6.4.0` tag。 / VX46: v6.4 scope frozen; sign-off gate does not tag.
 - Sprint VX45：双语清单说明 `ingressAdapters` / Provider `catalog` / Skills `hub`。 / VX45: bilingual probe checklist for ingress/provider/hub markers.
 - Sprint VX44：`GET /skills/catalog` 增加 `hub=org`；控制台「私有 · 组织 Hub · 不计费」。无公网市场。 / VX44: skills catalog hub=org; console line; no public marketplace.
 - Sprint VX43：`GET /model-router/providers` 信封 `catalog=org`、`billing=none`。 / VX43: provider list marked org catalog with no billing.
