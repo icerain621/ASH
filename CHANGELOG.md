@@ -8,6 +8,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX31：`make session-rpc-smoke` — ServeRPC idle `session.start`；可选 `ASH_SESSION_RPC_CLI=1` CLI 管道；写 evidence。无新表。 / VX31: session-rpc-smoke for ServeRPC; optional CLI pipe; no new tables.
+- Sprint 草案：v6.3（VX31–VX36）。RPC CLI 烟测 + Doctor；Notifier 缝（null/log）；Backend 枚举投影。无 IM、无新表。 / v6.3 draft: RPC smoke+Doctor, notifier seam, backend enum; no IM, no new tables.
 - Sprint EW130：v6.0 范围已冻结（EW W0–W12 吸收水位）；`make v6-signoff` 不自动打 `v6.0.0` tag。 / EW130: v6.0 absorb watermark frozen; sign-off gate does not tag.
 - Sprint GV06：v5.0 范围已冻结；`make v5-signoff` 不自动打 `v5.0.0` tag。 / GV06: v5.0 scope frozen; sign-off gate does not tag.
 - Sprint 草案：v5.0 冻结（GV06）。收口已落地的薄交互 + 管控/厚评审；`make v5-signoff`。无 Cordis、无自动升格。 / v5.0 draft: freeze shipped thin interaction and thick review; sign-off via make v5-signoff.

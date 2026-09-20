@@ -30,6 +30,7 @@
 | RAG Hybrid（DX9） | `make rag-hybrid-smoke` | RebuildSymbols + Hybrid Query + 回退 |
 | RAG LSP（DX35） | `make rag-lsp-smoke` | session / hover / def / refs / expandRefs；假 gopls；写 evidence |
 | Remote sandbox（DX40） | `make remote-sandbox-smoke` | mock/httptest + prefer；live 可选（无 key skip）；写 evidence |
+| Session RPC（VX31） | `make session-rpc-smoke` | ServeRPC idle `session.start`；可选 `ASH_SESSION_RPC_CLI=1` CLI 管道；写 evidence |
 | Waker（DX6/DX12） | `make waker-smoke` | queue/sweep + duties/status；可选 live curl |
 | 发布范围冻结 | `make scope-freeze-gate` | MVP + v2 + … + v3.0 scope 结构校验 |
 | 发布窗口门禁 | `make release-window-gate` | §8 快速聚合（~2min；含 backup/T+0/T+1） |
