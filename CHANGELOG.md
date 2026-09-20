@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint GV06：v5.0 范围已冻结；`make v5-signoff` 不自动打 `v5.0.0` tag。 / GV06: v5.0 scope frozen; sign-off gate does not tag.
 - Sprint 草案：v5.0 冻结（GV06）。收口已落地的薄交互 + 管控/厚评审；`make v5-signoff`。无 Cordis、无自动升格。 / v5.0 draft: freeze shipped thin interaction and thick review; sign-off via make v5-signoff.
 - fix: MemoryPage 测试 mock 去掉多余分页字段，恢复 `tsc -b` / `web-build`。 / Fix MemoryPage test mock so tsc/web-build pass.
 - Sprint DX84：v4.3 范围已冻结；`make v4.3-signoff` 不自动打 `v4.3.0` tag。 / DX84: v4.3 scope frozen; sign-off gate does not tag.

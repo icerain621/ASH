@@ -1,14 +1,14 @@
 # ASH v5 程序：双核管控 × 厚评审 × 薄交互
 
-> 状态：**hardening 已完成**；**三主题 IA 已落地**；**Agent Chat DSH 对标续推**；下一步 = **[`v5.0-release-scope.md`](v5.0-release-scope.md) 草案 → GV06 冻结**  
-> Status: next step is the v5.0 freeze draft (GV06).  
+> 状态：**v5.0 已冻结**（GV06；`make v5-signoff`；tag `v5.0.0` 人工）  
+> Status: **v5.0 frozen** (GV06). Tag is manual.  
 > 归属：[`plan/`](README.md)  
 > 规格：[`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md)  
 > IA 升级：[`../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md`](../../docs/superpowers/specs/2026-09-14-console-three-pillar-ia-design.md)  
 > Agent Chat 对标：[`../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-dsh-parity-design.md)（`874b0ce` · `6e88718` · `122b4c4` · `437e5d4`）  
 > 后端缺口：[`../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md`](../../docs/superpowers/specs/2026-09-15-agent-chat-backend-gaps.md)  
 > 图集：[`../diagrams/archify/`](../diagrams/archify/README.md)（`ash-v5-*`）  
-> 前置：[`v4.x-program.md`](v4.x-program.md) **已收口**；冻结轨见 [`v5.0-release-scope.md`](v5.0-release-scope.md) / [`sprint-gv06-v50-signoff.md`](sprint-gv06-v50-signoff.md)
+> 前置：[`v4.x-program.md`](v4.x-program.md) **已收口**；冻结：[`v5.0-release-scope.md`](v5.0-release-scope.md) / [`sprint-gv06-v50-signoff.md`](sprint-gv06-v50-signoff.md)
 
 ## 0. 与 v4.x 的命名隔离
 
@@ -67,17 +67,16 @@
 
 ## 5. 下一步
 
-1. **hardening**：evaluation 排除作废分 + BE-49 — **已完成**
-2. **控制台三主题 IA**：Tasks 1–4 **已落地**
-3. **Agent Chat DSH 对标**：主路径 **已收口**（见 backend-gaps complete+polish）
-4. **v4.x**：四代 **已收口**（见 [`v4.x-program.md`](v4.x-program.md)）
-5. **现行**：[`v5.0-release-scope.md`](v5.0-release-scope.md) 草案 → **GV06** 冻结 + `make v5-signoff`
-6. 门禁：`make v5-signoff`（已存在）；scope-freeze 待 GV06 接入
+1. **hardening** / 三主题 IA / Agent Chat 主路径 — **已完成**
+2. **v4.x** — **已收口**
+3. **v5.0** — **已冻结**（GV06）；人工 tag `v5.0.0`；可选 UI 扫一眼见 [`../checklists/v5.0-signoff.md`](../checklists/v5.0-signoff.md)
+4. 门禁：`make v5-signoff`（含 scope-freeze）
 
 ## 6. 修订记录
 
 | 日期 | 说明 |
 |------|------|
+| 2026-09-20 | **v5.0 已冻结**（GV06）；`make v5-signoff` 接入 scope-freeze；不打 tag |
 | 2026-09-20 | v4.x 收口后挂接 v5.0 冻结草案（GV06）；下一步实现冻结门禁 |
 | 2026-09-13 | 初稿：设计轨立项；A/B/C/D 定义；图集与规格挂接 |
 | 2026-09-13 | 挂接全量改造排期/技术方案；明确暂缓 Agent 打包迁移 |
