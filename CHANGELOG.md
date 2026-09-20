@@ -8,6 +8,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint DX83：双语清单说明如何读 `region`，并写明 `multiRegion=disabled`（非 Active-Active）。 / DX83: bilingual checklist for region and multiRegion=disabled (not Active-Active).
 - Sprint DX82：`/readyz` 与 scale readiness 固定 `multiRegion=disabled`（非 Active-Active）。 / DX82: probes report multiRegion=disabled; not Active-Active.
 - Sprint DX81：组织 Catalog 面板标明「私有 · 不计费」，不新开市场页。 / DX81: catalog panels say private and no billing; no marketplace page.
 - Sprint DX80：HTTP(S) 包与目录只允许 `ASH_SKILL_CATALOG_HOSTS`；未配置则拒绝远程 URL，本地路径不变。 / DX80: remote catalog fetches require `ASH_SKILL_CATALOG_HOSTS`; local paths stay allowed.
