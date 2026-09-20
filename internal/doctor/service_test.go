@@ -260,13 +260,13 @@ func TestM4Suite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.Summary.Pass != 12 {
+	if rep.Summary.Pass != 13 {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
 				t.Errorf("%s: %s", r.ID, r.Message)
 			}
 		}
-		t.Fatalf("M4 pass=%d fail=%d want pass=12", rep.Summary.Pass, rep.Summary.Fail)
+		t.Fatalf("M4 pass=%d fail=%d want pass=13", rep.Summary.Pass, rep.Summary.Fail)
 	}
 	assertCaseEvidence(t, rep, "M4-HAR-01", "harnessSchema")
 	assertCaseEvidence(t, rep, "M4-HAR-02", "harnessInvariant")
@@ -279,6 +279,7 @@ func TestM4Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M4-MDL-01", "providerCatalog")
 	assertCaseEvidence(t, rep, "M4-ACP-01", "acpSchema")
 	assertCaseEvidence(t, rep, "M4-ACP-02", "acpProbe")
+	assertCaseEvidence(t, rep, "M4-RPC-01", "sessionRpc")
 }
 
 func TestM5Suite(t *testing.T) {
@@ -311,7 +312,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 62
+	want := 63
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

@@ -33,6 +33,7 @@
 | [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**草案**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
 | [`sprint-ew130-v60-signoff.md`](sprint-ew130-v60-signoff.md) | **EW130** v6.0 冻结 + 签字 | ✅ |
 | [`sprint-vx31-rpc-cli-smoke.md`](sprint-vx31-rpc-cli-smoke.md) | **VX31** RPC CLI 烟测 | ✅ |
+| [`sprint-vx32-rpc-doctor.md`](sprint-vx32-rpc-doctor.md) | **VX32** RPC Doctor `M4-RPC-01` | ✅ |
 | [v5 实现排期](../../docs/superpowers/plans/2026-09-13-v5-governance-implementation.md) | **v5** 全量改造排期与技术方案（GV01–12） | 可观测运行 / 记忆关联 / 评分管控 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |

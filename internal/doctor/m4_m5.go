@@ -1,7 +1,9 @@
 package doctor
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"os/exec"
@@ -18,6 +20,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 	"github.com/ash-repwiki/ash/internal/sandbox/landlock"
+	"github.com/ash-repwiki/ash/internal/session"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -35,6 +38,7 @@ func (s *Service) m4SuiteCases() []CaseResult {
 		s.m4Mdl01ProviderCatalog(),
 		s.m4Acp01TaskSchema(),
 		s.m4Acp02ProbeUnconfigured(),
+		s.m4Rpc01SessionStartIdle(),
 	}
 }
 
@@ -313,6 +317,36 @@ func (s *Service) m4Acp02ProbeUnconfigured() CaseResult {
 	res.Status = "pass"
 	res.Message = "ProbeACP unconfigured → not ok"
 	res.Evidence = append(res.Evidence, Evidence{Kind: "acpProbe", Ref: "unconfigured"})
+	return res
+}
+
+func (s *Service) m4Rpc01SessionStartIdle() CaseResult {
+	res := CaseResult{ID: "M4-RPC-01", Status: "fail"}
+	if s == nil || s.runs == nil || s.runs.DB() == nil {
+		res.Status = "pass"
+		res.Message = "no db; session RPC probe skipped"
+		res.Evidence = append(res.Evidence, Evidence{Kind: "skipped", Ref: "no-db"})
+		return res
+	}
+	svc := session.NewService(s.runs.DB(), nil, s.events)
+	in := bytes.NewBufferString(`{"type":"session.start","repoRoot":"."}` + "\n")
+	var out bytes.Buffer
+	if err := svc.ServeRPC(in, &out); err != nil {
+		res.Message = err.Error()
+		return res
+	}
+	var ev session.RPCEvent
+	if err := json.Unmarshal(out.Bytes(), &ev); err != nil {
+		res.Message = fmt.Sprintf("decode rpc event: %v out=%q", err, out.String())
+		return res
+	}
+	if ev.Name != "session.started" || strings.TrimSpace(ev.SessionID) == "" {
+		res.Message = fmt.Sprintf("expected session.started, got %+v", ev)
+		return res
+	}
+	res.Status = "pass"
+	res.Message = "ServeRPC session.start idle ok"
+	res.Evidence = append(res.Evidence, Evidence{Kind: "sessionRpc", Ref: ev.SessionID})
 	return res
 }
 

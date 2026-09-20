@@ -130,7 +130,7 @@
 | 项 | 值 |
 |----|-----|
 | Tag | `v0.1.0-mvp` |
-| Doctor | ALL **62/62** · M3 11/11 · M4 **12/12** · M5 4/4 · TR3 **13/13** |
+| Doctor | ALL **63/63** · M3 11/11 · M4 **13/13** · M5 4/4 · TR3 **13/13** |
 | Schema | SQL rev **32**（+users oidc link）· RLS **51** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 
@@ -245,7 +245,7 @@
 | GV06 | v5.0 冻结 + 签字 | `v5.0-release-scope`；`make v5-signoff`；tag 人工 | ✅ |
 | EW130 | v6.0 冻结 + 签字 | `v6.0-release-scope`；`make v6-signoff`；tag 人工 | ✅ |
 | VX31 | RPC CLI 烟测（v6.3 草案） | `make session-rpc-smoke` / ServeRPC | ✅ |
-| VX32 | RPC Doctor（v6.3 草案） | Doctor 探针 | ⬜ |
+| VX32 | RPC Doctor（v6.3 草案） | `M4-RPC-01`；M4 **13** / ALL **63** | ✅ |
 | VX33 | Notifier 缝（v6.3 草案） | null/log 适配器 | ⬜ |
 | VX34 | Waker→Notifier（v6.3 草案） | duty 完成钩子 | ⬜ |
 | VX35 | Backend 枚举（v6.3 草案） | readyz/ABI 投影 | ⬜ |
