@@ -1,6 +1,7 @@
 import { Link, Outlet, useRouterState } from "@tanstack/react-router";
 import { RadioTower, Settings } from "lucide-react";
 import { getCurrentSpaceId } from "@/services/http/client";
+import { ASH_ICON_URL } from "@/modules/agent-session/agentModeLabels";
 import { persistWorkMode, workModeFromPath } from "./workMode";
 
 const workspaceLinks = [{ to: "/space", label: "空间设置", testId: "nav-settings-space" }] as const;
@@ -39,7 +40,9 @@ export function AppLayout() {
     <div className="app-shell">
       <header className="header">
         <div className="brand">
-          <span className="brand-mark">A</span>
+          <span className="brand-mark">
+            <img src={ASH_ICON_URL} alt="" width={28} height={28} />
+          </span>
           <span>
             ASH <span className="muted">控制台</span>
           </span>

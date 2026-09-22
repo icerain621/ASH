@@ -6,6 +6,10 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ## [Unreleased]
 
+### Fixed
+
+- Agent 空态铺满视口（无整页滚动），保留品牌背景与顶栏图标；「新建会话」白底按钮字号对齐 ASH Agent，约在底部 12%。 / Agent empty state fills the viewport without page scroll, keeps the brand hero and header icon; the New Session button is a white plate at about 12% from the bottom, same type size as ASH Agent.
+
 ### Added
 
 - Sprint VX46：v6.4 范围已冻结；`make v6.4-signoff` 不自动打 `v6.4.0` tag。 / VX46: v6.4 scope frozen; sign-off gate does not tag.

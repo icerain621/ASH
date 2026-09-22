@@ -597,21 +597,18 @@ export function AgentChatShell({
 
         {!selectedSessionId ? (
           <div className="agent-chat-empty hero" data-testid="agent-chat-empty">
-            {showBrandHero ? (
-              <AgentEmptyHero agentMode={effectiveAgentMode} onDismiss={dismissBrandHero} />
-            ) : (
-              <>
-                <p>选择左侧会话，或新建空白会话直接对话</p>
-                <button
-                  type="button"
-                  className="btn mini"
-                  disabled={createMut.isPending}
-                  onClick={() => createMut.mutate()}
-                >
-                  新建会话
-                </button>
-              </>
-            )}
+            <AgentEmptyHero agentMode={effectiveAgentMode} />
+            <div className="agent-ash-hero-cta">
+              <button
+                type="button"
+                className="agent-ash-hero-create"
+                disabled={createMut.isPending}
+                onClick={() => createMut.mutate()}
+                data-testid="agent-empty-create-session"
+              >
+                新建会话
+              </button>
+            </div>
           </div>
         ) : (
           <>
