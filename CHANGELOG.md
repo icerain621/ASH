@@ -12,6 +12,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX71：Harness Profile 列表与 active 回显已有 `sandboxBackends`；控制台一行沙箱目录。不改 spec、无新厂商。 / VX71: harness list and active echo the existing sandbox backend catalog.
+- Sprint 草案：v6.7（VX71–VX72）。Harness 回显沙箱目录。 / v6.7 draft: harness surfaces the sandbox backend catalog.
 - Sprint VX62：v6.6 范围已冻结；`make v6.6-signoff` 不自动打 `v6.6.0` tag。 / VX62: v6.6 scope frozen; sign-off gate does not tag.
 - Sprint VX61：GitHub Webhook 非重复入库后走 Notifier（`ci.webhook`）；默认 `null` 丢弃，`ASH_NOTIFIER=log` 可观察。无 IM、无新表。 / VX61: non-duplicate webhook ingest notifies via the existing seam; null discards, log is observable.
 - Sprint 草案：v6.6（VX61–VX62）。Webhook 投递走 Notifier。 / v6.6 draft: webhook delivery through the notifier seam.

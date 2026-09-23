@@ -5371,11 +5371,19 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
         type: array
+      sandboxBackends:
+        items:
+          type: string
+        type: array
     type: object
   internal_api.harnessLoadActiveResponse:
     properties:
       profile:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+      sandboxBackends:
+        items:
+          type: string
+        type: array
     type: object
   internal_api.loginRequest:
     properties:

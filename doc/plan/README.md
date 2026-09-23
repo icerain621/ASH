@@ -38,6 +38,9 @@
 | [`v6.6-release-scope.md`](v6.6-release-scope.md) | **v6.6** 范围（**已冻结**；VX61–VX62） | Webhook 投递走 Notifier |
 | [`sprint-vx61-webhook-notify.md`](sprint-vx61-webhook-notify.md) | **VX61** Webhook → Notifier | ✅ |
 | [`sprint-vx62-v66-signoff.md`](sprint-vx62-v66-signoff.md) | **VX62** v6.6 冻结 + 签字 | ✅ |
+| [`v6.7-release-scope.md`](v6.7-release-scope.md) | **v6.7** 范围（**草案**；VX71–VX72） | Harness 回显沙箱目录 |
+| [`sprint-vx71-harness-backends.md`](sprint-vx71-harness-backends.md) | **VX71** Harness sandboxBackends | ✅ |
+| [`sprint-vx72-v67-signoff.md`](sprint-vx72-v67-signoff.md) | **VX72** v6.7 冻结 + 签字 | ⬜ |
 | [`sprint-vx41-ingress-seam.md`](sprint-vx41-ingress-seam.md) | **VX41** Ingress 适配器缝 | ✅ |
 | [`sprint-vx42-ingress-probe.md`](sprint-vx42-ingress-probe.md) | **VX42** ingressAdapters 探测 | ✅ |
 | [`sprint-vx43-provider-catalog.md`](sprint-vx43-provider-catalog.md) | **VX43** Provider catalog 标记 | ✅ |

@@ -88,6 +88,7 @@ export function HarnessProfilesPane() {
   const active = activeQuery.data?.profile;
   const drafts = draftsQuery.data?.items ?? [];
   const inReview = reviewQuery.data?.items ?? [];
+  const sandboxBackends = draftsQuery.data?.sandboxBackends ?? [];
 
   return (
     <div className="pane" data-testid="harness-profiles-pane">
@@ -99,6 +100,9 @@ export function HarnessProfilesPane() {
         <span>{active ? `active v${active.version}` : "no active"}</span>
       </div>
       <p className="muted-line">draft → submit-review → Reviews 批准 → promote。draft 不可直通升格。</p>
+      <p className="muted-line" data-testid="harness-sandbox-backends">
+        沙箱目录 · {sandboxBackends.length ? sandboxBackends.join(" · ") : "—"}
+      </p>
       <div className="secret-form">
         <label>
           Name

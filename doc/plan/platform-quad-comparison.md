@@ -162,7 +162,7 @@
 | P18 | Cron + 投递到通道 | Hermes | Waker + Webhook 入库 | **Partial** | Cron 与 Waker 对齐；Webhook 非重复入库也走同一 Notifier（VX61）。无 IM |
 | P19 | Skills Hub + 自主沉淀 | Hermes | skill catalog（无公网市场） | **Partial** | 组织内 Hub；沉淀须经记忆/编排评审 |
 | P20 | 可插拔 Memory Provider | Hermes | 内置 Memory Core | **Reject 替换** / **Observe 桥** | 不以外置 mem0 替换双核；可 MCP 旁路 |
-| P21 | 多终端 Backend（docker/ssh/…） | Hermes / DSH | Sandbox backends 路线 | **Partial** | Backend 枚举进 Harness Profile |
+| P21 | 多终端 Backend（docker/ssh/…） | Hermes / DSH | Sandbox backends 路线 | **Partial** | 目录在 readyz/scale；Harness 列表与 active 回显同一组 ID（VX71）。不新开通厂商 |
 | P22 | Dashboard 本机运维八页 | Hermes | 三主题控制台更厚 | **Reject 复制** | 借「运维动作状态」卡片模式即可 |
 | P23 | Scenario DSL + Artifacts + Doctor | ASH | 已有 | **Keep** | 差异化护城河 |
 | P24 | Memory L0–L2 + 厚评审评分 | ASH v5 | 已有 | **Keep** | 继续 Harden，勿被外部「轻记忆」带回退 |
@@ -384,6 +384,7 @@
 | v6.4 | 单通道 Ingress；Provider 目录；组织 Skills Hub | P17, P09, P19 | **已冻结**（[`v6.4-release-scope.md`](v6.4-release-scope.md) · VX41–VX46） |
 | v6.5 | 已有 GitHub Webhook 经 Ingress 缝 | P17 | **已冻结**（[`v6.5-release-scope.md`](v6.5-release-scope.md) · VX51–VX52） |
 | v6.6 | Webhook 成功入库后走 Notifier | P18 | **已冻结**（[`v6.6-release-scope.md`](v6.6-release-scope.md) · VX61–VX62） |
+| v6.7 | Harness 列表与 active 回显沙箱目录 | P21 | **草案**（[`v6.7-release-scope.md`](v6.7-release-scope.md) · VX71 ✅；VX72 待冻结） |
 
 > 2026-09-20：v6.0–v6.2 主题经 EW W0–W12 落地后，以 **v6.0** 一代冻结（EW130 / `make v6-signoff`）。  
 > 2026-09-20: v6.0–v6.2 themes shipped via EW W0–W12 are frozen as **v6.0** (EW130).

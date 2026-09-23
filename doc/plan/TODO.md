@@ -260,6 +260,8 @@
 | VX52 | v6.5 冻结 + 签字 | `v6.5-release-scope`；`make v6.5-signoff`；tag 人工 | ✅ |
 | VX61 | Webhook→Notifier（v6.6 草案） | 非重复入库 `ci.webhook`；默认 null | ✅ |
 | VX62 | v6.6 冻结 + 签字 | `v6.6-release-scope`；`make v6.6-signoff`；tag 人工 | ✅ |
+| VX71 | Harness 沙箱目录（v6.7 草案） | 列表与 active `sandboxBackends`；不改 spec | ✅ |
+| VX72 | v6.7 冻结 + 签字 | `v6.7-release-scope`；`make v6.7-signoff` | ⬜ |
 | 详排 | — | [`v6.4-release-scope.md`](v6.4-release-scope.md)（已冻结） · [`v6.5-release-scope.md`](v6.5-release-scope.md)（已冻结） · [`v6.6-release-scope.md`](v6.6-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---

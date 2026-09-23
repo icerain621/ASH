@@ -9,14 +9,17 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 )
 
 type harnessListResponse struct {
-	Items []harness.ProfileView `json:"items"`
+	Items           []harness.ProfileView `json:"items"`
+	SandboxBackends []string              `json:"sandboxBackends,omitempty"`
 }
 
 type harnessLoadActiveResponse struct {
-	Profile harness.ProfileView `json:"profile"`
+	Profile         harness.ProfileView `json:"profile"`
+	SandboxBackends []string            `json:"sandboxBackends,omitempty"`
 }
 
 // ListHarnessProfiles godoc
@@ -33,7 +36,7 @@ func (h *Handler) listHarnessProfiles(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("HARNESS_LIST_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, harnessListResponse{Items: items})
+	c.JSON(http.StatusOK, harnessListResponse{Items: items, SandboxBackends: sandbox.KnownBackendIDs()})
 }
 
 // CreateHarnessProfile godoc
@@ -224,7 +227,7 @@ func (h *Handler) loadActiveHarnessProfile(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, errorBody("HARNESS_LOAD_ACTIVE_FAILED", err.Error()))
 		return
 	}
-	c.JSON(http.StatusOK, harnessLoadActiveResponse{Profile: *view})
+	c.JSON(http.StatusOK, harnessLoadActiveResponse{Profile: *view, SandboxBackends: sandbox.KnownBackendIDs()})
 }
 
 func (h *Handler) harnessFor(c *gin.Context) *harness.Service {

@@ -100,7 +100,7 @@ export function listHarnessProfiles(status = "", name = "") {
   if (status) q.set("status", status);
   if (name) q.set("name", name);
   const qs = q.toString();
-  return api<{ items: HarnessProfile[] }>(`/harness/profiles${qs ? `?${qs}` : ""}`);
+  return api<{ items: HarnessProfile[]; sandboxBackends?: string[] }>(`/harness/profiles${qs ? `?${qs}` : ""}`);
 }
 
 export function loadActiveHarnessProfile(name = "default") {

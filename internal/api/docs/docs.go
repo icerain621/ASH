@@ -17296,6 +17296,12 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
                     }
+                },
+                "sandboxBackends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -17304,6 +17310,12 @@ const docTemplate = `{
             "properties": {
                 "profile": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView"
+                },
+                "sandboxBackends": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

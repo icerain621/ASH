@@ -2219,6 +2219,10 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/HarnessProfileView" }
+        sandboxBackends:
+          type: array
+          items: { type: string }
+          description: "Static sandbox backend catalog (VX71). Same IDs as /readyz; not a new vendor and not stored on the profile spec."
     HarnessCreateProfileRequest:
       type: object
       required: [name, spec]
@@ -2237,6 +2241,10 @@ components:
       required: [profile]
       properties:
         profile: { $ref: "#/components/schemas/HarnessProfileView" }
+        sandboxBackends:
+          type: array
+          items: { type: string }
+          description: "Static sandbox backend catalog (VX71). Same IDs as /readyz."
     ScenarioPatchView:
       type: object
       properties:

@@ -7,7 +7,10 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"slices"
+
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/sandbox"
 )
 
 func TestHarnessProfileAPILifecycle(t *testing.T) {
@@ -56,5 +59,22 @@ func TestHarnessProfileAPILifecycle(t *testing.T) {
 	}
 	if active.Profile.ID != created.ID || active.Profile.Status != harness.StatusActive {
 		t.Fatalf("active=%+v", active.Profile)
+	}
+	if !slices.Equal(active.SandboxBackends, sandbox.KnownBackendIDs()) {
+		t.Fatalf("active sandboxBackends=%v", active.SandboxBackends)
+	}
+
+	wList := httptest.NewRecorder()
+	reqList := httptest.NewRequest(http.MethodGet, "/api/v1/harness/profiles?name=feature-default", nil)
+	r.ServeHTTP(wList, reqList)
+	if wList.Code != http.StatusOK {
+		t.Fatalf("list status=%d body=%s", wList.Code, wList.Body.String())
+	}
+	var listed harnessListResponse
+	if err := json.Unmarshal(wList.Body.Bytes(), &listed); err != nil {
+		t.Fatal(err)
+	}
+	if !slices.Equal(listed.SandboxBackends, sandbox.KnownBackendIDs()) {
+		t.Fatalf("list sandboxBackends=%v", listed.SandboxBackends)
 	}
 }
