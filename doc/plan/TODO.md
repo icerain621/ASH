@@ -257,8 +257,8 @@
 | VX45 | 探测清单（v6.4 草案） | `ingress-provider-hub.md` | ✅ |
 | VX46 | v6.4 冻结 + 签字 | `v6.4-release-scope`；`make v6.4-signoff`；tag 人工 | ✅ |
 | VX51 | Webhook 走 Ingress（v6.5 草案） | `ASH_INGRESS=webhook-github` 才 Accept；默认 null | ✅ |
-| VX52 | v6.5 冻结 + 签字 | `v6.5-release-scope`；`make v6.5-signoff` | ⬜ |
-| 详排 | — | [`v6.4-release-scope.md`](v6.4-release-scope.md)（已冻结） · [`v6.5-release-scope.md`](v6.5-release-scope.md)（草案） · [`v6.x-program.md`](v6.x-program.md) | — |
+| VX52 | v6.5 冻结 + 签字 | `v6.5-release-scope`；`make v6.5-signoff`；tag 人工 | ✅ |
+| 详排 | — | [`v6.4-release-scope.md`](v6.4-release-scope.md)（已冻结） · [`v6.5-release-scope.md`](v6.5-release-scope.md)（已冻结） · [`v6.x-program.md`](v6.x-program.md) | — |
 
 ---
 

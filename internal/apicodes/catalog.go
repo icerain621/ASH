@@ -189,6 +189,7 @@ var Catalog = map[string]Entry{
 	"WEBHOOK_SIGNATURE_INVALID":     {Domain: "ci", Summary: "GitHub webhook HMAC signature invalid"},
 	"WEBHOOK_SECRET_UNRESOLVED":     {Domain: "ci", Summary: "Webhook HMAC secret could not be resolved"},
 	"WEBHOOK_INGEST_FAILED":         {Domain: "ci", Summary: "Failed to ingest GitHub webhook payload"},
+	"INGRESS_REJECTED":              {Domain: "ci", Summary: "Ingress adapter rejected the webhook before ingest"},
 
 	// agents / session
 	"SESSION_CREATE_FAILED":           {Domain: "agents", Summary: "Failed to create agent session"},

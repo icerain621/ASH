@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX52：v6.5 范围已冻结；`make v6.5-signoff` 不自动打 `v6.5.0` tag。 / VX52: v6.5 scope frozen; sign-off gate does not tag.
 - Sprint VX51：GitHub Webhook 在 `ASH_INGRESS=webhook-github` 时经 Ingress 缝验收；默认 null 不改变原入库路径。 / VX51: GitHub webhook accepts via the ingress seam when engaged; null default keeps the existing ingest path.
 - Sprint 草案：v6.5（VX51–VX52）。把已有 Webhook 接到 Ingress 缝。无新 IM、无新表。 / v6.5 draft: live webhook through the ingress seam; no new IM, no new tables.
 - Sprint VX46：v6.4 范围已冻结；`make v6.4-signoff` 不自动打 `v6.4.0` tag。 / VX46: v6.4 scope frozen; sign-off gate does not tag.
