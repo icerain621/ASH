@@ -10,6 +10,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/goal"
 	"github.com/ash-repwiki/ash/internal/ingress"
+	"github.com/ash-repwiki/ash/internal/notify"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -33,6 +34,7 @@ type githubWebhookResponse struct {
 	IngressAdapter    string                `json:"ingressAdapter,omitempty"`
 	IngressChannel    string                `json:"ingressChannel,omitempty"`
 	IngressDeliveryID string                `json:"ingressDeliveryId,omitempty"`
+	Notifier          string                `json:"notifier,omitempty"`
 }
 
 // GitHubWebhook godoc
@@ -161,6 +163,21 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 			"connectionId": conn.ID, "ciRunId": result.CIRunID, "diagnosisId": result.Diagnosis.ID,
 			"planId": resp.PlanID, "ashRunId": resp.AshRunID, "autoRun": autoRun, "executionError": resp.ExecutionError,
 		})).Error
+	}
+	n := notify.FromEnv()
+	resp.Notifier = n.Name()
+	if !result.Duplicate {
+		_ = n.Notify(ctx, notify.Event{
+			Kind:    "ci.webhook",
+			Title:   firstNonEmptyAPI(result.Workflow, "github webhook"),
+			Body:    result.Conclusion,
+			SpaceID: result.SpaceID,
+			Meta: map[string]string{
+				"connectionId": result.ConnectionID,
+				"deliveryId":   c.GetHeader("X-GitHub-Delivery"),
+				"ciRunId":      result.CIRunID,
+			},
+		})
 	}
 	c.JSON(http.StatusOK, resp)
 }

@@ -12,6 +12,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX61：GitHub Webhook 非重复入库后走 Notifier（`ci.webhook`）；默认 `null` 丢弃，`ASH_NOTIFIER=log` 可观察。无 IM、无新表。 / VX61: non-duplicate webhook ingest notifies via the existing seam; null discards, log is observable.
+- Sprint 草案：v6.6（VX61–VX62）。Webhook 投递走 Notifier。 / v6.6 draft: webhook delivery through the notifier seam.
 - Sprint VX52：v6.5 范围已冻结；`make v6.5-signoff` 不自动打 `v6.5.0` tag。 / VX52: v6.5 scope frozen; sign-off gate does not tag.
 - Sprint VX51：GitHub Webhook 在 `ASH_INGRESS=webhook-github` 时经 Ingress 缝验收；默认 null 不改变原入库路径。 / VX51: GitHub webhook accepts via the ingress seam when engaged; null default keeps the existing ingest path.
 - Sprint 草案：v6.5（VX51–VX52）。把已有 Webhook 接到 Ingress 缝。无新 IM、无新表。 / v6.5 draft: live webhook through the ingress seam; no new IM, no new tables.

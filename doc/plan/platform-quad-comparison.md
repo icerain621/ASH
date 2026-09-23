@@ -159,7 +159,7 @@
 | P15 | Skills + Hooks + MCP 三件套 | Codex | Skills 目录 + MCP 桥 + 无 Hooks | **Absorb** | Hooks 补齐；MCP exec 收尾 |
 | P16 | 多 Agent 图 / subagent | Codex / DSH | Sub-run / ACP | **Partial** | 谱系写入 interaction_threads |
 | P17 | Messaging Gateway 多通道 | Hermes | Webhook / CI 有限 | **Observe→可选** | v6 仅设计「单通道适配器缝」；不全量 IM |
-| P18 | Cron + 投递到通道 | Hermes | Waker / schedule 部分 | **Partial** | Cron 与 Improve/Waker 对齐，投递走通知适配器 |
+| P18 | Cron + 投递到通道 | Hermes | Waker + Webhook 入库 | **Partial** | Cron 与 Waker 对齐；Webhook 非重复入库也走同一 Notifier（VX61）。无 IM |
 | P19 | Skills Hub + 自主沉淀 | Hermes | skill catalog（无公网市场） | **Partial** | 组织内 Hub；沉淀须经记忆/编排评审 |
 | P20 | 可插拔 Memory Provider | Hermes | 内置 Memory Core | **Reject 替换** / **Observe 桥** | 不以外置 mem0 替换双核；可 MCP 旁路 |
 | P21 | 多终端 Backend（docker/ssh/…） | Hermes / DSH | Sandbox backends 路线 | **Partial** | Backend 枚举进 Harness Profile |
@@ -383,6 +383,7 @@
 | v6.3 | RPC 嵌入 + Cron 通知适配器 + Backend 枚举 | P10, P18, P21 | **已冻结**（[`v6.3-release-scope.md`](v6.3-release-scope.md) · VX31–VX36） |
 | v6.4 | 单通道 Ingress；Provider 目录；组织 Skills Hub | P17, P09, P19 | **已冻结**（[`v6.4-release-scope.md`](v6.4-release-scope.md) · VX41–VX46） |
 | v6.5 | 已有 GitHub Webhook 经 Ingress 缝 | P17 | **已冻结**（[`v6.5-release-scope.md`](v6.5-release-scope.md) · VX51–VX52） |
+| v6.6 | Webhook 成功入库后走 Notifier | P18 | **草案**（[`v6.6-release-scope.md`](v6.6-release-scope.md) · VX61 ✅；VX62 待冻结） |
 
 > 2026-09-20：v6.0–v6.2 主题经 EW W0–W12 落地后，以 **v6.0** 一代冻结（EW130 / `make v6-signoff`）。  
 > 2026-09-20: v6.0–v6.2 themes shipped via EW W0–W12 are frozen as **v6.0** (EW130).

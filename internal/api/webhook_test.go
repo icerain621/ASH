@@ -215,6 +215,28 @@ func TestGitHubWebhookIngressSeam(t *testing.T) {
 	if resp.IngressAdapter != "webhook-github" || resp.IngressChannel != "webhook-github" || resp.IngressDeliveryID != "deliv-seam" {
 		t.Fatalf("%+v", resp)
 	}
+	if resp.Notifier != "null" {
+		t.Fatalf("default notifier=%q", resp.Notifier)
+	}
+
+	t.Setenv("ASH_NOTIFIER", "log")
+	logged := httptest.NewRecorder()
+	logReq := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github?connectionId="+conn.ID, bytes.NewReader(payload))
+	logReq.Header.Set("Content-Type", "application/json")
+	logReq.Header.Set("X-Hub-Signature-256", signGitHubBody("whsec_seam", payload))
+	logReq.Header.Set("X-GitHub-Event", "workflow_run")
+	logReq.Header.Set("X-GitHub-Delivery", "deliv-seam-log")
+	r.ServeHTTP(logged, logReq)
+	if logged.Code != http.StatusOK {
+		t.Fatalf("log status=%d body=%s", logged.Code, logged.Body.String())
+	}
+	var loggedResp githubWebhookResponse
+	if err := json.Unmarshal(logged.Body.Bytes(), &loggedResp); err != nil {
+		t.Fatal(err)
+	}
+	if loggedResp.Notifier != "log" {
+		t.Fatalf("notifier=%q", loggedResp.Notifier)
+	}
 }
 
 func signGitHubBody(secret string, body []byte) string {

@@ -1732,6 +1732,7 @@ components:
         ingressAdapter: { type: string, description: "Active ASH_INGRESS adapter; null means the seam is disengaged (VX51)" }
         ingressChannel: { type: string }
         ingressDeliveryId: { type: string }
+        notifier: { type: string, description: "Active ASH_NOTIFIER; null discards, log prints (VX61)" }
     CreateAgentSessionRequest:
       type: object
       properties:

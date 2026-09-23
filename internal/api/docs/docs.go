@@ -17265,6 +17265,9 @@ const docTemplate = `{
                 "ingressDeliveryId": {
                     "type": "string"
                 },
+                "notifier": {
+                    "type": "string"
+                },
                 "planId": {
                     "type": "string"
                 },

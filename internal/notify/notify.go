@@ -1,4 +1,4 @@
-// Package notify is the Cron/duty delivery seam (v6.3 VX33).
+// Package notify is the delivery seam (v6.3 VX33; webhook ingest VX61).
 // Adapters: null (default) and log. No IM SDKs.
 package notify
 
