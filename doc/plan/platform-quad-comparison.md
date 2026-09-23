@@ -384,7 +384,7 @@
 | v6.4 | 单通道 Ingress；Provider 目录；组织 Skills Hub | P17, P09, P19 | **已冻结**（[`v6.4-release-scope.md`](v6.4-release-scope.md) · VX41–VX46） |
 | v6.5 | 已有 GitHub Webhook 经 Ingress 缝 | P17 | **已冻结**（[`v6.5-release-scope.md`](v6.5-release-scope.md) · VX51–VX52） |
 | v6.6 | Webhook 成功入库后走 Notifier | P18 | **已冻结**（[`v6.6-release-scope.md`](v6.6-release-scope.md) · VX61–VX62） |
-| v6.7 | Harness 列表与 active 回显沙箱目录 | P21 | **草案**（[`v6.7-release-scope.md`](v6.7-release-scope.md) · VX71 ✅；VX72 待冻结） |
+| v6.7 | Harness 列表与 active 回显沙箱目录 | P21 | **已冻结**（[`v6.7-release-scope.md`](v6.7-release-scope.md) · VX71–VX72） |
 
 > 2026-09-20：v6.0–v6.2 主题经 EW W0–W12 落地后，以 **v6.0** 一代冻结（EW130 / `make v6-signoff`）。  
 > 2026-09-20: v6.0–v6.2 themes shipped via EW W0–W12 are frozen as **v6.0** (EW130).

@@ -12,6 +12,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
+- Sprint VX72：v6.7 范围已冻结；`make v6.7-signoff` 不自动打 `v6.7.0` tag。 / VX72: v6.7 scope frozen; sign-off gate does not tag.
 - Sprint VX71：Harness Profile 列表与 active 回显已有 `sandboxBackends`；控制台一行沙箱目录。不改 spec、无新厂商。 / VX71: harness list and active echo the existing sandbox backend catalog.
 - Sprint 草案：v6.7（VX71–VX72）。Harness 回显沙箱目录。 / v6.7 draft: harness surfaces the sandbox backend catalog.
 - Sprint VX62：v6.6 范围已冻结；`make v6.6-signoff` 不自动打 `v6.6.0` tag。 / VX62: v6.6 scope frozen; sign-off gate does not tag.
