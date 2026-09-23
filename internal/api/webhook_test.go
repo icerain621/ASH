@@ -157,6 +157,66 @@ func TestGitHubWebhookAutoRun(t *testing.T) {
 	}
 }
 
+func TestGitHubWebhookIngressSeam(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_AGENT_EXECUTOR", "static")
+	t.Setenv("ASH_INGRESS", "webhook-github")
+	r, _ := newPlatformTestRouter(t)
+	secretID := createNamedSecret(t, r, "WEBHOOK_SECRET", "whsec_seam")
+	connBody := []byte(`{"provider":"github","owner":"acer","repo":"ash","secretId":"` + secretID + `"}`)
+	connResp := httptest.NewRecorder()
+	connReq := httptest.NewRequest(http.MethodPost, "/api/v1/repo/connections", bytes.NewReader(connBody))
+	connReq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(connResp, connReq)
+	if connResp.Code != http.StatusCreated {
+		t.Fatalf("conn status=%d body=%s", connResp.Code, connResp.Body.String())
+	}
+	var conn struct {
+		ID string `json:"id"`
+	}
+	if err := json.Unmarshal(connResp.Body.Bytes(), &conn); err != nil {
+		t.Fatal(err)
+	}
+
+	emptySig := signGitHubBody("whsec_seam", nil)
+	rejected := httptest.NewRecorder()
+	rejReq := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github?connectionId="+conn.ID, nil)
+	rejReq.Header.Set("X-Hub-Signature-256", emptySig)
+	r.ServeHTTP(rejected, rejReq)
+	if rejected.Code != http.StatusBadRequest || !bytes.Contains(rejected.Body.Bytes(), []byte("INGRESS_REJECTED")) {
+		t.Fatalf("reject status=%d body=%s", rejected.Code, rejected.Body.String())
+	}
+
+	now := time.Now().UTC()
+	payload, _ := json.Marshal(map[string]any{
+		"action": "completed",
+		"workflow_run": map[string]any{
+			"id": 9101, "name": "CI", "status": "completed", "conclusion": "failure",
+			"run_attempt": 1, "html_url": "https://example.test/run/9101",
+			"head_branch": "main", "head_sha": "abc",
+			"created_at": now.Format(time.RFC3339), "updated_at": now.Format(time.RFC3339),
+		},
+		"repository": map[string]any{"name": "ash", "owner": map[string]any{"login": "acer"}},
+	})
+	ok := httptest.NewRecorder()
+	okReq := httptest.NewRequest(http.MethodPost, "/api/v1/webhooks/github?connectionId="+conn.ID, bytes.NewReader(payload))
+	okReq.Header.Set("Content-Type", "application/json")
+	okReq.Header.Set("X-Hub-Signature-256", signGitHubBody("whsec_seam", payload))
+	okReq.Header.Set("X-GitHub-Event", "workflow_run")
+	okReq.Header.Set("X-GitHub-Delivery", "deliv-seam")
+	r.ServeHTTP(ok, okReq)
+	if ok.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", ok.Code, ok.Body.String())
+	}
+	var resp githubWebhookResponse
+	if err := json.Unmarshal(ok.Body.Bytes(), &resp); err != nil {
+		t.Fatal(err)
+	}
+	if resp.IngressAdapter != "webhook-github" || resp.IngressChannel != "webhook-github" || resp.IngressDeliveryID != "deliv-seam" {
+		t.Fatalf("%+v", resp)
+	}
+}
+
 func signGitHubBody(secret string, body []byte) string {
 	mac := hmac.New(sha256.New, []byte(secret))
 	mac.Write(body)

@@ -382,6 +382,7 @@
 | v6.2 | Skills/MCP/Hooks 闭环 + 子代理谱系 | P15, P16 | 已并入 v6.0 冻结水位 |
 | v6.3 | RPC 嵌入 + Cron 通知适配器 + Backend 枚举 | P10, P18, P21 | **已冻结**（[`v6.3-release-scope.md`](v6.3-release-scope.md) · VX31–VX36） |
 | v6.4 | 单通道 Ingress；Provider 目录；组织 Skills Hub | P17, P09, P19 | **已冻结**（[`v6.4-release-scope.md`](v6.4-release-scope.md) · VX41–VX46） |
+| v6.5 | 已有 GitHub Webhook 经 Ingress 缝 | P17 | **草案**（[`v6.5-release-scope.md`](v6.5-release-scope.md) · VX51 ✅；VX52 待冻结） |
 
 > 2026-09-20：v6.0–v6.2 主题经 EW W0–W12 落地后，以 **v6.0** 一代冻结（EW130 / `make v6-signoff`）。  
 > 2026-09-20: v6.0–v6.2 themes shipped via EW W0–W12 are frozen as **v6.0** (EW130).

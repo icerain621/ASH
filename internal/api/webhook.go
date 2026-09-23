@@ -9,26 +9,30 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/ci"
 	"github.com/ash-repwiki/ash/internal/goal"
+	"github.com/ash-repwiki/ash/internal/ingress"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
 type githubWebhookResponse struct {
-	Duplicate      bool                  `json:"duplicate"`
-	Ignored        bool                  `json:"ignored,omitempty"`
-	Reason         string                `json:"reason,omitempty"`
-	ConnectionID   string                `json:"connectionId,omitempty"`
-	SpaceID        string                `json:"spaceId,omitempty"`
-	CIRunID        string                `json:"ciRunId,omitempty"`
-	CIJobID        string                `json:"ciJobId,omitempty"`
-	ProviderRunID  string                `json:"providerRunId,omitempty"`
-	Conclusion     string                `json:"conclusion,omitempty"`
-	Workflow       string                `json:"workflow,omitempty"`
-	ShouldStartRun bool                  `json:"shouldStartRun,omitempty"`
-	Diagnosis      *ci.DiagnosisResponse `json:"diagnosis,omitempty"`
-	PlanID         string                `json:"planId,omitempty"`
-	AshRunID       string                `json:"ashRunId,omitempty"`
-	AshTraceID     string                `json:"ashTraceId,omitempty"`
-	ExecutionError string                `json:"executionError,omitempty"`
+	Duplicate         bool                  `json:"duplicate"`
+	Ignored           bool                  `json:"ignored,omitempty"`
+	Reason            string                `json:"reason,omitempty"`
+	ConnectionID      string                `json:"connectionId,omitempty"`
+	SpaceID           string                `json:"spaceId,omitempty"`
+	CIRunID           string                `json:"ciRunId,omitempty"`
+	CIJobID           string                `json:"ciJobId,omitempty"`
+	ProviderRunID     string                `json:"providerRunId,omitempty"`
+	Conclusion        string                `json:"conclusion,omitempty"`
+	Workflow          string                `json:"workflow,omitempty"`
+	ShouldStartRun    bool                  `json:"shouldStartRun,omitempty"`
+	Diagnosis         *ci.DiagnosisResponse `json:"diagnosis,omitempty"`
+	PlanID            string                `json:"planId,omitempty"`
+	AshRunID          string                `json:"ashRunId,omitempty"`
+	AshTraceID        string                `json:"ashTraceId,omitempty"`
+	ExecutionError    string                `json:"executionError,omitempty"`
+	IngressAdapter    string                `json:"ingressAdapter,omitempty"`
+	IngressChannel    string                `json:"ingressChannel,omitempty"`
+	IngressDeliveryID string                `json:"ingressDeliveryId,omitempty"`
 }
 
 // GitHubWebhook godoc
@@ -78,6 +82,23 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, errorBody("WEBHOOK_SIGNATURE_INVALID", "invalid X-Hub-Signature-256"))
 		return
 	}
+	adapter := ingress.FromEnv()
+	var accepted *ingress.Event
+	if adapter.Name() != "null" {
+		ev, accErr := adapter.Accept(c.Request.Context(), ingress.RawInbound{
+			Channel: adapter.Name(),
+			Headers: map[string]string{
+				"X-GitHub-Delivery": c.GetHeader("X-GitHub-Delivery"),
+				"X-GitHub-Event":    c.GetHeader("X-GitHub-Event"),
+			},
+			Body: body,
+		})
+		if accErr != nil {
+			c.JSON(http.StatusBadRequest, errorBody("INGRESS_REJECTED", accErr.Error()))
+			return
+		}
+		accepted = ev
+	}
 	setIdentity(c, "webhook:github", conn.SpaceID, "admin")
 	ctx := c.Request.Context()
 	if store.PostgresRLSEnabled() {
@@ -106,6 +127,11 @@ func (h *Handler) githubWebhook(c *gin.Context) {
 		CIRunID: result.CIRunID, CIJobID: result.CIJobID, ProviderRunID: result.ProviderRunID,
 		Conclusion: result.Conclusion, Workflow: result.Workflow,
 		ShouldStartRun: result.ShouldStartRun, Diagnosis: result.Diagnosis,
+		IngressAdapter: adapter.Name(),
+	}
+	if accepted != nil {
+		resp.IngressChannel = accepted.Channel
+		resp.IngressDeliveryID = accepted.DeliveryID
 	}
 	// DX52: every diagnosed failure creates a GoalPlan; autoRun maps to AutoApprove.
 	if result.Diagnosis != nil && !result.Duplicate {

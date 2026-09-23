@@ -32,6 +32,9 @@
 | [`v6.0-release-scope.md`](v6.0-release-scope.md) | **v6.0** 范围（**已冻结**；EW130） | EW W0–W12 吸收水位冻结 |
 | [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**已冻结**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
 | [`v6.4-release-scope.md`](v6.4-release-scope.md) | **v6.4** 范围（**已冻结**；VX41–VX46） | Ingress 缝 · Provider 目录 · 组织 Skills Hub |
+| [`v6.5-release-scope.md`](v6.5-release-scope.md) | **v6.5** 范围（**草案**；VX51–VX52） | Webhook 走 Ingress 缝 |
+| [`sprint-vx51-webhook-ingress.md`](sprint-vx51-webhook-ingress.md) | **VX51** Webhook 经 Ingress 验收 | ✅ |
+| [`sprint-vx52-v65-signoff.md`](sprint-vx52-v65-signoff.md) | **VX52** v6.5 冻结 + 签字 | ⬜ |
 | [`sprint-vx41-ingress-seam.md`](sprint-vx41-ingress-seam.md) | **VX41** Ingress 适配器缝 | ✅ |
 | [`sprint-vx42-ingress-probe.md`](sprint-vx42-ingress-probe.md) | **VX42** ingressAdapters 探测 | ✅ |
 | [`sprint-vx43-provider-catalog.md`](sprint-vx43-provider-catalog.md) | **VX43** Provider catalog 标记 | ✅ |

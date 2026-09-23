@@ -1729,6 +1729,9 @@ components:
         ashRunId: { type: string }
         ashTraceId: { type: string }
         executionError: { type: string }
+        ingressAdapter: { type: string, description: "Active ASH_INGRESS adapter; null means the seam is disengaged (VX51)" }
+        ingressChannel: { type: string }
+        ingressDeliveryId: { type: string }
     CreateAgentSessionRequest:
       type: object
       properties:

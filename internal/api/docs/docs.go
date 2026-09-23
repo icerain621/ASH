@@ -17256,6 +17256,15 @@ const docTemplate = `{
                 "ignored": {
                     "type": "boolean"
                 },
+                "ingressAdapter": {
+                    "type": "string"
+                },
+                "ingressChannel": {
+                    "type": "string"
+                },
+                "ingressDeliveryId": {
+                    "type": "string"
+                },
                 "planId": {
                     "type": "string"
                 },
