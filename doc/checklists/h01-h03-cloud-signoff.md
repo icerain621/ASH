@@ -30,10 +30,10 @@ set -a && source config/cloud-rds.env && set +a
 
 | # | 检查 | 命令 | 通过标准 | 证据 |
 |---|------|------|----------|------|
-| H-01.1 | Schema 迁移 | `migrate schema up` + `version` | version=**20** expected=20 | `migrate-version.log` |
-| H-01.2 | 数据迁移 | `migrate plan/copy/verify` | 全表行数一致 | `migrate-verify.log` |
+| H-01.1 | Schema 迁移 / Schema migrate | `migrate schema up` + `version` | version=**39** expected=39 | `migrate-version.log` |
+| H-01.2 | 数据迁移 / Data migrate | `migrate plan/copy/verify` | 全表行数一致 / row counts match | `migrate-verify.log` |
 | H-01.3 | Doctor M3 | `doctor --suite M3` | **11/11** pass，M3-04 非 skip | `doctor-m3.log` |
-| H-01.4 | Doctor ALL | `doctor --suite ALL` | **43/43** pass | `doctor-all.log` |
+| H-01.4 | Doctor ALL | `doctor --suite ALL` | **63/63** pass | `doctor-all.log` |
 | H-01.5 | TR3 live | `doctor --suite TR3` | TR3-06/10 pass | `doctor-tr3.log` |
 | H-01.6 | 业务抽样 | `make release-sampling-static` 或 `live-smoke` | H-09 §7 | `release-sampling.log` |
 | H-01.L | 本地 dry-run | `make postgres-local-rds-e2e` | Docker + sqlite→Postgres + M3-04 live | `postgres-local-rds-e2e.log` |
@@ -57,7 +57,7 @@ make cloud-acceptance
 
 | # | 检查 | 命令 | 通过标准 | 证据 |
 |---|------|------|----------|------|
-| H-02.1 | RLS 策略 | Doctor M3-06 | `rlsPolicies` ≥ **41** | `doctor-m3.log` |
+| H-02.1 | RLS 策略 / RLS policies | Doctor M3-06 | `rlsPolicies` ≥ **56** | `doctor-m3.log` |
 | H-02.2 | ash_app ping | Doctor M3-07 | pass（需 `ASH_DATABASE_APP_URL`） | 同上 |
 | H-02.3 | 租户隔离 | `go test -tags=integration ./internal/store/ -run TestPostgresRLS` | 全 pass | `rls-integration.log` |
 | H-02.4 | 迁移后隔离 | `TestPostgresRLSE2EAfterMigrate` | pass | 同上 |
@@ -79,7 +79,7 @@ make cloud-acceptance
 | H-03.1 | 运行时连接 | Worker 设 `ASH_DATABASE_APP_URL` | store 使用 `ash_app` | env 截图/清单 |
 | H-03.2 | RLS 强制 | `ASH_POSTGRES_RLS=1` + `FORCE=1` | 无 bypass | env 清单 |
 | H-03.3 | Schema 模式 | `ASH_SCHEMA_MODE=sql` | AutoMigrate 关闭 | `/readyz` JSON |
-| H-03.4 | readyz | `curl /readyz` | `dialect=postgres`，`sqlMigrationVersion=20` | `readyz.json` |
+| H-03.4 | readyz | `curl /readyz` | `dialect=postgres`，`sqlMigrationVersion=39` | `readyz.json` |
 | H-03.5 | 租户 API | `GET /runs` + `X-ASH-Space-ID` | 仅本 space | 抽样记录 |
 | H-03.6 | 跨 space | 访问他 space 资源 | `403 SPACE_ACCESS_DENIED` | 抽样记录 |
 

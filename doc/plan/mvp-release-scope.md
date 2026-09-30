@@ -2,7 +2,7 @@
 
 > 状态：**已冻结**（2026-07-07，产品 `产品负责人（占位）` 确认）（对应 [`../progress/mvp-release-checklist.md`](../progress/mvp-release-checklist.md) §1）  
 > 归属：[`plan/`](README.md)  
-> 版本锚点：Doctor ALL **43/43** · SQL rev **20** · RLS **41**
+> 版本锚点 / Version anchors：Doctor ALL **63/63** · SQL rev **39** · RLS **56**
 
 ## 1. 发布目标
 

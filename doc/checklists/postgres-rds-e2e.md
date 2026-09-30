@@ -59,10 +59,10 @@ bash scripts/postgres-smoke.sh
 ```bash
 export ASH_SCHEMA_MODE=sql
 
-# 建表（golang-migrate 000001–000020，空库）
+# 建表（golang-migrate 000001–000039，空库）
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
-# 期望 version=20 expected=20 mode=sql
+# 期望 version=39 expected=39 mode=sql
 
 go run ./cmd/cli doctor --suite M3
 
@@ -72,8 +72,8 @@ bash scripts/postgres-ensure-app-role.sh
 
 | # | 检查 | 通过标准 |
 |---|------|----------|
-| 2.1 | 表目录 | **M3-03** pass，catalog ≥43 表；**M3-08** `sqlVersion=20` |
-| 2.2 | RLS SQL | **M3-06** pass，`rlsPolicies` ≥41（修订 000013–000020） |
+| 2.1 | 表目录 | **M3-03** pass，catalog 表齐全；**M3-08** `sqlVersion=39` |
+| 2.2 | RLS SQL | **M3-06** pass，`rlsPolicies` ≥56（修订 000013+） |
 | 2.3 | `ash_app` 存在 | `\du ash_app` 或 M3-07 ping ok |
 | 2.4 | 密码策略 | 生产强密码已轮换，`ASH_DATABASE_APP_URL` 已更新 |
 
@@ -252,9 +252,9 @@ ASH_CI_FIXTURE=1 make live-smoke   # H-04/05/06/07/09 live 编排
 ## 10. 证据归档（发布门禁）
 
 - [ ] `migrate plan` / `verify` 输出日志
-- [ ] `migrate schema version` 输出（version=20）
+- [ ] `migrate schema version` 输出（version=39）
 - [ ] `doctor --suite M3` 报告（11/11 pass）
-- [ ] `doctor --suite ALL` 报告（43/43 pass）
+- [ ] `doctor --suite ALL` 报告（63/63 pass）
 - [ ] RLS 集成测试日志
 - [ ] `readyz` 响应 + 切换时间戳
 - [ ] §7 业务抽样记录

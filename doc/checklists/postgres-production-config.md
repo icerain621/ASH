@@ -1,7 +1,8 @@
-# Postgres 生产配置模板（revision 20）
+# Postgres 生产配置模板（revision 39）/ Postgres production config template (rev 39)
 
 > 切换生产前复制本模板为环境变量/密钥配置。本地验证：`make postgres-sql-schema-e2e`、`make postgres-rls-e2e`。  
-> **云 RDS 一键模板**：[`config/cloud-rds.env.example`](../../config/cloud-rds.env.example)
+> Copy before production cutover. Local verify: `make postgres-sql-schema-e2e`, `make postgres-rls-e2e`.  
+> **云 RDS 一键模板 / Cloud template**：[`config/cloud-rds.env.example`](../../config/cloud-rds.env.example)
 
 ## 推荐 Schema 模式
 
@@ -37,10 +38,10 @@ export ASH_POSTGRES_RLS_FORCE=1
 ## 迁移顺序（空库 / 维护窗口）
 
 ```bash
-# 1. 应用全部 SQL 修订（000001–000020，expectedVersion=20）
+# 1. 应用全部 SQL 修订（000001–000039，expectedVersion=39）
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 go run ./cmd/cli migrate schema version --postgres "$ASH_DATABASE_URL"
-# 期望：version=20 dirty=false expected=20 mode=sql
+# 期望：version=39 dirty=false expected=39 mode=sql
 
 # 2. SQLite → Postgres 数据（若有存量）
 export ASH_MIGRATE_E2E=1
@@ -51,7 +52,7 @@ go run ./cmd/cli migrate verify --data-dir "$ASH_DATA_DIR" --sqlite "$ASH_SQLITE
 # 3. 门禁
 go run ./cmd/cli doctor --suite M3 --format md
 go run ./cmd/cli doctor --suite ALL --agent static --format md
-# 期望：M3 11/11，ALL 43/43（M3-09 readyz 契约，M3-10 RLS 全局表，M3-11 RLS 目录，TR3-05..10，TR1-06 TTL）
+# 期望：M3 11/11，ALL 63/63；RLS policies ≥56
 ```
 
 ## 可观测性（可选）

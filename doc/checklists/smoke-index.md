@@ -15,8 +15,9 @@
 | Live Worker 联调 | `ASH_WORKER_URL=... make live-smoke` | H-04/05/06/07/09 live 编排（`ASH_CI_LIVE=1` 时追加真 GitHub） |
 | P1 真 CI + ExecGo | `make p1-live-credibility` | H-04/05 真 GitHub + H-06；缺 env 则 SKIP |
 | 本地全量 | `bash scripts/verify-local.sh` | regression-short + Doctor CLI（`--agent static`）+ openapi + 可选 Postgres；`ASH_VERIFY_LOCAL_RDS=1` 时含 local-rds |
-| 前端门禁 | `make web-gate` | eslint + vitest（全页 smoke）+ build |
-| SSE 浏览器 E2E（可选） | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
+| 前端门禁 / Frontend gate | `make web-gate` | eslint + vitest coverage 门禁 + build / eslint + vitest coverage gate + build |
+| SSE 浏览器 E2E（可选） / SSE browser E2E (optional) | `make sse-browser-e2e` | Playwright + 临时 Worker：`/ui/runs` → 已连接 + 事件行（P2-4） |
+| 控制台浏览器 E2E（可选） / Console browser E2E (optional) | `make console-browser-e2e` | nav smoke + doctor/readyz + memory + SSE；默认 `ASH_AGENT_EXECUTOR=static` |
 | R-08 跨 space | `make r08-cross-space-gate` | API 越权回归 + RLS 静态；Docker/URL 时跑 Postgres live |
 | 插件签名 | `make plugin-sign-smoke` | HMAC 单测 + `ash plugin-sign` 往返（Sprint CR） |
 | 生产配置 | `make production-config-gate` | dev-secret / CHANGE_ME 拦截 |

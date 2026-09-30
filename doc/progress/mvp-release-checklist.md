@@ -8,7 +8,8 @@
 ## 1. 需求与范围确认
 - [x] 本次发布目标、范围、不包含范围已确认并冻结（[`mvp-release-scope.md`](../plan/mvp-release-scope.md)；`make signoff-gate`）
 - [x] 需求变更已冻结（仅允许 P0 缺陷修复）— 规则见 [`mvp-release-scope.md`](../plan/mvp-release-scope.md) §4；`make scope-freeze-gate`
-- [x] PRD、API、数据库文档已同步至最新版本（Doctor ALL 43/43 + OpenAPI 契约门禁）
+- [x] PRD、API、数据库文档已同步至最新版本（Doctor ALL 63/63 + OpenAPI 契约门禁）  
+      PRD/API/DB docs synced (Doctor ALL 63/63 + OpenAPI contract gate)
 
 ## 2. 开发完成度
 - [x] P0 功能全部开发完成（M0–M3 + PRD MVP 控制台/API）
@@ -35,12 +36,14 @@
 - [x] JWT、RBAC 配置正确（M2 权限矩阵 + Doctor M2-01）
 - [x] 高风险接口权限校验通过（跨 space 403 + policy.denied）
 - [x] 审计日志记录完整（compliance export + RedactJSON）
-- [ ] Postgres 生产切换已完成 [`postgres-rds-e2e.md`](../checklists/postgres-rds-e2e.md) + [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)（**待云 RDS 签字**）
+- [ ] Postgres 生产切换已完成 [`postgres-rds-e2e.md`](../checklists/postgres-rds-e2e.md) + [`h01-h03-cloud-signoff.md`](../checklists/h01-h03-cloud-signoff.md)（**云 RDS 待签字**；本地 Docker H-01/H-02 dry-run ✅）  
+      Postgres production cutover pending cloud RDS signoff (local Docker H-01/H-02 dry-run ✅)
 - [x] H-04–H-09 烟测清单已勾选（静态自动化；live 本地 `make worker-local-gate`；云 Worker 见 `make live-smoke`）— [`smoke-index.md`](../checklists/smoke-index.md)
 - [x] 默认密钥/测试账号已移除或替换（`make production-config-gate` 拦截 dev-secret / CHANGE_ME）
 
 ## 6. 数据与迁移
-- [ ] 数据库迁移脚本在 staging 成功执行（**云 RDS 待验收**；本地 Docker `make postgres-local-rds-e2e` ✅ Sprint CW）
+- [x] 数据库迁移脚本在 staging 成功执行（**云 RDS 待验收**；本地 Docker `make postgres-local-rds-e2e` ✅ SQL rev 39 / RLS 56）  
+      DB migrate verified on local Docker staging stand-in; cloud RDS acceptance still open
 - [x] 新增表、索引、约束验证通过（SQL rev 20 + Doctor M3-03/08/11）
 - [x] 关键数据已备份（`make data-backup` / `make release-window-gate` 本地演练；生产 migrate 前再次执行）
 - [x] 回滚脚本（DDL/DML）已准备并演练（[`postgres-rds-e2e.md`](../checklists/postgres-rds-e2e.md) §8）

@@ -1,8 +1,8 @@
 # H-01~H-03 云环境验收证据
 
-- 生成时间（UTC）：2026-08-06T16:14:16Z
-- Git：852726b @ main
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/cloud-h01-h03-20260806T161318Z`（本地，未入库）
+- 生成时间（UTC）：2026-09-30T15:38:11Z
+- Git：ee20019e @ main
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/cloud-h01-h03-20260930T153455Z`（本地，未入库）
 - RDS host：`postgres://ash:ash@...`（脱敏）
 - 环境：**本地 Docker**（云 RDS 待 `config/cloud-rds.env`）
 
