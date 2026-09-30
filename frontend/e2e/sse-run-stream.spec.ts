@@ -1,11 +1,21 @@
+import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
 import { expect, test } from "@playwright/test";
 
 /**
  * Browser-level SSE smoke (P2-4): open Runs console against a live Worker,
  * select a run, assert EventSource reaches "已连接" and delivers ≥1 event line.
+ *
+ * Uses an empty temp repoRoot so Create does not RAG-index the monorepo or
+ * run `go test ./...` via qa.verify (those hang browser E2E for minutes).
+ * ASH_AGENT_EXECUTOR=static (set by console-browser-e2e.sh) pins the agent.
  */
 test.describe("SSE run stream (browser)", () => {
   test("select run → SSE connected with events", async ({ page, request }) => {
+    const repoRoot = fs.mkdtempSync(path.join(os.tmpdir(), "ash-sse-repo-"));
+    test.setTimeout(90_000);
+
     const create = await request.post("/api/v1/runs", {
       headers: {
         "Content-Type": "application/json",
@@ -16,9 +26,10 @@ test.describe("SSE run stream (browser)", () => {
         actorRole: "maintainer",
         inputs: {
           issueOrSpec: `playwright sse ${Date.now()}`,
-          repoRoot: ".",
+          repoRoot,
         },
       },
+      timeout: 45_000,
     });
     expect(create.ok(), await create.text()).toBeTruthy();
     const body = (await create.json()) as { runId: string };

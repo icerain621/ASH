@@ -10,8 +10,10 @@
     "lint": "eslint src",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:e2e": "playwright test",
-    "test:e2e:sse": "playwright test e2e/sse-run-stream.spec.ts"
+    "test:e2e:sse": "playwright test e2e/sse-run-stream.spec.ts",
+    "test:e2e:console": "playwright test e2e/console-nav-smoke.spec.ts e2e/doctor-readyz.spec.ts e2e/memory-console.spec.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.62.8",
@@ -30,6 +32,7 @@
     "@types/react": "^18.3.12",
     "@types/react-dom": "^18.3.1",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/coverage-v8": "^2.1.9",
     "eslint": "^9.17.0",
     "eslint-plugin-react-hooks": "^5.1.0",
     "eslint-plugin-react-refresh": "^0.4.16",

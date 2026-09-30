@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
-# P2-4 SSE browser E2E: ephemeral Worker + Playwright Chromium against /ui/runs.
-# Optional gate (not part of web-gate). Requires Node + Playwright browsers.
+# Console browser E2E: ephemeral Worker + Playwright (nav smoke + doctor/readyz + memory + SSE).
+# Optional gate (not part of web-gate). Requires Node + Playwright Chromium.
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -10,12 +10,13 @@ source "$ROOT/scripts/_go_env.sh"
 _ash_go_env_bootstrap "$ROOT"
 
 PORT="${ASH_WORKER_PORT:-18082}"
-# Derive a free-ish gRPC port from HTTP port so parallel/local leftovers don't collide.
 PLUGIN_GRPC_PORT="${ASH_PLUGIN_GRPC_PORT:-$((PORT + 1000))}"
 BASE="http://127.0.0.1:${PORT}"
-DATA_DIR="$(mktemp -d 2>/dev/null || mktemp -d -t ash-sse-e2e)"
+DATA_DIR="${TMPDIR:-/tmp}/ash-console-e2e-$$"
+mkdir -p "$DATA_DIR"
 WORKER_PID=""
-SKIP_BUILD="${ASH_SSE_E2E_SKIP_BUILD:-0}"
+SKIP_BUILD="${ASH_CONSOLE_E2E_SKIP_BUILD:-${ASH_SSE_E2E_SKIP_BUILD:-0}}"
+SUITE="${ASH_CONSOLE_E2E_SUITE:-all}" # all | smoke | sse
 
 cleanup() {
   if [[ -n "${WORKER_PID}" ]] && kill -0 "$WORKER_PID" 2>/dev/null; then
@@ -62,22 +63,23 @@ export ASH_WORKER_URL="$BASE"
 export ASH_WEB_DIR="${ASH_WEB_DIR:-$ROOT/frontend/dist}"
 export ASH_PLUGIN_GRPC_ADDR="${ASH_PLUGIN_GRPC_ADDR:-127.0.0.1:${PLUGIN_GRPC_PORT}}"
 export ASH_SCENARIOS_DIR="${ASH_SCENARIOS_DIR:-$ROOT/scenarios}"
+# Deterministic agent so POST /runs returns without waiting on ExecGo/Codex.
 export ASH_AGENT_EXECUTOR="${ASH_AGENT_EXECUTOR:-static}"
 
 echo "== start ephemeral Worker @ ${BASE} =="
 go run ./cmd/worker >"$DATA_DIR/worker.log" 2>&1 &
 WORKER_PID=$!
 
-deadline=$((SECONDS + 90))
+deadline=$((SECONDS + 180))
 until curl -sf "${BASE}/readyz" >/dev/null 2>&1; do
   if ! kill -0 "$WORKER_PID" 2>/dev/null; then
     echo "Worker exited early; log:" >&2
-    tail -40 "$DATA_DIR/worker.log" >&2 || true
+    tail -80 "$DATA_DIR/worker.log" >&2 || true
     exit 1
   fi
   if (( SECONDS > deadline )); then
     echo "Worker readyz timeout @ ${BASE}" >&2
-    tail -40 "$DATA_DIR/worker.log" >&2 || true
+    tail -80 "$DATA_DIR/worker.log" >&2 || true
     exit 1
   fi
   sleep 1
@@ -89,10 +91,23 @@ if ! curl -sf "${BASE}/ui/" | head -c 200 | grep -qiE 'html|ash|root|script'; th
   exit 1
 fi
 
-echo "== Playwright SSE browser smoke =="
+echo "== Playwright console E2E (suite=${SUITE}) =="
 (
   cd "$ROOT/frontend"
-  ASH_WORKER_URL="$BASE" npx playwright test e2e/sse-run-stream.spec.ts
+  case "$SUITE" in
+    smoke)
+      ASH_WORKER_URL="$BASE" npx playwright test \
+        e2e/console-nav-smoke.spec.ts \
+        e2e/doctor-readyz.spec.ts \
+        e2e/memory-console.spec.ts
+      ;;
+    sse)
+      ASH_WORKER_URL="$BASE" npx playwright test e2e/sse-run-stream.spec.ts
+      ;;
+    all|*)
+      ASH_WORKER_URL="$BASE" npx playwright test
+      ;;
+  esac
 )
 
-echo "OK sse-browser-e2e"
+echo "OK console-browser-e2e"

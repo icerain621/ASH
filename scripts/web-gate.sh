@@ -22,7 +22,7 @@ npm_run() {
 }
 
 npm_run run lint
-npm_run run test:run
+npm_run run test:coverage
 npm_run run build
 
 echo "OK web-gate"
