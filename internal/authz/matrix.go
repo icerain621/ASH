@@ -26,9 +26,15 @@ type MatrixResponse struct {
 
 // BuildMatrix assembles the permission matrix for a space.
 func BuildMatrix(db *store.DB, spaceID, orgID, actorRole, actorID string) (*MatrixResponse, error) {
-	scenarios, err := ScenarioPoliciesForSpace(db, spaceID)
-	if err != nil {
-		return nil, err
+	var scenarios []ScenarioMatrixRow
+	if db != nil {
+		var err error
+		scenarios, err = ScenarioPoliciesForSpace(db, spaceID)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		scenarios = DefaultScenarioMatrix()
 	}
 	resp := &MatrixResponse{
 		SpaceID:       spaceID,

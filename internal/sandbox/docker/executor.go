@@ -15,6 +15,12 @@ import (
 
 const defaultImage = "ash-sandbox-runner:dev"
 
+// Test hooks (production defaults). Overridden in unit tests to avoid a live Docker daemon.
+var (
+	dockerAvailable = sandbox.DockerAvailable
+	commandContext  = exec.CommandContext
+)
+
 // Executor runs commands inside a short-lived Docker container.
 type Executor struct {
 	Image string
@@ -31,7 +37,7 @@ func (e Executor) image() string {
 }
 
 func (e Executor) Dispatch(ctx context.Context, req sandbox.DispatchRequest) (*sandbox.DispatchResult, error) {
-	if !sandbox.DockerAvailable() {
+	if !dockerAvailable() {
 		return &sandbox.DispatchResult{OK: false, Error: "docker unavailable or ASH_SKIP_SANDBOX set"}, nil
 	}
 	if req.Timeout <= 0 {
@@ -73,7 +79,7 @@ func (e Executor) Dispatch(ctx context.Context, req sandbox.DispatchRequest) (*s
 	}
 	args = append(args, req.Args...)
 
-	cmd := exec.CommandContext(ctx, "docker", args...)
+	cmd := commandContext(ctx, "docker", args...)
 	var stdout, stderr bytes.Buffer
 	cmd.Stdout = &stdout
 	cmd.Stderr = &stderr

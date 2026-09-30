@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"os"
 	"path/filepath"
 	"strings"
 	"time"
@@ -412,7 +413,17 @@ func (s *Service) Artifacts(runID string) (*artifacts.Manifest, error) {
 	if _, err := s.Get(runID); err != nil {
 		return nil, err
 	}
-	return artifacts.LoadManifest(s.db.RunDir(runID))
+	manifest, err := artifacts.LoadManifest(s.db.RunDir(runID))
+	if err != nil {
+		if os.IsNotExist(err) {
+			return &artifacts.Manifest{RunID: runID, Artifacts: []artifacts.Entry{}}, nil
+		}
+		return nil, err
+	}
+	if manifest.Artifacts == nil {
+		manifest.Artifacts = []artifacts.Entry{}
+	}
+	return manifest, nil
 }
 
 func (s *Service) Checkpoints(runID string) ([]store.Checkpoint, error) {
