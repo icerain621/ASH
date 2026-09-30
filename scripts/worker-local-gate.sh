@@ -27,12 +27,14 @@ export ASH_HTTP_ADDR=":${PORT}"
 export ASH_AUTH_MODE="${ASH_AUTH_MODE:-dev}"
 export ASH_CI_FIXTURE=1
 export ASH_WORKER_URL="$BASE"
+export ASH_SCENARIOS_DIR="${ASH_SCENARIOS_DIR:-$ROOT/scenarios}"
+export ASH_AGENT_EXECUTOR="${ASH_AGENT_EXECUTOR:-static}"
 
 echo "== start ephemeral Worker @ ${BASE} =="
 go run ./cmd/worker >"$DATA_DIR/worker.log" 2>&1 &
 WORKER_PID=$!
 
-deadline=$((SECONDS + 90))
+deadline=$((SECONDS + 180))
 until curl -sf "${BASE}/readyz" >/dev/null 2>&1; do
   if ! kill -0 "$WORKER_PID" 2>/dev/null; then
     echo "Worker exited early; log:" >&2

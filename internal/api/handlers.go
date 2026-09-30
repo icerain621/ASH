@@ -11,6 +11,7 @@ import (
 
 	"github.com/gin-gonic/gin"
 
+	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/agentworkspace"
 	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/ci"
@@ -83,6 +84,11 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 	ev := events.NewService(db)
 	tools := toolbus.DefaultBus()
 	runsSvc := runs.NewService(db, ev, scenarios, tools)
+	// ASH_AGENT_EXECUTOR=static pins a deterministic executor for demos/CI/E2E.
+	// Default execgo_codex stays unpinned so SelectProvider keeps harness + probe fallback.
+	if exec := pinnedAgentExecutor(config.Load().AgentExecutor); exec != nil {
+		runsSvc.WithAgentExecutor(exec)
+	}
 	ciSvc := ci.ApplyFixtureProvider(ci.NewService(db, func(spaceID, secretID string) (string, error) {
 		var row store.SecretRecord
 		if err := db.First(&row, "id = ? AND space_id = ? AND status = ?", secretID, spaceID, "active").Error; err != nil {
@@ -135,6 +141,20 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		waker.SetDefaultDoctorRunner(adapter)
 	}
 	return h
+}
+
+// pinnedAgentExecutor returns a non-nil executor when ASH_AGENT_EXECUTOR should override
+// harness/probe selection. nil leaves runs.SelectProvider unpinned (default execgo path).
+func pinnedAgentExecutor(kind string) agentexec.Executor {
+	switch agentexec.NormalizeProviderKind(kind) {
+	case "static":
+		return agentexec.StaticExecutor{}
+	case "acp_sdk":
+		return agentexec.Resolve(kind)
+	default:
+		// execgo / execgo_codex / empty: do not pin
+		return nil
+	}
 }
 
 func (h *Handler) Register(r *gin.Engine, webDir string) {

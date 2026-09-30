@@ -24,6 +24,8 @@ func TestPostgresRLSE2EAfterMigrate(t *testing.T) {
 	}
 	t.Setenv("ASH_POSTGRES_RLS", "1")
 	t.Setenv("ASH_POSTGRES_RLS_FORCE", "1")
+	// Schema already applied by migrate; AutoMigrate would ALTER typed columns and break RLS policies.
+	t.Setenv("ASH_SCHEMA_MODE", "sql")
 
 	dir := t.TempDir()
 	admin, err := OpenWithDatabaseURL(dir, pgURL)

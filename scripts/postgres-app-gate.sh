@@ -22,10 +22,12 @@ export ASH_DATABASE_URL="postgres://ash:ash@127.0.0.1:${PORT}/ash?sslmode=disabl
 export ASH_DATABASE_APP_URL="postgres://ash_app:ash_app@127.0.0.1:${PORT}/ash?sslmode=disable"
 export ASH_POSTGRES_RLS=1
 export ASH_POSTGRES_RLS_FORCE=1
+# Match H-03 production: SQL schema only — AutoMigrate must not ALTER columns under RLS policies.
+export ASH_SCHEMA_MODE="${ASH_SCHEMA_MODE:-sql}"
 
-echo "== H-02/H-03 postgres app gate (port ${PORT}) =="
+echo "== H-02/H-03 postgres app gate (port ${PORT}, schema_mode=${ASH_SCHEMA_MODE}) =="
 
-echo "== ensure ash_app role + schema rev 20 =="
+echo "== ensure ash_app role + schema (expectedVersion from migrate) =="
 bash scripts/postgres-ensure-app-role.sh
 go run ./cmd/cli migrate schema up --postgres "$ASH_DATABASE_URL"
 
