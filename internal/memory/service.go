@@ -487,7 +487,7 @@ func (s *Service) GetForSpace(spaceID, id string) (*RecordView, error) {
 
 func (s *Service) attachEvidence(rows []store.MemoryRecord) ([]RecordView, error) {
 	if len(rows) == 0 {
-		return nil, nil
+		return []RecordView{}, nil
 	}
 	ids := make([]string, len(rows))
 	for i, r := range rows {

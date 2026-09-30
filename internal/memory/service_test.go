@@ -2,43 +2,37 @@ package memory
 
 import (
 	"errors"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
-	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/events"
-	"github.com/ash-repwiki/ash/internal/rules"
-	"github.com/ash-repwiki/ash/internal/runs"
 	"github.com/ash-repwiki/ash/internal/store"
-	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
-func newTestMemory(t *testing.T) (*Service, *events.Service, *runs.Service) {
+func newTestMemory(t *testing.T) (*Service, *events.Service) {
 	t.Helper()
 	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)
-	scenariosDir := filepath.Join("..", "..", "scenarios")
-	loader := rules.NewLoader(scenariosDir)
-	if err := loader.LoadDir(); err != nil {
-		t.Fatalf("load scenarios: %v", err)
-	}
-	runsSvc := runs.NewService(db, ev, loader, toolbus.DefaultBus()).WithAgentExecutor(agentexec.StaticExecutor{})
-	return NewService(db, ev), ev, runsSvc
+	return NewService(db, ev), ev
 }
 
-func repoWithMemoryEvidence(t *testing.T, issue string) string {
+// seedRun inserts a minimal runs row so memory can emit SSE without importing runs
+// (runs → memory would create a test import cycle).
+func seedRun(t *testing.T, db *store.DB, runID, traceID string) {
 	t.Helper()
-	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte(issue+"\nMemory SSE citation evidence.\n"), 0o644); err != nil {
+	now := time.Now().UTC()
+	rec := store.RunRecord{
+		ID: runID, TraceID: traceID, ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local", ActorRole: "maintainer",
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&rec).Error; err != nil {
 		t.Fatal(err)
 	}
-	return dir
 }
 
 func TestCandidateReviewFlow(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 
 	_, err := svc.CreateCandidate(CreateCandidateRequest{
 		Layer: "L0",
@@ -102,7 +96,7 @@ func TestCandidateReviewFlow(t *testing.T) {
 }
 
 func TestRejectCandidate(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	created, _ := svc.CreateCandidate(CreateCandidateRequest{Layer: "L0", Title: "t", Body: "b"})
 	rev, err := svc.Review(created.CandidateID, ReviewRequest{
 		Decision: "reject", Reason: "no", PolicyProfile: "default",
@@ -117,7 +111,7 @@ func TestRejectCandidate(t *testing.T) {
 }
 
 func TestMemoryGovernanceEdgesAndTTL(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	confidence := 0.92
 
 	base, err := svc.CreateCandidate(CreateCandidateRequest{
@@ -303,21 +297,12 @@ func TestMemoryGovernanceEdgesAndTTL(t *testing.T) {
 }
 
 func TestMemoryEventsOnRunSSE(t *testing.T) {
-	mem, ev, runsSvc := newTestMemory(t)
-
-	run, err := runsSvc.Create(runs.CreateRequest{
-		Scenario: runs.ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "memory sse test",
-			"repoRoot":    repoWithMemoryEvidence(t, "memory sse test"),
-		},
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
+	mem, ev := newTestMemory(t)
+	runID := "run_mem_sse_test"
+	seedRun(t, mem.db, runID, "tr_mem_sse")
 
 	created, err := mem.CreateCandidate(CreateCandidateRequest{
-		RunID: run.RunID,
+		RunID: runID,
 		Layer: "L1",
 		Title: "sse rule",
 		Body:  "emit on stream",
@@ -331,7 +316,7 @@ func TestMemoryEventsOnRunSSE(t *testing.T) {
 	}
 
 	_, err = mem.Review(created.CandidateID, ReviewRequest{
-		RunID:         run.RunID,
+		RunID:         runID,
 		Decision:      "approve",
 		Reason:        "ok",
 		PolicyProfile: "default",
@@ -341,14 +326,14 @@ func TestMemoryEventsOnRunSSE(t *testing.T) {
 	}
 
 	_, err = mem.HitUsed(HitUsedRequest{
-		RunID:     run.RunID,
+		RunID:     runID,
 		RecordIDs: []string{created.CandidateID},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	evs, err := ev.ListAfter(run.RunID, 0, 500)
+	evs, err := ev.ListAfter(runID, 0, 500)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -372,7 +357,7 @@ func TestMemoryEventsOnRunSSE(t *testing.T) {
 }
 
 func TestCreateCandidateGovernanceHints(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	confidence := 0.9
 	base, err := svc.CreateCandidate(CreateCandidateRequest{
 		Layer: "L1", Title: "Governance hint", Body: "Always run doctor before release.",
@@ -399,7 +384,7 @@ func TestCreateCandidateGovernanceHints(t *testing.T) {
 }
 
 func TestApplyFeedbackDecayLowScore(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	confidence := 0.85
 	created, err := svc.CreateCandidate(CreateCandidateRequest{
 		Layer: "L0", Title: "decay target", Body: "pollution decay body",
@@ -449,7 +434,7 @@ func TestApplyFeedbackDecayLowScore(t *testing.T) {
 }
 
 func TestQueryRanksByConfidenceAndFiltersFloor(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	high, low := 0.9, 0.1
 	a, err := svc.CreateCandidate(CreateCandidateRequest{
 		Layer: "L0", Title: "rank alpha", Body: "shared retrieval keyword",
@@ -484,7 +469,7 @@ func TestQueryRanksByConfidenceAndFiltersFloor(t *testing.T) {
 }
 
 func TestCreateCandidateFillsScenarioFromRun(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	now := time.Now().UTC()
 	if err := svc.gdb().Create(&store.RunRecord{
 		ID: "run_mem_fill", TraceID: "tr_fill", ScenarioName: "hotfix", ScenarioVersion: "1",
