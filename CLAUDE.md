@@ -107,3 +107,17 @@ For documentation-only changes, tests are optional; mention that no tests were r
 - When uncertain about product or architecture intent, ask for the boundary instead of guessing too far.
 - Report changed files and verification results clearly.
 
+## Agent skills
+
+### Issue tracker
+
+Issues live as markdown under `.scratch/<feature>/`. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+Default five-role vocabulary (`needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`). See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: root `CONTEXT.md` + `docs/adr/`. See `docs/agents/domain.md`.
+

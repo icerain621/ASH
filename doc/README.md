@@ -1,7 +1,23 @@
 # ASH 文档归属索引
 
-> 更新：2026-09-10  
-> 代码水位：**v4.0 Auth 已冻结**（DX61–DX66）· **v4.1 草案**（DX67–DX72）· Doctor ALL **60/60** · TR3 **13/13** · M4 **10/10** · SQL rev **32** · RLS **51** · tag `v4.0.0` 待人工；现行轨 **v4.1**（见 [`plan/v4.1-release-scope.md`](plan/v4.1-release-scope.md)）
+> 更新：2026-09-23  
+> 代码水位：**v6.7 已冻结**（`main` `65308c4f`）。tag 人工，尚未打 `v6.*`。  
+> Watermark: **v6.7 frozen**. Tags are manual. No `v6.*` tag yet.
+
+人读文档按软件交付的标准类别归类。门禁路径不搬。  
+Reader docs follow standard delivery classes. Gate paths stay put.
+
+| 标准类别 | 现行入口 |
+|----------|----------|
+| 需求 | [`design/SRS-需求规格.md`](design/SRS-需求规格.md) |
+| 设计 | [`design/SDD-总体设计.md`](design/SDD-总体设计.md)（吸收、前端原型、后端模块层级） |
+| 计划 | [`plan/PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) · [`plan/GA-上线推进计划.md`](plan/GA-上线推进计划.md) · [`plan/TODO.md`](plan/TODO.md) · `plan/*-release-scope.md` |
+| 测试与验收 | [`checklists/`](checklists/smoke-index.md) |
+| 发布证据 | [`evidence/`](evidence/README.md) · [`progress/`](progress/README.md) |
+| 接口与协议 | [`api/openapi-ash-v1.yaml`](api/openapi-ash-v1.yaml) · [`appendices/`](appendices/README.md) |
+
+已被总册取代的长文在 [`archive/narrative/`](archive/narrative/)。旧文件名只留指向。  
+Long texts replaced by the classified set are in `archive/narrative/`. Old filenames are pointers only.
 
 文档按**归属**分三类；契约与门禁路径保持稳定，避免打断脚本。
 
@@ -21,28 +37,22 @@ doc/
 
 | 文档 | 职责 | Owner 角色 |
 |------|------|------------|
-| [`PRD-需求文档.md`](design/PRD-需求文档.md) | 做什么、In/Out、成功指标 | 产品 |
-| [`ORG-组织样板与商业落地.md`](design/ORG-组织样板与商业落地.md) | 付费/决策/审批与三套组织样板（PRD §3） | 产品 |
-| [`HLD-总体设计.md`](design/HLD-总体设计.md) | 系统拆分、数据与安全概览（含 v1/v2 总图） | 架构/后端 |
-| [`HLD-双核心-v2.md`](design/HLD-双核心-v2.md) | **v2** 记忆体 × 智能体双核架构与契约 | 架构/后端 |
-| [`HLD-Harness与沙盒.md`](design/HLD-Harness与沙盒.md) | **v2** Harness Profile / Loop / Sandbox | 平台/安全 |
-| [v5 双核管控规格](../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md) | **v5** 管控 × 厚评审 × 薄交互（设计评审稿） | 架构/产品 |
-| [`ARCH-架构与技术选型.md`](design/ARCH-架构与技术选型.md) | 为何这样选、可替换项；Stage1=v2 | 平台/架构 |
-| [`M3-多租户与Postgres演进.md`](design/M3-多租户与Postgres演进.md) | 多租户 / Postgres / RLS | 后端/运维 |
-| [`appendices/`](appendices/README.md) | 协议、Schema、Doctor、Artifacts | 对应域负责人 |
+| [`SRS-需求规格.md`](design/SRS-需求规格.md) | 需求：场景、功能点、Out | 产品 |
+| [`SDD-总体设计.md`](design/SDD-总体设计.md) | 建构演进、吸收、前端原型、后端模块层级 | 架构/后端 |
+| [`appendices/`](appendices/README.md) | 协议、Schema、Doctor、Artifacts（路径稳定） | 对应域负责人 |
+| [`archive/narrative/`](archive/narrative/) | 已归档的旧 PRD / HLD / ARCH（不作为现行依据） | — |
 
 ## 2. 计划归属 · `plan/`
 
 | 文档 | 职责 | Owner 角色 |
 |------|------|------------|
-| [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **排期与完成度真相源** | 项目经理/技术 |
+| [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结） | 项目经理/技术 |
+| [`GA-上线推进计划.md`](plan/GA-上线推进计划.md) | 打包上线六步（签字、云库、切换日） | 项目经理/发布 |
 | [`TODO.md`](plan/TODO.md) | 未完成短清单（P0–P3） | 全员更新 |
 | [`v4.x-program.md`](plan/v4.x-program.md) | **v4.x** 四代分冻（Auth → 企业 Agentic → Stage-1 → 生态） | 项目经理/架构 |
 | [`v4.0-release-scope.md`](plan/v4.0-release-scope.md) | v4.0 Auth 硬化范围（**已冻结**） | 产品/发布 |
 | [`v5-governance-program.md`](plan/v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互（设计评审中） | 项目经理/架构 |
-| [`platform-quad-comparison.md`](plan/platform-quad-comparison.md) | 四产品综合分析（DSH·Pi·Codex·Hermes→ASH；v6 输入） | 架构/产品 |
-| [`ash-feature-inventory.md`](plan/ash-feature-inventory.md) | 原型对照：功能/接口状态 · 工时 · 交付波次 | 产品/架构 |
-| [`v2-dual-core-evolution-plan.md`](plan/v2-dual-core-evolution-plan.md) | **v2** 双核心 + Harness 排期 | 项目经理/架构 |
+| [`platform-quad-comparison.md`](plan/platform-quad-comparison.md) | 吸收决策长证据（结论在 SDD） | 架构/产品 |
 | [`sprint-dh-harness-implementation.md`](plan/sprint-dh-harness-implementation.md) | Sprint DH Harness 骨架任务板 | 后端 |
 | [`sprint-di-loop-implementation.md`](plan/sprint-di-loop-implementation.md) | Sprint DI Loop Adapter 任务板 | 后端 |
 | [`sprint-dx-sandbox-implementation.md`](plan/sprint-dx-sandbox-implementation.md) | Sprint DX Sandbox POC 任务板 | 后端/安全 |

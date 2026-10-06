@@ -1,7 +1,7 @@
 # ASH 待办 / 技术债（短清单）
 
 > 更新：2026-09-19  
-> **完整计划与设计完成度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。  
+> **计划与进度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。需求 [`../design/SRS-需求规格.md`](../design/SRS-需求规格.md)，设计 [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md)。  
 > 归属：[`plan/`](README.md)  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
@@ -131,7 +131,7 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **63/63** · M3 11/11 · M4 **13/13** · M5 4/4 · TR3 **13/13** |
-| Schema | SQL rev **32**（+users oidc link）· RLS **51** |
+| Schema | SQL rev **32**（+users oidc link）· RLS **56** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 
 ---

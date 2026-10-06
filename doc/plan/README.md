@@ -4,7 +4,8 @@
 
 | 文件 | 用途 | 更新频率 |
 |------|------|----------|
-| [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md) | 里程碑完成度 + P0–P3 计划 | 里程碑/周会 |
+| [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结；标准类别：计划） | 里程碑变更时 |
+| [`GA-上线推进计划.md`](GA-上线推进计划.md) | **打包上线**（G0–G5；不新开功能代） | 上线窗口变更时 |
 | [`TODO.md`](TODO.md) | 未完成短清单 | 任务完成即删条目 |
 | [`mvp-release-scope.md`](mvp-release-scope.md) | MVP 范围冻结（`scope-freeze-gate`） | 冻结变更评审 |
 | [`v2-release-scope.md`](v2-release-scope.md) | **v2** 范围冻结（`scope-freeze-gate` / `make v2-signoff`） | v2 GA / DV |
@@ -57,11 +58,10 @@
 | [v5 实现排期](../../docs/superpowers/plans/2026-09-13-v5-governance-implementation.md) | **v5** 全量改造排期与技术方案（GV01–12） | 可观测运行 / 记忆关联 / 评分管控 |
 | [`risk-register.md`](risk-register.md) | 风险台账 | 周会 |
 | [`kpi-dashboard-definition.md`](kpi-dashboard-definition.md) | KPI 口径 | 口径变更时 |
-| [`qoder-ash-comparison.md`](qoder-ash-comparison.md) | Qoder 与 ASH 竞品/能力比对（调研稿） | 外部产品重大变更或 ASH 范围调整时 |
-| [`deepseek-harness-ash-comparison.md`](deepseek-harness-ash-comparison.md) | DeepSeek Harness 与 ASH 能力比对（调研稿） | DSH 重大版本或 ASH Agentic 架构调整时 |
-| [`pi-ash-comparison.md`](pi-ash-comparison.md) | Pi 与 ASH 能力比对（调研稿） | Pi 重大版本或 ASH 集成/CLI 调整时 |
+| [`../design/SRS-需求规格.md`](../design/SRS-需求规格.md) | **需求**（场景、功能点、Out） | 需求变更时 |
+| [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md) | **设计**（建构演进；吸收 DSH / Pi / Codex / Hermes） | 架构变更时 |
 | [`platform-quad-comparison.md`](platform-quad-comparison.md) | **四产品综合分析**（DSH·Pi·Codex·Hermes→ASH；v6 输入） | 外部平台大版本或 ASH v6 规格启动时 |
-| [`ash-feature-inventory.md`](ash-feature-inventory.md) | 原型对照：功能/接口状态 · 人时 · 交付波次 | 排期或吸收项评审时 |
+| [`ash-feature-inventory.md`](ash-feature-inventory.md) | 已归入需求规格（本文件只留指向） | 不再维护 |
 | [`sprint-ew-w0-harden.md`](sprint-ew-w0-harden.md) | **W0 硬化** Sprint 板（EW01–EW05）✅ | 已完成 |
 | [`sprint-ew-w1-v60-absorb.md`](sprint-ew-w1-v60-absorb.md) | **W1 v6.0 吸收** Sprint 板（EW11–EW18） | 开工勾选 |
 | [`sprint-ew-w2-v61-absorb.md`](sprint-ew-w2-v61-absorb.md) | **W2 v6.1 吸收** Sprint 板（EW21–EW25） | 开工勾选 |
@@ -75,8 +75,8 @@
 | [`sprint-ew-w10-openapi-hygiene.md`](sprint-ew-w10-openapi-hygiene.md) | OpenAPI 去掉 legacy `/v1/*` | ✅ |
 | [`sprint-ew-w11-post-tool-use.md`](sprint-ew-w11-post-tool-use.md) | Hooks PostToolUse | ✅ |
 | [`../prototypes/agent-absorb/`](../prototypes/agent-absorb/README.md) | 吸收交互原型（Agent 薄壳 + **管控&评审** 工作台） | 对照吸收项或 IA 演进时 |
-| [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 面向真实工作的 Agentic 迭代路线图（原则） | 里程碑 M4+ 或 Sprint DA+ 排期时 |
-| [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | **v2 双核心演进 + v1→v2 开发计划（Sprint DH–DV）** | v2 范围冻结 / M4 启动 |
+| [`agentic-roadmap-to-qoder.md`](agentic-roadmap-to-qoder.md) | 已归入总体设计（本文件只留指向） | 不再维护 |
+| [`v2-dual-core-evolution-plan.md`](v2-dual-core-evolution-plan.md) | 已归入总体设计（本文件只留指向） | 不再维护 |
 
 ## 归属边界
 

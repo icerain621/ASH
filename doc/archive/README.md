@@ -1,7 +1,7 @@
 # 文档归档说明
 
 > 归档日期：2026-08-08  
-> 现行归属索引：[`../README.md`](../README.md)（`design/` · `plan/` · `progress/`）
+> 现行归属索引：[`../README.md`](../README.md)。2026-09-23 起，被需求规格和总体设计取代的长文在 [`narrative/`](narrative/)。
 
 ## 为何归档
 
@@ -17,10 +17,10 @@
 
 | 归档文件 | 现行替代 |
 |----------|----------|
-| 调研 / 模板 PRD / 产品需求设计 | [`../design/PRD-需求文档.md`](../design/PRD-需求文档.md) |
+| 调研 / 模板 PRD / 产品需求设计 | [`../design/SRS-需求规格.md`](../design/SRS-需求规格.md) |
 | API/事件/DB 草案 | [`../api/`](../api/openapi-ash-v1.yaml) + [`../appendices/`](../appendices/README.md) |
 | 10 周计划 / Jira | [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md) |
-| MySQL/Redis 选型与 backend/ 结构 | [`../design/ARCH-架构与技术选型.md`](../design/ARCH-架构与技术选型.md) |
+| MySQL/Redis 选型与 backend/ 结构 | [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md) |
 | 工程搭建 | 根 [`README.md`](../../README.md) |
 | 里程碑评审模板 | [`../progress/mvp-release-checklist.md`](../progress/mvp-release-checklist.md) |
 | 商业分析报告 | 归档保留；产品决策以 PRD 为准 |

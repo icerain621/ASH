@@ -5,7 +5,7 @@
 > 方法：**模式抽取 + 定位过滤 + 附录矩阵 + 全功能点 + 使用场景**  
 > 下游：**B** → v6 演进规格（本报告签字后再写）  
 > 前置：[`v5-governance-program.md`](v5-governance-program.md)（薄交互 / 厚评审 / 双核管控已大体落地）  
-> 单品旧稿：[`deepseek-harness-ash-comparison.md`](deepseek-harness-ash-comparison.md) · [`pi-ash-comparison.md`](pi-ash-comparison.md) · [`qoder-ash-comparison.md`](qoder-ash-comparison.md)
+> 人读结论已归入设计说明 [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md)。本文件保留吸收决策的长证据。单品旧稿在 [`../archive/narrative/`](../archive/narrative/)。
 
 ---
 

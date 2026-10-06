@@ -1,41 +1,16 @@
 # 设计归属（design）
 
-**本目录只放「系统应如何构造」的设计正文。**  
-排期与完成度 → [`../plan/`](../plan/README.md)；发布勾选与证据 → [`../progress/`](../progress/README.md)。
+**标准类别：需求规格 + 总体设计。**  
+This folder is the requirements spec and the design description.
 
-## 阅读顺序
+| 现行 | 类别 |
+|------|------|
+| [`SRS-需求规格.md`](SRS-需求规格.md) | 需求：定位、场景、功能点、Out |
+| [`SDD-总体设计.md`](SDD-总体设计.md) | 设计：建构演进、吸收、前端原型、后端模块层级 |
+| [`../appendices/`](../appendices/README.md) | 设计附属：协议与 Schema（路径稳定） |
 
-### v1（MVP 基线）
+计划与进度在 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。测试验收在 [`../checklists/`](../checklists/smoke-index.md)。发布证据在 [`../evidence/`](../evidence/README.md)。  
+Plan and progress live under `plan/`. Acceptance lives under `checklists/`. Release evidence lives under `evidence/`.
 
-1. [`PRD-需求文档.md`](PRD-需求文档.md) — 场景与范围  
-2. [`HLD-总体设计.md`](HLD-总体设计.md) — 模块与数据（含 v1/v2 架构对照）  
-3. [`ARCH-架构与技术选型.md`](ARCH-架构与技术选型.md) — 技术选型与演进  
-4. [`M3-多租户与Postgres演进.md`](M3-多租户与Postgres演进.md) — 存储/租户专项  
-5. [`../appendices/`](../appendices/README.md) — 可执行规范与 Schema  
-
-### v2（双核 + Harness + 演进）
-
-1. [`../plan/v2-dual-core-evolution-plan.md`](../plan/v2-dual-core-evolution-plan.md) — 版本路线与 Sprint  
-2. [`HLD-双核心-v2.md`](HLD-双核心-v2.md) — 记忆体 × 智能体架构图与协作契约  
-3. [`HLD-Harness与沙盒.md`](HLD-Harness与沙盒.md) — Harness Profile、Loop、Sandbox  
-4. [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md) — Feedback / 双评审 / Improve  
-5. 回读 [`HLD-总体设计.md`](HLD-总体设计.md) §2.2 / §3.2.1 / §4.1  
-
-### v5（双核管控 × 厚评审 × 薄交互）
-
-1. [`../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md`](../../docs/superpowers/specs/2026-09-13-v5-dual-core-governance-design.md) — 设计规格（评审稿）  
-2. [`../plan/v5-governance-program.md`](../plan/v5-governance-program.md) — 程序与分期  
-3. [`../diagrams/archify/`](../diagrams/archify/README.md) — `ash-v5-*` 架构 / 时序 / 数据流 / 工作流 / 状态机  
-4. 回读 [`HLD-双核心-v2.md`](HLD-双核心-v2.md) 与 [`../appendices/K-演进平面-v2.md`](../appendices/K-演进平面-v2.md)  
-
-## 归属边界
-
-| 属于 design | 不属于（请放到别处） |
-|-------------|----------------------|
-| 需求、架构、选型、演进路线 | Sprint 排期、TODO → `plan/` |
-| 协议/Schema 说明（appendices） | 发布勾选、烟测 → `progress/` / `checklists/` |
-| 设计未决 TODO（带负责人） | 门禁证据 → `evidence/` |
-
-## 路径说明
-
-规范资产仍在 `doc/appendices/`（脚本与历史链接依赖），逻辑上归属设计域，由本 README 索引。
+同目录里带旧文件名的短文只是指向，正文不再写在那里。原文在 [`../archive/narrative/`](../archive/narrative/)。  
+The short files that keep old names are pointers. The previous long texts are archived.
