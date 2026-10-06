@@ -92,6 +92,51 @@ func TestHoverDefinitionViaFakeGopls(t *testing.T) {
 	}
 }
 
+func TestReferencesNoIdentifierIsEmptyLSPResult(t *testing.T) {
+	bin := buildFakeGopls(t)
+	t.Setenv(envRAGLSPGopls, bin)
+	withIsolatedLSPPool(t)
+
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+	root := t.TempDir()
+	rel := "sample.go"
+	if err := os.WriteFile(filepath.Join(root, rel), []byte("package main\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	abs, err := AbsRepoRoot(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	now := time.Now().UTC()
+	row := store.RAGSymbol{
+		ID: "s-miss", SpaceID: "fb", RepoRoot: abs, Path: rel, Name: "Alpha",
+		Kind: "func", Line: 1, Digest: "d1", CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	refs, err := svc.References(LSPReferencesRequest{
+		LSPPositionQuery: LSPPositionQuery{
+			RepoRoot:  root,
+			Path:      rel,
+			Line:      1,
+			Character: 0,
+			SpaceID:   "fb",
+		},
+	})
+	if err != nil {
+		t.Fatalf("err=%v", err)
+	}
+	if refs.Source != "lsp" {
+		t.Fatalf("source=%q want lsp", refs.Source)
+	}
+	if len(refs.Locations) != 0 {
+		t.Fatalf("locations=%+v want empty", refs.Locations)
+	}
+}
+
 func TestReferencesSymbolTableFallback(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)

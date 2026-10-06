@@ -27,11 +27,11 @@ type LSPPositionQuery struct {
 }
 
 type LSPHoverResponse struct {
-	Contents string         `json:"contents"`
-	Kind     string         `json:"kind,omitempty"`
-	Range    *LSPRangeView  `json:"range,omitempty"`
-	Server   string         `json:"server"`
-	Path     string         `json:"path"`
+	Contents string        `json:"contents"`
+	Kind     string        `json:"kind,omitempty"`
+	Range    *LSPRangeView `json:"range,omitempty"`
+	Server   string        `json:"server"`
+	Path     string        `json:"path"`
 }
 
 type LSPDefinitionResponse struct {
@@ -160,6 +160,14 @@ func (s *Service) References(req LSPReferencesRequest) (*LSPReferencesResponse, 
 	defer cancel()
 	locs, err := prep.pool.references(ctx, prep.rootAbs, prep.server, prep.fileAbs, prep.langID, prep.text, prep.line0, prep.character, limit+1)
 	if err != nil {
+		if lspPositionMiss(err) {
+			return &LSPReferencesResponse{
+				Server:    filepath.Base(prep.server),
+				Path:      prep.relPath,
+				Source:    "lsp",
+				Locations: []LSPLocationView{},
+			}, nil
+		}
 		return s.referencesFromSymbolTable(req, limit, err)
 	}
 	truncated := len(locs) > limit
@@ -177,6 +185,10 @@ func (s *Service) References(req LSPReferencesRequest) (*LSPReferencesResponse, 
 		out.Locations = append(out.Locations, locationViewFromResult(prep.rootAbs, loc))
 	}
 	return out, nil
+}
+
+func lspPositionMiss(err error) bool {
+	return err != nil && strings.Contains(err.Error(), "no identifier found")
 }
 
 func locationViewFromResult(rootAbs string, loc lspLocationResult) LSPLocationView {
@@ -326,7 +338,10 @@ func prepareLSPQuery(req LSPPositionQuery) (*lspQueryPrep, error) {
 	if text == "" {
 		b, err := os.ReadFile(fileAbs)
 		if err != nil {
-			return nil, err
+			if os.IsNotExist(err) {
+				return nil, fmt.Errorf("file not found: %s", rel)
+			}
+			return nil, fmt.Errorf("read file %s failed", rel)
 		}
 		text = string(b)
 	}

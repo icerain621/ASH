@@ -104,6 +104,14 @@ func main() {
 			})
 		case "textDocument/references":
 			appendEventLog("references")
+			if positionMiss(envelope.Params) {
+				writeLSP(map[string]any{
+					"jsonrpc": "2.0",
+					"id":      rawID(envelope.ID),
+					"error":   map[string]any{"code": -32602, "message": "no identifier found"},
+				})
+				continue
+			}
 			uri := extractURI(envelope.Params)
 			if uri == "" {
 				uri = "file:///fixture.go"
@@ -159,6 +167,19 @@ func appendEventLog(event string) {
 	}
 	defer f.Close()
 	_, _ = fmt.Fprintf(f, "%s\n", event)
+}
+
+func positionMiss(params json.RawMessage) bool {
+	var p struct {
+		Position struct {
+			Line      int `json:"line"`
+			Character int `json:"character"`
+		} `json:"position"`
+	}
+	if err := json.Unmarshal(params, &p); err != nil {
+		return false
+	}
+	return p.Position.Line == 0 && p.Position.Character == 0
 }
 
 func extractURI(params json.RawMessage) string {

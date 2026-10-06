@@ -110,7 +110,7 @@ func BuildWaterfall(db *store.DB, runID string) (*Waterfall, error) {
 	for _, usage := range modelUsages {
 		out.Spans = append(out.Spans, modelSpan(run.ID, usage))
 		if usage.Status != "routed" && usage.Status != "success" {
-			out.Failures = append(out.Failures, FailureAttribution{
+			out.Failures = appendFailureOnce(out.Failures, FailureAttribution{
 				Type: "model", Ref: usage.Provider + "/" + usage.Model, Code: usage.Status,
 			})
 		}
@@ -119,7 +119,9 @@ func BuildWaterfall(db *store.DB, runID string) (*Waterfall, error) {
 	if err != nil {
 		return nil, err
 	}
-	out.Failures = append(out.Failures, eventFailures...)
+	for _, f := range eventFailures {
+		out.Failures = appendFailureOnce(out.Failures, f)
+	}
 
 	var metrics []store.QualityMetric
 	if err := db.Where("run_id = ?", runID).Order("created_at asc").Find(&metrics).Error; err != nil {
@@ -362,6 +364,15 @@ func firstNonEmpty(values ...string) string {
 		}
 	}
 	return ""
+}
+
+func appendFailureOnce(list []FailureAttribution, item FailureAttribution) []FailureAttribution {
+	for _, existing := range list {
+		if existing.Type == item.Type && existing.Ref == item.Ref && existing.Code == item.Code && existing.Message == item.Message {
+			return list
+		}
+	}
+	return append(list, item)
 }
 
 func stringField(m map[string]any, key string) string {

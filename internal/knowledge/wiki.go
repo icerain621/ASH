@@ -48,7 +48,7 @@ func (s *Service) ListWikiPages(spaceID, repoRoot, query string, limit int) (*Wi
 	if q == "" {
 		q = "architecture overview testing deploy"
 	}
-	var items []WikiPage
+	items := make([]WikiPage, 0)
 	if strings.TrimSpace(repoRoot) != "" {
 		if prof, err := BuildProfile(repoRoot); err == nil {
 			items = append(items, WikiPage{

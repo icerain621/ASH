@@ -146,3 +146,39 @@ func TestBuildWaterfallAggregatesSpansFailuresAndMetrics(t *testing.T) {
 		t.Fatalf("memoryIds=%v", runAttrs["memoryIds"])
 	}
 }
+
+func TestBuildWaterfallDedupesIdenticalModelFailures(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_model_dup", TraceID: "trc_model_dup",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "failed", SpaceID: "local",
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []string{"model_a", "model_b"} {
+		if err := db.Create(&store.ModelUsage{
+			ID: id, RunID: run.ID, StepID: "step",
+			Provider: "primary", Model: "not-configured", Status: "not_configured",
+			CreatedAt: now,
+		}).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	waterfall, err := BuildWaterfall(db, run.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	modelFails := 0
+	for _, f := range waterfall.Failures {
+		if f.Type == "model" && f.Ref == "primary/not-configured" && f.Code == "not_configured" {
+			modelFails++
+		}
+	}
+	if modelFails != 1 {
+		t.Fatalf("model failures=%d want 1 in %+v", modelFails, waterfall.Failures)
+	}
+}

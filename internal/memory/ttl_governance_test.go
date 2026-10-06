@@ -9,7 +9,7 @@ import (
 
 func TestTTLQueueAndSweep(t *testing.T) {
 	t.Setenv("ASH_MEMORY_TTL_REVIEW_DAYS", "7")
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	now := time.Now().UTC()
 	space := "local"
 

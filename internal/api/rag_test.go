@@ -7,6 +7,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -15,6 +16,46 @@ import (
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
 )
+
+func TestRAGLSPHoverMissingFileIsClientError(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	dir := t.TempDir()
+	db, err := store.Open(filepath.Join(dir, "ash.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+
+	repo := filepath.Join(dir, "repo")
+	if err := os.MkdirAll(repo, 0o755); err != nil {
+		t.Fatal(err)
+	}
+
+	h := NewHandler(db, rules.NewLoader("scenarios"))
+	r := gin.New()
+	h.Register(r, "")
+
+	body, _ := json.Marshal(map[string]any{
+		"repoRoot":  repo,
+		"path":      "missing.go",
+		"line":      1,
+		"character": 0,
+		"spaceId":   "local",
+	})
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/rag/lsp/hover", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if strings.Contains(w.Body.String(), repo) || strings.Contains(w.Body.String(), filepath.VolumeName(repo)+`\`) {
+		t.Fatalf("absolute path leaked: %s", w.Body.String())
+	}
+	if !strings.Contains(w.Body.String(), "missing.go") {
+		t.Fatalf("body=%s", w.Body.String())
+	}
+}
 
 func TestRebuildRAGSymbolsHappyPath(t *testing.T) {
 	gin.SetMode(gin.TestMode)

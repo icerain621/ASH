@@ -134,3 +134,19 @@ func seedReleaseGateEvidence(t *testing.T, db *store.DB, now time.Time) {
 		}
 	}
 }
+
+func TestTraceUnknownIDEncodesEmptyEvents(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, _ := newPlatformTestRouter(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/observability/trace/trace_missing_spot", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	for _, key := range []string{"runs", "events", "toolCalls", "agentTasks", "auditLogs"} {
+		if !bytes.Contains(w.Body.Bytes(), []byte(`"`+key+`":[]`)) {
+			t.Fatalf("%s must encode as an empty array, body=%s", key, w.Body.String())
+		}
+	}
+}

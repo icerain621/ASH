@@ -177,7 +177,8 @@ func writeLSPQueryError(c *gin.Context, err error) {
 	default:
 		msg := err.Error()
 		if strings.Contains(msg, "line must") || strings.Contains(msg, "character must") ||
-			strings.Contains(msg, "path escapes") || strings.Contains(msg, "path is required") {
+			strings.Contains(msg, "path escapes") || strings.Contains(msg, "path is required") ||
+			strings.Contains(msg, "file not found:") {
 			c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", msg))
 			return
 		}

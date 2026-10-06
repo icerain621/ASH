@@ -8,15 +8,13 @@ import (
 )
 
 func TestRunMigrations_v0ToV1Backfill(t *testing.T) {
-	svc, ev, runsSvc := newTestMemory(t)
+	svc, ev := newTestMemory(t)
 	now := time.Now().UTC()
 	runID := "run_mem_migrate_test"
 	traceID := "trace_mem_migrate_test"
-	if err := runsSvc.DB().Create(&store.RunRecord{
-		ID: runID, TraceID: traceID, ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
-		PolicyProfile: "default", Status: "completed", SpaceID: "local",
-		StartedAt: now, CreatedAt: now, UpdatedAt: now,
-	}).Error; err != nil {
+	seedRun(t, svc.db, runID, traceID)
+	// seedRun sets Status running; migration only needs the row to exist for SSE emit.
+	if err := svc.db.Model(&store.RunRecord{}).Where("id = ?", runID).Update("status", "completed").Error; err != nil {
 		t.Fatal(err)
 	}
 

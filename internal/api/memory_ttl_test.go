@@ -12,6 +12,32 @@ import (
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
+func TestMemoryEmptyListsEncodeItemsArray(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, _ := newPlatformTestRouter(t)
+
+	candidates := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/memory/candidates", nil)
+	r.ServeHTTP(candidates, req)
+	if candidates.Code != http.StatusOK {
+		t.Fatalf("candidates status=%d body=%s", candidates.Code, candidates.Body.String())
+	}
+	if !bytes.Contains(candidates.Body.Bytes(), []byte(`"items":[]`)) {
+		t.Fatalf("candidates items must encode as an empty array, body=%s", candidates.Body.String())
+	}
+
+	query := httptest.NewRecorder()
+	qreq := httptest.NewRequest(http.MethodPost, "/api/v1/memory/query", bytes.NewReader([]byte(`{"text":"no-such-memory","topK":5}`)))
+	qreq.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(query, qreq)
+	if query.Code != http.StatusOK {
+		t.Fatalf("query status=%d body=%s", query.Code, query.Body.String())
+	}
+	if !bytes.Contains(query.Body.Bytes(), []byte(`"items":[]`)) {
+		t.Fatalf("query items must encode as an empty array, body=%s", query.Body.String())
+	}
+}
+
 func TestMemoryTTLQueueAndSweepAPI(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	t.Setenv("ASH_MEMORY_TTL_REVIEW_DAYS", "7")

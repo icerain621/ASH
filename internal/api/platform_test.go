@@ -1152,6 +1152,121 @@ func TestPluginCompatibilityUsesSharedABIContract(t *testing.T) {
 	if ok, reason := pluginCompatibility("grpc", "", "tool-runner", "1.0.0", ""); ok || reason != "endpoint is required" {
 		t.Fatalf("compatible=%v reason=%q want HTTP endpoint failure", ok, reason)
 	}
+	if ok, reason := pluginCompatibility("internal", "ash.obs.v0.1", "ASH OTel Exporter", "0.1.0", ""); !ok || reason != "" {
+		t.Fatalf("compatible=%v reason=%q want built-in internal exporter to pass without endpoint", ok, reason)
+	}
+	if ok, reason := pluginCompatibility("internal", "ash.obs.v0.1", "", "0.1.0", ""); ok || !strings.Contains(reason, "name and version") {
+		t.Fatalf("compatible=%v reason=%q want internal plugin name required", ok, reason)
+	}
+	if ok, reason := pluginCompatibility("internal", "ash.plugin.v1", "mystery", "1.0.0", ""); ok {
+		t.Fatalf("compatible=%v reason=%q want non-obs internal abi rejected", ok, reason)
+	}
+}
+
+func TestPluginRegistryJSONUsesCamelCase(t *testing.T) {
+	raw, err := json.Marshal(store.PluginRegistry{
+		ID: "ash-otel-exporter", SpaceID: "local", Name: "ASH OTel Exporter",
+		Version: "0.1.0", Protocol: "internal", ABI: "ash.obs.v0.1", Status: "verified", Compatible: true,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"id", "spaceId", "name", "protocol", "abi", "compatible", "status"} {
+		if _, ok := m[key]; !ok {
+			t.Fatalf("missing camelCase key %q in %s", key, string(raw))
+		}
+	}
+	if _, ok := m["ID"]; ok {
+		t.Fatalf("unexpected PascalCase ID in %s", string(raw))
+	}
+}
+
+func TestFeedbackJSONUsesCamelCase(t *testing.T) {
+	raw, err := json.Marshal(store.Feedback{
+		ID: "fb_1", SpaceID: "local", TargetType: "run", TargetID: "run_1",
+		Rating: 3, Category: "quality", Status: "triaged", Severity: "normal", Source: "ui",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m map[string]any
+	if err := json.Unmarshal(raw, &m); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"id", "spaceId", "targetType", "targetId", "rating", "status", "category"} {
+		if _, ok := m[key]; !ok {
+			t.Fatalf("missing camelCase key %q in %s", key, string(raw))
+		}
+	}
+	if _, ok := m["ID"]; ok {
+		t.Fatalf("unexpected PascalCase ID in %s", string(raw))
+	}
+}
+
+func TestOrgRoleMemberAuditPolicyJSONUsesCamelCase(t *testing.T) {
+	cases := []struct {
+		name string
+		raw  []byte
+		keys []string
+	}{
+		{
+			name: "org",
+			raw: mustJSON(t, store.Org{ID: "org_1", Name: "Acme", Slug: "acme"}),
+			keys: []string{"id", "name", "slug", "createdAt", "updatedAt"},
+		},
+		{
+			name: "role",
+			raw: mustJSON(t, store.Role{ID: "role_1", OrgID: "org_1", Name: "dev", Permissions: `["run:create"]`}),
+			keys: []string{"id", "orgId", "name", "permissions"},
+		},
+		{
+			name: "member",
+			raw: mustJSON(t, store.Member{ID: "mem_1", OrgID: "org_1", SpaceID: "space_1", UserID: "u1", RoleID: "role_1", Status: "active"}),
+			keys: []string{"id", "orgId", "spaceId", "userId", "roleId", "status"},
+		},
+		{
+			name: "auditPolicy",
+			raw: mustJSON(t, store.AuditPolicy{SpaceID: "local", RetentionDays: 365}),
+			keys: []string{"spaceId", "retentionDays", "redactPayload", "locked"},
+		},
+		{
+			name: "auditLog",
+			raw: mustJSON(t, store.AuditLog{ID: "al_1", SpaceID: "local", EventType: "login", PayloadJSON: "{}"}),
+			keys: []string{"id", "spaceId", "eventType", "payloadJSON", "createdAt"},
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var m map[string]any
+			if err := json.Unmarshal(tc.raw, &m); err != nil {
+				t.Fatal(err)
+			}
+			for _, key := range tc.keys {
+				if _, ok := m[key]; !ok {
+					t.Fatalf("missing camelCase key %q in %s", key, string(tc.raw))
+				}
+			}
+			if _, ok := m["ID"]; ok {
+				t.Fatalf("unexpected PascalCase ID in %s", string(tc.raw))
+			}
+			if _, ok := m["SpaceID"]; ok {
+				t.Fatalf("unexpected PascalCase SpaceID in %s", string(tc.raw))
+			}
+		})
+	}
+}
+
+func mustJSON(t *testing.T, v any) []byte {
+	t.Helper()
+	raw, err := json.Marshal(v)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return raw
 }
 
 func TestStorageProfileReportsDatabaseAndArtifactStore(t *testing.T) {

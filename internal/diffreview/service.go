@@ -75,7 +75,7 @@ func (s *Service) GetDiff(runID string) (*DiffView, error) {
 	body, err := os.ReadFile(path)
 	if err != nil {
 		if os.IsNotExist(err) {
-			view := &DiffView{RunID: runID, Raw: "", Files: nil}
+			view := &DiffView{RunID: runID, Raw: "", Files: []diffparse.FileDiff{}}
 			if paths, err := s.RejectedPaths(runID); err == nil {
 				view.RejectedPaths = paths
 			}
@@ -84,7 +84,11 @@ func (s *Service) GetDiff(runID string) (*DiffView, error) {
 		return nil, err
 	}
 	raw := string(body)
-	view := &DiffView{RunID: runID, Raw: raw, Files: diffparse.ParseUnified(raw)}
+	files := diffparse.ParseUnified(raw)
+	if files == nil {
+		files = []diffparse.FileDiff{}
+	}
+	view := &DiffView{RunID: runID, Raw: raw, Files: files}
 	if man, err := s.runs.Artifacts(runID); err == nil && man != nil {
 		view.ContextRefs = man.ContextRefs
 	}

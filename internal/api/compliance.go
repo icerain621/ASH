@@ -58,6 +58,9 @@ func (h *Handler) complianceSecretScan(c *gin.Context) {
 
 func buildSecretScan(space string, redactEnabled bool, items []struct{ Source, Ref, Text string }) SecretScanResponse {
 	findings := security.ScanTexts(items)
+	if findings == nil {
+		findings = []security.LeakFinding{}
+	}
 	return SecretScanResponse{
 		SpaceID: space, Scanned: len(items), LeakCount: len(findings),
 		RedactEnabled: redactEnabled, Findings: findings,

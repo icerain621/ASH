@@ -1,6 +1,7 @@
 package interaction_test
 
 import (
+	"encoding/json"
 	"errors"
 	"testing"
 
@@ -65,6 +66,46 @@ func TestSealReplayCompare(t *testing.T) {
 	if len(diff.NodesAdded)+len(diff.NodesRemoved)+len(diff.NodesChanged) == 0 &&
 		len(diff.LinksAdded)+len(diff.LinksRemoved) == 0 {
 		t.Fatalf("expected some node/link diff: %+v", diff)
+	}
+}
+
+func TestCompareJSONEmptyDimsAreArraysNotNull(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := interaction.NewService(db, ev)
+	thA, _, err := svc.EnsureThread(interaction.EnsureRequest{SpaceID: "local", RunID: "run_cmp_a"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	thB, _, err := svc.EnsureThread(interaction.EnsureRequest{SpaceID: "local", RunID: "run_cmp_b"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	diff, err := svc.Compare(thA.ID, thB.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	raw, err := json.Marshal(diff)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var asMap map[string]any
+	if err := json.Unmarshal(raw, &asMap); err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"nodesAdded", "nodesRemoved", "nodesChanged", "linksAdded", "linksRemoved"} {
+		v, ok := asMap[key]
+		if !ok {
+			t.Fatalf("missing %s in %s", key, raw)
+		}
+		if v == nil {
+			t.Fatalf("%s marshaled as null; want [] in %s", key, raw)
+		}
+		arr, ok := v.([]any)
+		if !ok {
+			t.Fatalf("%s=%T want array in %s", key, v, raw)
+		}
+		_ = arr
 	}
 }
 

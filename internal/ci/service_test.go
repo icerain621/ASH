@@ -18,6 +18,52 @@ func TestDiagnoseLogClassifiesTestFailure(t *testing.T) {
 	}
 }
 
+func TestDiagnoseLogClassifiesPastedFAILLines(t *testing.T) {
+	cases := []struct {
+		name string
+		log  string
+	}{
+		{
+			name: "error prefix fail file",
+			log:  "Error: FAIL test/foo_test.go:12 assertion failed\n",
+		},
+		{
+			name: "midline fail colon",
+			log:  "step test\n[error] FAIL: TestFoo expected true\n",
+		},
+		{
+			name: "go package fail tab",
+			log:  "FAIL\tgithub.com/ash-repwiki/ash/internal/api\t0.2s\n",
+		},
+		{
+			name: "go test package header before FAIL",
+			log:  "# github.com/ash-repwiki/ash/internal/api [github.com/ash-repwiki/ash/internal/api.test]\n--- FAIL: TestAPI (0.02s)\nFAIL\tgithub.com/ash-repwiki/ash/internal/api\t0.2s\n",
+		},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			resp := DiagnoseLog(tc.log)
+			if resp.RootCause != "test_failure" {
+				t.Fatalf("rootCause=%q want test_failure for %q", resp.RootCause, tc.log)
+			}
+			if len(resp.EvidenceRefs) == 0 {
+				t.Fatalf("want evidence refs for %q", tc.log)
+			}
+		})
+	}
+}
+
+func TestDiagnoseLogClassifiesGoCompileWithoutBareHash(t *testing.T) {
+	compile := DiagnoseLog("# github.com/acme/app\n./main.go:10:2: undefined: Foo\n")
+	if compile.RootCause != "go_compile_failure" {
+		t.Fatalf("rootCause=%q want go_compile_failure", compile.RootCause)
+	}
+	bare := DiagnoseLog("# just a comment line that is not a compile error\nsome other noise\n")
+	if bare.RootCause == "go_compile_failure" {
+		t.Fatalf("bare hash line must not classify as go_compile_failure, got %+v", bare)
+	}
+}
+
 func TestDiagnoseLogClassifiesCancelAndResourceAndFrontend(t *testing.T) {
 	cases := []struct {
 		name string

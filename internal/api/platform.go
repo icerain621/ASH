@@ -1945,6 +1945,12 @@ func (h *Handler) auditPolicy(c *gin.Context, space string) (*store.AuditPolicy,
 }
 
 func pluginCompatibility(protocol, abi, name, version, endpoint string) (bool, string) {
+	if isBuiltinInternalPlugin(protocol, abi) {
+		if strings.TrimSpace(name) == "" || strings.TrimSpace(version) == "" {
+			return false, "name and version are required"
+		}
+		return true, ""
+	}
 	if ok, reason := pluginabi.Compatible(protocol, abi, name, version); !ok {
 		return false, reason
 	}
@@ -1952,6 +1958,20 @@ func pluginCompatibility(protocol, abi, name, version, endpoint string) (bool, s
 		return false, "endpoint is required"
 	}
 	return true, ""
+}
+
+func isBuiltinInternalPlugin(protocol, abi string) bool {
+	p := strings.ToLower(strings.TrimSpace(protocol))
+	a := strings.ToLower(strings.TrimSpace(abi))
+	if p != "internal" {
+		return false
+	}
+	switch a {
+	case "ash.obs.v0.1", "ash.obs/v0.1":
+		return true
+	default:
+		return false
+	}
 }
 
 func (h *Handler) spaceForParam(c *gin.Context) (store.Space, bool) {

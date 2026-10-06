@@ -43,7 +43,7 @@ func TestEffectiveTTLDaysInvalidEnvUsesBuiltin(t *testing.T) {
 
 func TestMigrateV1ToV2RespectsTTLEnv(t *testing.T) {
 	t.Setenv("ASH_MEMORY_TTL_L1_DAYS", "30")
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	now := time.Now().UTC()
 	if err := svc.gdb().Create(&store.SchemaMeta{
 		Key: MemoryCatalogMetaKey, Value: "1", UpdatedAt: now,

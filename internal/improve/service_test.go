@@ -1,9 +1,11 @@
 package improve
 
 import (
+	"errors"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/events"
@@ -73,5 +75,23 @@ func TestImproveProposalExperimentFlow(t *testing.T) {
 	}
 	if promoted.Status != "promoted" {
 		t.Fatalf("promoted status=%q", promoted.Status)
+	}
+}
+
+func TestStartExperimentRequiresBaselineRun(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, nil)
+	now := time.Now().UTC()
+	row := store.ImproveProposal{
+		ID: "imp_nobase", SpaceID: "local", Title: "no baseline",
+		BaselineRunID: "", Status: "draft", CompareJSON: "{}",
+		Source: "low_score", CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&row).Error; err != nil {
+		t.Fatal(err)
+	}
+	_, err := svc.StartExperiment("local", row.ID)
+	if err == nil || !errors.Is(err, ErrBaselineRequired) {
+		t.Fatalf("err=%v want ErrBaselineRequired", err)
 	}
 }

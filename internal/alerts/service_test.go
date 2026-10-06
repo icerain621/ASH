@@ -9,6 +9,45 @@ import (
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
+func TestEnsureDefaultRulesIsIdempotent(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db)
+
+	for i := 0; i < 3; i++ {
+		rules, err := svc.ListRules("local")
+		if err != nil {
+			t.Fatal(err)
+		}
+		if len(rules) != len(defaultRules("local", time.Now().UTC())) {
+			t.Fatalf("call %d: rules=%d want %d", i+1, len(rules), len(defaultRules("local", time.Now().UTC())))
+		}
+	}
+
+	now := time.Now().UTC()
+	for i := 0; i < 5; i++ {
+		dup := rule("local", "运行失败率", "run_failure_rate", 0.3, 60, "critical", "dup", now)
+		if err := db.Create(&dup).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	rules, err := svc.ListRules("local")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rules) != len(defaultRules("local", now)) {
+		t.Fatalf("after dups rules=%d want %d", len(rules), len(defaultRules("local", now)))
+	}
+	seen := map[string]int{}
+	for _, r := range rules {
+		seen[r.Metric]++
+	}
+	for metric, n := range seen {
+		if n != 1 {
+			t.Fatalf("metric %s count=%d want 1", metric, n)
+		}
+	}
+}
+
 func TestEvaluateLowFeedbackCreatesAlert(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db)

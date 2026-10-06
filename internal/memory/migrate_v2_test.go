@@ -8,7 +8,7 @@ import (
 )
 
 func TestRunMigrations_v1ToV2PreservesExplicitTTL(t *testing.T) {
-	svc, _, _ := newTestMemory(t)
+	svc, _ := newTestMemory(t)
 	now := time.Now().UTC()
 	ttl := 30
 	if err := svc.gdb().Create(&store.SchemaMeta{

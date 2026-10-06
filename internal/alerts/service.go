@@ -340,6 +340,21 @@ func (s *Service) Trace(spaceID, traceID string) (TraceView, error) {
 		_ = s.gdb().Where("trace_id = ?", traceID).Order("created_at asc").Find(&out.AgentTasks).Error
 		_ = s.gdb().Where("space_id = ? AND trace_id = ?", spaceID, traceID).Order("created_at asc").Find(&out.AuditLogs).Error
 	}
+	if out.Runs == nil {
+		out.Runs = []store.RunRecord{}
+	}
+	if out.Events == nil {
+		out.Events = []store.RunEvent{}
+	}
+	if out.ToolCalls == nil {
+		out.ToolCalls = []store.ToolCall{}
+	}
+	if out.AgentTasks == nil {
+		out.AgentTasks = []store.AgentTask{}
+	}
+	if out.AuditLogs == nil {
+		out.AuditLogs = []store.AuditLog{}
+	}
 	return out, nil
 }
 
@@ -519,17 +534,51 @@ func (s *Service) upsertAlert(rule store.AlertRule, value float64, refs []string
 
 func (s *Service) ensureDefaultRules(spaceID string) error {
 	now := time.Now().UTC()
-	for _, rule := range defaultRules(spaceID, now) {
-		if err := s.gdb().Where("space_id = ? AND metric = ?", spaceID, rule.Metric).
-			Assign(map[string]any{
-				"name": rule.Name, "condition": rule.Condition, "threshold": rule.Threshold,
-				"window_minutes": rule.WindowMinutes, "severity": rule.Severity,
-				"description": rule.Description, "updated_at": now,
-			}).FirstOrCreate(&rule).Error; err != nil {
+	if err := s.dedupeRulesByMetric(spaceID); err != nil {
+		return err
+	}
+	for _, def := range defaultRules(spaceID, now) {
+		var count int64
+		if err := s.gdb().Model(&store.AlertRule{}).
+			Where("space_id = ? AND metric = ?", spaceID, def.Metric).
+			Count(&count).Error; err != nil {
+			return err
+		}
+		if count > 0 {
+			continue
+		}
+		if err := s.gdb().Create(&def).Error; err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// dedupeRulesByMetric keeps the oldest row per metric and deletes the rest.
+// Needed because an earlier FirstOrCreate path keyed on a fresh primary key and
+// inserted a new default rule on every ListRules / Evaluate call.
+func (s *Service) dedupeRulesByMetric(spaceID string) error {
+	var rows []store.AlertRule
+	if err := s.gdb().Where("space_id = ?", spaceID).Order("created_at asc").Find(&rows).Error; err != nil {
+		return err
+	}
+	seen := map[string]string{}
+	var drop []string
+	for _, row := range rows {
+		metric := strings.TrimSpace(row.Metric)
+		if metric == "" {
+			continue
+		}
+		if _, ok := seen[metric]; ok {
+			drop = append(drop, row.ID)
+			continue
+		}
+		seen[metric] = row.ID
+	}
+	if len(drop) == 0 {
+		return nil
+	}
+	return s.gdb().Where("space_id = ? AND id IN ?", spaceID, drop).Delete(&store.AlertRule{}).Error
 }
 
 func defaultRules(spaceID string, now time.Time) []store.AlertRule {

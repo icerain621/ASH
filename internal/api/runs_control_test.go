@@ -129,3 +129,87 @@ func TestScaleReadinessRunBacklogCounts(t *testing.T) {
 		t.Fatalf("inflight=%d want running+waiting", resp.RunInflightCount)
 	}
 }
+
+func TestRunCheckpointListUsesCamelCase(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_ckpt_json", TraceID: "trace_ckpt_json",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "failed", SpaceID: "local",
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	checkpoint := store.Checkpoint{
+		ID: "ckpt_json", RunID: run.ID, StepID: "qa.verify",
+		SnapshotDigest: "sha256:checkpoint", Strategy: "per_step",
+		SizeBytes: 64, CreatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&checkpoint).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+run.ID+"/checkpoints", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`"id":"ckpt_json"`)) || !bytes.Contains(w.Body.Bytes(), []byte(`"stepId":"qa.verify"`)) {
+		t.Fatalf("checkpoint list must use camelCase, body=%s", w.Body.String())
+	}
+	if bytes.Contains(w.Body.Bytes(), []byte(`"ID"`)) || bytes.Contains(w.Body.Bytes(), []byte(`"StepID"`)) {
+		t.Fatalf("checkpoint list leaked store field names, body=%s", w.Body.String())
+	}
+}
+
+func TestRunDiffMissingPatchEncodesEmptyFiles(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_diff_empty", TraceID: "trace_diff_empty",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "failed", SpaceID: "local",
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+run.ID+"/diff", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`"files":[]`)) {
+		t.Fatalf("files must encode as an empty array, body=%s", w.Body.String())
+	}
+}
+
+func TestRunArtifactsMissingManifestIsEmptyList(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_artifacts_missing", TraceID: "trace_artifacts_missing",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "failed", SpaceID: "local",
+		StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/runs/"+run.ID+"/artifacts", nil)
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`"artifacts":[]`)) {
+		t.Fatalf("artifacts must encode as an empty array, body=%s", w.Body.String())
+	}
+}

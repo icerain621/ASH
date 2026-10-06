@@ -147,8 +147,16 @@ func (s *Service) Compare(leftThreadID, rightThreadID string) (*CompareResult, e
 
 func compareFolds(left, right *FoldResult) *CompareResult {
 	out := &CompareResult{
-		LeftThreadID: left.ThreadID, RightThreadID: right.ThreadID,
-		LeftDigest: left.Digest, RightDigest: right.Digest,
+		LeftThreadID:  left.ThreadID,
+		RightThreadID: right.ThreadID,
+		LeftDigest:    left.Digest,
+		RightDigest:   right.Digest,
+		// Non-nil empty slices so JSON clients get [] not null.
+		NodesAdded:   []string{},
+		NodesRemoved: []string{},
+		NodesChanged: []string{},
+		LinksAdded:   []string{},
+		LinksRemoved: []string{},
 	}
 	lNodes := indexNodes(left.Nodes)
 	rNodes := indexNodes(right.Nodes)

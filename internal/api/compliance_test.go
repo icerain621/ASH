@@ -38,6 +38,25 @@ func TestComplianceSecretScan(t *testing.T) {
 	}
 }
 
+func TestComplianceSecretScanEmptyFindingsIsArray(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	r, db := newPlatformTestRouter(t)
+	now := time.Now().UTC()
+	space := "space_secret_scan_empty"
+	_ = db.Create(&store.AuditPolicy{SpaceID: space, RetentionDays: 30, CreatedAt: now, UpdatedAt: now}).Error
+
+	req := httptest.NewRequest(http.MethodGet, "/api/v1/compliance/secret-scan?limit=50", nil)
+	req.Header.Set("X-ASH-Space-ID", space)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	if !bytes.Contains(w.Body.Bytes(), []byte(`"findings":[]`)) {
+		t.Fatalf("findings must encode as an empty array, body=%s", w.Body.String())
+	}
+}
+
 func TestComplianceExportIncludesSecretScan(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	r, db := newPlatformTestRouter(t)

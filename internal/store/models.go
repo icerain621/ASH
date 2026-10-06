@@ -117,16 +117,16 @@ func (ArtifactIndex) TableName() string { return "artifact_index" }
 
 // Checkpoint stores recoverable per-step snapshots.
 type Checkpoint struct {
-	ID             string `gorm:"primaryKey;size:64"`
-	RunID          string `gorm:"index;size:64;not null"`
-	StepID         string `gorm:"index;size:128;not null"`
-	SnapshotDigest string `gorm:"size:128;not null"`
-	URI            string `gorm:"size:1024"`
-	StoreKey       string `gorm:"size:1024"`
-	ContentType    string `gorm:"size:128"`
-	SizeBytes      int64
-	Strategy       string `gorm:"size:64"`
-	CreatedAt      time.Time
+	ID             string    `gorm:"primaryKey;size:64" json:"id"`
+	RunID          string    `gorm:"index;size:64;not null" json:"runId"`
+	StepID         string    `gorm:"index;size:128;not null" json:"stepId"`
+	SnapshotDigest string    `gorm:"size:128;not null" json:"snapshotDigest"`
+	URI            string    `gorm:"size:1024" json:"uri,omitempty"`
+	StoreKey       string    `gorm:"size:1024" json:"storeKey,omitempty"`
+	ContentType    string    `gorm:"size:128" json:"contentType,omitempty"`
+	SizeBytes      int64     `json:"sizeBytes"`
+	Strategy       string    `gorm:"size:64" json:"strategy,omitempty"`
+	CreatedAt      time.Time `json:"createdAt"`
 }
 
 func (Checkpoint) TableName() string { return "checkpoints" }
@@ -357,36 +357,36 @@ func (QualityMetric) TableName() string { return "quality_metrics" }
 
 // MCPTool tracks registered MCP tools and isolation state.
 type MCPTool struct {
-	ID         string `gorm:"primaryKey;size:64"`
-	SpaceID    string `gorm:"size:64;not null;default:local;index"`
-	Name       string `gorm:"size:128;not null;index"`
-	Server     string `gorm:"size:256;not null"`
-	SchemaJSON string `gorm:"type:text;not null;default:'{}'"`
-	Risk       string `gorm:"size:32;not null"`
-	Status     string `gorm:"size:32;not null;index"`
-	LastError  string `gorm:"type:text"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         string    `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID    string    `gorm:"size:64;not null;default:local;index" json:"spaceId"`
+	Name       string    `gorm:"size:128;not null;index" json:"name"`
+	Server     string    `gorm:"size:256;not null" json:"server"`
+	SchemaJSON string    `gorm:"type:text;not null;default:'{}'" json:"schemaJson"`
+	Risk       string    `gorm:"size:32;not null" json:"risk"`
+	Status     string    `gorm:"size:32;not null;index" json:"status"`
+	LastError  string    `gorm:"type:text" json:"lastError,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func (MCPTool) TableName() string { return "mcp_tools" }
 
 // Feedback records user feedback over runs, artifacts, and memory hits.
 type Feedback struct {
-	ID         string `gorm:"primaryKey;size:64"`
-	SpaceID    string `gorm:"size:64;not null;default:local;index"`
-	TargetType string `gorm:"size:64;not null;index"`
-	TargetID   string `gorm:"size:128;not null;index"`
-	RunID      string `gorm:"size:64;index"` // optional; uniqueness with target when set
-	Rating     int
-	Category   string `gorm:"size:64;not null;default:general;index"`
-	Status     string `gorm:"size:32;not null;default:open;index"`
-	Severity   string `gorm:"size:32;not null;default:info;index"`
-	Source     string `gorm:"size:64;not null;default:ui;index"`
-	Comment    string `gorm:"type:text"`
-	ActorID    string `gorm:"size:128"`
-	CreatedAt  time.Time
-	UpdatedAt  time.Time
+	ID         string    `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID    string    `gorm:"size:64;not null;default:local;index" json:"spaceId"`
+	TargetType string    `gorm:"size:64;not null;index" json:"targetType"`
+	TargetID   string    `gorm:"size:128;not null;index" json:"targetId"`
+	RunID      string    `gorm:"size:64;index" json:"runId,omitempty"`
+	Rating     int       `json:"rating"`
+	Category   string    `gorm:"size:64;not null;default:general;index" json:"category"`
+	Status     string    `gorm:"size:32;not null;default:open;index" json:"status"`
+	Severity   string    `gorm:"size:32;not null;default:info;index" json:"severity"`
+	Source     string    `gorm:"size:64;not null;default:ui;index" json:"source"`
+	Comment    string    `gorm:"type:text" json:"comment"`
+	ActorID    string    `gorm:"size:128" json:"actorId,omitempty"`
+	CreatedAt  time.Time `json:"createdAt"`
+	UpdatedAt  time.Time `json:"updatedAt"`
 }
 
 func (Feedback) TableName() string { return "feedback" }
@@ -586,77 +586,77 @@ type RollbackDrill struct {
 func (RollbackDrill) TableName() string { return "rollback_drills" }
 
 type SecretRecord struct {
-	ID              string `gorm:"primaryKey;size:64"`
-	SpaceID         string `gorm:"size:64;not null;default:local;uniqueIndex:uniq_secret_space_name,priority:1"`
-	Name            string `gorm:"size:128;not null;uniqueIndex:uniq_secret_space_name,priority:2"`
-	Description     string `gorm:"size:512"`
-	Status          string `gorm:"size:32;not null;default:active;index"`
-	ScopeJSON       string `gorm:"type:text;not null;default:'{}'"`
-	ValueCiphertext string `gorm:"type:text;not null"`
-	ValueDigest     string `gorm:"size:128;not null;index"`
-	CreatedBy       string `gorm:"size:128"`
-	UpdatedBy       string `gorm:"size:128"`
-	CreatedAt       time.Time
-	UpdatedAt       time.Time
-	LastUsedAt      *time.Time
+	ID              string     `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID         string     `gorm:"size:64;not null;default:local;uniqueIndex:uniq_secret_space_name,priority:1" json:"spaceId"`
+	Name            string     `gorm:"size:128;not null;uniqueIndex:uniq_secret_space_name,priority:2" json:"name"`
+	Description     string     `gorm:"size:512" json:"description,omitempty"`
+	Status          string     `gorm:"size:32;not null;default:active;index" json:"status"`
+	ScopeJSON       string     `gorm:"type:text;not null;default:'{}'" json:"-"`
+	ValueCiphertext string     `gorm:"type:text;not null" json:"-"`
+	ValueDigest     string     `gorm:"size:128;not null;index" json:"valueDigest"`
+	CreatedBy       string     `gorm:"size:128" json:"createdBy,omitempty"`
+	UpdatedBy       string     `gorm:"size:128" json:"updatedBy,omitempty"`
+	CreatedAt       time.Time  `json:"createdAt"`
+	UpdatedAt       time.Time  `json:"updatedAt"`
+	LastUsedAt      *time.Time `json:"lastUsedAt,omitempty"`
 }
 
 func (SecretRecord) TableName() string { return "secret_records" }
 
 type AuditLog struct {
-	ID          string `gorm:"primaryKey;size:64"`
-	SpaceID     string `gorm:"size:64;not null;default:local;index"`
-	TraceID     string `gorm:"index;size:64"`
-	RunID       string `gorm:"index;size:64"`
-	ActorID     string `gorm:"size:128"`
-	EventType   string `gorm:"size:128;not null;index"`
-	PayloadJSON string `gorm:"type:text;not null"`
-	CreatedAt   time.Time
+	ID          string    `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID     string    `gorm:"size:64;not null;default:local;index" json:"spaceId"`
+	TraceID     string    `gorm:"index;size:64" json:"traceId,omitempty"`
+	RunID       string    `gorm:"index;size:64" json:"runId,omitempty"`
+	ActorID     string    `gorm:"size:128" json:"actorId,omitempty"`
+	EventType   string    `gorm:"size:128;not null;index" json:"eventType"`
+	PayloadJSON string    `gorm:"type:text;not null" json:"payloadJSON"`
+	CreatedAt   time.Time `json:"createdAt"`
 }
 
 func (AuditLog) TableName() string { return "audit_log" }
 
 type ApprovalRequest struct {
-	ID             string `gorm:"primaryKey;size:64"`
-	SpaceID        string `gorm:"size:64;not null;default:local;index"`
-	RunID          string `gorm:"index;size:64;not null"`
-	TraceID        string `gorm:"index;size:64"`
-	StepID         string `gorm:"index;size:128;not null"`
-	Gate           string `gorm:"size:64;not null;index"`
-	Risk           string `gorm:"size:32"`
-	Reason         string `gorm:"type:text;not null"`
-	Status         string `gorm:"size:32;not null;default:pending;index"`
-	RequestedBy    string `gorm:"size:128"`
-	DecidedBy      string `gorm:"size:128"`
-	DecisionReason string `gorm:"type:text"`
-	EvidenceJSON   string `gorm:"type:text;not null;default:'{}'"`
-	CreatedAt      time.Time
-	UpdatedAt      time.Time
-	DecidedAt      *time.Time
+	ID             string     `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID        string     `gorm:"size:64;not null;default:local;index" json:"spaceId"`
+	RunID          string     `gorm:"index;size:64;not null" json:"runId"`
+	TraceID        string     `gorm:"index;size:64" json:"traceId,omitempty"`
+	StepID         string     `gorm:"index;size:128;not null" json:"stepId"`
+	Gate           string     `gorm:"size:64;not null;index" json:"gate"`
+	Risk           string     `gorm:"size:32" json:"risk,omitempty"`
+	Reason         string     `gorm:"type:text;not null" json:"reason"`
+	Status         string     `gorm:"size:32;not null;default:pending;index" json:"status"`
+	RequestedBy    string     `gorm:"size:128" json:"requestedBy,omitempty"`
+	DecidedBy      string     `gorm:"size:128" json:"decidedBy,omitempty"`
+	DecisionReason string     `gorm:"type:text" json:"decisionReason,omitempty"`
+	EvidenceJSON   string     `gorm:"type:text;not null;default:'{}'" json:"evidenceJson,omitempty"`
+	CreatedAt      time.Time  `json:"createdAt"`
+	UpdatedAt      time.Time  `json:"updatedAt"`
+	DecidedAt      *time.Time `json:"decidedAt,omitempty"`
 }
 
 func (ApprovalRequest) TableName() string { return "approval_requests" }
 
 type User struct {
-	ID           string `gorm:"primaryKey;size:64"`
-	Email        string `gorm:"size:256;uniqueIndex"`
-	DisplayName  string `gorm:"size:256"`
-	PasswordHash string `gorm:"size:256"`
-	Status       string `gorm:"size:32;not null;default:active;index"`
-	OidcIssuer   string `gorm:"size:512;index:idx_users_oidc,priority:1"`
-	OidcSubject  string `gorm:"size:256;index:idx_users_oidc,priority:2"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string    `gorm:"primaryKey;size:64" json:"id"`
+	Email        string    `gorm:"size:256;uniqueIndex" json:"email,omitempty"`
+	DisplayName  string    `gorm:"size:256" json:"displayName,omitempty"`
+	PasswordHash string    `gorm:"size:256" json:"-"`
+	Status       string    `gorm:"size:32;not null;default:active;index" json:"status"`
+	OidcIssuer   string    `gorm:"size:512;index:idx_users_oidc,priority:1" json:"oidcIssuer,omitempty"`
+	OidcSubject  string    `gorm:"size:256;index:idx_users_oidc,priority:2" json:"oidcSubject,omitempty"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 func (User) TableName() string { return "users" }
 
 type Org struct {
-	ID        string `gorm:"primaryKey;size:64"`
-	Name      string `gorm:"size:256;not null"`
-	Slug      string `gorm:"size:128;uniqueIndex"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string    `gorm:"primaryKey;size:64" json:"id"`
+	Name      string    `gorm:"size:256;not null" json:"name"`
+	Slug      string    `gorm:"size:128;uniqueIndex" json:"slug,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func (Org) TableName() string { return "orgs" }
@@ -674,37 +674,37 @@ type Space struct {
 func (Space) TableName() string { return "spaces" }
 
 type Member struct {
-	ID        string `gorm:"primaryKey;size:64"`
-	OrgID     string `gorm:"index;size:64;not null"`
-	SpaceID   string `gorm:"index;size:64"`
-	UserID    string `gorm:"index;size:64;not null"`
-	RoleID    string `gorm:"index;size:64;not null"`
-	Status    string `gorm:"size:32;not null;default:active;index"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
+	ID        string    `gorm:"primaryKey;size:64" json:"id"`
+	OrgID     string    `gorm:"index;size:64;not null" json:"orgId"`
+	SpaceID   string    `gorm:"index;size:64" json:"spaceId,omitempty"`
+	UserID    string    `gorm:"index;size:64;not null" json:"userId"`
+	RoleID    string    `gorm:"index;size:64;not null" json:"roleId"`
+	Status    string    `gorm:"size:32;not null;default:active;index" json:"status"`
+	CreatedAt time.Time `json:"createdAt"`
+	UpdatedAt time.Time `json:"updatedAt"`
 }
 
 func (Member) TableName() string { return "members" }
 
 type Role struct {
-	ID          string `gorm:"primaryKey;size:64"`
-	OrgID       string `gorm:"index;size:64"`
-	Name        string `gorm:"size:128;not null;index"`
-	Permissions string `gorm:"type:text;not null;default:'[]'"`
-	CreatedAt   time.Time
-	UpdatedAt   time.Time
+	ID          string    `gorm:"primaryKey;size:64" json:"id"`
+	OrgID       string    `gorm:"index;size:64" json:"orgId,omitempty"`
+	Name        string    `gorm:"size:128;not null;index" json:"name"`
+	Permissions string    `gorm:"type:text;not null;default:'[]'" json:"permissions"`
+	CreatedAt   time.Time `json:"createdAt"`
+	UpdatedAt   time.Time `json:"updatedAt"`
 }
 
 func (Role) TableName() string { return "roles" }
 
 type ResourceScope struct {
-	ID           string `gorm:"primaryKey;size:64"`
-	SpaceID      string `gorm:"index;size:64;not null"`
-	ResourceType string `gorm:"size:64;not null;index"`
-	ResourceID   string `gorm:"size:128;not null;index"`
-	PolicyJSON   string `gorm:"type:text;not null;default:'{}'"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string    `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID      string    `gorm:"index;size:64;not null" json:"spaceId"`
+	ResourceType string    `gorm:"size:64;not null;index" json:"resourceType"`
+	ResourceID   string    `gorm:"size:128;not null;index" json:"resourceId"`
+	PolicyJSON   string    `gorm:"type:text;not null;default:'{}'" json:"policyJson"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
 }
 
 func (ResourceScope) TableName() string { return "resource_scopes" }
@@ -726,33 +726,33 @@ type AuditExport struct {
 func (AuditExport) TableName() string { return "audit_exports" }
 
 type AuditPolicy struct {
-	SpaceID       string `gorm:"primaryKey;size:64"`
-	RetentionDays int    `gorm:"not null;default:365"`
-	RedactPayload bool   `gorm:"not null;default:false"`
-	Locked        bool   `gorm:"not null;default:false"`
-	CreatedAt     time.Time
-	UpdatedAt     time.Time
+	SpaceID       string    `gorm:"primaryKey;size:64" json:"spaceId"`
+	RetentionDays int       `gorm:"not null;default:365" json:"retentionDays"`
+	RedactPayload bool      `gorm:"not null;default:false" json:"redactPayload"`
+	Locked        bool      `gorm:"not null;default:false" json:"locked"`
+	CreatedAt     time.Time `json:"createdAt"`
+	UpdatedAt     time.Time `json:"updatedAt"`
 }
 
 func (AuditPolicy) TableName() string { return "audit_policies" }
 
 type PluginRegistry struct {
-	ID           string `gorm:"primaryKey;size:64"`
-	SpaceID      string `gorm:"index;size:64;not null;default:local"`
-	Name         string `gorm:"size:128;not null;index"`
-	Version      string `gorm:"size:64;not null"`
-	Protocol     string `gorm:"size:32;not null;default:grpc;index"`
-	ABI          string `gorm:"size:64;not null;default:ash.plugin.v1;index"`
-	Endpoint     string `gorm:"size:512"`
-	Capabilities string `gorm:"type:text;not null;default:'[]'"`
-	Compatible   bool   `gorm:"not null;default:false"`
-	Status       string `gorm:"size:32;not null;index"`
-	LastError    string `gorm:"type:text"`
-	LastExportAt *time.Time
-	ExportErrors int64 `gorm:"not null;default:0"`
-	DropCount    int64 `gorm:"not null;default:0"`
-	CreatedAt    time.Time
-	UpdatedAt    time.Time
+	ID           string     `gorm:"primaryKey;size:64" json:"id"`
+	SpaceID      string     `gorm:"index;size:64;not null;default:local" json:"spaceId"`
+	Name         string     `gorm:"size:128;not null;index" json:"name"`
+	Version      string     `gorm:"size:64;not null" json:"version"`
+	Protocol     string     `gorm:"size:32;not null;default:grpc;index" json:"protocol"`
+	ABI          string     `gorm:"size:64;not null;default:ash.plugin.v1;index" json:"abi"`
+	Endpoint     string     `gorm:"size:512" json:"endpoint"`
+	Capabilities string     `gorm:"type:text;not null;default:'[]'" json:"capabilities"`
+	Compatible   bool       `gorm:"not null;default:false" json:"compatible"`
+	Status       string     `gorm:"size:32;not null;index" json:"status"`
+	LastError    string     `gorm:"type:text" json:"lastError"`
+	LastExportAt *time.Time `json:"lastExportAt,omitempty"`
+	ExportErrors int64      `gorm:"not null;default:0" json:"exportErrors"`
+	DropCount    int64      `gorm:"not null;default:0" json:"dropCount"`
+	CreatedAt    time.Time  `json:"createdAt"`
+	UpdatedAt    time.Time  `json:"updatedAt"`
 }
 
 func (PluginRegistry) TableName() string { return "plugin_registry" }

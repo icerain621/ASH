@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -17,10 +18,10 @@ import (
 )
 
 var (
-	ErrNotFound          = errors.New("proposal not found")
-	ErrInvalidState      = errors.New("proposal state does not allow this action")
-	ErrBaselineRequired  = errors.New("baseline run is required")
-	ErrBaselineNotReady  = errors.New("baseline run is not finished")
+	ErrNotFound         = errors.New("proposal not found")
+	ErrInvalidState     = errors.New("proposal state does not allow this action")
+	ErrBaselineRequired = errors.New("baseline run is required")
+	ErrBaselineNotReady = errors.New("baseline run is not finished")
 )
 
 type Service struct {
@@ -126,6 +127,9 @@ func (s *Service) StartExperiment(spaceID, id string) (*StartExperimentResponse,
 	}
 	if row.Status != "draft" && row.Status != "experimenting" {
 		return nil, fmt.Errorf("%w: status=%s", ErrInvalidState, row.Status)
+	}
+	if strings.TrimSpace(row.BaselineRunID) == "" {
+		return nil, ErrBaselineRequired
 	}
 	replay, err := s.runs.Replay(row.BaselineRunID, runs.ReplayRequest{Mode: "exact"})
 	if err != nil {

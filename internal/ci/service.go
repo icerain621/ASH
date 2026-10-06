@@ -551,7 +551,15 @@ func diagnosisRules() []PatternRule {
 				"从首个 Go 编译错误开始修复，优先处理 undefined、类型不匹配和导入缺失。",
 				"本地运行 go test ./... 复现，并确认生成文件没有漏提交。",
 			},
-			Patterns: rex(`(?m)^# .*`, `(?i)undefined:`, `(?i)cannot find package`, `(?i)expected .* before`, `(?i)build failed`),
+			// Do not match bare "# pkg" headers — go test also emits those before --- FAIL.
+			Patterns: rex(
+				`(?i)undefined:`,
+				`(?i)cannot find package`,
+				`(?i)expected .* before`,
+				`(?i)build failed`,
+				`(?i)\.go:\d+:\d+:`,
+				`(?i)imported and not used`,
+			),
 		},
 		{
 			Cause:      "test_failure",
@@ -560,7 +568,17 @@ func diagnosisRules() []PatternRule {
 				"定位第一个 --- FAIL 测试用例，确认是行为回归还是断言样本需要更新。",
 				"本地使用相同 -run 过滤条件复现，并保留失败输出作为修复证据。",
 			},
-			Patterns: rex(`(?m)^--- FAIL:`, `(?m)^FAIL\s`, `(?i)t\.fatalf`, `(?i)panic:`),
+			// Also match paste snippets ("Error: FAIL path.go:N …") and mid-line FAIL markers.
+			Patterns: rex(
+				`(?m)^--- FAIL:`,
+				`(?i)--- FAIL:`,
+				`(?m)^FAIL\s`,
+				`(?i)\bFAIL\t`,
+				`(?i)\bFAIL:\s*Test`,
+				`(?i)\bFAIL\s+\S+\.go:\d+`,
+				`(?i)t\.fatalf`,
+				`(?i)panic:`,
+			),
 		},
 		{
 			Cause:      "frontend_lint_or_typecheck_failure",
