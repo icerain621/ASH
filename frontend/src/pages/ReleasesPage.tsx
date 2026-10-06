@@ -14,21 +14,26 @@ import {
 export function ReleasesPage() {
   const qc = useQueryClient();
   const [releaseId, setReleaseId] = useState("");
+  const [releaseVersion, setReleaseVersion] = useState("");
+  const [releaseTitle, setReleaseTitle] = useState("");
+  const [rollbackScenario, setRollbackScenario] = useState("");
   const releasesQuery = useQuery({ queryKey: ["releases"], queryFn: () => listReleases({ limit: 50 }) });
-  const activeReleaseId = releaseId || releasesQuery.data?.items[0]?.id || "";
+  const activeReleaseId = releaseId || releasesQuery.data?.items?.[0]?.id || "";
   const checklistQuery = useQuery({
     queryKey: ["release-checklist", activeReleaseId],
     queryFn: () => getReleaseChecklist(activeReleaseId),
     enabled: Boolean(activeReleaseId),
   });
   const activeRelease = useMemo(
-    () => releasesQuery.data?.items.find((item) => item.id === activeReleaseId),
+    () => (releasesQuery.data?.items ?? []).find((item) => item.id === activeReleaseId),
     [releasesQuery.data, activeReleaseId],
   );
   const createMut = useMutation({
     mutationFn: createRelease,
     onSuccess: (rel) => {
       setReleaseId(rel.id);
+      setReleaseVersion("");
+      setReleaseTitle("");
       qc.invalidateQueries({ queryKey: ["releases"] });
     },
   });
@@ -41,7 +46,12 @@ export function ReleasesPage() {
     mutationFn: () => evaluateReleaseGate(activeReleaseId),
     onSuccess: () => qc.invalidateQueries({ queryKey: ["releases"] }),
   });
-  const rollbackMut = useMutation({ mutationFn: (body: { scenario: string; status?: string; durationMs?: number; notes?: string }) => createRollbackDrill(activeReleaseId, body) });
+  const rollbackMut = useMutation({
+    mutationFn: (body: { scenario: string; status?: string; durationMs?: number; notes?: string }) =>
+      createRollbackDrill(activeReleaseId, body),
+    onSuccess: () => setRollbackScenario(""),
+  });
+  const rollbackReady = Boolean(activeReleaseId) && Boolean(rollbackScenario.trim());
 
   return (
     <section className="panel active">
@@ -63,14 +73,35 @@ export function ReleasesPage() {
                   {release.version}
                 </option>
               ))}
-              {!releasesQuery.data?.items.length && <option value="">无发布</option>}
+              {!releasesQuery.data?.items?.length && <option value="">无发布</option>}
             </select>
           </label>
-          <button className="btn icon-btn" onClick={() => releasesQuery.refetch()}>
+          <button
+            className="btn icon-btn"
+            onClick={() => releasesQuery.refetch()}
+            title="刷新发布列表"
+          >
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
           </button>
-          <button className="btn primary icon-btn" onClick={() => gateMut.mutate()} disabled={!activeReleaseId || gateMut.isPending}>
+          <button
+            className="btn primary icon-btn"
+            data-testid="release-gate-run"
+            onClick={() => {
+              if (!activeReleaseId) return;
+              const ok = window.confirm(`确认对 release「${activeReleaseId}」运行 gate？`);
+              if (!ok) return;
+              gateMut.mutate();
+            }}
+            disabled={!activeReleaseId || gateMut.isPending}
+            title={
+              !activeReleaseId
+                ? "需要先选择或创建 release"
+                : gateMut.isPending
+                  ? "运行中…"
+                  : "运行 gate（需确认）"
+            }
+          >
             <PlayCircle size={16} strokeWidth={1.8} />
             运行 gate
           </button>
@@ -93,27 +124,60 @@ export function ReleasesPage() {
             className="form-grid"
             onSubmit={(event) => {
               event.preventDefault();
+              if (!releaseVersion.trim() || !releaseTitle.trim()) return;
+              const ok = window.confirm(
+                `确认创建 release「${releaseVersion.trim()} · ${releaseTitle.trim()}」？`,
+              );
+              if (!ok) return;
               const form = new FormData(event.currentTarget);
               createMut.mutate({
-                version: String(form.get("version") || ""),
-                title: String(form.get("title") || ""),
+                version: releaseVersion.trim(),
+                title: releaseTitle.trim(),
                 canaryStrategy: String(form.get("canaryStrategy") || ""),
               });
             }}
           >
             <label>
               Version
-              <input name="version" placeholder="v0.4.0" required />
+              <input
+                name="version"
+                placeholder="v0.4.0"
+                required
+                value={releaseVersion}
+                onChange={(e) => setReleaseVersion(e.target.value)}
+                data-testid="release-version"
+              />
             </label>
             <label>
               Title
-              <input name="title" placeholder="MVP release" />
+              <input
+                name="title"
+                placeholder="MVP release"
+                required
+                value={releaseTitle}
+                onChange={(e) => setReleaseTitle(e.target.value)}
+                data-testid="release-title"
+              />
             </label>
             <label className="wide-field">
               Canary Strategy
               <textarea name="canaryStrategy" rows={4} placeholder="按 space/project 分批观察错误率、低分反馈和 active alerts。" />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={createMut.isPending}>
+            <button
+              className="btn primary icon-btn"
+              type="submit"
+              disabled={createMut.isPending || !releaseVersion.trim() || !releaseTitle.trim()}
+              title={
+                !releaseVersion.trim()
+                  ? "需要填写 Version"
+                  : !releaseTitle.trim()
+                    ? "需要填写 Title"
+                    : createMut.isPending
+                      ? "创建中…"
+                      : "创建 release（需确认）"
+              }
+              data-testid="release-create"
+            >
               <Send size={16} strokeWidth={1.8} />
               创建 release
             </button>
@@ -147,7 +211,7 @@ export function ReleasesPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>MVP Checklist</h2>
-            <span>{checklistQuery.data?.items.filter((item) => item.status === "done").length ?? 0} done</span>
+            <span>{(checklistQuery.data?.items ?? []).filter((item) => item.status === "done").length} done</span>
           </div>
           <table className="table">
             <thead>
@@ -170,7 +234,21 @@ export function ReleasesPage() {
                     <StatusPill value={item.status} />
                   </td>
                   <td>
-                    <button className="btn mini" onClick={() => checklistMut.mutate(item)} disabled={checklistMut.isPending}>
+                    <button
+                      className="btn mini"
+                      onClick={() => checklistMut.mutate(item)}
+                      disabled={checklistMut.isPending || !activeReleaseId}
+                      title={
+                        !activeReleaseId
+                          ? "需要先选择 release"
+                          : checklistMut.isPending
+                            ? "更新中…"
+                            : item.status === "done"
+                              ? "撤销完成标记"
+                              : "标记清单项为完成"
+                      }
+                      data-testid={`release-checklist-toggle-${item.id}`}
+                    >
                       {item.status === "done" ? "undo" : "done"}
                     </button>
                   </td>
@@ -222,16 +300,27 @@ export function ReleasesPage() {
           className="inline-form release-drill-form"
           onSubmit={(event) => {
             event.preventDefault();
+            if (!rollbackReady) return;
+            const ok = window.confirm(
+              `确认记录回滚演练「${rollbackScenario.trim()}」？`,
+            );
+            if (!ok) return;
             const form = new FormData(event.currentTarget);
             rollbackMut.mutate({
-              scenario: String(form.get("scenario") || ""),
+              scenario: rollbackScenario.trim(),
               status: String(form.get("status") || "recorded"),
               durationMs: Number(form.get("durationMs") || 0),
               notes: String(form.get("notes") || ""),
             });
           }}
         >
-          <input name="scenario" placeholder="rollback image / switch database URL" required />
+          <input
+            name="scenario"
+            data-testid="release-rollback-scenario"
+            placeholder="rollback image / switch database URL"
+            value={rollbackScenario}
+            onChange={(e) => setRollbackScenario(e.target.value)}
+          />
           <select name="status" defaultValue="passed">
             <option value="passed">passed</option>
             <option value="recorded">recorded</option>
@@ -239,7 +328,21 @@ export function ReleasesPage() {
           </select>
           <input name="durationMs" type="number" min="0" placeholder="duration ms" />
           <input name="notes" placeholder="evidence / notes" />
-          <button className="btn icon-btn" type="submit" disabled={!activeReleaseId || rollbackMut.isPending}>
+          <button
+            className="btn icon-btn"
+            type="submit"
+            data-testid="release-rollback-submit"
+            disabled={!rollbackReady || rollbackMut.isPending}
+            title={
+              !activeReleaseId
+                ? "需要先选择或创建 release"
+                : !rollbackScenario.trim()
+                  ? "需要填写回滚场景"
+                  : rollbackMut.isPending
+                    ? "记录中…"
+                    : "记录回滚演练（需确认）"
+            }
+          >
             <RotateCcw size={16} strokeWidth={1.8} />
             记录
           </button>

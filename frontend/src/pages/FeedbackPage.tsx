@@ -20,9 +20,11 @@ const FEEDBACK_TARGET_TYPES = [
 
 export function FeedbackPage() {
   const qc = useQueryClient();
-  const [status, setStatus] = useState("open");
+  const [status, setStatus] = useState("");
   const [category, setCategory] = useState("");
   const [targetType, setTargetType] = useState("");
+  const [targetId, setTargetId] = useState("");
+  const [rating, setRating] = useState(3);
   const feedbackQuery = useQuery({
     queryKey: ["feedback", status, category, targetType],
     queryFn: () => listFeedback({ status, category, targetType, limit: 80 }),
@@ -30,6 +32,8 @@ export function FeedbackPage() {
   const feedbackMut = useMutation({
     mutationFn: createFeedback,
     onSuccess: () => {
+      setTargetId("");
+      setRating(3);
       qc.invalidateQueries({ queryKey: ["feedback"] });
       qc.invalidateQueries({ queryKey: ["observability-alerts"] });
       qc.invalidateQueries({ queryKey: ["metrics"] });
@@ -41,11 +45,27 @@ export function FeedbackPage() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["feedback"] }),
   });
 
+  const ratingValid = Number.isFinite(rating) && rating >= 1 && rating <= 5;
+  const canSubmit = Boolean(targetId.trim()) && ratingValid && !feedbackMut.isPending;
+  const submitTitle = !targetId.trim()
+    ? "需要填写 Target ID"
+    : !ratingValid
+      ? "Rating 需为 1–5"
+      : feedbackMut.isPending
+        ? "提交中…"
+        : "提交反馈（需确认）";
+
   function submit(formData: FormData) {
+    if (!canSubmit) return;
+    const type = String(formData.get("targetType") || "run");
+    const ok = window.confirm(
+      `确认提交反馈？target=${type}/${targetId.trim()}，rating=${rating}`,
+    );
+    if (!ok) return;
     feedbackMut.mutate({
-      targetType: String(formData.get("targetType") || "run"),
-      targetId: String(formData.get("targetId") || ""),
-      rating: Number(formData.get("rating") || 0),
+      targetType: type,
+      targetId: targetId.trim(),
+      rating,
       category: String(formData.get("category") || "general"),
       source: "ui",
       comment: String(formData.get("comment") || ""),
@@ -97,7 +117,12 @@ export function FeedbackPage() {
               ))}
             </select>
           </label>
-          <button className="btn icon-btn" onClick={() => feedbackQuery.refetch()} disabled={feedbackQuery.isFetching}>
+          <button
+            className="btn icon-btn"
+            onClick={() => feedbackQuery.refetch()}
+            disabled={feedbackQuery.isFetching}
+            title={feedbackQuery.isFetching ? "刷新中…" : "刷新反馈列表"}
+          >
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
           </button>
@@ -143,27 +168,53 @@ export function FeedbackPage() {
             </label>
             <label>
               Target ID
-              <input name="targetId" placeholder="run_..." required />
+              <input
+                name="targetId"
+                placeholder="run_..."
+                required
+                value={targetId}
+                onChange={(e) => setTargetId(e.target.value)}
+                data-testid="feedback-target-id"
+              />
             </label>
             <label>
               Rating
-              <input name="rating" type="number" min="1" max="5" defaultValue="3" />
+              <input
+                name="rating"
+                type="number"
+                min={1}
+                max={5}
+                value={rating}
+                onChange={(e) => setRating(Number(e.target.value))}
+                data-testid="feedback-rating"
+              />
             </label>
             <label className="wide-field">
               Comment
               <textarea name="comment" rows={4} placeholder="记录采纳、失败原因或改进建议。" />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={feedbackMut.isPending}>
+            <button
+              className="btn primary icon-btn"
+              type="submit"
+              disabled={!canSubmit}
+              title={submitTitle}
+              data-testid="feedback-submit"
+            >
               <Send size={16} strokeWidth={1.8} />
               提交反馈
             </button>
+            {feedbackMut.isError && (
+              <p className="error-text" data-testid="feedback-submit-error">
+                {feedbackMut.error instanceof Error ? feedbackMut.error.message : "提交失败"}
+              </p>
+            )}
           </form>
         </div>
 
         <div className="pane">
           <div className="pane-title">
             <h2>低分与处理</h2>
-            <span>{feedbackQuery.data?.items.filter((item) => item.rating > 0 && item.rating <= 2).length ?? 0} 条低分</span>
+            <span>{(feedbackQuery.data?.items ?? []).filter((item) => item.rating > 0 && item.rating <= 2).length} 条低分</span>
           </div>
           <table className="table">
             <thead>
@@ -192,13 +243,61 @@ export function FeedbackPage() {
                   </td>
                   <td>
                     <div className="row-actions">
-                      <button className="btn mini" onClick={() => updateMut.mutate({ item, next: "triaged" })} disabled={item.status === "triaged"}>
+                      <button
+                        className="btn mini"
+                        data-testid={`feedback-triage-${item.id}`}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认将反馈「${item.targetId}」标记为 triaged？`,
+                          );
+                          if (!ok) return;
+                          updateMut.mutate({ item, next: "triaged" });
+                        }}
+                        disabled={item.status === "triaged" || updateMut.isPending}
+                        title={
+                          item.status === "triaged"
+                            ? "已 triage"
+                            : "标记为 triaged（需确认）"
+                        }
+                      >
                         triage
                       </button>
-                      <button className="btn mini ok" onClick={() => updateMut.mutate({ item, next: "resolved" })} disabled={item.status === "resolved"}>
+                      <button
+                        className="btn mini ok"
+                        data-testid={`feedback-resolve-${item.id}`}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认将反馈「${item.targetId}」标记为 resolved？`,
+                          );
+                          if (!ok) return;
+                          updateMut.mutate({ item, next: "resolved" });
+                        }}
+                        disabled={item.status === "resolved" || updateMut.isPending}
+                        title={
+                          item.status === "resolved"
+                            ? "已 resolve"
+                            : "标记为 resolved（需确认）"
+                        }
+                      >
                         resolve
                       </button>
-                      <button className="btn mini err" onClick={() => updateMut.mutate({ item, next: "dismissed" })} disabled={item.status === "dismissed"}>
+                      <button
+                        className="btn mini err"
+                        data-testid={`feedback-dismiss-${item.id}`}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认将反馈「${item.targetId}」标记为 dismissed？`,
+                          );
+                          if (!ok) return;
+                          updateMut.mutate({ item, next: "dismissed" });
+                        }}
+                        disabled={item.status === "dismissed" || updateMut.isPending}
+                        title={
+                          item.status === "dismissed"
+                            ? "已 dismiss"
+                            : "标记为 dismissed（需确认）"
+                        }
+                      >
                         dismiss
                       </button>
                     </div>
@@ -213,7 +312,7 @@ export function FeedbackPage() {
       <div className="pane">
         <div className="pane-title">
           <h2>反馈详情</h2>
-          <span>{feedbackQuery.data?.items.length ?? 0} 条</span>
+          <span>{feedbackQuery.data?.items?.length ?? 0} 条</span>
         </div>
         <table className="table">
           <thead>

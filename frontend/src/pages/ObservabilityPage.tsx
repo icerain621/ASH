@@ -41,6 +41,7 @@ export function ObservabilityPage() {
   const qc = useQueryClient();
   const activeSpaceId = getCurrentSpaceId();
   const [traceId, setTraceId] = useState("");
+  const [traceDraft, setTraceDraft] = useState("");
   const [cancelConfirm, setCancelConfirm] = useState("");
   const [selectedDutyId, setSelectedDutyId] = useState("");
   const alertsQuery = useQuery({ queryKey: ["observability-alerts", "active"], queryFn: () => listAlerts({ status: "active", limit: 100 }) });
@@ -73,7 +74,7 @@ export function ObservabilityPage() {
     queryKey: ["waker", "queue", activeSpaceId],
     queryFn: () => getWakerQueue({ spaceId: activeSpaceId, limit: 10 }),
   });
-  const otelExporter = pluginHealthQuery.data?.items.find((p) => p.id === "ash-otel-exporter");
+  const otelExporter = pluginHealthQuery.data?.items?.find((p) => p.id === "ash-otel-exporter");
   const traceQuery = useQuery({
     queryKey: ["trace", traceId],
     queryFn: () => getTrace(traceId),
@@ -134,7 +135,14 @@ export function ObservabilityPage() {
     );
 
   function toggleRule(rule: AlertRule) {
-    rulesMut.mutate([{ ...rule, enabled: !rule.enabled }]);
+    const next = !rule.enabled;
+    const ok = window.confirm(
+      next
+        ? `确认启用规则「${rule.metric || rule.id}」？`
+        : `确认关闭规则「${rule.metric || rule.id}」？`,
+    );
+    if (!ok) return;
+    rulesMut.mutate([{ ...rule, enabled: next }]);
   }
 
   return (
@@ -150,7 +158,17 @@ export function ObservabilityPage() {
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar metrics-toolbar">
-          <button className="btn primary icon-btn" onClick={() => evaluateMut.mutate()} disabled={evaluateMut.isPending}>
+          <button
+            className="btn primary icon-btn"
+            data-testid="obs-evaluate-alerts"
+            onClick={() => {
+              const ok = window.confirm("确认按当前规则评估告警？可能写入新的告警事件。");
+              if (!ok) return;
+              evaluateMut.mutate();
+            }}
+            disabled={evaluateMut.isPending}
+            title={evaluateMut.isPending ? "评估中…" : "按当前规则评估告警（需确认）"}
+          >
             <Activity size={16} strokeWidth={1.8} />
             评估告警
           </button>
@@ -167,6 +185,7 @@ export function ObservabilityPage() {
               wakerStatusQuery.refetch();
               wakerQueueQuery.refetch();
             }}
+            title="刷新告警 / 规则 / 指标 / Waker"
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
@@ -206,11 +225,13 @@ export function ObservabilityPage() {
             <tr>
               <td>Exporter 健康</td>
               <td>
-                {otelExporter
-                  ? `错误 ${otelExporter.exportErrors} · 丢弃 ${otelExporter.dropCount}`
-                  : pluginHealthQuery.isLoading
-                    ? "加载中"
-                    : "未注册"}
+                {!otelQuery.data?.enabled
+                  ? "导出关闭"
+                  : otelExporter
+                    ? `错误 ${otelExporter.exportErrors ?? 0} · 丢弃 ${otelExporter.dropCount ?? 0}`
+                    : pluginHealthQuery.isLoading
+                      ? "加载中"
+                      : "未注册"}
               </td>
             </tr>
             <tr>
@@ -380,6 +401,7 @@ export function ObservabilityPage() {
               wakerStatusQuery.refetch();
               wakerQueueQuery.refetch();
             }}
+            title="刷新 Waker 状态与队列"
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
             刷新
@@ -388,6 +410,7 @@ export function ObservabilityPage() {
             className="btn icon-btn"
             onClick={() => sweepMut.mutate({ dryRun: true, action: "report", spaceId: activeSpaceId })}
             disabled={wakerBusy}
+            title={wakerBusy ? "Waker 忙碌中" : "Dry-run sweep（只报告，不取消）"}
           >
             Dry-run sweep
           </button>
@@ -397,6 +420,7 @@ export function ObservabilityPage() {
               if (selectedDuty) dutyRunMut.mutate({ id: selectedDuty.id, dryRun: true });
             }}
             disabled={!selectedDuty || wakerBusy}
+            title={!selectedDuty ? "暂无可用 duty" : wakerBusy ? "Waker 忙碌中" : "Run duty dry-run"}
           >
             Run duty dry-run
           </button>
@@ -407,6 +431,10 @@ export function ObservabilityPage() {
             onSubmit={(event) => {
               event.preventDefault();
               if (cancelConfirm !== "CANCEL_STALE_RUNS") return;
+              const ok = window.confirm(
+                "确认取消过期 Run？此操作不可逆，将按 CANCEL_STALE_RUNS 执行。",
+              );
+              if (!ok) return;
               sweepMut.mutate({ action: "cancel", dryRun: false, confirm: "CANCEL_STALE_RUNS", spaceId: activeSpaceId });
             }}
           >
@@ -415,16 +443,31 @@ export function ObservabilityPage() {
               value={cancelConfirm}
               onChange={(event) => setCancelConfirm(event.target.value)}
             />
-            <button className="btn err icon-btn" type="submit" disabled={cancelConfirm !== "CANCEL_STALE_RUNS" || wakerBusy}>
+            <button
+              className="btn err icon-btn"
+              type="submit"
+              data-testid="waker-cancel-stale"
+              disabled={cancelConfirm !== "CANCEL_STALE_RUNS" || wakerBusy}
+              title={
+                cancelConfirm !== "CANCEL_STALE_RUNS"
+                  ? "需在输入框填写 CANCEL_STALE_RUNS 确认"
+                  : wakerBusy
+                    ? "Waker 忙碌中"
+                    : "取消过期 Run（不可逆，需确认）"
+              }
+            >
               Cancel stale
             </button>
           </form>
         ) : (
           <p>Cancel 需设置 ASH_WAKER_ALLOW_CANCEL=1</p>
         )}
-        {(sweepMut.data || dutyRunMut.data) && (
-          <p>{(sweepMut.data ?? dutyRunMut.data)?.summary || (sweepMut.data ?? dutyRunMut.data)?.action || "ok"}</p>
-        )}
+        {sweepMut.data ? (
+          <p data-testid="waker-sweep-result">{sweepMut.data.summary || sweepMut.data.action || "ok"}</p>
+        ) : null}
+        {dutyRunMut.data ? (
+          <p data-testid="waker-duty-result">{dutyRunMut.data.summary || dutyRunMut.data.action || "ok"}</p>
+        ) : null}
         <table className="table">
           <thead>
             <tr>
@@ -455,9 +498,24 @@ export function ObservabilityPage() {
                     className={`btn mini ${duty.enabled ? "ok" : ""}`}
                     onClick={(event) => {
                       event.stopPropagation();
-                      dutyEnableMut.mutate({ id: duty.id, enabled: !duty.enabled });
+                      const next = !duty.enabled;
+                      const ok = window.confirm(
+                        next
+                          ? `确认启用 duty「${duty.id}」？`
+                          : `确认关闭 duty「${duty.id}」？`,
+                      );
+                      if (!ok) return;
+                      dutyEnableMut.mutate({ id: duty.id, enabled: next });
                     }}
                     disabled={wakerBusy}
+                    title={
+                      wakerBusy
+                        ? "Waker 操作进行中…"
+                        : duty.enabled
+                          ? `关闭 duty「${duty.id}」（需确认）`
+                          : `启用 duty「${duty.id}」（需确认）`
+                    }
+                    data-testid={`waker-duty-enable-${duty.id}`}
                   >
                     {duty.enabled ? "on" : "off"}
                   </button>
@@ -473,7 +531,7 @@ export function ObservabilityPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Recent duty runs</h2>
-            <span>{wakerStatusQuery.data?.recentRuns.length ?? 0} runs</span>
+            <span>{wakerStatusQuery.data?.recentRuns?.length ?? 0} runs</span>
           </div>
           <table className="table">
             <thead>
@@ -577,6 +635,14 @@ export function ObservabilityPage() {
                       className={`btn mini ${rule.enabled ? "ok" : ""}`}
                       onClick={() => toggleRule(rule)}
                       disabled={rulesMut.isPending}
+                      data-testid={`obs-gov-rule-toggle-${rule.id}`}
+                      title={
+                        rulesMut.isPending
+                          ? "更新中…"
+                          : rule.enabled
+                            ? "关闭此治理规则（需确认）"
+                            : "启用此治理规则（需确认）"
+                      }
                     >
                       {rule.enabled ? "on" : "off"}
                     </button>
@@ -591,7 +657,7 @@ export function ObservabilityPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Active Alerts</h2>
-            <span>{alertsQuery.data?.items.length ?? 0} 条</span>
+            <span>{alertsQuery.data?.items?.length ?? 0} 条</span>
           </div>
           <table className="table">
             <thead>
@@ -625,7 +691,7 @@ export function ObservabilityPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Alert Rules</h2>
-            <span>{rulesQuery.data?.items.length ?? 0} 条</span>
+            <span>{rulesQuery.data?.items?.length ?? 0} 条</span>
           </div>
           <table className="table">
             <thead>
@@ -643,7 +709,19 @@ export function ObservabilityPage() {
                     {rule.condition} {rule.threshold}
                   </td>
                   <td>
-                    <button className={`btn mini ${rule.enabled ? "ok" : ""}`} onClick={() => toggleRule(rule)} disabled={rulesMut.isPending}>
+                    <button
+                      className={`btn mini ${rule.enabled ? "ok" : ""}`}
+                      onClick={() => toggleRule(rule)}
+                      disabled={rulesMut.isPending}
+                      data-testid={`obs-alert-rule-toggle-${rule.id}`}
+                      title={
+                        rulesMut.isPending
+                          ? "更新中…"
+                          : rule.enabled
+                            ? "关闭此告警规则（需确认）"
+                            : "启用此告警规则（需确认）"
+                      }
+                    >
                       {rule.enabled ? "on" : "off"}
                     </button>
                   </td>
@@ -658,7 +736,7 @@ export function ObservabilityPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Trace 查询</h2>
-            <span>{traceQuery.data?.runs.length ?? 0} runs</span>
+            <span>{traceQuery.data?.runs?.length ?? 0} runs</span>
           </div>
           <form
             className="inline-form"
@@ -668,8 +746,26 @@ export function ObservabilityPage() {
               setTraceId(value.trim());
             }}
           >
-            <input name="traceId" placeholder="trace_..." />
-            <button className="btn icon-btn" type="submit">
+            <input
+              name="traceId"
+              placeholder="trace_..."
+              value={traceDraft}
+              onChange={(e) => setTraceDraft(e.target.value)}
+              data-testid="obs-trace-id"
+            />
+            <button
+              className="btn icon-btn"
+              type="submit"
+              disabled={!traceDraft.trim() || traceQuery.isFetching}
+              title={
+                !traceDraft.trim()
+                  ? "需要填写 traceId"
+                  : traceQuery.isFetching
+                    ? "查询中…"
+                    : "查询 Trace"
+              }
+              data-testid="obs-trace-query"
+            >
               <Search size={16} strokeWidth={1.8} />
               查询
             </button>
@@ -678,11 +774,11 @@ export function ObservabilityPage() {
             {traceQuery.data
               ? JSON.stringify(
                   {
-                    runs: traceQuery.data.runs.length,
-                    events: traceQuery.data.events.length,
-                    toolCalls: traceQuery.data.toolCalls.length,
-                    agentTasks: traceQuery.data.agentTasks.length,
-                    auditLogs: traceQuery.data.auditLogs.length,
+                    runs: traceQuery.data.runs?.length ?? 0,
+                events: traceQuery.data.events?.length ?? 0,
+                toolCalls: traceQuery.data.toolCalls?.length ?? 0,
+                agentTasks: traceQuery.data.agentTasks?.length ?? 0,
+                auditLogs: traceQuery.data.auditLogs?.length ?? 0,
                   },
                   null,
                   2,

@@ -97,6 +97,7 @@ describe("MobileReviewsPage", () => {
   it("renders compact queue with approve/reject", async () => {
     renderPage(<MobileReviewsPage />);
     expect(await screen.findByText("default v3")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-review-harness_profile:hp1")).toBeInTheDocument();
     expect(screen.getAllByTestId("mobile-review-approve")[0]).toBeInTheDocument();
     expect(screen.getAllByTestId("mobile-review-reject")[0]).toBeInTheDocument();
   });
@@ -127,9 +128,22 @@ describe("MobileReviewsPage", () => {
     expect(screen.getByTestId("mobile-rubric-citable")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-rubric-efficiency")).toBeInTheDocument();
     expect(screen.getByTestId("mobile-review-assign")).toBeInTheDocument();
+    expect(screen.getByTestId("mobile-review-assign")).toBeDisabled();
+    expect(screen.getByTestId("mobile-review-assign")).toHaveAttribute("title", "需要填写 assigneeId");
+
+    fireEvent.change(screen.getByTestId("mobile-rubric-correctness"), { target: { value: "" } });
+    const approve = screen.getAllByTestId("mobile-review-approve")[0];
+    expect(approve).toBeDisabled();
+    expect(approve).toHaveAttribute("title", "Rubric 各项需为 1–5");
 
     fireEvent.change(screen.getByTestId("mobile-rubric-correctness"), { target: { value: "3" } });
-    fireEvent.click(screen.getAllByTestId("mobile-review-approve")[0]);
+    expect(approve).not.toBeDisabled();
+    expect(approve).toHaveAttribute("title", "批准（需确认）");
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(approve);
+    expect(decideReview).not.toHaveBeenCalled();
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(approve);
     await waitFor(() => {
       expect(decideReview).toHaveBeenCalledWith(
         "harness_profile:hp1",
@@ -142,10 +156,18 @@ describe("MobileReviewsPage", () => {
     });
 
     fireEvent.change(screen.getByPlaceholderText("assigneeId"), { target: { value: "op_x" } });
-    fireEvent.click(screen.getByTestId("mobile-review-assign"));
+    const assignBtn = screen.getByTestId("mobile-review-assign");
+    expect(assignBtn).toHaveAttribute("title", "分配负责人（需确认）");
+    confirmSpy.mockReturnValue(false);
+    fireEvent.click(assignBtn);
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("op_x"));
+    expect(assignReview).not.toHaveBeenCalled();
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(assignBtn);
     await waitFor(() => {
       expect(assignReview).toHaveBeenCalledWith("harness_profile:hp1", expect.objectContaining({ assigneeId: "op_x" }));
     });
+    confirmSpy.mockRestore();
   });
 
   it("shows assign-denied copy without reviews:assign", async () => {

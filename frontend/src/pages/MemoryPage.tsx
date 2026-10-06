@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Link } from "@tanstack/react-router";
 import { Check, Clock, DatabaseZap, RefreshCw, Search, Send, X } from "lucide-react";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { KnowledgePanel } from "@/modules/knowledge/components/KnowledgePanel";
@@ -112,6 +111,8 @@ export function MemoryPage() {
   const [governanceMsg, setGovernanceMsg] = useState("");
   const [ttlMsg, setTtlMsg] = useState("");
   const [queryText, setQueryText] = useState("doctor release");
+  const [candidateTitle, setCandidateTitle] = useState("M1 治理规则");
+  const [candidateBody, setCandidateBody] = useState("合并前始终运行测试与 doctor。");
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -147,6 +148,8 @@ export function MemoryPage() {
     mutationFn: createCandidate,
     onSuccess: (res) => {
       setGovernanceMsg(formatGovernance(res.governance));
+      setCandidateTitle("M1 治理规则");
+      setCandidateBody("合并前始终运行测试与 doctor。");
       qc.invalidateQueries({ queryKey: ["memory", "candidates"] });
     },
   });
@@ -168,13 +171,19 @@ export function MemoryPage() {
   });
 
   const ttlSweepMut = useMutation({
-    mutationFn: () => sweepMemoryTTL({ dryRun: false }),
-    onSuccess: (res) => {
-      setTtlMsg(
-        res.deprecated > 0
-          ? `已弃用 ${res.deprecated} 条到期记忆；复核队列 ${res.reviewDue} 条。`
-          : `无到期记录需弃用；复核队列 ${res.reviewDue} 条。`,
-      );
+    mutationFn: (dryRun: boolean) => sweepMemoryTTL({ dryRun }),
+    onSuccess: (res, dryRun) => {
+      if (dryRun) {
+        setTtlMsg(
+          `Dry-run：将弃用 ${res.deprecated} 条；复核队列 ${res.reviewDue} 条（未写入）。`,
+        );
+      } else {
+        setTtlMsg(
+          res.deprecated > 0
+            ? `已弃用 ${res.deprecated} 条到期记忆；复核队列 ${res.reviewDue} 条。`
+            : `无到期记录需弃用；复核队列 ${res.reviewDue} 条。`,
+        );
+      }
       qc.invalidateQueries({ queryKey: ["memory", "ttl-queue"] });
       qc.invalidateQueries({ queryKey: ["memory", "candidates"] });
       if (selectedId) qc.invalidateQueries({ queryKey: ["memory", "record", selectedId] });
@@ -184,12 +193,17 @@ export function MemoryPage() {
 
   const onSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!candidateTitle.trim() || !candidateBody.trim()) return;
+    const ok = window.confirm(
+      `确认提交记忆候选「${candidateTitle.trim()}」？将进入待审队列。`,
+    );
+    if (!ok) return;
     const fd = new FormData(e.currentTarget);
     const layer = String(fd.get("layer") || "L1");
     const body: Record<string, unknown> = {
       layer,
-      title: fd.get("title"),
-      body: fd.get("body"),
+      title: candidateTitle.trim(),
+      body: candidateBody.trim(),
       scopeRepo: "ash",
     };
     const formRunId = String(fd.get("runId") || "");
@@ -206,9 +220,7 @@ export function MemoryPage() {
     if (layer !== "L0" && ref) {
       body.evidence = [{ kind: "file", ref }];
     }
-    createMut.mutate(body, {
-      onSuccess: () => e.currentTarget.reset(),
-    });
+    createMut.mutate(body);
   };
 
   const rawItems = candidatesQuery.data?.items ?? [];
@@ -249,16 +261,26 @@ export function MemoryPage() {
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar">
-          <Link to="/reviews" className="btn icon-btn" data-testid="memory-goto-reviews">
+          <a href="/ui/reviews?queue=memory" className="btn icon-btn" data-testid="memory-goto-reviews">
             去评审
-          </Link>
+          </a>
           {pillarTab === "memory" && (
             <>
-              <button className="btn icon-btn" onClick={() => candidatesQuery.refetch()}>
+              <button
+                className="btn icon-btn"
+                onClick={() => candidatesQuery.refetch()}
+                disabled={candidatesQuery.isFetching}
+                title={candidatesQuery.isFetching ? "刷新中…" : "刷新候选列表"}
+              >
                 <RefreshCw size={16} strokeWidth={1.8} />
                 刷新候选
               </button>
-              <button className="btn icon-btn" onClick={() => ttlQueueQuery.refetch()}>
+              <button
+                className="btn icon-btn"
+                onClick={() => ttlQueueQuery.refetch()}
+                disabled={ttlQueueQuery.isFetching}
+                title={ttlQueueQuery.isFetching ? "刷新中…" : "刷新 TTL 复核队列"}
+              >
                 <Clock size={16} strokeWidth={1.8} />
                 刷新 TTL
               </button>
@@ -282,6 +304,7 @@ export function MemoryPage() {
             aria-selected={pillarTab === tab.id}
             className={pillarTab === tab.id ? "work-mode-btn active" : "work-mode-btn"}
             data-testid={`memory-tab-${tab.id}`}
+            title={`切换到「${tab.label}」`}
             onClick={() => setPillarTab(tab.id)}
           >
             {tab.label}
@@ -328,6 +351,7 @@ export function MemoryPage() {
                 aria-pressed={perspective === item.id}
                 className={perspective === item.id ? "work-mode-btn active" : "work-mode-btn"}
                 data-testid={`memory-perspective-${item.id}`}
+                title={`按「${item.label}」视角查看`}
                 onClick={() => {
                   setPerspective(item.id);
                   if (item.id !== "layer") setLayerFilter("全部");
@@ -355,6 +379,7 @@ export function MemoryPage() {
                   className={layerFilter === layer ? "btn mini primary" : "btn mini"}
                   aria-pressed={layerFilter === layer}
                   data-testid={`memory-layer-${layer}`}
+                  title={layer === "全部" ? "显示全部分层" : `仅显示 ${layer} 层`}
                   onClick={() => setLayerFilter(layer)}
                 >
                   {layer}
@@ -412,14 +437,26 @@ export function MemoryPage() {
                               <button
                                 className="btn small icon-only ok"
                                 aria-label="通过候选"
-                                onClick={() => reviewMut.mutate({ id: m.id, decision: "approve" })}
+                                title="通过候选（需确认）"
+                                data-testid={`memory-candidate-approve-${m.id}`}
+                                onClick={() => {
+                                  const ok = window.confirm(`确认通过记忆候选「${m.title || m.id}」？`);
+                                  if (!ok) return;
+                                  reviewMut.mutate({ id: m.id, decision: "approve" });
+                                }}
                               >
                                 <Check size={14} strokeWidth={2} />
                               </button>
                               <button
                                 className="btn small icon-only err"
                                 aria-label="拒绝候选"
-                                onClick={() => reviewMut.mutate({ id: m.id, decision: "reject" })}
+                                title="拒绝候选（需确认）"
+                                data-testid={`memory-candidate-reject-${m.id}`}
+                                onClick={() => {
+                                  const ok = window.confirm(`确认拒绝记忆候选「${m.title || m.id}」？`);
+                                  if (!ok) return;
+                                  reviewMut.mutate({ id: m.id, decision: "reject" });
+                                }}
                               >
                                 <X size={14} strokeWidth={2} />
                               </button>
@@ -493,11 +530,24 @@ export function MemoryPage() {
                 </label>
                 <label>
                   标题
-                  <input name="title" required defaultValue="M1 治理规则" />
+                  <input
+                    name="title"
+                    required
+                    value={candidateTitle}
+                    onChange={(e) => setCandidateTitle(e.target.value)}
+                    data-testid="memory-candidate-title"
+                  />
                 </label>
                 <label>
                   内容
-                  <textarea name="body" rows={3} required defaultValue="合并前始终运行测试与 doctor。" />
+                  <textarea
+                    name="body"
+                    rows={3}
+                    required
+                    value={candidateBody}
+                    onChange={(e) => setCandidateBody(e.target.value)}
+                    data-testid="memory-candidate-body"
+                  />
                 </label>
                 <label>
                   场景 / Skill / 工具 <span className="muted">(可选，用于视角分组)</span>
@@ -510,7 +560,21 @@ export function MemoryPage() {
                   <input name="evidenceRef" defaultValue="doc/README.md" />
                 </label>
                 {governanceMsg && <p className="warn-text">{governanceMsg}</p>}
-                <button type="submit" className="btn primary icon-btn" disabled={createMut.isPending}>
+                <button
+                  type="submit"
+                  className="btn primary icon-btn"
+                  disabled={createMut.isPending || !candidateTitle.trim() || !candidateBody.trim()}
+                  title={
+                    !candidateTitle.trim()
+                      ? "需要填写标题"
+                      : !candidateBody.trim()
+                        ? "需要填写内容"
+                        : createMut.isPending
+                          ? "提交中…"
+                          : "提交记忆候选（需确认）"
+                  }
+                  data-testid="memory-candidate-submit"
+                >
                   <Send size={16} strokeWidth={1.8} />
                   提交候选
                 </button>
@@ -539,8 +603,32 @@ export function MemoryPage() {
                   <button
                     className="btn mini"
                     type="button"
+                    data-testid="memory-ttl-sweep-dry"
                     disabled={ttlSweepMut.isPending}
-                    onClick={() => ttlSweepMut.mutate()}
+                    title={ttlSweepMut.isPending ? "处理中…" : "Dry-run：只报告将弃用的数量，不写入"}
+                    onClick={() => ttlSweepMut.mutate(true)}
+                    style={{ marginLeft: "0.5rem" }}
+                  >
+                    Dry-run sweep
+                  </button>
+                  <button
+                    className="btn mini err"
+                    type="button"
+                    data-testid="memory-ttl-sweep"
+                    disabled={ttlSweepMut.isPending}
+                    title={
+                      ttlSweepMut.isPending
+                        ? "处理中…"
+                        : "弃用过期记忆（不可恢复，需确认）"
+                    }
+                    onClick={() => {
+                      const n = ttlQueue!.expiredPendingCount;
+                      const ok = window.confirm(
+                        `确认弃用 ${n} 条过期记忆？此操作不可恢复。`,
+                      );
+                      if (!ok) return;
+                      ttlSweepMut.mutate(false);
+                    }}
                     style={{ marginLeft: "0.5rem" }}
                   >
                     {ttlSweepMut.isPending ? "处理中…" : "执行 TTL sweep"}
@@ -591,13 +679,30 @@ export function MemoryPage() {
                   <Search size={15} strokeWidth={1.8} />
                   记忆检索
                 </h2>
-                <button className="btn mini" type="button" onClick={() => queryMut.mutate()} disabled={queryMut.isPending}>
+                <button
+                  className="btn mini"
+                  type="button"
+                  onClick={() => queryMut.mutate()}
+                  disabled={queryMut.isPending || !queryText.trim()}
+                  title={
+                    !queryText.trim()
+                      ? "需要填写关键词"
+                      : queryMut.isPending
+                        ? "查询中…"
+                        : "检索记忆"
+                  }
+                  data-testid="memory-query-submit"
+                >
                   查询
                 </button>
               </div>
               <label>
                 关键词
-                <input value={queryText} onChange={(e) => setQueryText(e.target.value)} />
+                <input
+                  value={queryText}
+                  onChange={(e) => setQueryText(e.target.value)}
+                  data-testid="memory-query-input"
+                />
               </label>
               <table className="table">
                 <thead>
@@ -615,7 +720,7 @@ export function MemoryPage() {
                       <td>{row.layer}</td>
                     </tr>
                   ))}
-                  {!queryMut.data?.items.length && (
+                  {!(queryMut.data?.items?.length) && (
                     <tr className="empty-row">
                       <td colSpan={3}>尚无检索结果。</td>
                     </tr>

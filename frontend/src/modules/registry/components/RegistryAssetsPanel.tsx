@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   createAgentAsset,
   createMemoryAsset,
@@ -18,6 +18,24 @@ const DEFAULT_PRESETS_JSON = `{
     { "tool": "bash", "risk": "high", "default": "ask" }
   ]
 }`;
+
+/** Empty / non-object JSON is not a valid SpacePolicy bodyJson payload. */
+export function validatePolicyBodyJson(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return "需要填写 BodyJSON";
+  try {
+    const parsed = JSON.parse(trimmed) as unknown;
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      return "BodyJSON 必须是合法 JSON 对象";
+    }
+    if (Object.keys(parsed as Record<string, unknown>).length === 0) {
+      return "BodyJSON 对象不能为空";
+    }
+    return null;
+  } catch {
+    return "BodyJSON 必须是合法 JSON 对象";
+  }
+}
 
 export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
   const qc = useQueryClient();
@@ -92,13 +110,17 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
       ? `${quotas.usage.tokenBudgetProxyUsed} / ${quotas.limits.tokenBudgetProxy}`
       : "不限";
 
+  const bodyJsonIssue = useMemo(() => validatePolicyBodyJson(bodyJson), [bodyJson]);
+  const canSaveBodyJson = !putPolicy.isPending && !bodyJsonIssue;
+
   const saveBodyJson = () => {
-    try {
-      JSON.parse(bodyJson);
-    } catch {
-      setBodyError("BodyJSON 必须是合法 JSON 对象");
+    const issue = validatePolicyBodyJson(bodyJson);
+    if (issue) {
+      setBodyError(issue);
       return;
     }
+    const ok = window.confirm("确认保存工具审批预设 BodyJSON？将覆盖该 Space 策略包内容。");
+    if (!ok) return;
     setBodyError("");
     putPolicy.mutate({ bodyJson });
   };
@@ -122,16 +144,46 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
       </div>
 
       <div className="row-actions" style={{ marginBottom: 8 }}>
-        <button type="button" className="btn mini" onClick={() => createAgent.mutate()} data-testid="registry-create-agent">
+        <button
+          type="button"
+          className="btn mini"
+          onClick={() => {
+            const ok = window.confirm("确认登记一条 Agent 资产（自动生成名称）？");
+            if (!ok) return;
+            createAgent.mutate();
+          }}
+          disabled={createAgent.isPending}
+          title={createAgent.isPending ? "创建中…" : "登记 Agent 资产（需确认）"}
+          data-testid="registry-create-agent"
+        >
           + Agent 资产
         </button>
-        <button type="button" className="btn mini" onClick={() => createMemory.mutate()} data-testid="registry-create-memory">
+        <button
+          type="button"
+          className="btn mini"
+          onClick={() => {
+            const ok = window.confirm("确认登记一条 Memory 资产（自动生成名称）？");
+            if (!ok) return;
+            createMemory.mutate();
+          }}
+          disabled={createMemory.isPending}
+          title={createMemory.isPending ? "创建中…" : "登记 Memory 资产（需确认）"}
+          data-testid="registry-create-memory"
+        >
           + Memory 资产
         </button>
         <button
           type="button"
           className="btn mini"
-          onClick={() => putPolicy.mutate({ citationMode: "required", multiSign: true, reviewSlaHours: 48 })}
+          onClick={() => {
+            const ok = window.confirm(
+              "确认写入策略包？将设置 citation=required、multiSign=true、reviewSlaHours=48。",
+            );
+            if (!ok) return;
+            putPolicy.mutate({ citationMode: "required", multiSign: true, reviewSlaHours: 48 });
+          }}
+          disabled={putPolicy.isPending}
+          title={putPolicy.isPending ? "写入中…" : "写入 citation/multiSign/SLA 策略包（需确认）"}
           data-testid="registry-put-policy"
         >
           写入策略包
@@ -144,7 +196,10 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
           rows={6}
           value={bodyJson}
           data-testid="space-policy-bodyjson"
-          onChange={(e) => setBodyJson(e.target.value)}
+          onChange={(e) => {
+            setBodyJson(e.target.value);
+            if (bodyError) setBodyError("");
+          }}
           style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: 12 }}
         />
       </label>
@@ -153,7 +208,14 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
           type="button"
           className="btn mini"
           data-testid="space-policy-bodyjson-save"
-          disabled={putPolicy.isPending}
+          disabled={!canSaveBodyJson}
+          title={
+            bodyJsonIssue
+              ? bodyJsonIssue
+              : putPolicy.isPending
+                ? "保存中…"
+                : "保存工具审批预设 BodyJSON（需确认）"
+          }
           onClick={saveBodyJson}
         >
           保存 BodyJSON
@@ -168,13 +230,27 @@ export function RegistryAssetsPanel({ spaceId }: { spaceId: string }) {
       <AssetTable
         title="Agent 资产"
         items={agentsQuery.data?.items ?? []}
-        onToggle={(id, status) => patchAgent.mutate({ id, status: status === "active" ? "disabled" : "active" })}
+        onToggle={(id, status) => {
+          const next = status === "active" ? "disabled" : "active";
+          const ok = window.confirm(
+            `确认将 Agent 资产设为「${next === "active" ? "启用" : "停用"}」？`,
+          );
+          if (!ok) return;
+          patchAgent.mutate({ id, status: next });
+        }}
         testId="agent-assets-list"
       />
       <AssetTable
         title="Memory 资产"
         items={memoryQuery.data?.items ?? []}
-        onToggle={(id, status) => patchMemory.mutate({ id, status: status === "active" ? "disabled" : "active" })}
+        onToggle={(id, status) => {
+          const next = status === "active" ? "disabled" : "active";
+          const ok = window.confirm(
+            `确认将 Memory 资产设为「${next === "active" ? "启用" : "停用"}」？`,
+          );
+          if (!ok) return;
+          patchMemory.mutate({ id, status: next });
+        }}
         testId="memory-assets-list"
       />
     </div>
@@ -211,7 +287,15 @@ function AssetTable({
               <td>{it.kind}</td>
               <td>{it.status}</td>
               <td>
-                <button type="button" className="btn mini" onClick={() => onToggle(it.id, it.status)} data-testid={`toggle-${it.id}`}>
+                <button
+                  type="button"
+                  className="btn mini"
+                  onClick={() => onToggle(it.id, it.status)}
+                  data-testid={`toggle-${it.id}`}
+                  title={
+                    it.status === "active" ? "停用该资产（需确认）" : "启用该资产（需确认）"
+                  }
+                >
                   {it.status === "active" ? "停用" : "启用"}
                 </button>
               </td>

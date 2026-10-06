@@ -1,9 +1,9 @@
-import { screen, waitFor } from "@testing-library/react";
+import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ObservabilityPage } from "./ObservabilityPage";
 import { renderPage } from "@/test/renderPage";
-import { getPrometheusText, listAlertRules } from "@/modules/closure/api/closure.api";
-import { getWakerQueue, getWakerStatus } from "@/modules/waker/api/waker.api";
+import { getPrometheusText, getTrace, listAlertRules, putAlertRules } from "@/modules/closure/api/closure.api";
+import { getWakerQueue, getWakerStatus, postWakerDutyRun, postWakerSweep } from "@/modules/waker/api/waker.api";
 
 vi.mock("@/modules/closure/api/closure.api", () => ({
   listAlerts: vi.fn().mockResolvedValue({ items: [] }),
@@ -124,12 +124,38 @@ describe("ObservabilityPage", () => {
     });
   });
 
+  it("shows zero event count when a trace has null events", async () => {
+    vi.mocked(getTrace).mockResolvedValue({
+      spaceId: "local",
+      traceId: "trace_missing",
+      runs: [],
+      events: null,
+      toolCalls: [],
+      agentTasks: [],
+      auditLogs: [],
+    } as unknown as Awaited<ReturnType<typeof getTrace>>);
+    renderPage(<ObservabilityPage />);
+    const queryBtn = screen.getByTestId("obs-trace-query");
+    expect(queryBtn).toBeDisabled();
+    expect(queryBtn).toHaveAttribute("title", "需要填写 traceId");
+    fireEvent.change(screen.getByTestId("obs-trace-id"), { target: { value: "trace_missing" } });
+    expect(queryBtn).toBeEnabled();
+    fireEvent.click(queryBtn);
+    expect(await screen.findByText(/"events": 0/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "可观测与告警" })).toBeInTheDocument();
+  });
+
   it("renders observability heading and evaluate alerts control", async () => {
     renderPage(<ObservabilityPage />);
     expect(screen.getByRole("heading", { name: "可观测与告警" })).toBeInTheDocument();
     await waitFor(() => {
       expect(screen.getByRole("button", { name: "评估告警" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "评估告警" })).toHaveAttribute(
+        "title",
+        "按当前规则评估告警（需确认）",
+      );
       expect(screen.getByText("Space: local")).toBeInTheDocument();
+      expect(screen.getByText("导出关闭")).toBeInTheDocument();
     });
   });
 
@@ -200,12 +226,108 @@ describe("ObservabilityPage", () => {
     });
   });
 
+  it("keeps the duty dry-run summary visible after a sweep result", async () => {
+    vi.mocked(postWakerSweep).mockResolvedValue({
+      ok: true,
+      dryRun: true,
+      action: "report",
+      matched: 0,
+      flagged: 0,
+      maxAge: "30m",
+      summary: "matched 0 stale runs (dryRun)",
+    });
+    vi.mocked(postWakerDutyRun).mockResolvedValue({
+      ok: true,
+      dryRun: true,
+      action: "report",
+      matched: 1,
+      flagged: 1,
+      maxAge: "30m",
+      summary: "doctor_subset dry-run flagged 1",
+    });
+    renderPage(<ObservabilityPage />);
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: "Run duty dry-run" })).toBeEnabled();
+    });
+    expect(screen.getByTestId("waker-duty-enable-wd_stale")).toHaveAttribute("title", "关闭 duty「wd_stale」（需确认）");
+    fireEvent.click(screen.getByRole("button", { name: "Dry-run sweep" }));
+    expect(await screen.findByText("matched 0 stale runs (dryRun)")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Run duty dry-run" }));
+    expect(await screen.findByText("doctor_subset dry-run flagged 1")).toBeInTheDocument();
+    expect(screen.getByText("matched 0 stale runs (dryRun)")).toBeInTheDocument();
+  });
+
+  it("requires confirm before toggling duty enable", async () => {
+    const { postWakerDutyEnable } = await import("@/modules/waker/api/waker.api");
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<ObservabilityPage />);
+    const toggle = await screen.findByTestId("waker-duty-enable-wd_stale");
+    expect(toggle).toHaveAttribute("title", "关闭 duty「wd_stale」（需确认）");
+    fireEvent.click(toggle);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(postWakerDutyEnable).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(toggle);
+    await waitFor(() => {
+      expect(postWakerDutyEnable).toHaveBeenCalledWith("wd_stale", false);
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it("requires confirm before toggling governance and alert rules", async () => {
+    vi.mocked(putAlertRules).mockResolvedValue({ items: [] } as never);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<ObservabilityPage />);
+
+    const gov = await screen.findByTestId("obs-gov-rule-toggle-rule_inflight");
+    expect(gov).toHaveAttribute("title", "关闭此治理规则（需确认）");
+    fireEvent.click(gov);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(putAlertRules).not.toHaveBeenCalled();
+
+    const alert = await screen.findByTestId("obs-alert-rule-toggle-rule_inflight");
+    expect(alert).toHaveAttribute("title", "关闭此告警规则（需确认）");
+    fireEvent.click(alert);
+    expect(putAlertRules).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(gov);
+    await waitFor(() => {
+      expect(putAlertRules).toHaveBeenCalled();
+    });
+    confirmSpy.mockRestore();
+  });
+
   it("notes that cancel requires ASH_WAKER_ALLOW_CANCEL when gated off", async () => {
     renderPage(<ObservabilityPage />);
     await waitFor(() => {
       expect(screen.getByText(/ASH_WAKER_ALLOW_CANCEL=1/)).toBeInTheDocument();
     });
     expect(screen.queryByRole("button", { name: /Cancel stale/i })).not.toBeInTheDocument();
+  });
+
+  it("requires typed phrase and confirm before canceling stale runs", async () => {
+    const { postWakerSweep } = await import("@/modules/waker/api/waker.api");
+    vi.mocked(getWakerStatus).mockResolvedValue({
+      ...wakerStatus,
+      allowCancel: true,
+    } as never);
+    vi.mocked(postWakerSweep).mockClear();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<ObservabilityPage />);
+    const btn = await screen.findByTestId("waker-cancel-stale");
+    expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute("title", "需在输入框填写 CANCEL_STALE_RUNS 确认");
+    fireEvent.change(screen.getByPlaceholderText("CANCEL_STALE_RUNS"), {
+      target: { value: "CANCEL_STALE_RUNS" },
+    });
+    expect(btn).toBeEnabled();
+    expect(btn).toHaveAttribute("title", "取消过期 Run（不可逆，需确认）");
+    fireEvent.click(btn);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(postWakerSweep).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it("renders RAG LSP status and probe controls", async () => {
@@ -225,6 +347,19 @@ describe("ObservabilityPage", () => {
       expect(screen.getByTestId("observability-sandbox-remote-backend")).toHaveTextContent("mock");
       expect(screen.getByTestId("observability-sandbox-remote-policy")).toHaveTextContent(/prefer=remote/);
     });
+  });
+
+  it("requires confirm before evaluating alerts", async () => {
+    const { evaluateAlerts } = await import("@/modules/closure/api/closure.api");
+    vi.mocked(evaluateAlerts).mockClear();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<ObservabilityPage />);
+    const btn = await screen.findByTestId("obs-evaluate-alerts");
+    expect(btn).toHaveAttribute("title", "按当前规则评估告警（需确认）");
+    fireEvent.click(btn);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(evaluateAlerts).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
   });
 
   it("renders vector backend status from rag profile", async () => {

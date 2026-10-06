@@ -2,7 +2,13 @@ import { fireEvent, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { describe, expect, it, vi } from "vitest";
 import { MemoryPage } from "./MemoryPage";
-import { listCandidates } from "@/modules/memory/api/memory.api";
+import {
+  createCandidate,
+  getMemoryTTLQueue,
+  listCandidates,
+  queryMemory,
+  sweepMemoryTTL,
+} from "@/modules/memory/api/memory.api";
 import { renderPage } from "@/test/renderPage";
 
 vi.mock("@/modules/memory/api/memory.api", () => ({
@@ -22,7 +28,7 @@ vi.mock("@/modules/memory/api/memory.api", () => ({
   }),
   createCandidate: vi.fn(),
   reviewCandidate: vi.fn(),
-  sweepMemoryTTL: vi.fn(),
+  sweepMemoryTTL: vi.fn().mockResolvedValue({ ok: true, deprecated: 0, reviewDue: 0 }),
 }));
 
 vi.mock("@/modules/knowledge/api/knowledge.api", () => ({
@@ -162,11 +168,68 @@ describe("MemoryPage", () => {
     expect(screen.queryByTestId("memory-perspective-hint")).not.toBeInTheDocument();
   });
 
-  it("links 去评审 to /reviews", () => {
+  it("restores the candidate form after a successful create", async () => {
+    vi.mocked(createCandidate).mockResolvedValue({ candidateId: "mem_spot" });
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderPage(<MemoryPage />);
+    const title = screen.getByDisplayValue("M1 治理规则");
+    fireEvent.change(title, { target: { value: "点测标题" } });
+    fireEvent.click(screen.getByRole("button", { name: "提交候选" }));
+    await waitFor(() => {
+      expect(screen.getByDisplayValue("M1 治理规则")).toBeInTheDocument();
+    });
+    expect(screen.queryByDisplayValue("点测标题")).not.toBeInTheDocument();
+    confirmSpy.mockRestore();
+  });
+
+  it("disables candidate submit until title and body are filled", () => {
+    renderPage(<MemoryPage />);
+    const submit = screen.getByTestId("memory-candidate-submit");
+    expect(submit).toBeEnabled();
+    expect(submit).toHaveAttribute("title", "提交记忆候选（需确认）");
+    fireEvent.change(screen.getByTestId("memory-candidate-title"), { target: { value: "" } });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("title", "需要填写标题");
+    fireEvent.change(screen.getByTestId("memory-candidate-title"), { target: { value: "有标题" } });
+    fireEvent.change(screen.getByTestId("memory-candidate-body"), { target: { value: "" } });
+    expect(submit).toBeDisabled();
+    expect(submit).toHaveAttribute("title", "需要填写内容");
+  });
+
+  it("requires confirm before submitting a memory candidate", async () => {
+    vi.mocked(createCandidate).mockClear();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<MemoryPage />);
+    fireEvent.click(screen.getByTestId("memory-candidate-submit"));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(createCandidate).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("shows the empty search row when query items is null", async () => {
+    vi.mocked(queryMemory).mockResolvedValueOnce({ items: null as unknown as [] });
+    renderPage(<MemoryPage />);
+    const queryBtn = screen.getByTestId("memory-query-submit");
+    expect(queryBtn).toBeEnabled();
+    expect(queryBtn).toHaveAttribute("title", "检索记忆");
+    fireEvent.click(queryBtn);
+    expect(await screen.findByText("尚无检索结果。")).toBeInTheDocument();
+  });
+
+  it("disables memory query until keyword is filled", () => {
+    renderPage(<MemoryPage />);
+    const input = screen.getByTestId("memory-query-input");
+    fireEvent.change(input, { target: { value: "   " } });
+    const queryBtn = screen.getByTestId("memory-query-submit");
+    expect(queryBtn).toBeDisabled();
+    expect(queryBtn).toHaveAttribute("title", "需要填写关键词");
+  });
+
+  it("links 去评审 to memory review queue", () => {
     renderPage(<MemoryPage />);
     const link = screen.getByTestId("memory-goto-reviews");
     expect(link).toHaveTextContent("去评审");
-    expect(link).toHaveAttribute("href", "/reviews");
+    expect(link.getAttribute("href") || "").toMatch(/queue=memory/);
   });
 
   it("opens MemoryLink tab from query params", async () => {
@@ -185,5 +248,66 @@ describe("MemoryPage", () => {
     expect(screen.getByTestId("memory-tab-links")).toHaveAttribute("aria-selected", "true");
     expect(screen.getByTestId("memory-links-pane")).toBeInTheDocument();
     expect(screen.queryByTestId("memory-perspective")).not.toBeInTheDocument();
+  });
+
+  it("offers TTL dry-run and requires confirm before live sweep", async () => {
+    vi.mocked(getMemoryTTLQueue).mockResolvedValue({
+      reviewDue: [],
+      reviewDueCount: 0,
+      expiredPendingCount: 2,
+      reviewLeadDays: 7,
+    });
+    vi.mocked(sweepMemoryTTL).mockResolvedValue({ ok: true, deprecated: 2, reviewDue: 0 });
+    renderPage(<MemoryPage />);
+    const dry = await screen.findByTestId("memory-ttl-sweep-dry");
+    const live = screen.getByTestId("memory-ttl-sweep");
+    expect(live).toHaveAttribute("title", "弃用过期记忆（不可恢复，需确认）");
+
+    fireEvent.click(dry);
+    await waitFor(() => {
+      expect(sweepMemoryTTL).toHaveBeenCalledWith({ dryRun: true });
+    });
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(live);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(sweepMemoryTTL).not.toHaveBeenCalledWith({ dryRun: false });
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(live);
+    await waitFor(() => {
+      expect(sweepMemoryTTL).toHaveBeenCalledWith({ dryRun: false });
+    });
+    confirmSpy.mockRestore();
+    vi.mocked(getMemoryTTLQueue).mockResolvedValue({
+      reviewDue: [],
+      reviewDueCount: 0,
+      expiredPendingCount: 0,
+      reviewLeadDays: 7,
+    });
+  });
+
+  it("requires confirm before approving or rejecting a memory candidate", async () => {
+    const { reviewCandidate } = await import("@/modules/memory/api/memory.api");
+    vi.mocked(reviewCandidate).mockResolvedValue({ ok: true } as never);
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderPage(<MemoryPage />);
+    const approve = await screen.findByTestId("memory-candidate-approve-mem_l2");
+    expect(approve).toHaveAttribute("title", "通过候选（需确认）");
+    fireEvent.click(approve);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(reviewCandidate).not.toHaveBeenCalled();
+
+    const reject = screen.getByTestId("memory-candidate-reject-mem_l2");
+    expect(reject).toHaveAttribute("title", "拒绝候选（需确认）");
+    fireEvent.click(reject);
+    expect(reviewCandidate).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(approve);
+    await waitFor(() => {
+      expect(reviewCandidate).toHaveBeenCalledWith("mem_l2", expect.objectContaining({ decision: "approve" }));
+    });
+    confirmSpy.mockRestore();
   });
 });

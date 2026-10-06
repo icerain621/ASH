@@ -26,13 +26,24 @@ export function lowScoreSourceLabel(item: Pick<ImproveProposal, "scoreEventId">)
   return "由低分触发";
 }
 
+/** Parse canary percent; returns issue message or a valid integer in 1..100. */
+export function parseCanaryPercent(raw: string): { percent: number; issue: string } {
+  const trimmed = raw.trim();
+  if (!trimmed) return { percent: 0, issue: "需要填写灰度 %（1–100）" };
+  const n = Number(trimmed);
+  if (!Number.isInteger(n) || n < 1 || n > 100) {
+    return { percent: 0, issue: "灰度 % 须为 1–100 的整数" };
+  }
+  return { percent: n, issue: "" };
+}
+
 export function ImproveProposalsPane() {
   const qc = useQueryClient();
   const [title, setTitle] = useState("M1 自我迭代提案");
   const [baselineRunId, setBaselineRunId] = useState("");
   const [canaryPercent, setCanaryPercent] = useState("10");
   const [message, setMessage] = useState("");
-
+  const canaryParsed = parseCanaryPercent(canaryPercent);
   const proposalsQuery = useQuery({
     queryKey: ["improve", "proposals"],
     queryFn: () => listImproveProposals(20),
@@ -104,22 +115,60 @@ export function ImproveProposalsPane() {
       <div className="secret-form">
         <label>
           标题
-          <input value={title} onChange={(e) => setTitle(e.target.value)} />
+          <input
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            data-testid="improve-title"
+          />
         </label>
         <label>
           基线 Run ID
-          <input placeholder="run_..." value={baselineRunId} onChange={(e) => setBaselineRunId(e.target.value)} />
+          <input
+            placeholder="run_..."
+            value={baselineRunId}
+            onChange={(e) => setBaselineRunId(e.target.value)}
+            data-testid="improve-baseline"
+          />
         </label>
         <label>
           灰度 %
-          <input type="number" min={1} max={100} value={canaryPercent} onChange={(e) => setCanaryPercent(e.target.value)} />
+          <input
+            type="number"
+            min={1}
+            max={100}
+            value={canaryPercent}
+            onChange={(e) => setCanaryPercent(e.target.value)}
+            data-testid="improve-canary-percent"
+          />
         </label>
         <button
           className="btn mini icon-only"
           type="button"
-          disabled={createMut.isPending || !baselineRunId.trim()}
-          title="创建提案"
-          onClick={() => createMut.mutate()}
+          disabled={createMut.isPending || !title.trim() || !baselineRunId.trim()}
+          title={
+            !title.trim()
+              ? "需要填写标题"
+              : !baselineRunId.trim()
+                ? "需要填写基线 Run ID"
+                : createMut.isPending
+                  ? "创建中…"
+                  : "创建提案（需确认）"
+          }
+          aria-label={
+            !title.trim()
+              ? "需要填写标题"
+              : !baselineRunId.trim()
+                ? "需要填写基线 Run ID"
+                : "创建提案"
+          }
+          data-testid="improve-create"
+          onClick={() => {
+            const ok = window.confirm(
+              `确认创建自我迭代提案「${title.trim()}」？基线 Run=${baselineRunId.trim()}`,
+            );
+            if (!ok) return;
+            createMut.mutate();
+          }}
         >
           <Play size={13} strokeWidth={1.8} />
         </button>
@@ -147,7 +196,9 @@ export function ImproveProposalsPane() {
                 ) : null}
               </td>
               <td>{item.status}</td>
-              <td title={item.baselineRunId}>{shortId(item.baselineRunId)}</td>
+              <td title={item.baselineRunId || undefined} data-testid={`improve-baseline-${item.id}`}>
+                {item.baselineRunId?.trim() ? shortId(item.baselineRunId) : "—"}
+              </td>
               <td title={item.experimentRunId}>{item.experimentRunId ? shortId(item.experimentRunId) : "-"}</td>
               <td>
                 {item.compare
@@ -159,23 +210,97 @@ export function ImproveProposalsPane() {
                   <button
                     className="btn mini"
                     type="button"
-                    disabled={experimentMut.isPending}
-                    onClick={() => experimentMut.mutate(item.id)}
+                    data-testid={`improve-experiment-${item.id}`}
+                    disabled={experimentMut.isPending || !item.baselineRunId?.trim()}
+                    title={
+                      !item.baselineRunId?.trim()
+                        ? "需要基线 Run"
+                        : "启动实验（需确认）"
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(`确认对提案「${item.title || item.id}」启动实验？`);
+                      if (!ok) return;
+                      experimentMut.mutate(item.id);
+                    }}
                   >
                     实验
                   </button>
                   <button
                     className="btn mini"
                     type="button"
-                    disabled={canaryMut.isPending}
-                    onClick={() => canaryMut.mutate({ id: item.id, percent: Number(canaryPercent || 10) })}
+                    data-testid={`improve-canary-${item.id}`}
+                    disabled={
+                      canaryMut.isPending || !item.baselineRunId?.trim() || Boolean(canaryParsed.issue)
+                    }
+                    title={
+                      !item.baselineRunId?.trim()
+                        ? "需要基线 Run"
+                        : canaryParsed.issue
+                          ? canaryParsed.issue
+                          : "启动灰度（需确认）"
+                    }
+                    onClick={() => {
+                      if (!item.baselineRunId?.trim() || canaryParsed.issue) return;
+                      const ok = window.confirm(
+                        `确认对提案「${item.title || item.id}」启动灰度（${canaryParsed.percent}%）？`,
+                      );
+                      if (!ok) return;
+                      canaryMut.mutate({ id: item.id, percent: canaryParsed.percent });
+                    }}
                   >
                     灰度
                   </button>
-                  <button className="btn mini ok icon-only" type="button" title="晋升" onClick={() => promoteMut.mutate(item.id)}>
+                  <button
+                    className="btn mini ok icon-only"
+                    type="button"
+                    data-testid={`improve-promote-${item.id}`}
+                    disabled={
+                      promoteMut.isPending ||
+                      (item.status !== "canary" && item.status !== "experimenting")
+                    }
+                    title={
+                      item.status !== "canary" && item.status !== "experimenting"
+                        ? "需先实验或灰度后再晋升"
+                        : "晋升（需确认）"
+                    }
+                    aria-label={
+                      item.status !== "canary" && item.status !== "experimenting"
+                        ? "需先实验或灰度后再晋升"
+                        : "晋升"
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(`确认晋升提案「${item.title || item.id}」？`);
+                      if (!ok) return;
+                      promoteMut.mutate(item.id);
+                    }}
+                  >
                     <Upload size={13} strokeWidth={1.8} />
                   </button>
-                  <button className="btn mini err icon-only" type="button" title="回滚" onClick={() => rollbackMut.mutate(item.id)}>
+                  <button
+                    className="btn mini err icon-only"
+                    type="button"
+                    data-testid={`improve-rollback-${item.id}`}
+                    disabled={
+                      rollbackMut.isPending ||
+                      item.status === "rolled_back" ||
+                      item.status === "promoted"
+                    }
+                    title={
+                      item.status === "rolled_back" || item.status === "promoted"
+                        ? "已终态，不可再回滚"
+                        : "回滚（需确认）"
+                    }
+                    aria-label={
+                      item.status === "rolled_back" || item.status === "promoted"
+                        ? "已终态，不可再回滚"
+                        : "回滚"
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(`确认回滚提案「${item.title || item.id}」？`);
+                      if (!ok) return;
+                      rollbackMut.mutate(item.id);
+                    }}
+                  >
                     <RotateCcw size={13} strokeWidth={1.8} />
                   </button>
                 </div>

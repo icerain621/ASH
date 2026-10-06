@@ -104,7 +104,7 @@ export function ScalePage() {
 
   const r = readinessQuery.data;
   const z = readyzQuery.data;
-  const wakerEnabledCount = wakerStatusQuery.data?.duties.filter((d) => d.enabled).length ?? 0;
+  const wakerEnabledCount = (wakerStatusQuery.data?.duties ?? []).filter((d) => d.enabled).length;
   const wakerQueueCount = wakerQueueQuery.data?.count ?? 0;
   const wakerTicker = wakerStatusQuery.data?.interval;
 
@@ -123,7 +123,9 @@ export function ScalePage() {
         <div className="toolbar">
           <button
             className="btn icon-btn"
+            data-testid="scale-doctor-m3"
             disabled={doctorMut.isPending}
+            title={doctorMut.isPending ? "诊断运行中…" : "运行 M3 多租户套件"}
             onClick={() => doctorMut.mutate("M3")}
           >
             <Play size={16} strokeWidth={1.8} />
@@ -131,7 +133,9 @@ export function ScalePage() {
           </button>
           <button
             className="btn primary icon-btn"
+            data-testid="scale-doctor-tr3"
             disabled={doctorMut.isPending}
+            title={doctorMut.isPending ? "诊断运行中…" : "运行 TR3 规模化套件"}
             onClick={() => doctorMut.mutate("TR3")}
           >
             <Play size={16} strokeWidth={1.8} />
@@ -140,9 +144,20 @@ export function ScalePage() {
           {(r?.memoryPendingMigrationRecords ?? 0) > 0 && (
             <button
               className="btn icon-btn"
+              data-testid="scale-memory-migrate"
               disabled={migrateMut.isPending}
-              onClick={() => migrateMut.mutate()}
+              onClick={() => {
+                const n = r!.memoryPendingMigrationRecords;
+                const ok = window.confirm(`确认执行记忆迁移（待迁移 ${n} 条）？`);
+                if (!ok) return;
+                migrateMut.mutate();
+              }}
               type="button"
+              title={
+                migrateMut.isPending
+                  ? "迁移中…"
+                  : `执行记忆迁移（待迁移 ${r!.memoryPendingMigrationRecords} 条，需确认）`
+              }
             >
               <Database size={16} strokeWidth={1.8} />
               {migrateMut.isPending ? "迁移中…" : `记忆迁移 (${r!.memoryPendingMigrationRecords})`}
@@ -152,9 +167,23 @@ export function ScalePage() {
             (r?.memoryTTLReviewDueCount ?? 0) > 0) && (
             <button
               className="btn icon-btn"
+              data-testid="scale-ttl-sweep"
               disabled={ttlSweepMut.isPending}
-              onClick={() => ttlSweepMut.mutate()}
+              onClick={() => {
+                const expired = r!.memoryTTLExpiredPendingCount ?? 0;
+                const review = r!.memoryTTLReviewDueCount ?? 0;
+                const ok = window.confirm(
+                  `确认执行 TTL sweep（过期 ${expired} / 待复核 ${review}）？弃用不可恢复。`,
+                );
+                if (!ok) return;
+                ttlSweepMut.mutate();
+              }}
               type="button"
+              title={
+                ttlSweepMut.isPending
+                  ? "TTL 处理中…"
+                  : `执行 TTL sweep（过期 ${r!.memoryTTLExpiredPendingCount ?? 0} / 待复核 ${r!.memoryTTLReviewDueCount ?? 0}，需确认）`
+              }
             >
               <Database size={16} strokeWidth={1.8} />
               {ttlSweepMut.isPending

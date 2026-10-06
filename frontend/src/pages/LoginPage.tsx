@@ -43,8 +43,11 @@ export function LoginPage() {
     },
   });
 
+  const passwordReady = Boolean(password.trim());
+
   function onSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!email.trim() || !passwordReady) return;
     loginMut.mutate();
   }
 
@@ -106,7 +109,21 @@ export function LoginPage() {
             placeholder="默认取成员首个 Space"
           />
         </label>
-        <button className="btn primary icon-btn" type="submit" disabled={loginMut.isPending}>
+        <button
+          className="btn primary icon-btn"
+          type="submit"
+          disabled={loginMut.isPending || !email.trim() || !passwordReady}
+          title={
+            !email.trim()
+              ? "需要填写邮箱"
+              : !passwordReady
+                ? "需要填写密码"
+                : loginMut.isPending
+                  ? "登录中…"
+                  : "密码登录"
+          }
+          data-testid="password-login-submit"
+        >
           <KeyRound size={16} strokeWidth={1.8} />
           {loginMut.isPending ? "登录中…" : "密码登录"}
         </button>

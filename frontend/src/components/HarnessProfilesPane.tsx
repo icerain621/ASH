@@ -116,7 +116,24 @@ export function HarnessProfilesPane() {
             <option value="isolated">isolated</option>
           </select>
         </label>
-        <button className="btn mini" type="button" disabled={createMut.isPending} onClick={() => createMut.mutate()} data-testid="harness-create-draft">
+        <button
+          className="btn mini"
+          type="button"
+          disabled={createMut.isPending || !name.trim()}
+          onClick={() => {
+            const ok = window.confirm(`确认创建 Harness Profile 草稿「${name.trim()}」？`);
+            if (!ok) return;
+            createMut.mutate();
+          }}
+          data-testid="harness-create-draft"
+          title={
+            !name.trim()
+              ? "需要填写 Profile 名称"
+              : createMut.isPending
+                ? "创建中…"
+                : "创建 Harness Profile 草稿（需确认）"
+          }
+        >
           <Upload size={13} strokeWidth={1.8} />
           新建草稿
         </button>
@@ -133,8 +150,19 @@ export function HarnessProfilesPane() {
             className="btn mini"
             type="button"
             disabled={rollbackMut.isPending}
-            onClick={() => rollbackMut.mutate(active.id)}
+            onClick={() => {
+              const ok = window.confirm(
+                `确认回滚 Harness Profile「${active.name}」当前 active v${active.version}？`,
+              );
+              if (!ok) return;
+              rollbackMut.mutate(active.id);
+            }}
             data-testid="harness-rollback"
+            title={
+              rollbackMut.isPending
+                ? "回滚中…"
+                : `回滚到上一 active 版本（当前 v${active.version}，需确认）`
+            }
           >
             Rollback
           </button>
@@ -158,12 +186,46 @@ export function HarnessProfilesPane() {
               <td>
                 <div className="row-actions">
                   {p.status === "draft" ? (
-                    <button className="btn mini" type="button" disabled={submitMut.isPending} onClick={() => submitMut.mutate(p.id)}>
+                    <button
+                      className="btn mini"
+                      type="button"
+                      disabled={submitMut.isPending}
+                      onClick={() => {
+                        const ok = window.confirm(
+                          `确认提交 Harness Profile「${shortId(p.id)}」进入评审（draft → in_review）？`,
+                        );
+                        if (!ok) return;
+                        submitMut.mutate(p.id);
+                      }}
+                      title={
+                        submitMut.isPending
+                          ? "提交中…"
+                          : "提交编排评审（draft → in_review，需确认）"
+                      }
+                      data-testid={`harness-submit-${p.id}`}
+                    >
                       提交评审
                     </button>
                   ) : null}
                   {p.status === "in_review" ? (
-                    <button className="btn mini ok" type="button" disabled={promoteMut.isPending} onClick={() => promoteMut.mutate(p.id)} title="须先在 Reviews 批准">
+                    <button
+                      className="btn mini ok"
+                      type="button"
+                      disabled={promoteMut.isPending}
+                      onClick={() => {
+                        const ok = window.confirm(
+                          `确认将 Harness Profile「${shortId(p.id)}」升格为 active？须已在 Reviews 批准。`,
+                        );
+                        if (!ok) return;
+                        promoteMut.mutate(p.id);
+                      }}
+                      title={
+                        promoteMut.isPending
+                          ? "升格中…"
+                          : "须先在 Reviews 批准后再升格为 active（需确认）"
+                      }
+                      data-testid={`harness-promote-${p.id}`}
+                    >
                       Promote
                     </button>
                   ) : null}

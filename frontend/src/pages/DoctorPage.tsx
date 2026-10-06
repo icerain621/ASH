@@ -77,6 +77,7 @@ export function DoctorPage() {
             <select
               value={suite}
               disabled={doctorMut.isPending}
+              data-testid="doctor-suite"
               onChange={(event) => setSuite(event.target.value as DoctorSuite)}
             >
               {SUITES.map((item) => (
@@ -88,8 +89,10 @@ export function DoctorPage() {
           </label>
           <button
             className="btn primary icon-btn"
+            data-testid="doctor-run"
             onClick={() => doctorMut.mutate(suite)}
             disabled={doctorMut.isPending}
+            title={doctorMut.isPending ? `正在运行 ${suite}…` : `运行 ${suite} 诊断套件`}
           >
             <Play size={16} strokeWidth={1.8} />
             {doctorMut.isPending ? `正在运行 ${suite}…` : `运行 ${suite}`}

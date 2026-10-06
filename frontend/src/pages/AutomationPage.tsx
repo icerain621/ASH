@@ -238,21 +238,25 @@ export function AutomationPage() {
         redactPayload,
       }),
     onSuccess: async (policy) => {
-      setRetentionMessage(`policy saved: ${policy.retentionDays}d`);
+      setRetentionMessage(`策略已保存：${policy.retentionDays} 天`);
       await refreshGovernance();
     },
-    onError: (error) => setRetentionMessage(error instanceof Error ? error.message : "policy update failed"),
+    onError: (error) =>
+      setRetentionMessage(error instanceof Error ? error.message : "策略更新失败"),
   });
 
   const retentionMut = useMutation({
     mutationFn: (dryRun: boolean) => applyAuditRetention({ dryRun }),
     onSuccess: async (res) => {
       setRetentionMessage(
-        res.dryRun ? `dry run matched ${res.matched}` : `deleted ${res.deleted} of ${res.matched}`,
+        res.dryRun
+          ? `干跑匹配 ${res.matched} 条`
+          : `已删除 ${res.deleted} / 匹配 ${res.matched}`,
       );
       await refreshGovernance();
     },
-    onError: (error) => setRetentionMessage(error instanceof Error ? error.message : "retention failed"),
+    onError: (error) =>
+      setRetentionMessage(error instanceof Error ? error.message : "保留策略执行失败"),
   });
 
   const verifyPluginMut = useMutation({
@@ -263,18 +267,22 @@ export function AutomationPage() {
   const createAuditExportMut = useMutation({
     mutationFn: createAuditExport,
     onSuccess: async (item) => {
-      setExportMessage(`exported ${shortId(item.id)}`);
+      setExportMessage(`已导出 ${shortId(item.id)}`);
       await refreshGovernance();
     },
-    onError: (error) => setExportMessage(error instanceof Error ? error.message : "audit export failed"),
+    onError: (error) =>
+      setExportMessage(error instanceof Error ? error.message : "审计导出失败"),
   });
 
   const auditExportAccessMut = useMutation({
     mutationFn: (exportId: string) => getAuditExportAccess(exportId),
     onSuccess: (access) => {
-      setExportMessage(`access ${shortId(access.exportId)} ${shortId(access.digest.replace("sha256:", ""))}`);
+      setExportMessage(
+        `access ${shortId(access.exportId)} ${shortId((access.digest ?? "").replace("sha256:", ""))}`,
+      );
     },
-    onError: (error) => setExportMessage(error instanceof Error ? error.message : "audit export access failed"),
+    onError: (error) =>
+      setExportMessage(error instanceof Error ? error.message : "获取导出访问失败"),
   });
 
   const createSecretMut = useMutation({
@@ -289,36 +297,41 @@ export function AutomationPage() {
       setSecretName("");
       setSecretValue("");
       setSecretDescription("");
-      setSecretMessage(`created ${secret.name}`);
+      setSecretMessage(`已创建 ${secret.name}`);
       await refreshGovernance();
     },
-    onError: (error) => setSecretMessage(error instanceof Error ? error.message : "secret create failed"),
+    onError: (error) =>
+      setSecretMessage(error instanceof Error ? error.message : "创建 secret 失败"),
   });
 
   const rotateSecretMut = useMutation({
     mutationFn: ({ id, value }: { id: string; value: string }) => rotateSecret(id, { value }),
     onSuccess: async (secret) => {
       setRotateValues((current) => ({ ...current, [secret.id]: "" }));
-      setSecretMessage(`rotated ${secret.name}`);
+      setSecretMessage(`已轮换 ${secret.name}`);
       await refreshGovernance();
     },
-    onError: (error) => setSecretMessage(error instanceof Error ? error.message : "secret rotate failed"),
+    onError: (error) =>
+      setSecretMessage(error instanceof Error ? error.message : "轮换 secret 失败"),
   });
 
   const deleteSecretMut = useMutation({
     mutationFn: (secretId: string) => deleteSecret(secretId),
     onSuccess: async () => {
-      setSecretMessage("deleted");
+      setSecretMessage("已删除");
       await refreshGovernance();
     },
-    onError: (error) => setSecretMessage(error instanceof Error ? error.message : "secret delete failed"),
+    onError: (error) =>
+      setSecretMessage(error instanceof Error ? error.message : "删除 secret 失败"),
   });
 
   const submitSecret = () => {
     if (!secretName.trim() || !secretValue) {
-      setSecretMessage("name and value required");
+      setSecretMessage("需要填写 Name 与 Value");
       return;
     }
+    const ok = window.confirm(`确认创建 secret「${secretName.trim()}」？`);
+    if (!ok) return;
     createSecretMut.mutate();
   };
 
@@ -343,7 +356,7 @@ export function AutomationPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Model Router</h2>
-            <span>{providersQuery.data?.items.length ?? 0} 个 provider</span>
+            <span>{providersQuery.data?.items?.length ?? 0} 个 provider</span>
           </div>
           <table className="table">
             <thead>
@@ -363,7 +376,7 @@ export function AutomationPage() {
                   <td>{provider.status}</td>
                 </tr>
               ))}
-              {!providersQuery.data?.items.length && (
+              {!providersQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无 provider 配置。</td>
                 </tr>
@@ -374,7 +387,7 @@ export function AutomationPage() {
         <div className="pane" data-testid="skills-catalog">
           <div className="pane-title">
             <h2>Skills</h2>
-            <span>{skillsQuery.data?.items.length ?? 0} 个</span>
+            <span>{skillsQuery.data?.items?.length ?? 0} 个</span>
           </div>
           <p className="muted-line">
             扫描 <code>.ash/skills/*/SKILL.md</code>；组织 catalog：<code>.ash/skill-catalog.json</code> 或{" "}
@@ -409,16 +422,38 @@ export function AutomationPage() {
             </label>
             <button
               type="button"
-              disabled={!skillPackPath || !skillPackSig || verifySkillPackMutation.isPending}
-              onClick={() => verifySkillPackMutation.mutate()}
+              disabled={!skillPackPath.trim() || !skillPackSig.trim() || verifySkillPackMutation.isPending}
+              title={
+                !skillPackPath.trim()
+                  ? "需要填写 packPath"
+                  : !skillPackSig.trim()
+                    ? "需要填写 signature"
+                    : "验签（干跑）"
+              }
+              onClick={() => {
+                if (!skillPackPath.trim() || !skillPackSig.trim()) return;
+                verifySkillPackMutation.mutate();
+              }}
               data-testid="skills-pack-verify-btn"
             >
               验签（干跑）
             </button>
             <button
               type="button"
-              disabled={!skillPackPath || !skillPackSig || installSkillPackMutation.isPending}
-              onClick={() => installSkillPackMutation.mutate()}
+              disabled={!skillPackPath.trim() || !skillPackSig.trim() || installSkillPackMutation.isPending}
+              title={
+                !skillPackPath.trim()
+                  ? "需要填写 packPath"
+                  : !skillPackSig.trim()
+                    ? "需要填写 signature"
+                    : "安装签名 pack（需确认）"
+              }
+              onClick={() => {
+                if (!skillPackPath.trim() || !skillPackSig.trim()) return;
+                const ok = window.confirm(`确认安装签名 skill pack「${skillPackPath.trim()}」？`);
+                if (!ok) return;
+                installSkillPackMutation.mutate();
+              }}
               data-testid="skills-pack-install-btn"
             >
               安装签名 pack
@@ -432,7 +467,7 @@ export function AutomationPage() {
           <div className="pane" data-testid="skills-org-catalog" style={{ marginTop: "0.75rem" }}>
             <div className="pane-title">
               <h3 style={{ margin: 0, fontSize: "1rem" }}>组织 Catalog</h3>
-              <span>{skillCatalogQuery.data?.items.length ?? 0} 项</span>
+              <span>{skillCatalogQuery.data?.items?.length ?? 0} 项</span>
             </div>
             <p className="muted-line" data-testid="catalog-private-marker">
               私有 · 组织 Hub · 不计费
@@ -468,7 +503,20 @@ export function AutomationPage() {
                         <button
                           type="button"
                           disabled={installFromCatalogMutation.isPending}
-                          onClick={() => installFromCatalogMutation.mutate({ name: it.name, version: it.version })}
+                          title={
+                            installed
+                              ? `重新安装「${it.name}」@${it.version}（需确认）`
+                              : `从 catalog 安装「${it.name}」@${it.version}（需确认）`
+                          }
+                          onClick={() => {
+                            const ok = window.confirm(
+                              installed
+                                ? `确认重新安装 skill「${it.name}」@${it.version}？`
+                                : `确认从 catalog 安装 skill「${it.name}」@${it.version}？`,
+                            );
+                            if (!ok) return;
+                            installFromCatalogMutation.mutate({ name: it.name, version: it.version });
+                          }}
                           data-testid={`skills-catalog-install-${it.name}`}
                         >
                           {installed ? "重新安装" : "从 catalog 安装"}
@@ -514,7 +562,7 @@ export function AutomationPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>MCP Tools</h2>
-            <span>{toolsQuery.data?.items.length ?? 0} 个工具</span>
+            <span>{toolsQuery.data?.items?.length ?? 0} 个工具</span>
           </div>
           <table className="table">
             <thead>
@@ -536,7 +584,7 @@ export function AutomationPage() {
                   <td>{tool.status}</td>
                 </tr>
               ))}
-              {!toolsQuery.data?.items.length && (
+              {!toolsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无 MCP 工具。</td>
                 </tr>
@@ -547,7 +595,7 @@ export function AutomationPage() {
         <div className="pane" data-testid="tool-risk-catalog">
           <div className="pane-title">
             <h2>内置工具风险（危险操作）</h2>
-            <span>{riskCatalogQuery.data?.items.length ?? 0} 项</span>
+            <span>{riskCatalogQuery.data?.items?.length ?? 0} 项</span>
           </div>
           <p className="muted-line">danger 默认需人工批准或场景 allow_dangerous；见 ARCH §安全。</p>
           <table className="table">
@@ -566,7 +614,7 @@ export function AutomationPage() {
                   <td>{tool.defaultDeny ? "是" : "否"}</td>
                 </tr>
               ))}
-              {!riskCatalogQuery.data?.items.length && (
+              {!riskCatalogQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>加载风险目录中…</td>
                 </tr>
@@ -578,7 +626,7 @@ export function AutomationPage() {
           <div className="pane-title">
             <h2>Plugins</h2>
             <span>
-              {pluginABIQuery.data?.currentAbi ?? `${pluginsQuery.data?.items.length ?? 0} 个插件`}
+              {pluginABIQuery.data?.currentAbi ?? `${pluginsQuery.data?.items?.length ?? 0} 个插件`}
               {pluginHealthQuery.data
                 ? ` · 导出错误 ${pluginHealthQuery.data.exportErrorsTotal} · 丢弃 ${pluginHealthQuery.data.dropCountTotal} · 过期 ${pluginHealthQuery.data.staleExportCount}`
                 : null}
@@ -587,7 +635,7 @@ export function AutomationPage() {
           <div className="abi-strip">
             <span>{pluginABIQuery.data?.supportedProtocols?.join("/") ?? "-"}</span>
             <span>{pluginABIQuery.data?.breakingPolicy ?? "-"}</span>
-            <span title={pluginABIQuery.data?.protoFiles?.map((file) => `${file.path} ${file.digest}`).join("\n")}>
+            <span title={(pluginABIQuery.data?.protoFiles ?? []).map((file) => `${file.path} ${file.digest}`).join("\n")}>
               {pluginABIQuery.data?.protoFiles?.length ?? 0} proto
             </span>
           </div>
@@ -626,16 +674,26 @@ export function AutomationPage() {
                   <td>
                     <button
                       className="btn mini"
+                      data-testid={`plugin-verify-${plugin.id}`}
                       disabled={verifyPluginMut.isPending}
                       type="button"
-                      onClick={() => verifyPluginMut.mutate(plugin.id)}
+                      title={
+                        verifyPluginMut.isPending ? "校验中…" : "校验插件签名与兼容性（需确认）"
+                      }
+                      onClick={() => {
+                        const ok = window.confirm(
+                          `确认校验插件「${plugin.name}」的签名与兼容性？`,
+                        );
+                        if (!ok) return;
+                        verifyPluginMut.mutate(plugin.id);
+                      }}
                     >
                       Verify
                     </button>
                   </td>
                 </tr>
               ))}
-              {!pluginsQuery.data?.items.length && (
+              {!pluginsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={8}>暂无插件注册。</td>
                 </tr>
@@ -693,7 +751,7 @@ export function AutomationPage() {
               <KeyRound size={15} strokeWidth={1.8} />
               Secrets
             </h2>
-            <span>{secretsQuery.data?.items.length ?? 0} 个 secret</span>
+            <span>{secretsQuery.data?.items?.length ?? 0} 个 secret</span>
           </div>
           <div className="secret-form">
             <label>
@@ -702,6 +760,7 @@ export function AutomationPage() {
                 autoComplete="off"
                 placeholder="OPENAI_API_KEY"
                 value={secretName}
+                data-testid="secret-name"
                 onChange={(event) => setSecretName(event.target.value)}
               />
             </label>
@@ -712,6 +771,7 @@ export function AutomationPage() {
                 placeholder="********"
                 type="password"
                 value={secretValue}
+                data-testid="secret-value"
                 onChange={(event) => setSecretValue(event.target.value)}
               />
             </label>
@@ -726,14 +786,32 @@ export function AutomationPage() {
             </label>
             <button
               className="btn mini icon-only"
-              disabled={createSecretMut.isPending}
-              title="Create secret"
+              disabled={createSecretMut.isPending || !secretName.trim() || !secretValue}
+              title={
+                !secretName.trim()
+                  ? "需要填写 Name"
+                  : !secretValue
+                    ? "需要填写 Value"
+                    : createSecretMut.isPending
+                      ? "创建中…"
+                      : "Create secret（需确认）"
+              }
+              aria-label={
+                !secretName.trim()
+                  ? "需要填写 Name"
+                  : !secretValue
+                    ? "需要填写 Value"
+                    : createSecretMut.isPending
+                      ? "创建中…"
+                      : "Create secret"
+              }
               type="button"
+              data-testid="secret-create"
               onClick={submitSecret}
             >
               <Plus size={13} strokeWidth={1.8} />
             </button>
-            <span>{secretMessage || activeSpaceId}</span>
+            <span data-testid="secret-message">{secretMessage || activeSpaceId}</span>
           </div>
           <table className="table secret-table">
             <thead>
@@ -757,6 +835,7 @@ export function AutomationPage() {
                     <input
                       autoComplete="new-password"
                       className="inline-secret-input"
+                      data-testid={`secret-rotate-value-${secret.id}`}
                       placeholder="********"
                       type="password"
                       value={rotateValues[secret.id] ?? ""}
@@ -767,19 +846,45 @@ export function AutomationPage() {
                     <div className="row-actions">
                       <button
                         className="btn mini icon-only"
-                        disabled={rotateSecretMut.isPending || !(rotateValues[secret.id] ?? "")}
-                        title="Rotate secret"
+                        data-testid={`secret-rotate-${secret.id}`}
+                        disabled={rotateSecretMut.isPending || !(rotateValues[secret.id] ?? "").trim()}
+                        title={
+                          !(rotateValues[secret.id] ?? "").trim()
+                            ? "需要填写新 Value"
+                            : rotateSecretMut.isPending
+                              ? "轮换中…"
+                              : "Rotate secret（需确认）"
+                        }
+                        aria-label={
+                          !(rotateValues[secret.id] ?? "").trim()
+                            ? "需要填写新 Value"
+                            : rotateSecretMut.isPending
+                              ? "轮换中…"
+                              : "Rotate secret"
+                        }
                         type="button"
-                        onClick={() => rotateSecretMut.mutate({ id: secret.id, value: rotateValues[secret.id] ?? "" })}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认轮换 secret「${secret.name || secret.id}」？旧值将立即失效。`,
+                          );
+                          if (!ok) return;
+                          rotateSecretMut.mutate({ id: secret.id, value: rotateValues[secret.id] ?? "" });
+                        }}
                       >
                         <RotateCw size={13} strokeWidth={1.8} />
                       </button>
                       <button
                         className="btn mini err icon-only"
+                        data-testid={`secret-delete-${secret.id}`}
                         disabled={deleteSecretMut.isPending}
-                        title="Delete secret"
+                        title="Delete secret（需确认）"
+                        aria-label="Delete secret"
                         type="button"
-                        onClick={() => deleteSecretMut.mutate(secret.id)}
+                        onClick={() => {
+                          const ok = window.confirm(`确认删除 secret「${secret.name || secret.id}」？此操作不可恢复。`);
+                          if (!ok) return;
+                          deleteSecretMut.mutate(secret.id);
+                        }}
                       >
                         <Trash2 size={13} strokeWidth={1.8} />
                       </button>
@@ -787,7 +892,7 @@ export function AutomationPage() {
                   </td>
                 </tr>
               ))}
-              {!secretsQuery.data?.items.length && (
+              {!secretsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无 secret。</td>
                 </tr>
@@ -803,7 +908,7 @@ export function AutomationPage() {
               <ShieldCheck size={15} strokeWidth={1.8} />
               Approval Queue
             </h2>
-            <span>{approvalsQuery.data?.items.length ?? 0} 个待处理</span>
+            <span>{approvalsQuery.data?.items?.length ?? 0} 个待处理</span>
           </div>
           <table className="table">
             <thead>
@@ -834,18 +939,42 @@ export function AutomationPage() {
                       <button
                         className="btn mini ok icon-only"
                         type="button"
-                        title="Approve"
+                        data-testid={`approval-approve-${approval.id}`}
+                        title={
+                          approveMut.isPending || cancelMut.isPending
+                            ? "处理中…"
+                            : "批准审批（需确认）"
+                        }
+                        aria-label="Approve"
                         disabled={approveMut.isPending || cancelMut.isPending}
-                        onClick={() => approveMut.mutate(approval.id)}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认批准审批「${shortId(approval.id)}」？`,
+                          );
+                          if (!ok) return;
+                          approveMut.mutate(approval.id);
+                        }}
                       >
                         <CheckCircle size={14} strokeWidth={1.8} />
                       </button>
                       <button
                         className="btn mini err icon-only"
                         type="button"
-                        title="Reject"
+                        data-testid={`approval-reject-${approval.id}`}
+                        title={
+                          approveMut.isPending || cancelMut.isPending
+                            ? "处理中…"
+                            : "拒绝审批（需确认）"
+                        }
+                        aria-label="Reject"
                         disabled={approveMut.isPending || cancelMut.isPending}
-                        onClick={() => cancelMut.mutate(approval.id)}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            `确认拒绝审批「${shortId(approval.id)}」？`,
+                          );
+                          if (!ok) return;
+                          cancelMut.mutate(approval.id);
+                        }}
                       >
                         <Square size={13} strokeWidth={1.8} />
                       </button>
@@ -853,7 +982,7 @@ export function AutomationPage() {
                   </td>
                 </tr>
               ))}
-              {!approvalsQuery.data?.items.length && (
+              {!approvalsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={6}>暂无待审批请求。</td>
                 </tr>
@@ -864,7 +993,7 @@ export function AutomationPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Audit Logs</h2>
-            <span>{auditQuery.data?.items.length ?? 0} 条事件</span>
+            <span>{auditQuery.data?.items?.length ?? 0} 条事件</span>
           </div>
           <div className="audit-policy">
             <label>
@@ -887,16 +1016,30 @@ export function AutomationPage() {
             </label>
             <button
               className="btn mini icon-only"
+              data-testid="audit-policy-save"
               disabled={updatePolicyMut.isPending}
-              title="Save audit policy"
+              title={
+                updatePolicyMut.isPending
+                  ? "保存中…"
+                  : "Save audit policy（需确认）"
+              }
+              aria-label="Save audit policy"
               type="button"
-              onClick={() => updatePolicyMut.mutate()}
+              onClick={() => {
+                const ok = window.confirm(
+                  `确认保存审计策略（retention=${retentionDays}d，redact=${redactPayload}）？`,
+                );
+                if (!ok) return;
+                updatePolicyMut.mutate();
+              }}
             >
               <Save size={13} strokeWidth={1.8} />
             </button>
             <button
               className="btn mini"
+              data-testid="audit-retention-dry"
               disabled={retentionMut.isPending}
+              title={retentionMut.isPending ? "执行中…" : "Retention dry-run（不删除）"}
               type="button"
               onClick={() => retentionMut.mutate(true)}
             >
@@ -904,10 +1047,19 @@ export function AutomationPage() {
             </button>
             <button
               className="btn mini err icon-only"
+              data-testid="audit-retention-apply"
               disabled={retentionMut.isPending}
-              title="Apply retention"
+              title="Apply retention（需确认，会删除过期审计）"
+              aria-label="Apply retention"
               type="button"
-              onClick={() => retentionMut.mutate(false)}
+              onClick={() => {
+                const days = Number(retentionDays || 365);
+                const ok = window.confirm(
+                  `确认按 ${days} 天策略执行审计 Retention？过期记录将被删除且不可恢复。`,
+                );
+                if (!ok) return;
+                retentionMut.mutate(false);
+              }}
             >
               <Trash2 size={13} strokeWidth={1.8} />
             </button>
@@ -916,13 +1068,23 @@ export function AutomationPage() {
           <div className="pane-title subhead">
             <h3>Exports</h3>
             <div className="row-actions">
-              <span>{exportMessage || `${auditExportsQuery.data?.items.length ?? 0} 个导出`}</span>
+              <span>{exportMessage || `${auditExportsQuery.data?.items?.length ?? 0} 个导出`}</span>
               <button
                 className="btn mini icon-only"
+                data-testid="audit-export-create"
                 disabled={createAuditExportMut.isPending}
-                title="Create audit export"
+                title={
+                  createAuditExportMut.isPending
+                    ? "创建中…"
+                    : "Create audit export（需确认）"
+                }
+                aria-label="Create audit export"
                 type="button"
-                onClick={() => createAuditExportMut.mutate()}
+                onClick={() => {
+                  const ok = window.confirm("确认创建审计导出包？");
+                  if (!ok) return;
+                  createAuditExportMut.mutate();
+                }}
               >
                 <Download size={13} strokeWidth={1.8} />
               </button>
@@ -955,8 +1117,20 @@ export function AutomationPage() {
                   <td>
                     <button
                       className="btn mini icon-only"
+                      data-testid={`audit-export-access-${item.id}`}
                       disabled={auditExportAccessMut.isPending || item.status !== "completed"}
-                      title="Get export access"
+                      title={
+                        item.status !== "completed"
+                          ? "导出未完成，无法获取 access"
+                          : auditExportAccessMut.isPending
+                            ? "获取中…"
+                            : "Get export access"
+                      }
+                      aria-label={
+                        item.status !== "completed"
+                          ? "导出未完成，无法获取 access"
+                          : "Get export access"
+                      }
                       type="button"
                       onClick={() => auditExportAccessMut.mutate(item.id)}
                     >
@@ -965,7 +1139,7 @@ export function AutomationPage() {
                   </td>
                 </tr>
               ))}
-              {!auditExportsQuery.data?.items.length && (
+              {!auditExportsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={5}>暂无导出。</td>
                 </tr>
@@ -994,7 +1168,7 @@ export function AutomationPage() {
                   </td>
                 </tr>
               ))}
-              {!auditQuery.data?.items.length && (
+              {!auditQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={5}>暂无审计事件。</td>
                 </tr>

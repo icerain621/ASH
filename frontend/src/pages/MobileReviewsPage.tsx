@@ -26,6 +26,13 @@ function isPendingSecond(status: string | undefined) {
   return status === "pending_second";
 }
 
+function isRubricValid(r: RubricForm): boolean {
+  return (["correctness", "safety", "citable", "efficiency"] as const).every((k) => {
+    const v = r[k];
+    return Number.isFinite(v) && Number.isInteger(v) && v >= 1 && v <= 5;
+  });
+}
+
 /** Compact mobile review surface: Plan/Diff summary + approve/reject. */
 export function MobileReviewsPage() {
   const qc = useQueryClient();
@@ -90,6 +97,7 @@ export function MobileReviewsPage() {
             className={`btn mini ${overdueOnly ? "ok" : ""}`}
             data-testid="mobile-reviews-filter-overdue"
             aria-pressed={overdueOnly}
+            title={overdueOnly ? "显示全部待办（取消仅逾期）" : "仅显示逾期评审"}
             onClick={() => setOverdueOnly((v) => !v)}
           >
             仅逾期
@@ -100,6 +108,7 @@ export function MobileReviewsPage() {
             onClick={() => queueQuery.refetch()}
             disabled={queueQuery.isFetching}
             aria-label="刷新"
+            title={queueQuery.isFetching ? "刷新中…" : "刷新待办评审"}
           >
             <RefreshCcw size={18} strokeWidth={1.8} />
           </button>
@@ -179,12 +188,14 @@ function MobileReviewCard({
   onDecide: (d: "approve" | "reject") => void;
   onAssign: () => void;
 }) {
+  const rubricOk = isRubricValid(rubric);
   return (
-    <li className="mobile-review-card" data-testid={`mobile-review-${item.targetType}`}>
+    <li className="mobile-review-card" data-testid={`mobile-review-${item.id}`}>
       <button type="button" className="mobile-review-main" onClick={onToggle}>
         <strong>{item.title}</strong>
         <span className="muted-line">
           {item.targetType} · {item.queue}
+          {item.targetId ? ` · ${item.targetId.slice(0, 12)}` : ""}
         </span>
         {item.summary ? <span className="muted-line">{item.summary}</span> : null}
         <span style={{ display: "flex", flexWrap: "wrap", gap: 6, marginTop: 4 }}>
@@ -230,7 +241,14 @@ function MobileReviewCard({
                 type="button"
                 className="btn mini"
                 disabled={assignBusy || !assigneeInput.trim()}
-                onClick={onAssign}
+                title={!assigneeInput.trim() ? "需要填写 assigneeId" : "分配负责人（需确认）"}
+                onClick={() => {
+                  const id = assigneeInput.trim();
+                  if (!id) return;
+                  const ok = window.confirm(`确认将评审分配给「${id}」？`);
+                  if (!ok) return;
+                  onAssign();
+                }}
                 data-testid="mobile-review-assign"
               >
                 分配
@@ -259,11 +277,35 @@ function MobileReviewCard({
         </div>
       ) : null}
       <div className="mobile-review-actions">
-        <button type="button" className="btn ok icon-btn" disabled={busy} onClick={() => onDecide("approve")} data-testid="mobile-review-approve">
+        <button
+          type="button"
+          className="btn ok icon-btn"
+          disabled={busy || !rubricOk}
+          title={!rubricOk ? "Rubric 各项需为 1–5" : busy ? "提交中…" : "批准（需确认）"}
+          onClick={() => {
+            if (!rubricOk) return;
+            const ok = window.confirm("确认批准该评审项？");
+            if (!ok) return;
+            onDecide("approve");
+          }}
+          data-testid="mobile-review-approve"
+        >
           <Check size={16} strokeWidth={1.8} />
           批准
         </button>
-        <button type="button" className="btn err icon-btn" disabled={busy} onClick={() => onDecide("reject")} data-testid="mobile-review-reject">
+        <button
+          type="button"
+          className="btn err icon-btn"
+          disabled={busy || !rubricOk}
+          title={!rubricOk ? "Rubric 各项需为 1–5" : busy ? "提交中…" : "拒绝（需确认）"}
+          onClick={() => {
+            if (!rubricOk) return;
+            const ok = window.confirm("确认拒绝该评审项？");
+            if (!ok) return;
+            onDecide("reject");
+          }}
+          data-testid="mobile-review-reject"
+        >
           <X size={16} strokeWidth={1.8} />
           拒绝
         </button>

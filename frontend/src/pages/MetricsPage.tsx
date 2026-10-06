@@ -44,7 +44,7 @@ export function MetricsPage() {
   });
   const overview = overviewQuery.data;
   const evaluation = evaluationQuery.data;
-  const cards = KPI_ORDER.map((id) => overview?.summary.find((item) => item.id === id)).filter(Boolean) as MetricCard[];
+  const cards = KPI_ORDER.map((id) => overview?.summary?.find((item) => item.id === id)).filter(Boolean) as MetricCard[];
   const deliveryCards = cards.filter((c) => !EVOLVE_KPI.has(c.id));
   const evolveCards = cards.filter((c) => EVOLVE_KPI.has(c.id));
 
@@ -91,6 +91,11 @@ export function MetricsPage() {
               evaluationQuery.refetch();
             }}
             disabled={overviewQuery.isFetching || evaluationQuery.isFetching}
+            title={
+              overviewQuery.isFetching || evaluationQuery.isFetching
+                ? "刷新中…"
+                : "刷新指标与空间测评"
+            }
           >
             <RefreshCcw size={16} strokeWidth={1.8} />
             {overviewQuery.isFetching || evaluationQuery.isFetching ? "刷新中" : "刷新"}
@@ -264,7 +269,7 @@ export function MetricsPage() {
           <div className="pane" key={group.id} data-testid={`metrics-breakdown-${group.id}`}>
             <div className="pane-title">
               <h2>{group.label}</h2>
-              <span>{group.items.length} 项</span>
+              <span>{(group.items ?? []).length} 项</span>
             </div>
             <table className="table">
               <thead>
@@ -274,12 +279,12 @@ export function MetricsPage() {
                 </tr>
               </thead>
               <tbody>
-                {group.items.length === 0 && (
+                {(group.items ?? []).length === 0 && (
                   <tr className="empty-row">
                     <td colSpan={2}>暂无样本。</td>
                   </tr>
                 )}
-                {group.items.map((item) => {
+                {(group.items ?? []).map((item) => {
                   const unstable =
                     group.id === "scenarioStability" &&
                     item.unit === "ratio" &&

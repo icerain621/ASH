@@ -44,11 +44,19 @@ function isPendingSecond(status: string | undefined) {
   return status === "pending_second";
 }
 
+/** Rubric scores must be integers in 1–5 (empty/0/NaN/out-of-range fail). */
+function isRubricValid(r: RubricForm): boolean {
+  return (["correctness", "safety", "citable", "efficiency"] as const).every((k) => {
+    const v = r[k];
+    return Number.isFinite(v) && Number.isInteger(v) && v >= 1 && v <= 5;
+  });
+}
+
 export function ReviewsPage() {
   const qc = useQueryClient();
   const spaceId = getCurrentSpaceId();
   const [pillar, setPillar] = useState<ReviewPillar>("queue");
-  const [queue, setQueue] = useState<"all" | "orchestration" | "memory" | "appeal">("orchestration");
+  const [queue, setQueue] = useState<"all" | "orchestration" | "memory" | "appeal">("all");
   const [reason, setReason] = useState("控制台评审");
   const [message, setMessage] = useState("");
   const [selected, setSelected] = useState<ReviewItem | null>(null);
@@ -60,6 +68,9 @@ export function ReviewsPage() {
   const [appealScoreEventId, setAppealScoreEventId] = useState("");
   const [appealReason, setAppealReason] = useState("申诉评分");
   const [memoryDeepLinkId, setMemoryDeepLinkId] = useState("");
+  const [patchScenario, setPatchScenario] = useState("");
+  const [patchTitle, setPatchTitle] = useState("");
+  const [patchDiff, setPatchDiff] = useState("");
 
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
@@ -92,6 +103,7 @@ export function ReviewsPage() {
   const hooksProjection = projectHooksFromBodyJson(policyQuery.data?.pack?.bodyJson);
 
   const isAppealItem = selected?.targetType === "score_appeal";
+  const rubricOk = isAppealItem || isRubricValid(rubric);
 
   const decideMut = useMutation({
     mutationFn: ({ id, decision }: { id: string; decision: "approve" | "reject" }) => {
@@ -153,20 +165,68 @@ export function ReviewsPage() {
     onError: (e: Error) => setMessage(e.message),
   });
 
-  function onCreatePatch(fd: FormData) {
-    createPatchMut.mutate({
-      scenarioName: String(fd.get("scenarioName") || ""),
-      fromVersion: String(fd.get("fromVersion") || ""),
-      toVersion: String(fd.get("toVersion") || ""),
-      title: String(fd.get("title") || ""),
-      diffText: String(fd.get("diffText") || ""),
-    });
+  function onCreatePatch() {
+    const ok = window.confirm(
+      `确认创建 Scenario patch 草稿「${patchTitle.trim()}」（场景 ${patchScenario.trim()}）？`,
+    );
+    if (!ok) return;
+    createPatchMut.mutate(
+      {
+        scenarioName: patchScenario.trim(),
+        fromVersion: "",
+        toVersion: "",
+        title: patchTitle.trim(),
+        diffText: patchDiff.trim(),
+      },
+      {
+        onSuccess: () => {
+          setPatchScenario("");
+          setPatchTitle("");
+          setPatchDiff("");
+        },
+      },
+    );
   }
+
+  const patchCreateReady = Boolean(patchScenario.trim() && patchTitle.trim() && patchDiff.trim());
+  const patchCreateTitle = createPatchMut.isPending
+    ? "创建中…"
+    : !patchScenario.trim()
+      ? "需要填写场景名"
+      : !patchTitle.trim()
+        ? "需要填写标题"
+        : !patchDiff.trim()
+          ? "需要填写 Diff / 说明"
+          : "创建 Scenario patch 草稿（需确认）";
 
   const allItems = queueQuery.data?.items ?? [];
   const items = overdueOnly ? allItems.filter((it) => it.slaBreach) : allItems;
   const reviewSlaHours = policyQuery.data?.effective?.reviewSlaHours;
   const secondSign = isPendingSecond(selected?.status);
+
+  useEffect(() => {
+    if (!memoryDeepLinkId) return;
+    const list = queueQuery.data?.items;
+    if (!list?.length) return;
+    setSelected((prev) => {
+      if (
+        prev &&
+        (prev.targetId === memoryDeepLinkId ||
+          prev.id === memoryDeepLinkId ||
+          prev.id.includes(memoryDeepLinkId))
+      ) {
+        return prev;
+      }
+      const hit = list.find(
+        (it) =>
+          it.targetId === memoryDeepLinkId ||
+          it.id === memoryDeepLinkId ||
+          it.id.endsWith(`:${memoryDeepLinkId}`) ||
+          it.id.includes(memoryDeepLinkId),
+      );
+      return hit ?? prev;
+    });
+  }, [memoryDeepLinkId, queueQuery.data?.items]);
   const canAssign = (meQuery.data?.permissions ?? []).includes("reviews:assign");
 
   return (
@@ -215,11 +275,18 @@ export function ReviewsPage() {
               className={`btn mini ${overdueOnly ? "ok" : ""}`}
               data-testid="reviews-filter-overdue"
               aria-pressed={overdueOnly}
+              title={overdueOnly ? "显示全部待审（取消仅逾期）" : "仅显示逾期评审"}
               onClick={() => setOverdueOnly((v) => !v)}
             >
               仅逾期
             </button>
-            <button type="button" className="btn icon-btn" onClick={() => queueQuery.refetch()} disabled={queueQuery.isFetching}>
+            <button
+              type="button"
+              className="btn icon-btn"
+              onClick={() => queueQuery.refetch()}
+              disabled={queueQuery.isFetching}
+              title={queueQuery.isFetching ? "刷新中…" : "刷新待审队列"}
+            >
               <RefreshCcw size={16} strokeWidth={1.8} />
               刷新
             </button>
@@ -257,6 +324,7 @@ export function ReviewsPage() {
             className={`work-mode-btn${pillar === tab.id ? " active" : ""}`}
             aria-selected={pillar === tab.id}
             data-testid={tab.testId}
+            title={`切换到「${tab.label}」`}
             onClick={() => setPillar(tab.id)}
           >
             {tab.label}
@@ -282,7 +350,12 @@ export function ReviewsPage() {
       {pillar === "observe" ? (
         <div data-testid="review-observe-panel">
           <div className="toolbar metrics-toolbar" style={{ marginBottom: 8 }}>
-            <Link to="/metrics" className="btn mini" data-testid="review-open-metrics">
+            <Link
+              to="/metrics"
+              className="btn mini"
+              data-testid="review-open-metrics"
+              title="打开完整指标看板"
+            >
               打开完整指标
             </Link>
             <span className="muted-line">观测面板含 review_sla Waker / 告警可见性</span>
@@ -418,31 +491,56 @@ export function ReviewsPage() {
 
               <div className="pane-title" style={{ marginTop: 16 }}>
                 <h2>Scenario patch 草稿</h2>
-                <span>{draftsQuery.data?.items.length ?? 0} 草稿</span>
+                <span>{draftsQuery.data?.items?.length ?? 0} 草稿</span>
               </div>
               <form
                 className="form-grid"
                 onSubmit={(e) => {
                   e.preventDefault();
-                  onCreatePatch(new FormData(e.currentTarget));
-                  e.currentTarget.reset();
+                  if (!patchCreateReady || createPatchMut.isPending) return;
+                  onCreatePatch();
                 }}
               >
                 <label>
                   场景名
-                  <input name="scenarioName" required placeholder="feature_delivery" data-testid="patch-scenario" />
+                  <input
+                    name="scenarioName"
+                    required
+                    placeholder="feature_delivery"
+                    data-testid="patch-scenario"
+                    value={patchScenario}
+                    onChange={(e) => setPatchScenario(e.target.value)}
+                  />
                 </label>
                 <label>
                   标题
-                  <input name="title" required placeholder="收紧 citation gate" data-testid="patch-title" />
+                  <input
+                    name="title"
+                    required
+                    placeholder="收紧 citation gate"
+                    data-testid="patch-title"
+                    value={patchTitle}
+                    onChange={(e) => setPatchTitle(e.target.value)}
+                  />
                 </label>
                 <label className="wide-field">
                   Diff / 说明
-                  <textarea name="diffText" required rows={4} data-testid="patch-diff" />
+                  <textarea
+                    name="diffText"
+                    required
+                    rows={4}
+                    data-testid="patch-diff"
+                    value={patchDiff}
+                    onChange={(e) => setPatchDiff(e.target.value)}
+                  />
                 </label>
-                <input type="hidden" name="fromVersion" />
-                <input type="hidden" name="toVersion" />
-                <button type="submit" className="btn primary icon-btn" data-testid="patch-create" disabled={createPatchMut.isPending}>
+                <button
+                  type="submit"
+                  className="btn primary icon-btn"
+                  data-testid="patch-create"
+                  disabled={!patchCreateReady || createPatchMut.isPending}
+                  title={patchCreateTitle}
+                >
                   <Send size={16} strokeWidth={1.8} />
                   创建草稿
                 </button>
@@ -456,8 +554,19 @@ export function ReviewsPage() {
                         <button
                           type="button"
                           className="btn mini"
-                          onClick={() => submitPatchMut.mutate(p.id)}
+                          onClick={() => {
+                            const ok = window.confirm(
+                              `确认提交编排补丁「${p.title || p.id}」进入评审？`,
+                            );
+                            if (!ok) return;
+                            submitPatchMut.mutate(p.id);
+                          }}
                           disabled={submitPatchMut.isPending}
+                          title={
+                            submitPatchMut.isPending
+                              ? "提交中…"
+                              : "提交编排评审（需确认）"
+                          }
                           data-testid={`patch-submit-${p.id}`}
                         >
                           提交评审
@@ -489,39 +598,39 @@ export function ReviewsPage() {
                     ) : null}
                   </p>
                   {selected.diff ? <pre className="code-block compact">{selected.diff}</pre> : null}
-                  <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
-                    关联 Run（探查 Thread）
-                    <input
-                      data-testid="reviews-inspect-run"
-                      value={inspectRunId}
-                      placeholder="run_…"
-                      onChange={(e) => {
-                        setInspectRunId(e.target.value);
-                        setHighlightSeq(null);
-                      }}
-                    />
-                  </label>
-                  {inspectRunId.trim() ? (
-                    <>
-                      <ThreadTimeline
-                        runId={inspectRunId.trim()}
-                        highlightSeq={highlightSeq}
-                        onSelectSeq={setHighlightSeq}
-                      />
-                      <MemoryLinkPanel
-                        runId={inspectRunId.trim()}
-                        highlightSeq={highlightSeq}
-                        onSelectLinkSeq={setHighlightSeq}
-                      />
-                    </>
-                  ) : (
-                    <p className="muted-line">输入 Run ID 后加载 Thread 时间线与 MemoryLink。</p>
-                  )}
-                  <ThreadComparePanel defaultLeftRunId={inspectRunId.trim()} />
                 </>
               ) : (
-                <p className="muted-line">选择左侧队列项以查看详情。</p>
+                <p className="muted-line">选择左侧队列项以查看详情；也可直接输入 Run 做 Thread 探查 / 比对。</p>
               )}
+              <label className="scenario-picker" style={{ display: "block", marginBottom: 8 }}>
+                关联 Run（探查 Thread）
+                <input
+                  data-testid="reviews-inspect-run"
+                  value={inspectRunId}
+                  placeholder="run_…"
+                  onChange={(e) => {
+                    setInspectRunId(e.target.value);
+                    setHighlightSeq(null);
+                  }}
+                />
+              </label>
+              {inspectRunId.trim() ? (
+                <>
+                  <ThreadTimeline
+                    runId={inspectRunId.trim()}
+                    highlightSeq={highlightSeq}
+                    onSelectSeq={setHighlightSeq}
+                  />
+                  <MemoryLinkPanel
+                    runId={inspectRunId.trim()}
+                    highlightSeq={highlightSeq}
+                    onSelectLinkSeq={setHighlightSeq}
+                  />
+                </>
+              ) : (
+                <p className="muted-line">输入 Run ID 后加载 Thread 时间线与 MemoryLink。</p>
+              )}
+              <ThreadComparePanel defaultLeftRunId={inspectRunId.trim()} />
             </div>
 
             <div className="pane" data-testid="reviews-decide-form">
@@ -559,10 +668,23 @@ export function ReviewsPage() {
                         <button
                           type="button"
                           className="btn mini"
-                          disabled={assignMut.isPending || !assigneeInput.trim()}
-                          onClick={() =>
-                            selected && assignMut.mutate({ id: selected.id, assigneeId: assigneeInput.trim() })
+                          disabled={assignMut.isPending || !assigneeInput.trim() || !selected}
+                          title={
+                            !selected
+                              ? "需要先选择一条评审"
+                              : !assigneeInput.trim()
+                                ? "需要填写 assigneeId"
+                                : assignMut.isPending
+                                  ? "分配中…"
+                                  : "分配责任人（需确认）"
                           }
+                          onClick={() => {
+                            if (!selected) return;
+                            const assignee = assigneeInput.trim();
+                            const ok = window.confirm(`确认将评审分配给「${assignee}」？`);
+                            if (!ok) return;
+                            assignMut.mutate({ id: selected.id, assigneeId: assignee });
+                          }}
                           data-testid="review-assign"
                         >
                           分配
@@ -604,8 +726,26 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       className="btn mini ok"
-                      disabled={decideMut.isPending}
-                      onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "approve" })}
+                      disabled={decideMut.isPending || !selected || !rubricOk}
+                      title={
+                        !selected
+                          ? "需要先选择左侧队列项"
+                          : !rubricOk
+                            ? "Rubric 各项需为 1–5"
+                            : decideMut.isPending
+                              ? "提交中…"
+                              : isAppealItem
+                                ? "保持评分（需确认）"
+                                : "批准（需确认）"
+                      }
+                      onClick={() => {
+                        if (!selected || !rubricOk) return;
+                        const ok = window.confirm(
+                          isAppealItem ? "确认保持该评分？" : "确认批准该评审项？",
+                        );
+                        if (!ok) return;
+                        decideMut.mutate({ id: selected.id, decision: "approve" });
+                      }}
                       data-testid="review-approve"
                     >
                       {isAppealItem ? "保持评分" : secondSign ? "第二签批准" : "批准"}
@@ -613,8 +753,26 @@ export function ReviewsPage() {
                     <button
                       type="button"
                       className="btn mini err"
-                      disabled={decideMut.isPending}
-                      onClick={() => selected && decideMut.mutate({ id: selected.id, decision: "reject" })}
+                      disabled={decideMut.isPending || !selected || !rubricOk}
+                      title={
+                        !selected
+                          ? "需要先选择左侧队列项"
+                          : !rubricOk
+                            ? "Rubric 各项需为 1–5"
+                            : decideMut.isPending
+                              ? "提交中…"
+                              : isAppealItem
+                                ? "作废评分（需确认）"
+                                : "拒绝（需确认）"
+                      }
+                      onClick={() => {
+                        if (!selected || !rubricOk) return;
+                        const ok = window.confirm(
+                          isAppealItem ? "确认作废该评分？" : "确认拒绝该评审项？",
+                        );
+                        if (!ok) return;
+                        decideMut.mutate({ id: selected.id, decision: "reject" });
+                      }}
                       data-testid="review-reject"
                     >
                       {isAppealItem ? "作废评分" : secondSign ? "第二签拒绝" : "拒绝"}
@@ -651,7 +809,22 @@ export function ReviewsPage() {
                 type="button"
                 className="btn mini"
                 disabled={appealMut.isPending || !appealScoreEventId.trim() || !appealReason.trim()}
-                onClick={() => appealMut.mutate()}
+                title={
+                  !appealScoreEventId.trim()
+                    ? "需要填写 score event id"
+                    : !appealReason.trim()
+                      ? "需要填写申诉原因"
+                      : appealMut.isPending
+                        ? "提交中…"
+                        : "提交申诉（需确认）"
+                }
+                onClick={() => {
+                  const ok = window.confirm(
+                    `确认提交评分事件「${appealScoreEventId.trim()}」的申诉？`,
+                  );
+                  if (!ok) return;
+                  appealMut.mutate();
+                }}
                 data-testid="appeal-create"
               >
                 提交申诉

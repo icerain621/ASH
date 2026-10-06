@@ -69,6 +69,12 @@ export function KnowledgePanel({ embedded = false }: KnowledgePanelProps) {
           ragQuery.refetch();
         }}
         disabled={profileQuery.isFetching || wikiQuery.isFetching || ragQuery.isFetching}
+        title={
+          profileQuery.isFetching || wikiQuery.isFetching || ragQuery.isFetching
+            ? "刷新中…"
+            : "刷新 Profile / Wiki / RAG"
+        }
+        data-testid="knowledge-refresh"
       >
         <RefreshCcw size={16} />
         刷新
@@ -131,8 +137,22 @@ export function KnowledgePanel({ embedded = false }: KnowledgePanelProps) {
                 type="button"
                 className="btn"
                 data-testid="knowledge-rag-rebuild"
-                disabled={rebuildMut.isPending}
-                onClick={() => rebuildMut.mutate()}
+                disabled={rebuildMut.isPending || !repoRoot.trim()}
+                title={
+                  !repoRoot.trim()
+                    ? "需要填写 repoRoot"
+                    : rebuildMut.isPending
+                      ? "重建中…"
+                      : "重建符号/路径索引（可能耗时，需确认）"
+                }
+                onClick={() => {
+                  if (!repoRoot.trim()) return;
+                  const ok = window.confirm(
+                    `确认重建「${repoRoot.trim()}」的符号/路径索引？可能耗时并写入索引数据。`,
+                  );
+                  if (!ok) return;
+                  rebuildMut.mutate();
+                }}
               >
                 {rebuildMut.isPending ? "重建中…" : "重建符号/路径索引"}
               </button>
@@ -142,7 +162,11 @@ export function KnowledgePanel({ embedded = false }: KnowledgePanelProps) {
                   {rebuildMut.data.files}
                 </p>
               )}
-              {rebuildMut.isError && <p className="error">重建失败</p>}
+              {rebuildMut.isError && (
+                <p className="error" data-testid="knowledge-rag-rebuild-error">
+                  {(rebuildMut.error as Error)?.message || "重建失败"}
+                </p>
+              )}
             </div>
           )}
 
@@ -173,6 +197,7 @@ export function KnowledgePanel({ embedded = false }: KnowledgePanelProps) {
                   className="btn linkish"
                   onClick={() => setSelectedId(item.id)}
                   data-testid={`wiki-item-${item.id}`}
+                  title={`打开 Wiki「${item.title}」`}
                 >
                   {item.title}
                   <span className="muted"> · {item.source}</span>

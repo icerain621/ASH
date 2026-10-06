@@ -32,17 +32,18 @@ export function CIPage() {
   const [runId, setRunId] = useState("");
   const [jobId, setJobId] = useState("");
   const [decisionStatus, setDecisionStatus] = useState("");
+  const [logText, setLogText] = useState("");
 
   const connectionsQuery = useQuery({ queryKey: ["repo-connections"], queryFn: listRepoConnections });
   const readyzQuery = useQuery({ queryKey: ["readyz"], queryFn: getReadyz, staleTime: 60_000 });
   const ciFixtureMode = (readyzQuery.data?.liveGateHints ?? []).some((h) => h.includes("ASH_CI_FIXTURE"));
-  const activeConnectionId = connectionId || connectionsQuery.data?.items[0]?.id || "";
+  const activeConnectionId = connectionId || connectionsQuery.data?.items?.[0]?.id || "";
   const runsQuery = useQuery({
     queryKey: ["ci-runs", activeConnectionId],
     queryFn: () => listCIRuns({ connectionId: activeConnectionId, limit: 50 }),
     enabled: Boolean(activeConnectionId),
   });
-  const activeRunId = runId || runsQuery.data?.items[0]?.id || "";
+  const activeRunId = runId || runsQuery.data?.items?.[0]?.id || "";
   const jobsQuery = useQuery({
     queryKey: ["ci-jobs", activeRunId],
     queryFn: () => listCIJobs({ runId: activeRunId, limit: 50 }),
@@ -58,7 +59,6 @@ export function CIPage() {
         decisionStatus,
         limit: 50,
       }),
-    enabled: Boolean(activeConnectionId),
   });
 
   const syncRunsMut = useMutation({
@@ -90,7 +90,10 @@ export function CIPage() {
     },
   });
 
-  const selectedDiagnosis = useMemo(() => diagnosesQuery.data?.items[0], [diagnosesQuery.data]);
+  const selectedDiagnosis = useMemo(
+    () => diagnoseMut.data ?? diagnosesQuery.data?.items?.[0],
+    [diagnoseMut.data, diagnosesQuery.data],
+  );
 
   return (
     <section className="panel active">
@@ -117,14 +120,46 @@ export function CIPage() {
                   {conn.owner}/{conn.repo}
                 </option>
               ))}
-              {!connectionsQuery.data?.items.length && <option value="">无连接</option>}
+              {!connectionsQuery.data?.items?.length && <option value="">无连接</option>}
             </select>
           </label>
-          <button className="btn icon-btn" onClick={() => syncRunsMut.mutate()} disabled={!activeConnectionId || syncRunsMut.isPending}>
+          <button
+            className="btn icon-btn"
+            onClick={() => {
+              const ok = window.confirm("确认从远程同步 Workflow Runs？");
+              if (!ok) return;
+              syncRunsMut.mutate();
+            }}
+            disabled={!activeConnectionId || syncRunsMut.isPending}
+            title={
+              !activeConnectionId
+                ? "需要先选择 Repo 连接"
+                : syncRunsMut.isPending
+                  ? "同步中…"
+                  : "同步 runs（需确认）"
+            }
+            data-testid="ci-sync-runs"
+          >
             <RefreshCcw size={16} strokeWidth={1.8} />
             同步 runs
           </button>
-          <button className="btn icon-btn" onClick={() => syncJobsMut.mutate()} disabled={!activeRunId || syncJobsMut.isPending}>
+          <button
+            className="btn icon-btn"
+            onClick={() => {
+              const ok = window.confirm("确认从远程同步 Workflow Jobs？");
+              if (!ok) return;
+              syncJobsMut.mutate();
+            }}
+            disabled={!activeRunId || syncJobsMut.isPending}
+            title={
+              !activeRunId
+                ? "需要先选择 Workflow Run"
+                : syncJobsMut.isPending
+                  ? "同步中…"
+                  : "同步 jobs（需确认）"
+            }
+            data-testid="ci-sync-jobs"
+          >
             <RefreshCcw size={16} strokeWidth={1.8} />
             同步 jobs
           </button>
@@ -144,7 +179,7 @@ export function CIPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Workflow Runs</h2>
-            <span>{runsQuery.data?.items.length ?? 0} 项</span>
+            <span>{runsQuery.data?.items?.length ?? 0} 项</span>
           </div>
           <table className="table">
             <thead>
@@ -176,7 +211,7 @@ export function CIPage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Jobs</h2>
-            <span>{jobsQuery.data?.items.length ?? 0} 项</span>
+            <span>{jobsQuery.data?.items?.length ?? 0} 项</span>
           </div>
           <table className="table">
             <thead>
@@ -217,7 +252,14 @@ export function CIPage() {
             onSubmit={(event) => {
               event.preventDefault();
               const data = new FormData(event.currentTarget);
-              diagnoseMut.mutate({ logText: String(data.get("logText") || "") });
+              const text = String(data.get("logText") || "");
+              const ok = window.confirm(
+                text.trim()
+                  ? "确认根据粘贴日志发起 CI 失败诊断？"
+                  : "确认根据所选连接/job 发起 CI 失败诊断？",
+              );
+              if (!ok) return;
+              diagnoseMut.mutate({ logText: text });
             }}
           >
             <label>
@@ -231,18 +273,48 @@ export function CIPage() {
             </label>
             <label className="wide-field">
               Log Text
-              <textarea name="logText" rows={6} placeholder={jobId ? "已选 job 时可留空，由后端拉取日志。" : "粘贴 CI 失败日志。"} />
+              <textarea
+                name="logText"
+                rows={6}
+                value={logText}
+                onChange={(e) => setLogText(e.target.value)}
+                placeholder={jobId ? "已选 job 时可留空，由后端拉取日志。" : "粘贴 CI 失败日志。"}
+              />
             </label>
             <div className="row-actions">
-              <button className="btn primary icon-btn" type="submit" disabled={diagnoseMut.isPending || (!jobId && !activeConnectionId)}>
+              <button
+                className="btn primary icon-btn"
+                type="submit"
+                data-testid="ci-diagnose-log"
+                disabled={diagnoseMut.isPending || (!jobId && !activeConnectionId && !logText.trim())}
+                title={
+                  diagnoseMut.isPending
+                    ? "诊断进行中"
+                    : !jobId && !activeConnectionId && !logText.trim()
+                      ? "需要粘贴失败日志，或选择 Repo 连接 / job"
+                      : "诊断失败（需确认）"
+                }
+              >
                 <SearchCheck size={16} strokeWidth={1.8} />
                 诊断失败
               </button>
               <button
                 className="btn icon-btn"
                 type="button"
+                data-testid="ci-diagnose-job"
                 disabled={diagnoseMut.isPending || !jobId}
-                onClick={() => diagnoseMut.mutate({})}
+                title={
+                  !jobId
+                    ? "需要先选择 Workflow Job"
+                    : diagnoseMut.isPending
+                      ? "诊断进行中"
+                      : "诊断选中 job（需确认）"
+                }
+                onClick={() => {
+                  const ok = window.confirm("确认诊断所选 Workflow Job？");
+                  if (!ok) return;
+                  diagnoseMut.mutate({});
+                }}
               >
                 <SearchCheck size={16} strokeWidth={1.8} />
                 诊断选中 job
@@ -264,7 +336,7 @@ export function CIPage() {
       <div className="pane">
         <div className="pane-title">
           <h2>诊断历史</h2>
-          <span>{diagnosesQuery.data?.items.length ?? 0} 条</span>
+          <span>{diagnosesQuery.data?.items?.length ?? 0} 条</span>
         </div>
         <table className="table">
           <thead>
@@ -290,11 +362,47 @@ export function CIPage() {
                 </td>
                 <td>
                   <div className="row-actions">
-                    <button className="btn mini ok" onClick={() => decideMut.mutate({ item, decision: "adopt" })} disabled={item.decisionStatus === "adopted"}>
+                    <button
+                      className="btn mini ok"
+                      data-testid={`ci-diagnosis-adopt-${item.id}`}
+                      onClick={() => {
+                        const ok = window.confirm(
+                          `确认采纳诊断「${item.rootCause || item.id}」？`,
+                        );
+                        if (!ok) return;
+                        decideMut.mutate({ item, decision: "adopt" });
+                      }}
+                      disabled={item.decisionStatus === "adopted" || decideMut.isPending}
+                      title={
+                        item.decisionStatus === "adopted"
+                          ? "已采纳"
+                          : decideMut.isPending
+                            ? "处理中…"
+                            : "采纳诊断（需确认）"
+                      }
+                    >
                       <CheckCircle2 size={14} strokeWidth={1.8} />
                       采纳
                     </button>
-                    <button className="btn mini err" onClick={() => decideMut.mutate({ item, decision: "dismiss" })} disabled={item.decisionStatus === "dismissed"}>
+                    <button
+                      className="btn mini err"
+                      data-testid={`ci-diagnosis-dismiss-${item.id}`}
+                      onClick={() => {
+                        const ok = window.confirm(
+                          `确认驳回诊断「${item.rootCause || item.id}」？`,
+                        );
+                        if (!ok) return;
+                        decideMut.mutate({ item, decision: "dismiss" });
+                      }}
+                      disabled={item.decisionStatus === "dismissed" || decideMut.isPending}
+                      title={
+                        item.decisionStatus === "dismissed"
+                          ? "已驳回"
+                          : decideMut.isPending
+                            ? "处理中…"
+                            : "驳回诊断（需确认）"
+                      }
+                    >
                       <XCircle size={14} strokeWidth={1.8} />
                       驳回
                     </button>

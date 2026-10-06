@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
+import { flushSync } from "react-dom";
 import { Building2, KeyRound, Plus, ShieldCheck, UsersRound } from "lucide-react";
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import {
   createOrg,
   createRole,
@@ -34,6 +35,24 @@ import { RegistryAssetsPanel } from "@/modules/registry/components/RegistryAsset
 import { getAuthToken, getCurrentSpaceId, getRefreshToken, setAuthSession } from "@/services/http/client";
 import type { AuthSessionResponse } from "@/modules/platform/api/platform.api";
 
+/** Space rules editor must be a non-empty JSON object (never coerce "" → {}). */
+export function validateSpaceRulesDraft(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return "需要填写规则 JSON";
+  try {
+    const doc = JSON.parse(trimmed) as unknown;
+    if (doc === null || typeof doc !== "object" || Array.isArray(doc)) {
+      return "规则必须是合法 JSON 对象";
+    }
+    if (Object.keys(doc as Record<string, unknown>).length === 0) {
+      return "规则 JSON 对象不能为空";
+    }
+    return null;
+  } catch {
+    return "规则 JSON 不合法";
+  }
+}
+
 export function SpacePage() {
   const qc = useQueryClient();
   const [activeSpaceId, setActiveSpaceId] = useState(getCurrentSpaceId());
@@ -41,6 +60,16 @@ export function SpacePage() {
   const [deviceId, setDeviceId] = useState("");
   const [deviceScope, setDeviceScope] = useState("");
   const [deviceTtl, setDeviceTtl] = useState("");
+  const deviceTtlIssue = (() => {
+    const raw = deviceTtl.trim();
+    if (!raw) return "";
+    const n = Number(raw);
+    if (!Number.isInteger(n) || n <= 0) return "TTL 须为正整数秒（可空）";
+    return "";
+  })();
+  const [orgName, setOrgName] = useState("");
+  const [spaceName, setSpaceName] = useState("");
+  const [roleName, setRoleName] = useState("");
   const [mintResult, setMintResult] = useState<AuthSessionResponse | null>(null);
   const gateQuery = useQuery({
     queryKey: ["console-auth-gate"],
@@ -60,8 +89,8 @@ export function SpacePage() {
     queryKey: ["spaces"],
     queryFn: listSpaces,
   });
-  const firstOrgId = orgsQuery.data?.items[0]?.id ?? "";
-  const activeSpace = spacesQuery.data?.items.find((space) => space.id === activeSpaceId);
+  const firstOrgId = orgsQuery.data?.items?.[0]?.id ?? "";
+  const activeSpace = (spacesQuery.data?.items ?? []).find((space) => space.id === activeSpaceId);
   const activeOrgId = activeSpace?.orgId || firstOrgId;
   const canManageActiveSpace = Boolean(activeSpaceId && activeSpaceId !== "local" && activeSpace);
   const rolesQuery = useQuery({
@@ -138,7 +167,9 @@ export function SpacePage() {
   });
   const rulesMut = useMutation({
     mutationFn: () => {
-      const document = JSON.parse(rulesDraft || "{}");
+      const issue = validateSpaceRulesDraft(rulesDraft);
+      if (issue) throw new Error(issue);
+      const document = JSON.parse(rulesDraft.trim()) as Record<string, unknown>;
       return putSpaceRules(activeSpaceId || "local", document);
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["space-rules"] }),
@@ -154,23 +185,29 @@ export function SpacePage() {
   const previewRulesMut = useMutation({
     mutationFn: () => previewSpaceRules(activeSpaceId || "local", { goal: previewGoal, repoRoot: rulesYamlHint }),
   });
+  const rulesDraftIssue = useMemo(() => validateSpaceRulesDraft(rulesDraft), [rulesDraft]);
+  const rulesRepoReady = Boolean(rulesYamlHint.trim());
   useEffect(() => {
     if (rulesQuery.data?.document) {
       setRulesDraft(JSON.stringify(rulesQuery.data.document, null, 2));
     }
   }, [rulesQuery.data]);
+  function commitActiveSpace(token: string, spaceId: string, refreshToken?: string) {
+    setAuthSession(token, spaceId, refreshToken);
+    flushSync(() => {
+      setActiveSpaceId(spaceId);
+    });
+  }
   const loginMut = useMutation({
     mutationFn: (spaceId?: string) => devLogin(spaceId),
     onSuccess: async (data) => {
-      setAuthSession(data.token, data.space.id);
-      setActiveSpaceId(data.space.id);
+      commitActiveSpace(data.token, data.space.id);
       await qc.invalidateQueries();
     },
   });
   function activateSpace(spaceId: string) {
     if (consoleAuthRequired && getAuthToken()) {
-      setAuthSession(getAuthToken(), spaceId, getRefreshToken() || undefined);
-      setActiveSpaceId(spaceId);
+      commitActiveSpace(getAuthToken(), spaceId, getRefreshToken() || undefined);
       void qc.invalidateQueries();
       return;
     }
@@ -179,6 +216,7 @@ export function SpacePage() {
   const createOrgMut = useMutation({
     mutationFn: createOrg,
     onSuccess: async () => {
+      setOrgName("");
       await qc.invalidateQueries({ queryKey: ["orgs"] });
     },
   });
@@ -198,6 +236,7 @@ export function SpacePage() {
   const createSpaceMut = useMutation({
     mutationFn: createSpace,
     onSuccess: async (space) => {
+      setSpaceName("");
       await qc.invalidateQueries({ queryKey: ["spaces"] });
       activateSpace(space.id);
     },
@@ -214,6 +253,7 @@ export function SpacePage() {
     mutationFn: (body: { orgId: string; name: string; permissions: string[] }) =>
       createRole(body.orgId, { name: body.name, permissions: body.permissions }),
     onSuccess: async () => {
+      setRoleName("");
       await qc.invalidateQueries({ queryKey: ["roles", activeOrgId] });
     },
   });
@@ -233,10 +273,14 @@ export function SpacePage() {
 
   function submitOrg(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    const name = orgName.trim();
+    if (!name) return;
     const formData = new FormData(event.currentTarget);
+    const ok = window.confirm(`确认创建组织「${name}」？`);
+    if (!ok) return;
     createOrgMut.mutate({
-      name: String(formData.get("name") || ""),
-      slug: String(formData.get("slug") || "") || undefined,
+      name,
+      slug: String(formData.get("slug") || "").trim() || undefined,
     });
   }
 
@@ -244,6 +288,10 @@ export function SpacePage() {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
     const selected = String(formData.get("templateId") || templateId);
+    const label =
+      (templatesQuery.data?.items ?? []).find((item) => item.id === selected)?.label || selected;
+    const ok = window.confirm(`确认按样板「${label}」一键开通 Org / Space / 角色？`);
+    if (!ok) return;
     provisionTemplateMut.mutate({
       templateId: selected,
       name: String(formData.get("name") || "") || undefined,
@@ -253,22 +301,28 @@ export function SpacePage() {
 
   function submitSpace(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!spaceName.trim() || !firstOrgId) return;
     const formData = new FormData(event.currentTarget);
+    const ok = window.confirm(`确认创建空间「${spaceName.trim()}」？`);
+    if (!ok) return;
     createSpaceMut.mutate({
-      orgId: String(formData.get("orgId") || ""),
-      name: String(formData.get("name") || ""),
+      orgId: String(formData.get("orgId") || firstOrgId),
+      name: spaceName.trim(),
       slug: String(formData.get("slug") || "") || undefined,
     });
   }
 
   function submitRole(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (!roleName.trim() || !activeOrgId) return;
     const formData = new FormData(event.currentTarget);
     const orgId = String(formData.get("orgId") || activeOrgId);
     const rawPermissions = String(formData.get("permissions") || "");
+    const ok = window.confirm(`确认创建角色「${roleName.trim()}」？`);
+    if (!ok) return;
     createRoleMut.mutate({
       orgId,
-      name: String(formData.get("name") || ""),
+      name: roleName.trim(),
       permissions: rawPermissions
         .split(/[\n,]/)
         .map((item) => item.trim())
@@ -279,17 +333,24 @@ export function SpacePage() {
   function submitMember(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const formData = new FormData(event.currentTarget);
+    const roleId = String(formData.get("roleId") || "").trim();
+    if (!roleId) return;
+    const label =
+      String(formData.get("email") || formData.get("displayName") || formData.get("userId") || "").trim() ||
+      "新成员";
+    const ok = window.confirm(`确认添加成员「${label}」到当前 Space？`);
+    if (!ok) return;
     createMemberMut.mutate({
       spaceId: activeSpaceId,
       userId: String(formData.get("userId") || "") || undefined,
       email: String(formData.get("email") || "") || undefined,
       displayName: String(formData.get("displayName") || "") || undefined,
       password: String(formData.get("password") || "") || undefined,
-      roleId: String(formData.get("roleId") || ""),
+      roleId,
     });
   }
 
-  const selectedTemplate = templatesQuery.data?.items.find((item) => item.id === templateId);
+  const selectedTemplate = (templatesQuery.data?.items ?? []).find((item) => item.id === templateId);
   const err =
     orgsQuery.error?.message ||
     templatesQuery.error?.message ||
@@ -327,8 +388,15 @@ export function SpacePage() {
             <button
               className="btn icon-btn"
               data-testid="dev-token-btn"
-              onClick={() => loginMut.mutate(activeSpaceId)}
+              onClick={() => {
+                const ok = window.confirm(
+                  `确认签发 Space「${activeSpaceId}」的本地 Dev Token？`,
+                );
+                if (!ok) return;
+                loginMut.mutate(activeSpaceId);
+              }}
               disabled={loginMut.isPending}
+              title={loginMut.isPending ? "签发中…" : "签发本地 Dev Token（需确认）"}
             >
               <KeyRound size={16} strokeWidth={1.8} />
               Dev Token
@@ -340,7 +408,7 @@ export function SpacePage() {
       <div className="pane" style={{ marginBottom: "1rem" }} data-testid="auth-sessions-panel">
         <div className="pane-title">
           <h2>Auth Sessions</h2>
-          <span>{sessionsQuery.data?.items.length ?? 0}</span>
+          <span>{sessionsQuery.data?.items?.length ?? 0}</span>
         </div>
         <p className="muted-line">
           多端会话（DX57–58）：当前{" "}
@@ -356,8 +424,19 @@ export function SpacePage() {
             className="btn"
             type="button"
             data-testid="auth-session-refresh"
-            onClick={() => refreshSessionMut.mutate()}
+            onClick={() => {
+              const ok = window.confirm("确认刷新当前会话 token？旧 token 可能立即失效。");
+              if (!ok) return;
+              refreshSessionMut.mutate();
+            }}
             disabled={!getAuthToken() || refreshSessionMut.isPending}
+            title={
+              !getAuthToken()
+                ? "需要先登录获取 token"
+                : refreshSessionMut.isPending
+                  ? "刷新中…"
+                  : "刷新当前会话 token（需确认）"
+            }
           >
             {refreshSessionMut.isPending ? "刷新中…" : "Refresh 当前 token"}
           </button>
@@ -368,6 +447,11 @@ export function SpacePage() {
           style={{ marginBottom: "0.75rem" }}
           onSubmit={(e) => {
             e.preventDefault();
+            if (deviceTtlIssue) return;
+            const ok = window.confirm(
+              "确认签发 device token？令牌仅展示一次，请妥善保存。",
+            );
+            if (!ok) return;
             mintDeviceMut.mutate();
           }}
         >
@@ -404,7 +488,16 @@ export function SpacePage() {
             className="btn primary"
             type="submit"
             data-testid="device-mint-submit"
-            disabled={!getAuthToken() || mintDeviceMut.isPending}
+            disabled={!getAuthToken() || mintDeviceMut.isPending || Boolean(deviceTtlIssue)}
+            title={
+              !getAuthToken()
+                ? "需要先登录获取 token"
+                : deviceTtlIssue
+                  ? deviceTtlIssue
+                  : mintDeviceMut.isPending
+                    ? "签发中…"
+                    : "签发 device token（需确认）"
+            }
           >
             {mintDeviceMut.isPending ? "Minting…" : "Mint device"}
           </button>
@@ -477,7 +570,20 @@ export function SpacePage() {
                       className="btn icon-btn"
                       type="button"
                       disabled={row.status === "revoked" || revokeSessionMut.isPending}
-                      onClick={() => revokeSessionMut.mutate(row.sid)}
+                      onClick={() => {
+                        if (row.status === "revoked") return;
+                        const ok = window.confirm(`确认吊销会话 ${row.sid}？吊销后对应 token 将失效。`);
+                        if (!ok) return;
+                        revokeSessionMut.mutate(row.sid);
+                      }}
+                      title={
+                        row.status === "revoked"
+                          ? "会话已吊销"
+                          : revokeSessionMut.isPending
+                            ? "吊销中…"
+                            : `吊销会话 ${row.sid}（需确认）`
+                      }
+                      data-testid={`space-session-revoke-${row.sid}`}
                     >
                       Revoke
                     </button>
@@ -498,7 +604,7 @@ export function SpacePage() {
       <div className="pane" style={{ marginBottom: "1rem" }} data-testid="org-templates-panel">
         <div className="pane-title">
           <h2>组织样板（PRD §3）</h2>
-          <span>{templatesQuery.data?.items.length ?? 0} 套</span>
+          <span>{templatesQuery.data?.items?.length ?? 0} 套</span>
         </div>
         <p className="muted-line">一键开通 Org / Space / 角色；标明谁付费、谁决策、谁审批。</p>
         <form className="stack-form" onSubmit={submitTemplate}>
@@ -508,14 +614,14 @@ export function SpacePage() {
               name="templateId"
               value={templateId}
               onChange={(e) => setTemplateId(e.target.value)}
-              disabled={!templatesQuery.data?.items.length || provisionTemplateMut.isPending}
+              disabled={!templatesQuery.data?.items?.length || provisionTemplateMut.isPending}
             >
               {(templatesQuery.data?.items ?? []).map((item) => (
                 <option key={item.id} value={item.id}>
                   {item.label}
                 </option>
               ))}
-              {!templatesQuery.data?.items.length && <option value="small_team">小团队</option>}
+              {!templatesQuery.data?.items?.length && <option value="small_team">小团队</option>}
             </select>
           </label>
           {selectedTemplate && (
@@ -525,7 +631,19 @@ export function SpacePage() {
           )}
           <input name="name" placeholder="组织名称（可空=样板默认）" />
           <input name="slug" placeholder="slug（可空）" />
-          <button className="btn primary icon-btn" type="submit" disabled={provisionTemplateMut.isPending}>
+          <button
+            className="btn primary icon-btn"
+            type="submit"
+            disabled={!templatesQuery.data?.items?.length || provisionTemplateMut.isPending}
+            title={
+              !templatesQuery.data?.items?.length
+                ? "样板列表加载中或不可用"
+                : provisionTemplateMut.isPending
+                  ? "开通中…"
+                  : "按所选样板开通 Org / Space / 角色（需确认）"
+            }
+            data-testid="space-template-provision"
+          >
             <Plus size={16} strokeWidth={1.8} />
             {provisionTemplateMut.isPending ? "开通中…" : "一键开通样板"}
           </button>
@@ -556,13 +674,71 @@ export function SpacePage() {
           style={{ width: "100%", fontFamily: "ui-monospace, monospace", fontSize: "0.85rem" }}
         />
         <div className="toolbar" style={{ gap: "0.5rem", flexWrap: "wrap" }}>
-          <button className="btn primary" type="button" onClick={() => rulesMut.mutate()} disabled={rulesMut.isPending}>
+          <button
+            className="btn primary"
+            type="button"
+            data-testid="space-rules-save"
+            onClick={() => {
+              if (rulesDraftIssue) return;
+              const ok = window.confirm("确认将当前规则 JSON 保存到 DB？将覆盖该 Space 现有规则。");
+              if (!ok) return;
+              rulesMut.mutate();
+            }}
+            disabled={Boolean(rulesDraftIssue) || rulesMut.isPending}
+            title={
+              rulesDraftIssue
+                ? rulesDraftIssue
+                : rulesMut.isPending
+                  ? "保存中…"
+                  : "将规则保存到 DB（需确认）"
+            }
+          >
             保存到 DB
           </button>
-          <button className="btn" type="button" onClick={() => importRulesMut.mutate()} disabled={importRulesMut.isPending}>
+          <button
+            className="btn"
+            type="button"
+            data-testid="space-rules-import"
+            onClick={() => {
+              if (!rulesRepoReady) return;
+              const ok = window.confirm(
+                `确认从「${rulesYamlHint.trim()}」导入规则到 DB？将覆盖该 Space 现有规则。`,
+              );
+              if (!ok) return;
+              importRulesMut.mutate();
+            }}
+            disabled={!rulesRepoReady || importRulesMut.isPending}
+            title={
+              !rulesRepoReady
+                ? "需要填写 repoRoot"
+                : importRulesMut.isPending
+                  ? "导入中…"
+                  : "从文件导入规则到 DB（需确认）"
+            }
+          >
             Import 文件→DB
           </button>
-          <button className="btn" type="button" onClick={() => exportRulesMut.mutate()} disabled={exportRulesMut.isPending}>
+          <button
+            className="btn"
+            type="button"
+            data-testid="space-rules-export"
+            onClick={() => {
+              if (!rulesRepoReady) return;
+              const ok = window.confirm(
+                `确认将 DB 规则导出到「${rulesYamlHint.trim()}」？可能覆盖仓库内规则文件。`,
+              );
+              if (!ok) return;
+              exportRulesMut.mutate();
+            }}
+            disabled={!rulesRepoReady || exportRulesMut.isPending}
+            title={
+              !rulesRepoReady
+                ? "需要填写 repoRoot"
+                : exportRulesMut.isPending
+                  ? "导出中…"
+                  : "从 DB 导出规则到文件（需确认）"
+            }
+          >
             Export DB→文件
           </button>
         </div>
@@ -570,7 +746,25 @@ export function SpacePage() {
           预览 Goal
           <input value={previewGoal} onChange={(e) => setPreviewGoal(e.target.value)} data-testid="space-rules-preview-goal" />
         </label>
-        <button className="btn" type="button" onClick={() => previewRulesMut.mutate()} disabled={previewRulesMut.isPending}>
+        <button
+          className="btn"
+          type="button"
+          data-testid="space-rules-preview"
+          onClick={() => {
+            if (!rulesRepoReady || !previewGoal.trim()) return;
+            previewRulesMut.mutate();
+          }}
+          disabled={previewRulesMut.isPending || !previewGoal.trim() || !rulesRepoReady}
+          title={
+            !rulesRepoReady
+              ? "需要填写 repoRoot"
+              : !previewGoal.trim()
+                ? "需要填写预览 Goal"
+                : previewRulesMut.isPending
+                  ? "预览中…"
+                  : "预览路由"
+          }
+        >
           预览路由
         </button>
         {previewRulesMut.data && (
@@ -579,14 +773,23 @@ export function SpacePage() {
           </p>
         )}
         {(rulesMut.isError || importRulesMut.isError || exportRulesMut.isError || previewRulesMut.isError) && (
-          <p className="error-text">Rules 操作失败，请检查 JSON / 路径权限。</p>
+          <p className="error-text" data-testid="space-rules-error">
+            {(() => {
+              const err =
+                (rulesMut.error as Error | null) ||
+                (importRulesMut.error as Error | null) ||
+                (exportRulesMut.error as Error | null) ||
+                (previewRulesMut.error as Error | null);
+              return err?.message?.trim() || "Rules 操作失败，请检查 JSON / 路径权限。";
+            })()}
+          </p>
         )}
       </div>
       <div className="split">
         <div className="pane">
           <div className="pane-title">
             <h2>Organizations</h2>
-            <span>{orgsQuery.data?.items.length ?? 0} 个</span>
+            <span>{orgsQuery.data?.items?.length ?? 0} 个</span>
           </div>
           <table className="table">
             <thead>
@@ -604,7 +807,7 @@ export function SpacePage() {
                   <td>{org.slug || "-"}</td>
                 </tr>
               ))}
-              {!orgsQuery.data?.items.length && (
+              {!orgsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>暂无组织。</td>
                 </tr>
@@ -617,13 +820,32 @@ export function SpacePage() {
           >
             <label>
               Name
-              <input name="name" required placeholder="Product Team" />
+              <input
+                name="name"
+                required
+                placeholder="Product Team"
+                value={orgName}
+                onChange={(e) => setOrgName(e.target.value)}
+                data-testid="space-org-name"
+              />
             </label>
             <label>
               Slug
               <input name="slug" placeholder="product" />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={createOrgMut.isPending}>
+            <button
+              className="btn primary icon-btn"
+              type="submit"
+              disabled={createOrgMut.isPending || !orgName.trim()}
+              title={
+                !orgName.trim()
+                  ? "需要填写组织名称"
+                  : createOrgMut.isPending
+                    ? "创建中…"
+                    : "创建组织（需确认）"
+              }
+              data-testid="space-org-create"
+            >
               <Plus size={16} strokeWidth={1.8} />
               创建组织
             </button>
@@ -632,7 +854,7 @@ export function SpacePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Spaces</h2>
-            <span>{spacesQuery.data?.items.length ?? 0} 个</span>
+            <span>{spacesQuery.data?.items?.length ?? 0} 个</span>
           </div>
           <table className="table">
             <thead>
@@ -658,7 +880,13 @@ export function SpacePage() {
                         当前
                       </span>
                     ) : (
-                      <button className="btn icon-btn" type="button" onClick={() => activateSpace(space.id)} disabled={loginMut.isPending}>
+                      <button
+                        className="btn icon-btn"
+                        type="button"
+                        onClick={() => activateSpace(space.id)}
+                        disabled={loginMut.isPending}
+                        title={loginMut.isPending ? "激活中…" : `切换到空间 ${space.name || space.id}`}
+                      >
                         <KeyRound size={14} strokeWidth={1.8} />
                         激活
                       </button>
@@ -666,7 +894,7 @@ export function SpacePage() {
                   </td>
                 </tr>
               ))}
-              {!spacesQuery.data?.items.length && (
+              {!spacesQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={5}>暂无空间。</td>
                 </tr>
@@ -692,13 +920,33 @@ export function SpacePage() {
             </label>
             <label>
               Name
-              <input name="name" required placeholder="Delivery Space" />
+              <input
+                name="name"
+                required
+                placeholder="Delivery Space"
+                value={spaceName}
+                onChange={(e) => setSpaceName(e.target.value)}
+              />
             </label>
             <label>
               Slug
               <input name="slug" placeholder="delivery" />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={createSpaceMut.isPending || !firstOrgId}>
+            <button
+              className="btn primary icon-btn"
+              type="submit"
+              disabled={createSpaceMut.isPending || !firstOrgId || !spaceName.trim()}
+              data-testid="space-create"
+              title={
+                !firstOrgId
+                  ? "需要先创建组织"
+                  : !spaceName.trim()
+                    ? "需要填写空间名称"
+                    : createSpaceMut.isPending
+                      ? "创建中…"
+                      : "创建空间（需确认）"
+              }
+            >
               <Plus size={16} strokeWidth={1.8} />
               创建空间
             </button>
@@ -718,7 +966,7 @@ export function SpacePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Roles</h2>
-            <span>{rolesQuery.data?.items.length ?? 0} 个</span>
+            <span>{rolesQuery.data?.items?.length ?? 0} 个</span>
           </div>
           <table className="table">
             <thead>
@@ -736,7 +984,7 @@ export function SpacePage() {
                   <td>{role.permissions || "[]"}</td>
                 </tr>
               ))}
-              {!rolesQuery.data?.items.length && (
+              {!rolesQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>暂无角色。</td>
                 </tr>
@@ -759,13 +1007,33 @@ export function SpacePage() {
             </label>
             <label>
               Name
-              <input name="name" required placeholder="delivery-runner" />
+              <input
+                name="name"
+                required
+                placeholder="delivery-runner"
+                value={roleName}
+                onChange={(e) => setRoleName(e.target.value)}
+              />
             </label>
             <label>
               Permissions
               <textarea name="permissions" rows={3} placeholder="run:create, artifact:read" />
             </label>
-            <button className="btn primary icon-btn" type="submit" disabled={createRoleMut.isPending || !activeOrgId}>
+            <button
+              className="btn primary icon-btn"
+              type="submit"
+              disabled={createRoleMut.isPending || !activeOrgId || !roleName.trim()}
+              data-testid="space-role-create"
+              title={
+                !activeOrgId
+                  ? "需要先创建或选择组织"
+                  : !roleName.trim()
+                    ? "需要填写角色名称"
+                    : createRoleMut.isPending
+                      ? "创建中…"
+                      : "创建角色（需确认）"
+              }
+            >
               <ShieldCheck size={16} strokeWidth={1.8} />
               创建角色
             </button>
@@ -774,7 +1042,7 @@ export function SpacePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Members</h2>
-            <span>{membersQuery.data?.items.length ?? 0} 个</span>
+            <span>{membersQuery.data?.items?.length ?? 0} 个</span>
           </div>
           <table className="table">
             <thead>
@@ -794,7 +1062,7 @@ export function SpacePage() {
                   <td>{member.status}</td>
                 </tr>
               ))}
-              {!membersQuery.data?.items.length && (
+              {!membersQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无成员。</td>
                 </tr>
@@ -834,7 +1102,16 @@ export function SpacePage() {
             <button
               className="btn primary icon-btn"
               type="submit"
-              disabled={createMemberMut.isPending || !canManageActiveSpace || !rolesQuery.data?.items.length}
+              disabled={createMemberMut.isPending || !canManageActiveSpace || !rolesQuery.data?.items?.length}
+              title={
+                !canManageActiveSpace
+                  ? "本地 space 不可添加成员，请切换到托管 space"
+                  : !rolesQuery.data?.items?.length
+                    ? "需要先创建角色"
+                    : createMemberMut.isPending
+                      ? "添加中…"
+                      : "添加成员（需确认）"
+              }
             >
               <UsersRound size={16} strokeWidth={1.8} />
               添加成员
@@ -873,7 +1150,7 @@ export function SpacePage() {
                       {role.label} <code>{role.name}</code>
                     </td>
                     <td>
-                      <code className="evidence-snippet">{role.permissions.join(", ")}</code>
+                      <code className="evidence-snippet">{(role.permissions ?? []).join(", ")}</code>
                     </td>
                   </tr>
                 ))}
@@ -899,7 +1176,7 @@ export function SpacePage() {
         </div>
         <div className="pane-title subhead">
           <h3>场景策略编辑</h3>
-          <span>{scopesQuery.data?.items.filter((s) => s.resourceType === "scenario").length ?? 0} 条</span>
+          <span>{(scopesQuery.data?.items ?? []).filter((s) => s.resourceType === "scenario").length} 条</span>
         </div>
         {(scopesQuery.data?.items ?? [])
           .filter((scope) => scope.resourceType === "scenario")
@@ -919,8 +1196,22 @@ export function SpacePage() {
                 <button
                   className="btn icon-btn"
                   type="button"
+                  data-testid={`space-scope-save-${scope.id}`}
                   disabled={updateScopeMut.isPending || draft === scope.policyJson}
-                  onClick={() => updateScopeMut.mutate({ scopeId: scope.id, policyJson: draft })}
+                  title={
+                    draft === scope.policyJson
+                      ? "策略未修改"
+                      : updateScopeMut.isPending
+                        ? "保存中…"
+                        : "保存场景工具策略（需确认）"
+                  }
+                  onClick={() => {
+                    const ok = window.confirm(
+                      `确认保存场景「${scope.resourceId}」的工具策略？`,
+                    );
+                    if (!ok) return;
+                    updateScopeMut.mutate({ scopeId: scope.id, policyJson: draft });
+                  }}
                 >
                   保存策略
                 </button>

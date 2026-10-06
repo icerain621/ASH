@@ -107,6 +107,21 @@ describe("ScalePage", () => {
     });
   });
 
+  it("tolerates null duties on waker status", async () => {
+    const { getWakerStatus } = await import("@/modules/waker/api/waker.api");
+    vi.mocked(getWakerStatus).mockResolvedValueOnce({
+      duties: null as unknown as [],
+      recentRuns: [],
+      allowCancel: false,
+      interval: "off",
+      intervalMs: 0,
+    } as never);
+    renderPage(<ScalePage />);
+    await waitFor(() => {
+      expect(screen.getByText(/duties enabled: 0 · queue: 3/)).toBeInTheDocument();
+    });
+  });
+
   it("shows LSP availability on RAG retrieval mode row", async () => {
     renderPage(<ScalePage />);
     await waitFor(() => {
@@ -134,5 +149,17 @@ describe("ScalePage", () => {
     await waitFor(() => {
       expect(screen.getByTestId("scale-rag-vector")).toHaveTextContent(/可用 · mock/);
     });
+  });
+
+  it("exposes M3 and TR3 doctor run controls", async () => {
+    renderPage(<ScalePage />);
+    expect(await screen.findByTestId("scale-doctor-m3")).toHaveAttribute(
+      "title",
+      "运行 M3 多租户套件",
+    );
+    expect(screen.getByTestId("scale-doctor-tr3")).toHaveAttribute(
+      "title",
+      "运行 TR3 规模化套件",
+    );
   });
 });

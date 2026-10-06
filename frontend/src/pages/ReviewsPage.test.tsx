@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { ReviewsPage } from "./ReviewsPage";
 import { decideReview, listReviewsQueue, assignReview, createScoreAppeal } from "@/modules/reviews/api/reviews.api";
 import { getSpacePolicy } from "@/modules/registry/api/registry.api";
@@ -138,12 +138,55 @@ describe("ReviewsPage", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     window.history.replaceState({}, "", "/reviews");
+    vi.mocked(listReviewsQueue).mockResolvedValue({
+      items: [
+        {
+          id: "harness_profile:hprof_1",
+          queue: "orchestration",
+          targetType: "harness_profile",
+          targetId: "hprof_1",
+          title: "default@v1",
+          status: "pending",
+          spaceId: "local",
+          createdAt: 1,
+          assigneeId: "rev_bob",
+          slaBreach: true,
+          ageHours: 96,
+        },
+        {
+          id: "harness_profile:hprof_2",
+          queue: "orchestration",
+          targetType: "harness_profile",
+          targetId: "hprof_2",
+          title: "team@v2",
+          status: "pending_second",
+          spaceId: "local",
+          createdAt: 2,
+        },
+        {
+          id: "score_appeal:score_1",
+          queue: "appeal",
+          targetType: "score_appeal",
+          targetId: "score_1",
+          title: "Appeal score_1",
+          summary: "please reconsider",
+          status: "pending",
+          spaceId: "local",
+          createdAt: 3,
+        },
+      ],
+    });
     vi.mocked(getAuthMe).mockResolvedValue({
       user: { id: "u1", displayName: "Reviewer" },
       space: { id: "local", name: "local" },
       role: "reviewer",
       permissions: ["reviews:assign", "memory:review"],
     });
+    vi.spyOn(window, "confirm").mockReturnValue(true);
+  });
+
+  afterEach(() => {
+    vi.mocked(window.confirm).mockRestore?.();
   });
 
   it("reads memoryId query into deeplink banner and memory queue", async () => {
@@ -152,6 +195,67 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("reviews-memory-deeplink")).toHaveTextContent("mem_deeplink");
     expect(screen.getByTestId("reviews-queue-filter")).toHaveValue("memory");
     expect(listReviewsQueue).toHaveBeenCalledWith("memory", 80);
+  });
+
+  it("disables patch create until scenario, title, and diff are filled", async () => {
+    renderReviews();
+    const create = await screen.findByTestId("patch-create");
+    expect(create).toBeDisabled();
+    expect(create).toHaveAttribute("title", "需要填写场景名");
+    fireEvent.change(screen.getByTestId("patch-scenario"), { target: { value: "feature_delivery" } });
+    expect(create).toHaveAttribute("title", "需要填写标题");
+    fireEvent.change(screen.getByTestId("patch-title"), { target: { value: "tighten gate" } });
+    expect(create).toHaveAttribute("title", "需要填写 Diff / 说明");
+    fireEvent.change(screen.getByTestId("patch-diff"), { target: { value: "- old\n+ new" } });
+    expect(create).toBeEnabled();
+    expect(create).toHaveAttribute("title", "创建 Scenario patch 草稿（需确认）");
+  });
+
+  it("requires confirm before creating scenario patch draft", async () => {
+    const { createScenarioPatch } = await import("@/modules/reviews/api/reviews.api");
+    vi.mocked(createScenarioPatch).mockClear();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    renderReviews();
+    fireEvent.change(await screen.findByTestId("patch-scenario"), {
+      target: { value: "feature_delivery" },
+    });
+    fireEvent.change(screen.getByTestId("patch-title"), { target: { value: "tighten gate" } });
+    fireEvent.change(screen.getByTestId("patch-diff"), { target: { value: "- old\n+ new" } });
+    fireEvent.click(screen.getByTestId("patch-create"));
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(createScenarioPatch).not.toHaveBeenCalled();
+    confirmSpy.mockRestore();
+  });
+
+  it("auto-selects queue item matching memoryId deeplink", async () => {
+    vi.mocked(listReviewsQueue).mockImplementation(async (q) => {
+      if (q === "memory") {
+        return {
+          items: [
+            {
+              id: "memory:mem_deeplink",
+              queue: "memory",
+              targetType: "memory",
+              targetId: "mem_deeplink",
+              title: "Deep link candidate",
+              summary: "from thick review",
+              status: "pending",
+              spaceId: "local",
+              createdAt: 1,
+            },
+          ],
+        };
+      }
+      return { items: [] };
+    });
+    window.history.replaceState({}, "", "/reviews?queue=memory&memoryId=mem_deeplink");
+    renderReviews();
+    expect(await screen.findByTestId("reviews-memory-deeplink")).toHaveTextContent("mem_deeplink");
+    await waitFor(() => {
+      expect(screen.getByTestId("review-item-memory")).toHaveClass("selected");
+    });
+    expect(screen.getAllByText("Deep link candidate").length).toBeGreaterThanOrEqual(1);
+    expect(screen.queryByTestId("reviews-decide-hint")).toBeNull();
   });
 
   it("renders pillar sub-nav and defaults to queue workbench", async () => {
@@ -164,6 +268,8 @@ describe("ReviewsPage", () => {
     expect(screen.getByTestId("review-nav-orchestrate")).toBeTruthy();
     expect(screen.getByTestId("reviews-workbench")).toBeTruthy();
     expect(screen.queryByTestId("review-assets-panel")).toBeNull();
+    expect(screen.getByTestId("reviews-queue-filter")).toHaveValue("all");
+    expect(listReviewsQueue).toHaveBeenCalledWith("all", 80);
   });
 
   it("switches to assets, observe, and orchestrate panels", async () => {
@@ -219,6 +325,29 @@ describe("ReviewsPage", () => {
     });
   });
 
+  it("disables approve/reject when rubric is empty or out of 1–5", async () => {
+    renderReviews();
+    fireEvent.click(await screen.findByText("default@v1"));
+    const approve = screen.getByTestId("review-approve");
+    const reject = screen.getByTestId("review-reject");
+    expect(approve).not.toBeDisabled();
+
+    fireEvent.change(screen.getByTestId("rubric-correctness"), { target: { value: "" } });
+    expect(approve).toBeDisabled();
+    expect(reject).toBeDisabled();
+    expect(approve).toHaveAttribute("title", "Rubric 各项需为 1–5");
+
+    fireEvent.change(screen.getByTestId("rubric-correctness"), { target: { value: "9" } });
+    expect(approve).toBeDisabled();
+    expect(approve).toHaveAttribute("title", "Rubric 各项需为 1–5");
+
+    fireEvent.change(screen.getByTestId("rubric-correctness"), { target: { value: "4" } });
+    expect(approve).not.toBeDisabled();
+    expect(reject).not.toBeDisabled();
+    expect(approve).toHaveAttribute("title", "批准（需确认）");
+    expect(reject).toHaveAttribute("title", "拒绝（需确认）");
+  });
+
   it("shows pending_second badge and second-sign decide labels", async () => {
     renderReviews();
     expect(await screen.findByText("team@v2")).toBeTruthy();
@@ -245,8 +374,18 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("review-assignee-badge")).toHaveTextContent("负责人: rev_bob");
     fireEvent.click(screen.getByText("default@v1"));
     expect(screen.getByTestId("review-detail-assignee")).toHaveTextContent("负责人: rev_bob");
+    const assignBtn = screen.getByTestId("review-assign");
+    expect(assignBtn).toBeDisabled();
+    expect(assignBtn).toHaveAttribute("title", "需要填写 assigneeId");
     fireEvent.change(screen.getByTestId("reviews-assignee-input"), { target: { value: "op_x" } });
-    fireEvent.click(screen.getByTestId("review-assign"));
+    expect(assignBtn).toBeEnabled();
+    expect(assignBtn).toHaveAttribute("title", "分配责任人（需确认）");
+    vi.mocked(window.confirm).mockReturnValue(false);
+    fireEvent.click(assignBtn);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("op_x"));
+    expect(assignReview).not.toHaveBeenCalled();
+    vi.mocked(window.confirm).mockReturnValue(true);
+    fireEvent.click(assignBtn);
     await waitFor(() => {
       expect(assignReview).toHaveBeenCalledWith(
         "harness_profile:hprof_1",
@@ -260,6 +399,7 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("review-sla-breach-badge")).toHaveTextContent("SLA 逾期");
     expect(screen.getByText("default@v1")).toBeTruthy();
     expect(screen.getByText("team@v2")).toBeTruthy();
+    expect(screen.getByTestId("reviews-filter-overdue")).toHaveAttribute("title", "仅显示逾期评审");
 
     fireEvent.click(screen.getByTestId("reviews-filter-overdue"));
     expect(screen.getByText("default@v1")).toBeTruthy();
@@ -316,9 +456,40 @@ describe("ReviewsPage", () => {
       target: { value: "score_abc" },
     });
     fireEvent.change(screen.getByTestId("appeal-reason"), { target: { value: "too harsh" } });
-    fireEvent.click(screen.getByTestId("appeal-create"));
+    const create = screen.getByTestId("appeal-create");
+    expect(create).toHaveAttribute("title", "提交申诉（需确认）");
+    vi.mocked(window.confirm).mockReturnValue(false);
+    fireEvent.click(create);
+    expect(window.confirm).toHaveBeenCalledWith(expect.stringContaining("score_abc"));
+    expect(createScoreAppeal).not.toHaveBeenCalled();
+    vi.mocked(window.confirm).mockReturnValue(true);
+    fireEvent.click(create);
     await waitFor(() => {
       expect(createScoreAppeal).toHaveBeenCalledWith("score_abc", { reason: "too harsh" });
+    });
+  });
+
+  it("requires confirm before submitting scenario patch for review", async () => {
+    const { listScenarioPatches, submitScenarioPatchReview } = await import(
+      "@/modules/reviews/api/reviews.api"
+    );
+    vi.mocked(listScenarioPatches).mockResolvedValue({
+      items: [{ id: "sp_1", title: "tighten gate", status: "draft", scenarioName: "feature_delivery" }],
+    } as never);
+    vi.mocked(submitScenarioPatchReview).mockClear();
+    // beforeEach already mocks confirm as true; override to cancel first
+    vi.mocked(window.confirm).mockReturnValue(false);
+    renderReviews();
+    const submit = await screen.findByTestId("patch-submit-sp_1");
+    expect(submit).toHaveAttribute("title", "提交编排评审（需确认）");
+    fireEvent.click(submit);
+    expect(window.confirm).toHaveBeenCalled();
+    expect(submitScenarioPatchReview).not.toHaveBeenCalled();
+
+    vi.mocked(window.confirm).mockReturnValue(true);
+    fireEvent.click(submit);
+    await waitFor(() => {
+      expect(submitScenarioPatchReview).toHaveBeenCalledWith("sp_1", expect.anything());
     });
   });
 });

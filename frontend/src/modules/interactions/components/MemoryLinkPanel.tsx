@@ -6,6 +6,7 @@ import {
   replayInteractionThread,
   sealInteractionThread,
 } from "../api/interactions.api";
+import { formatInteractionError } from "../formatInteractionError";
 
 type Props = {
   runId: string;
@@ -20,17 +21,20 @@ export function MemoryLinkPanel({ runId, highlightSeq, onSelectLinkSeq }: Props)
     queryKey: ["interaction-by-run", runId],
     queryFn: () => getInteractionByRun(runId),
     enabled: Boolean(runId),
+    retry: false,
   });
   const threadId = byRun.data?.thread.id ?? "";
   const linksQuery = useQuery({
     queryKey: ["interaction-links", threadId],
     queryFn: () => listInteractionMemoryLinks(threadId),
     enabled: Boolean(threadId),
+    retry: false,
   });
   const foldQuery = useQuery({
     queryKey: ["interaction-fold", threadId],
     queryFn: () => getInteractionThread(threadId),
     enabled: Boolean(threadId),
+    retry: false,
   });
 
   const sealMut = useMutation({
@@ -47,13 +51,19 @@ export function MemoryLinkPanel({ runId, highlightSeq, onSelectLinkSeq }: Props)
   const sealed = byRun.data?.thread.status === "sealed";
   const replayOk = replayMut.data?.ok;
   const links = linksQuery.data?.items ?? [];
+  const rawLoadError =
+    (byRun.error as Error | null)?.message ||
+    (linksQuery.error as Error | null)?.message ||
+    (foldQuery.error as Error | null)?.message ||
+    "";
+  const loadError = formatInteractionError(rawLoadError);
 
   return (
     <div className="pane" data-testid="memory-link-panel" style={{ marginTop: "0.75rem" }}>
       <div className="pane-title">
         <h2>MemoryLink</h2>
         <span>
-          {sealed ? "sealed" : "open"}
+          {byRun.isError ? "error" : sealed ? "sealed" : threadId ? "open" : byRun.isLoading ? "loading" : "—"}
           {foldQuery.data?.digest ? ` · ${foldQuery.data.digest.slice(0, 12)}` : ""}
         </span>
       </div>
@@ -62,8 +72,14 @@ export function MemoryLinkPanel({ runId, highlightSeq, onSelectLinkSeq }: Props)
           type="button"
           className="btn mini"
           disabled={!threadId || sealMut.isPending || sealed}
+          title={!threadId ? "需要先解析到 Thread" : sealed ? "已封印" : "封印 Thread（需确认）"}
           data-testid="memory-link-seal"
-          onClick={() => sealMut.mutate()}
+          onClick={() => {
+            if (!threadId || sealed) return;
+            const ok = window.confirm("确认封印此 Thread？封印后不可再写入事件。");
+            if (!ok) return;
+            sealMut.mutate();
+          }}
         >
           封印
         </button>
@@ -71,8 +87,14 @@ export function MemoryLinkPanel({ runId, highlightSeq, onSelectLinkSeq }: Props)
           type="button"
           className="btn mini"
           disabled={!threadId || replayMut.isPending}
+          title={!threadId ? "需要先解析到 Thread" : "复现校验 digest（需确认）"}
           data-testid="memory-link-replay"
-          onClick={() => replayMut.mutate()}
+          onClick={() => {
+            if (!threadId) return;
+            const ok = window.confirm("确认对此 Thread 执行复现校验？");
+            if (!ok) return;
+            replayMut.mutate();
+          }}
         >
           复现校验
         </button>
@@ -91,7 +113,15 @@ export function MemoryLinkPanel({ runId, highlightSeq, onSelectLinkSeq }: Props)
           </span>
         ) : null}
       </div>
-      {links.length === 0 ? (
+      {!runId ? (
+        <p className="muted-line">输入 Run ID 后加载 MemoryLink。</p>
+      ) : byRun.isLoading || (threadId && linksQuery.isLoading) ? (
+        <p className="muted-line">加载中…</p>
+      ) : loadError ? (
+        <p className="error-text" data-testid="memory-link-error">
+          {loadError}
+        </p>
+      ) : links.length === 0 ? (
         <p className="muted-line" data-testid="memory-link-empty">
           本 Thread 暂无记忆关联边
         </p>

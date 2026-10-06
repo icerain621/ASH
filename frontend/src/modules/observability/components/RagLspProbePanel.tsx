@@ -1,5 +1,5 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   postRagLspDefinition,
   postRagLspHover,
@@ -9,22 +9,43 @@ import { getCurrentSpaceId } from "@/services/http/client";
 
 type Props = {
   defaultRepoRoot?: string;
+  /** Sample file for probes; default matches ASH Go entrypoint (not bare main.go). */
+  defaultPath?: string;
   testIdPrefix?: string;
 };
 
-export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-lsp" }: Props) {
+export function RagLspProbePanel({
+  defaultRepoRoot = ".",
+  defaultPath = "cmd/worker/main.go",
+  testIdPrefix = "rag-lsp",
+}: Props) {
   const spaceId = getCurrentSpaceId();
   const [repoRoot, setRepoRoot] = useState(defaultRepoRoot);
-  const [path, setPath] = useState("main.go");
+  const [path, setPath] = useState(defaultPath);
   const [line, setLine] = useState(1);
   const [character, setCharacter] = useState(0);
   const [result, setResult] = useState<string>("");
 
+  useEffect(() => {
+    setRepoRoot(defaultRepoRoot);
+  }, [defaultRepoRoot]);
+
+  const pathReady = Boolean(path.trim());
+  const repoReady = Boolean(repoRoot.trim());
+  const lineIssue =
+    !Number.isFinite(line) || !Number.isInteger(line) || line < 1
+      ? "line 须为 ≥1 的整数"
+      : "";
+  const charIssue =
+    !Number.isFinite(character) || !Number.isInteger(character) || character < 0
+      ? "char 须为 ≥0 的整数"
+      : "";
+
   const body = () => ({
-    repoRoot: repoRoot.trim() || ".",
+    repoRoot: repoRoot.trim(),
     path: path.trim(),
-    line: Number(line) || 1,
-    character: Number(character) || 0,
+    line,
+    character,
     spaceId,
   });
 
@@ -59,6 +80,19 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
   });
 
   const busy = hoverMut.isPending || defMut.isPending || refsMut.isPending;
+  const actionsDisabled = busy || !pathReady || !repoReady || Boolean(lineIssue) || Boolean(charIssue);
+  const actionTitle = (idle: string) =>
+    !repoReady
+      ? "需要填写 repoRoot"
+      : !pathReady
+        ? "需要填写 path"
+        : lineIssue
+          ? lineIssue
+          : charIssue
+            ? charIssue
+            : busy
+              ? "查询中…"
+              : idle;
 
   return (
     <div className="card-like" data-testid={`${testIdPrefix}-probe`}>
@@ -77,6 +111,7 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
           <input
             value={path}
             onChange={(e) => setPath(e.target.value)}
+            placeholder="cmd/worker/main.go"
             data-testid={`${testIdPrefix}-path`}
           />
         </label>
@@ -85,8 +120,11 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
           <input
             type="number"
             min={1}
-            value={line}
-            onChange={(e) => setLine(Number(e.target.value))}
+            value={Number.isFinite(line) ? line : ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setLine(raw === "" ? Number.NaN : Number(raw));
+            }}
             data-testid={`${testIdPrefix}-line`}
           />
         </label>
@@ -95,8 +133,11 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
           <input
             type="number"
             min={0}
-            value={character}
-            onChange={(e) => setCharacter(Number(e.target.value))}
+            value={Number.isFinite(character) ? character : ""}
+            onChange={(e) => {
+              const raw = e.target.value;
+              setCharacter(raw === "" ? Number.NaN : Number(raw));
+            }}
             data-testid={`${testIdPrefix}-char`}
           />
         </label>
@@ -105,7 +146,8 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
         <button
           type="button"
           className="btn"
-          disabled={busy}
+          disabled={actionsDisabled}
+          title={actionTitle("LSP Hover（当前 path/line/char）")}
           data-testid={`${testIdPrefix}-hover`}
           onClick={() => hoverMut.mutate()}
         >
@@ -114,7 +156,8 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
         <button
           type="button"
           className="btn"
-          disabled={busy}
+          disabled={actionsDisabled}
+          title={actionTitle("LSP Definition（跳转定义）")}
           data-testid={`${testIdPrefix}-definition`}
           onClick={() => defMut.mutate()}
         >
@@ -123,7 +166,8 @@ export function RagLspProbePanel({ defaultRepoRoot = ".", testIdPrefix = "rag-ls
         <button
           type="button"
           className="btn"
-          disabled={busy}
+          disabled={actionsDisabled}
+          title={actionTitle("LSP References（查找引用）")}
           data-testid={`${testIdPrefix}-references`}
           onClick={() => refsMut.mutate()}
         >

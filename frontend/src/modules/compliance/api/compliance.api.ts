@@ -30,11 +30,17 @@ export function exportComplianceBundle(body: { suite?: string; reportId?: string
   );
 }
 
+export type AuditEventCount = {
+  eventType: string;
+  count: number;
+};
+
 export type AuditReport = {
   spaceId: string;
   window: string;
   total: number;
   buckets: { approve: number; deny: number; hook: number; spawn: number; other: number };
+  byEvent?: AuditEventCount[] | null;
 };
 
 export function getSpaceAuditReport(spaceId: string, window = "7d") {

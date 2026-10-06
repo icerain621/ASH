@@ -17,6 +17,7 @@ import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
 import { LoginPage } from "../pages/LoginPage";
 import { SpacePage } from "../pages/SpacePage";
+import { NotFoundPage } from "../pages/NotFoundPage";
 import { shouldRedirectToLoginNow } from "../modules/platform/auth/consoleGate";
 
 const rootRoute = createRootRoute({
@@ -142,6 +143,49 @@ const scaleRoute = createRoute({
   component: ScalePage,
 });
 
+/** Legacy / shorthand paths that used to render a blank shell (no matching route). */
+function aliasRedirect(
+  from: string,
+  to:
+    | "/automation"
+    | "/reviews"
+    | "/knowledge"
+    | "/agent"
+    | "/runs"
+    | "/quest"
+    | "/m/reviews"
+    | "/observability",
+) {
+  return createRoute({
+    getParentRoute: () => rootRoute,
+    path: from,
+    beforeLoad: () => {
+      throw redirect({ to });
+    },
+  });
+}
+
+const improveAliasRoute = aliasRedirect("/improve", "/automation");
+const improvesAliasRoute = aliasRedirect("/improves", "/automation");
+const skillsAliasRoute = aliasRedirect("/skills", "/automation");
+const approvalsAliasRoute = aliasRedirect("/approvals", "/automation");
+const secretsAliasRoute = aliasRedirect("/secrets", "/automation");
+const toolsAliasRoute = aliasRedirect("/tools", "/automation");
+const compareAliasRoute = aliasRedirect("/compare", "/reviews");
+const registryAliasRoute = aliasRedirect("/registry", "/reviews");
+const ragAliasRoute = aliasRedirect("/rag", "/knowledge");
+const chatAliasRoute = aliasRedirect("/chat", "/agent");
+const planAliasRoute = aliasRedirect("/plan", "/runs");
+const otelAliasRoute = aliasRedirect("/otel", "/observability");
+const mobileReviewsAliasRoute = aliasRedirect("/mobile/reviews", "/m/reviews");
+
+/** Catch-all: unknown /ui/... paths used to render an empty shell under AppLayout. */
+const notFoundRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "$",
+  component: NotFoundPage,
+});
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   runsRoute,
@@ -151,17 +195,31 @@ const routeTree = rootRoute.addChildren([
   questRoute,
   agentRoute,
   knowledgeRoute,
-	automationRoute,
-	feedbackRoute,
-	ciRoute,
-	metricsRoute,
-	observabilityRoute,
-	releasesRoute,
-	spaceRoute,
+  automationRoute,
+  feedbackRoute,
+  ciRoute,
+  metricsRoute,
+  observabilityRoute,
+  releasesRoute,
+  spaceRoute,
   loginRoute,
   complianceRoute,
   scaleRoute,
   doctorRoute,
+  improveAliasRoute,
+  improvesAliasRoute,
+  skillsAliasRoute,
+  approvalsAliasRoute,
+  secretsAliasRoute,
+  toolsAliasRoute,
+  compareAliasRoute,
+  registryAliasRoute,
+  ragAliasRoute,
+  chatAliasRoute,
+  planAliasRoute,
+  otelAliasRoute,
+  mobileReviewsAliasRoute,
+  notFoundRoute,
 ]);
 
 export const router = createRouter({

@@ -174,15 +174,15 @@ export function CompliancePage() {
 
   const identityOk =
     Boolean(meQuery.data?.permissions?.length) &&
-    (activeSpaceId === "local" || (scopesQuery.data?.items.length ?? 0) > 0);
-  const isolationOk = runsQuery.data?.items.every((run) => (run.spaceId || "local") === activeSpaceId) ?? true;
+    (activeSpaceId === "local" || (scopesQuery.data?.items ?? []).length > 0);
+  const isolationOk = (runsQuery.data?.items ?? []).every((run) => (run.spaceId || "local") === activeSpaceId);
   const storageOk = Boolean(storageQuery.data?.artifactStore?.ready);
-  const pluginOk = Boolean(abiQuery.data?.currentAbi) && (pluginsQuery.data?.items.length ?? 0) >= 0;
+  const pluginOk = Boolean(abiQuery.data?.currentAbi) && (pluginsQuery.data?.items?.length ?? 0) >= 0;
   const secretOk = (scanQuery.data?.leakCount ?? 0) === 0;
   const scenarioScopes =
-    scopesQuery.data?.items.filter((scope) => scope.resourceType === "scenario").length ?? 0;
+    (scopesQuery.data?.items ?? []).filter((scope) => scope.resourceType === "scenario").length;
   const matrixOk =
-    (matrixQuery.data?.builtinRoles.length ?? 0) >= 5 && (matrixQuery.data?.scenarioTools.length ?? 0) >= 3;
+    (matrixQuery.data?.builtinRoles ?? []).length >= 5 && (matrixQuery.data?.scenarioTools ?? []).length >= 3;
   const liveStatus: Record<string, boolean> = {
     "TR2-01": identityOk,
     "TR2-02": isolationOk,
@@ -191,7 +191,7 @@ export function CompliancePage() {
     "TR2-05": secretOk && !scanQuery.isLoading,
     "M2-01": matrixOk && scenarioScopes >= 3,
     "M2-02": scenarioScopes >= 3,
-    "M3-01": activeSpaceId === "local" || (membersQuery.data?.items.length ?? 0) > 0,
+    "M3-01": activeSpaceId === "local" || (membersQuery.data?.items ?? []).length > 0,
     "M3-02": true,
     "M3-03": true,
     "M3-04": true,
@@ -210,15 +210,39 @@ export function CompliancePage() {
           <span className="scope-badge">Space: {activeSpaceId}</span>
         </div>
         <div className="toolbar">
-          <button className="btn icon-btn" disabled={scanQuery.isFetching} onClick={() => scanQuery.refetch()}>
+          <button
+            className="btn icon-btn"
+            data-testid="compliance-secret-scan"
+            disabled={scanQuery.isFetching}
+            onClick={() => scanQuery.refetch()}
+            title={
+              scanQuery.isFetching
+                ? "扫描中…"
+                : scanQuery.data
+                  ? `重新扫描审计载荷（上次 ${scanQuery.data.leakCount ?? 0} 处 / ${scanQuery.data.scanned ?? 0} 条）`
+                  : "扫描审计载荷中的明文 secret 模式"
+            }
+          >
             <ScanSearch size={16} strokeWidth={1.8} />
             扫描 Secret
           </button>
           <button
             className="btn icon-btn"
+            data-testid="compliance-redact-enable"
             disabled={redactMut.isPending || auditQuery.data?.redactPayload}
-            onClick={() => redactMut.mutate()}
-            title="开启后审计列表 API 与导出包会对载荷脱敏"
+            onClick={() => {
+              if (auditQuery.data?.redactPayload) return;
+              const ok = window.confirm("确认开启审计载荷脱敏（Redact）？开启后会影响审计列表与导出包。");
+              if (!ok) return;
+              redactMut.mutate();
+            }}
+            title={
+              auditQuery.data?.redactPayload
+                ? "脱敏已开启"
+                : redactMut.isPending
+                  ? "开启中…"
+                  : "开启后审计列表 API 与导出包会对载荷脱敏（需确认）"
+            }
           >
             <EyeOff size={16} strokeWidth={1.8} />
             {auditQuery.data?.redactPayload ? "脱敏已开启" : "一键开启 Redact"}
@@ -237,16 +261,28 @@ export function CompliancePage() {
           </label>
           <button
             className="btn icon-btn"
+            data-testid="compliance-export-package"
             disabled={exportWithReportMut.isPending}
-            onClick={() => exportWithReportMut.mutate()}
+            onClick={() => {
+              const ok = window.confirm("确认导出含诊断报告的审计包？");
+              if (!ok) return;
+              exportWithReportMut.mutate();
+            }}
+            title={
+              exportWithReportMut.isPending
+                ? "导出中…"
+                : "导出含诊断报告的审计包（需确认）"
+            }
           >
             <Download size={16} strokeWidth={1.8} />
             导出审计包
           </button>
           <button
             className="btn primary icon-btn"
+            data-testid="compliance-doctor-run"
             disabled={doctorMut.isPending}
             onClick={() => doctorMut.mutate()}
+            title={doctorMut.isPending ? "运行中…" : "运行 TR2 合规诊断套件"}
           >
             <Play size={16} strokeWidth={1.8} />
             {doctorMut.isPending ? "运行 TR2…" : "运行 TR2"}
@@ -280,11 +316,26 @@ export function CompliancePage() {
             该窗口内无审计事件。
           </p>
         ) : (
-          <p className="muted-line" data-testid="audit-report-counts">
-            合计 {auditReportQuery.data.total} · 批准 {auditReportQuery.data.buckets.approve} · 拒绝{" "}
-            {auditReportQuery.data.buckets.deny} · Hook {auditReportQuery.data.buckets.hook} · Spawn{" "}
-            {auditReportQuery.data.buckets.spawn}
-          </p>
+          <>
+            <p className="muted-line" data-testid="audit-report-counts">
+              合计 {auditReportQuery.data.total} · 批准 {auditReportQuery.data.buckets?.approve ?? 0} · 拒绝{" "}
+              {auditReportQuery.data.buckets?.deny ?? 0} · Hook {auditReportQuery.data.buckets?.hook ?? 0} · Spawn{" "}
+              {auditReportQuery.data.buckets?.spawn ?? 0} · 其他 {auditReportQuery.data.buckets?.other ?? 0}
+            </p>
+            {(auditReportQuery.data.byEvent ?? []).length > 0 && (
+              <ul className="muted-line" data-testid="audit-report-by-event" style={{ marginTop: 8, paddingLeft: 18 }}>
+                {(auditReportQuery.data.byEvent ?? [])
+                  .slice()
+                  .sort((a, b) => b.count - a.count)
+                  .slice(0, 8)
+                  .map((row) => (
+                    <li key={row.eventType}>
+                      <code>{row.eventType}</code> · {row.count}
+                    </li>
+                  ))}
+              </ul>
+            )}
+          </>
         )}
       </div>
 
@@ -362,7 +413,7 @@ export function CompliancePage() {
           </pre>
           <div className="pane-title subhead">
             <h3>成员</h3>
-            <span>{membersQuery.data?.items.length ?? 0} 人</span>
+            <span>{membersQuery.data?.items?.length ?? 0} 人</span>
           </div>
           <table className="table">
             <thead>
@@ -380,7 +431,7 @@ export function CompliancePage() {
                   <td>{shortId(m.roleId)}</td>
                 </tr>
               ))}
-              {!membersQuery.data?.items.length && (
+              {!membersQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>
                     {activeSpaceId === "local" ? "local 空间无成员表。" : "暂无成员。"}
@@ -397,7 +448,7 @@ export function CompliancePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>资源作用域</h2>
-            <span>{scopesQuery.data?.items.length ?? 0} 条</span>
+            <span>{scopesQuery.data?.items?.length ?? 0} 条</span>
           </div>
           <table className="table">
             <thead>
@@ -417,7 +468,7 @@ export function CompliancePage() {
                   </td>
                 </tr>
               ))}
-              {!scopesQuery.data?.items.length && (
+              {!scopesQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>暂无作用域记录（创建空间时会自动写入）。</td>
                 </tr>
@@ -429,13 +480,13 @@ export function CompliancePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>存储与插件</h2>
-            <span>{storageQuery.data?.artifactStore.kind ?? "-"}</span>
+            <span>{storageQuery.data?.artifactStore?.kind ?? "-"}</span>
           </div>
           <table className="table">
             <tbody>
               <tr>
                 <td>数据库</td>
-                <td>{storageQuery.data?.database.dialect ?? "-"}</td>
+                <td>{storageQuery.data?.database?.dialect ?? "-"}</td>
                 <td>
                   <span className="status-pill ok">
                     <span className="status-dot" />
@@ -445,24 +496,24 @@ export function CompliancePage() {
               </tr>
               <tr>
                 <td>产物库</td>
-                <td title={storageQuery.data?.artifactStore.uri}>
-                  {storageQuery.data?.artifactStore.kind ?? "-"}
+                <td title={storageQuery.data?.artifactStore?.uri}>
+                  {storageQuery.data?.artifactStore?.kind ?? "-"}
                 </td>
                 <td>
                   <span
                     className={
-                      "status-pill " + (storageQuery.data?.artifactStore.ready ? "ok" : "err")
+                      "status-pill " + (storageQuery.data?.artifactStore?.ready ? "ok" : "err")
                     }
                   >
                     <span className="status-dot" />
-                    {storageQuery.data?.artifactStore.ready ? "ready" : "not ready"}
+                    {storageQuery.data?.artifactStore?.ready ? "ready" : "not ready"}
                   </span>
                 </td>
               </tr>
               <tr>
                 <td>插件 ABI</td>
                 <td>{abiQuery.data?.currentAbi ?? "-"}</td>
-                <td>{pluginsQuery.data?.items.length ?? 0} 注册</td>
+                <td>{pluginsQuery.data?.items?.length ?? 0} 注册</td>
               </tr>
             </tbody>
           </table>
@@ -474,7 +525,7 @@ export function CompliancePage() {
         <div className="pane">
           <div className="pane-title">
             <h2>Run 隔离抽样</h2>
-            <span>{runsQuery.data?.items.length ?? 0} 条</span>
+            <span>{runsQuery.data?.items?.length ?? 0} 条</span>
           </div>
           <p className="muted-line">当前空间下的运行列表（应全部属于 {activeSpaceId}）。</p>
           <table className="table">
@@ -493,7 +544,7 @@ export function CompliancePage() {
                   <td>{run.status}</td>
                 </tr>
               ))}
-              {!runsQuery.data?.items.length && (
+              {!runsQuery.data?.items?.length && (
                 <tr className="empty-row">
                   <td colSpan={3}>暂无运行。</td>
                 </tr>
@@ -539,7 +590,7 @@ export function CompliancePage() {
                 </td>
               </tr>
             ))}
-            {!scanQuery.data?.findings.length && (
+            {!(scanQuery.data?.findings?.length) && (
               <tr className="empty-row">
                 <td colSpan={3}>未发现明文 secret 模式（或尚未扫描）。</td>
               </tr>

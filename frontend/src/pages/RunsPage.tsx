@@ -46,6 +46,22 @@ import { getCurrentSpaceId } from "@/services/http/client";
 import { useRunStream } from "@/services/sse/runStream";
 import { fmtTime, shortId } from "@/shared/utils/format";
 
+/** Map auth/token API errors to a clear console hint (avoid raw "invalid token shape"). */
+function formatRunDetailError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : "";
+  const code = err instanceof ApiError ? err.code : "";
+  if (
+    /invalid token|token expired|token subject|unauthorized|unauthorised/i.test(msg) ||
+    /UNAUTHORIZED|AUTH_|TOKEN_/i.test(code)
+  ) {
+    return "登录已失效或令牌无效，请重新登录后再查看运行";
+  }
+  if (/^run not found$/i.test(msg.trim()) || code === "NOT_FOUND") {
+    return "未找到该 Run，请检查 Run ID";
+  }
+  return msg || "运行不存在或无法加载";
+}
+
 const runColumns: ColumnDef<RunSummary>[] = [
   {
     accessorKey: "runId",
@@ -297,6 +313,11 @@ export function RunsPage() {
   const [goalPlan, setGoalPlan] = useState<GoalPlan | null>(null);
   const [actorRole, setActorRole] = useState<(typeof ACTOR_ROLES)[number]>("maintainer");
 
+  useEffect(() => {
+    const rid = new URLSearchParams(window.location.search).get("runId")?.trim();
+    if (rid) setSelectedId(rid);
+  }, []);
+
   const scenariosQuery = useQuery({
     queryKey: ["scenarios"],
     queryFn: listScenarios,
@@ -311,57 +332,68 @@ export function RunsPage() {
     queryKey: ["runs", selectedId],
     queryFn: () => getRun(selectedId!),
     enabled: !!selectedId,
+    retry: false,
   });
 
   const artifactsQuery = useQuery({
     queryKey: ["runs", selectedId, "artifacts"],
     queryFn: () => getRunArtifacts(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const checkpointsQuery = useQuery({
     queryKey: ["runs", selectedId, "checkpoints"],
     queryFn: () => getRunCheckpoints(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const timelineQuery = useQuery({
     queryKey: ["runs", selectedId, "timeline"],
     queryFn: () => getRunTimeline(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const toolsQuery = useQuery({
     queryKey: ["runs", selectedId, "tool-calls"],
     queryFn: () => getRunToolCalls(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const agentsQuery = useQuery({
     queryKey: ["runs", selectedId, "agent-tasks"],
     queryFn: () => getRunAgentTasks(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const qualityQuery = useQuery({
     queryKey: ["runs", selectedId, "quality-metrics"],
     queryFn: () => getRunQualityMetrics(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const waterfallQuery = useQuery({
     queryKey: ["runs", selectedId, "waterfall"],
     queryFn: () => getRunWaterfall(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
   const provenanceQuery = useQuery({
     queryKey: ["runs", selectedId, "provenance"],
     queryFn: () => getRunProvenance(selectedId!),
-    enabled: !!selectedId,
+    enabled: !!selectedId && Boolean(detailQuery.data),
+    retry: false,
   });
 
-  const { lines: streamLines, status: streamStatus } = useRunStream(selectedId);
+  const { lines: streamLines, status: streamStatus } = useRunStream(
+    detailQuery.data ? selectedId : null,
+  );
   const artifacts = useMemo(() => artifactItems(artifactsQuery.data), [artifactsQuery.data]);
   const checkpoints = checkpointsQuery.data?.items ?? [];
   const scenarioOptions = useMemo(
@@ -515,6 +547,7 @@ export function RunsPage() {
   });
 
   const selected = detailQuery.data;
+  // detailQuery errors render under 运行详情 — omit from page banner to avoid duplicate copy
   const err =
     formatControlError(runsQuery.error) ||
     formatControlError(createMut.error) ||
@@ -578,14 +611,34 @@ export function RunsPage() {
               ))}
             </select>
           </label>
-          <button className="btn icon-btn" onClick={() => runsQuery.refetch()} disabled={runsQuery.isFetching}>
+          <button
+            className="btn icon-btn"
+            onClick={() => runsQuery.refetch()}
+            disabled={runsQuery.isFetching}
+            title={runsQuery.isFetching ? "刷新中…" : "刷新运行列表"}
+          >
             <RefreshCw size={16} strokeWidth={1.8} />
             刷新
           </button>
           <button
             className="btn primary icon-btn"
-            onClick={() => createMut.mutate()}
+            data-testid="runs-create"
+            onClick={() => {
+              const scenario = parseScenarioKey(scenarioKeyValue);
+              const ok = window.confirm(
+                `确认按场景「${scenario.name}@${scenario.scenarioVersion}」新建运行？将写入工作区并开始执行。`,
+              );
+              if (!ok) return;
+              createMut.mutate();
+            }}
             disabled={createMut.isPending || scenariosQuery.isLoading}
+            title={
+              scenariosQuery.isLoading
+                ? "场景加载中…"
+                : createMut.isPending
+                  ? "创建中…"
+                  : "按所选场景新建运行（需确认）"
+            }
           >
             <Play size={16} strokeWidth={1.8} />
             新建运行
@@ -616,7 +669,20 @@ export function RunsPage() {
             className="btn primary"
             type="button"
             disabled={fromGoalMut.isPending || !goalText.trim()}
-            onClick={() => fromGoalMut.mutate()}
+            title={
+              !goalText.trim()
+                ? "需要填写 Goal"
+                : fromGoalMut.isPending
+                  ? "生成中…"
+                  : "根据 Goal 生成 Plan（需确认）"
+            }
+            onClick={() => {
+              if (!goalText.trim()) return;
+              const snippet = goalText.trim().slice(0, 80);
+              const ok = window.confirm(`确认根据 Goal「${snippet}」生成 Plan？`);
+              if (!ok) return;
+              fromGoalMut.mutate();
+            }}
             data-testid="quest-route"
           >
             生成 Plan
@@ -634,7 +700,12 @@ export function RunsPage() {
                   className="btn mini ok"
                   type="button"
                   disabled={approvePlanMut.isPending}
-                  onClick={() => approvePlanMut.mutate(goalPlan.id)}
+                  title={approvePlanMut.isPending ? "启动中…" : "批准 Plan 并启动 Run（需确认）"}
+                  onClick={() => {
+                    const ok = window.confirm("确认批准 Plan 并启动 Run？将按所选场景写入工作区并执行。");
+                    if (!ok) return;
+                    approvePlanMut.mutate(goalPlan.id);
+                  }}
                   data-testid="quest-approve"
                 >
                   批准并启动
@@ -643,7 +714,12 @@ export function RunsPage() {
                   className="btn mini err"
                   type="button"
                   disabled={rejectPlanMut.isPending}
-                  onClick={() => rejectPlanMut.mutate(goalPlan.id)}
+                  title={rejectPlanMut.isPending ? "拒绝中…" : "拒绝此 Plan（需确认）"}
+                  onClick={() => {
+                    const ok = window.confirm("确认拒绝此 Plan？");
+                    if (!ok) return;
+                    rejectPlanMut.mutate(goalPlan.id);
+                  }}
                   data-testid="quest-reject"
                 >
                   拒绝
@@ -700,9 +776,19 @@ export function RunsPage() {
             <h2>运行详情</h2>
             <span>{selectedId ? shortId(selectedId) : "未选择"}</span>
           </div>
-          <pre className="code-block">
-            {selected ? JSON.stringify(selected, null, 2) : "选择一条运行记录"}
-          </pre>
+          {selectedId && detailQuery.isError ? (
+            <p className="error-text" data-testid="runs-detail-error">
+              {formatRunDetailError(detailQuery.error)}
+            </p>
+          ) : (
+            <pre className="code-block">
+              {selected
+                ? JSON.stringify(selected, null, 2)
+                : selectedId && detailQuery.isFetching
+                  ? "加载中…"
+                  : "选择一条运行记录"}
+            </pre>
+          )}
           <div className="pane-title subhead">
             <h3>门禁与控制</h3>
             <span>{selected ? statusLabel(selected.status) : "未选择"}</span>
@@ -714,6 +800,8 @@ export function RunsPage() {
                   <span className="status-dot" />
                   {statusLabel(selected.status)}
                 </span>
+              ) : selectedId && detailQuery.isError ? (
+                <span className="muted">无法操作：运行详情加载失败。</span>
               ) : (
                 <span className="muted">选择运行后可操作。</span>
               )}
@@ -729,18 +817,38 @@ export function RunsPage() {
             </div>
             <div className="run-control-actions">
               {canApprove && (
-                <button className="btn ok icon-btn" onClick={() => approveMut.mutate()} disabled={approveMut.isPending}>
+                <button
+                  className="btn ok icon-btn"
+                  data-testid="runs-approve"
+                  onClick={() => {
+                    const ok = window.confirm(`确认批准运行 ${shortId(selectedId!)} 的门禁并继续？`);
+                    if (!ok) return;
+                    approveMut.mutate();
+                  }}
+                  disabled={approveMut.isPending}
+                  title={approveMut.isPending ? "提交中…" : "批准通过门禁（需确认）"}
+                >
                   <CheckCircle size={16} strokeWidth={1.8} />
                   通过
                 </button>
               )}
               {selectedId && selected?.status === "failed" && (
-                <button className="btn icon-btn" onClick={() => resumeMut.mutate()} disabled={resumeMut.isPending}>
+                <button
+                  className="btn icon-btn"
+                  data-testid="runs-resume"
+                  onClick={() => {
+                    const ok = window.confirm(`确认从失败点继续运行 ${shortId(selectedId!)}？`);
+                    if (!ok) return;
+                    resumeMut.mutate();
+                  }}
+                  disabled={resumeMut.isPending}
+                  title={resumeMut.isPending ? "继续中…" : "从失败点继续（需确认）"}
+                >
                   <RotateCcw size={16} strokeWidth={1.8} />
                   继续
                 </button>
               )}
-              {selectedId && (
+              {selected && (
                 <>
                   <select
                     className="control-select"
@@ -751,14 +859,36 @@ export function RunsPage() {
                     <option value="exact">exact</option>
                     <option value="latest_memory">latest_memory</option>
                   </select>
-                  <button className="btn icon-btn" onClick={() => replayMut.mutate()} disabled={replayMut.isPending}>
+                  <button
+                    className="btn icon-btn"
+                    data-testid="runs-replay"
+                    onClick={() => {
+                      const ok = window.confirm(
+                        `确认重放运行 ${shortId(selectedId!)}（模式 ${replayMode}）？将创建新的 Run。`,
+                      );
+                      if (!ok) return;
+                      replayMut.mutate();
+                    }}
+                    disabled={replayMut.isPending}
+                    title={replayMut.isPending ? "重放中…" : "重放此运行（需确认）"}
+                  >
                     <GitBranch size={16} strokeWidth={1.8} />
                     重放
                   </button>
                 </>
               )}
               {canCancel && (
-                <button className="btn err icon-btn" onClick={() => cancelMut.mutate()} disabled={cancelMut.isPending}>
+                <button
+                  className="btn err icon-btn"
+                  data-testid="runs-cancel"
+                  onClick={() => {
+                    const ok = window.confirm(`确认取消运行 ${shortId(selectedId!)}？`);
+                    if (!ok) return;
+                    cancelMut.mutate();
+                  }}
+                  disabled={cancelMut.isPending}
+                  title={cancelMut.isPending ? "取消中…" : "取消运行（需确认）"}
+                >
                   <Square size={16} strokeWidth={1.8} />
                   取消
                 </button>
@@ -767,7 +897,7 @@ export function RunsPage() {
           </div>
           <div className="pane-title subhead">
             <h3>质量指标</h3>
-            <span>{qualityQuery.data?.items.length ?? 0} 项</span>
+            <span>{qualityQuery.data?.items?.length ?? 0} 项</span>
           </div>
           <table className="table compact">
             <thead>
@@ -785,7 +915,7 @@ export function RunsPage() {
                   <td>{metric.unit || "-"}</td>
                 </tr>
               ))}
-              {selectedId && !(qualityQuery.data?.items.length) && (
+              {selectedId && !(qualityQuery.data?.items?.length) && (
                 <tr className="empty-row">
                   <td colSpan={3}>暂无质量指标。</td>
                 </tr>
@@ -816,8 +946,8 @@ export function RunsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {provenanceQuery.data.links.map((link) => (
-                    <tr key={`${link.kind}-${link.ref}`}>
+                  {provenanceQuery.data.links.map((link, index) => (
+                    <tr key={`${link.kind}-${link.ref}-${index}`} data-testid="provenance-link-row">
                       <td>{link.kind}</td>
                       <td>
                         <code title={link.ref}>{link.ref}</code>
@@ -861,7 +991,7 @@ export function RunsPage() {
           </div>
           <div className="pane-title subhead">
             <h3>时间线</h3>
-            <span>{timelineQuery.data?.items.length ?? 0} 条记录</span>
+            <span>{timelineQuery.data?.items?.length ?? 0} 条记录</span>
           </div>
           <div className="event-log">
             {(timelineQuery.data?.items ?? []).slice(-32).map((item: TimelineItem) => (
@@ -874,7 +1004,17 @@ export function RunsPage() {
                 {item.payload ? JSON.stringify(item.payload) : ""}
               </div>
             ))}
-            {selectedId && !(timelineQuery.data?.items.length) && <div className="event-line muted">暂无时间线记录。</div>}
+            {selectedId && timelineQuery.isError && (
+              <div className="event-line error" data-testid="runs-timeline-error">
+                {(timelineQuery.error as Error).message}
+              </div>
+            )}
+            {selectedId &&
+              !timelineQuery.isError &&
+              !(timelineQuery.data?.items?.length) &&
+              !timelineQuery.isFetching && (
+                <div className="event-line muted">暂无时间线记录。</div>
+              )}
           </div>
           <div className="pane-title subhead">
             <h3>瀑布视图</h3>
@@ -900,13 +1040,25 @@ export function RunsPage() {
                 </div>
               </div>
             ))}
-            {selectedId && !waterfallSpans.length && (
-              <div className="waterfall-empty muted">暂无瀑布数据。</div>
+            {selectedId && waterfallQuery.isError && (
+              <div className="waterfall-empty error-text" data-testid="runs-waterfall-error">
+                {(waterfallQuery.error as Error).message}
+              </div>
             )}
+            {selectedId &&
+              !waterfallQuery.isError &&
+              !waterfallSpans.length &&
+              !waterfallQuery.isFetching && (
+                <div className="waterfall-empty muted">暂无瀑布数据。</div>
+              )}
             {!!(waterfallQuery.data?.failures?.length) && (
               <div className="failure-list">
-                {waterfallQuery.data.failures.map((failure) => (
-                  <div key={`${failure.type}-${failure.ref}-${failure.code || failure.message}`} className="failure-item">
+                {waterfallQuery.data.failures.map((failure, index) => (
+                  <div
+                    key={`${failure.type}-${failure.ref}-${failure.code || failure.message}-${index}`}
+                    className="failure-item"
+                    data-testid="waterfall-failure-item"
+                  >
                     <span>{failure.type}</span>
                     <strong>{failure.ref}</strong>
                     <em>{failure.code || failure.message || "failed"}</em>
@@ -917,7 +1069,7 @@ export function RunsPage() {
           </div>
           <div className="pane-title subhead">
             <h3>智能体任务</h3>
-            <span>{agentsQuery.data?.items.length ?? 0} 个任务</span>
+            <span>{agentsQuery.data?.items?.length ?? 0} 个任务</span>
           </div>
           <table className="table compact">
             <thead>
@@ -937,7 +1089,7 @@ export function RunsPage() {
                   <td title={task.execGoTaskId}>{task.execGoTaskId ? shortId(task.execGoTaskId) : "-"}</td>
                 </tr>
               ))}
-              {selectedId && !(agentsQuery.data?.items.length) && (
+              {selectedId && !(agentsQuery.data?.items?.length) && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无智能体任务。</td>
                 </tr>
@@ -946,7 +1098,7 @@ export function RunsPage() {
           </table>
           <div className="pane-title subhead">
             <h3>工具调用</h3>
-            <span>{toolsQuery.data?.items.length ?? 0} 次调用</span>
+            <span>{toolsQuery.data?.items?.length ?? 0} 次调用</span>
           </div>
           <table className="table compact">
             <thead>
@@ -966,7 +1118,7 @@ export function RunsPage() {
                   <td>{statusLabel(call.status)}</td>
                 </tr>
               ))}
-              {selectedId && !(toolsQuery.data?.items.length) && (
+              {selectedId && !(toolsQuery.data?.items?.length) && (
                 <tr className="empty-row">
                   <td colSpan={4}>暂无工具调用。</td>
                 </tr>
@@ -975,7 +1127,9 @@ export function RunsPage() {
           </table>
           <div className="pane-title subhead">
             <h3>产物</h3>
-            <span>{artifactsQuery.isFetching ? "加载中" : `${artifacts.length} 个产物`}</span>
+            <span>
+              {artifactsQuery.isFetching ? "加载中" : artifactsQuery.isError ? "加载失败" : `${artifacts.length} 个产物`}
+            </span>
           </div>
           <table className="table compact artifacts-table">
             <thead>
@@ -1009,7 +1163,12 @@ export function RunsPage() {
                   </td>
                 </tr>
               ))}
-              {selectedId && !artifacts.length && (
+              {selectedId && artifactsQuery.isError && (
+                <tr className="empty-row">
+                  <td colSpan={6}>产物加载失败。</td>
+                </tr>
+              )}
+              {selectedId && !artifactsQuery.isError && !artifacts.length && (
                 <tr className="empty-row">
                   <td colSpan={6}>暂无产物。</td>
                 </tr>
