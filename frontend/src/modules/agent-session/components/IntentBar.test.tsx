@@ -38,6 +38,48 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "prompt", prompt: "continue" });
   });
 
+  it("keeps prompt textarea and send actions in a dedicated input shell", () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    const field = screen.getByTestId("agent-intent-field");
+    const prompt = screen.getByTestId("agent-intent-prompt");
+    const send = screen.getByTestId("agent-intent-send");
+    expect(field).toContainElement(prompt);
+    expect(field).toContainElement(screen.getByTestId("agent-intent-toolbar"));
+    expect(screen.getByTestId("agent-intent-toolbar")).toContainElement(send);
+    expect(prompt).toHaveAttribute("aria-label", "意图");
+    expect(prompt.tagName).toBe("TEXTAREA");
+    expect(prompt).toHaveClass("agent-intent-input");
+  });
+
+  it("explains why send stays disabled for empty or whitespace prompt", () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    const send = screen.getByTestId("agent-intent-send");
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("title", "需要输入内容");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "   " } });
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("title", "需要输入内容");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "hi" } });
+    expect(send).not.toBeDisabled();
+    expect(send).toHaveAttribute("title", "发送");
+  });
+
+  it("disables send for bare slash until a command is chosen", async () => {
+    const onIntent = vi.fn();
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
+    const send = screen.getByTestId("agent-intent-send");
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/" } });
+    await waitFor(() => expect(screen.getByTestId("agent-command-help")).toBeInTheDocument());
+    expect(send).toBeDisabled();
+    expect(send).toHaveAttribute("title", "选择命令或继续输入");
+    fireEvent.click(send);
+    expect(onIntent).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/help" } });
+    expect(send).not.toBeDisabled();
+    fireEvent.click(send);
+    expect(onIntent).toHaveBeenCalledWith({ action: "command", command: "/help", args: undefined });
+  });
+
   it("shows four gate buttons: once / session / reject / cancel run", () => {
     const onIntent = vi.fn();
     wrap(
@@ -129,26 +171,57 @@ describe("IntentBar", () => {
   it("opens command menu on slash and fills without sending", async () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
     fireEvent.click(screen.getByTestId("agent-intent-slash"));
     await waitFor(() => expect(screen.getByTestId("agent-command-help")).toBeInTheDocument());
     expect(listAgentCommands).toHaveBeenCalled();
+    expect(screen.getByTestId("agent-command-help")).toHaveAttribute(
+      "title",
+      "填入 /help（不自动发送）",
+    );
     fireEvent.click(screen.getByTestId("agent-command-help"));
     expect(onIntent).not.toHaveBeenCalled();
     expect(screen.getByTestId("agent-intent-prompt")).toHaveValue("/help ");
   });
 
-  it("sends leading slash text as command action", () => {
+  it("requires confirm before sending /clear command", () => {
     const onIntent = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
     wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
     fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
       target: { value: "/clear now" },
     });
-    fireEvent.click(screen.getByTestId("agent-intent-send"));
+    const send = screen.getByTestId("agent-intent-send");
+    expect(send).toHaveAttribute("title", "执行 /clear（需确认）");
+    fireEvent.click(send);
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(onIntent).not.toHaveBeenCalled();
+
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(send);
     expect(onIntent).toHaveBeenCalledWith({
       action: "command",
       command: "/clear",
       args: "now",
     });
+    confirmSpy.mockRestore();
+  });
+
+  it("sends non-destructive slash commands without confirm", () => {
+    const onIntent = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm");
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={onIntent} />);
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
+      target: { value: "/help" },
+    });
+    fireEvent.click(screen.getByTestId("agent-intent-send"));
+    expect(confirmSpy).not.toHaveBeenCalled();
+    expect(onIntent).toHaveBeenCalledWith({
+      action: "command",
+      command: "/help",
+      args: undefined,
+    });
+    confirmSpy.mockRestore();
   });
 
   it("sends on Enter and inserts newline on Shift+Enter", () => {

@@ -12,7 +12,8 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- Sprint VX72：v6.7 范围已冻结；`make v6.7-signoff` 不自动打 `v6.7.0` tag。 / VX72: v6.7 scope frozen; sign-off gate does not tag.
+- Composer 模型席位的推理等级（low/medium/high/max，默认 high）经 `PATCH /agents/sessions/{id}` 写入会话文档（无新表）；控制台从投影读取。Chat 走 `ASH_LLM` 时请求带 `reasoning_effort`；Quest/Run 的 agent 步骤从绑定会话读出同一字段交给 ExecGo/Codex（max→xhigh）与 ACP `ash.acp.task.v1`。空白会话的 `assistant.message`（合成账本）与绑定 Run 的同名事件携带该字段；Chat 气泡、Trajectory 行、绑定 Run 的 Thread 时间线与 Details 按投影展示。 / Session reasoning effort is stored via PATCH. ASH_LLM chat sends reasoning_effort; bound Quest/Run agent steps pass the same field to ExecGo/Codex (max→xhigh) and ACP task v1. Blank-session synthesized `assistant.message` and bound-run events include the field; Chat bubbles, Trajectory rows, bound-run Thread timeline, and Details render the projection.
+- 文档按交付类别归类：需求 `design/SRS-需求规格.md`、设计 `design/SDD-总体设计.md`（标明吸收的 DSH / Pi / Codex / Hermes）、计划 `plan/PLAN-进度与里程碑.md`。旧长文进 `doc/archive/narrative/`。门禁路径不动。 / Docs are classified as requirements, design, and plan. Old long texts are archived. Gate paths stay.
 - Sprint VX71：Harness Profile 列表与 active 回显已有 `sandboxBackends`；控制台一行沙箱目录。不改 spec、无新厂商。 / VX71: harness list and active echo the existing sandbox backend catalog.
 - Sprint 草案：v6.7（VX71–VX72）。Harness 回显沙箱目录。 / v6.7 draft: harness surfaces the sandbox backend catalog.
 - Sprint VX62：v6.6 范围已冻结；`make v6.6-signoff` 不自动打 `v6.6.0` tag。 / VX62: v6.6 scope frozen; sign-off gate does not tag.

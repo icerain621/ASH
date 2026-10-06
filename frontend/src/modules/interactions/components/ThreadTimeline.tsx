@@ -1,6 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
+import { reasoningEffortCaption } from "@/modules/agent-session/reasoningEffort";
 import { getInteractionByRun, getInteractionThread } from "../api/interactions.api";
+import { formatInteractionError } from "../formatInteractionError";
 
 type Props = {
   runId: string;
@@ -29,18 +31,44 @@ function matchesFilter(type: string, visibility: string, filter: TimelineFilter)
   return type === "harness.compaction";
 }
 
+function payloadRecord(payload: unknown): Record<string, unknown> {
+  if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    return payload as Record<string, unknown>;
+  }
+  if (typeof payload === "string") {
+    try {
+      const parsed = JSON.parse(payload) as unknown;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        return parsed as Record<string, unknown>;
+      }
+    } catch {
+      return {};
+    }
+  }
+  return {};
+}
+
+function foldNodeTypeLabel(type: string, payload: unknown): string {
+  if (type !== "assistant.message") return type;
+  const raw = payloadRecord(payload).reasoningEffort;
+  const effort = reasoningEffortCaption(typeof raw === "string" ? raw : "");
+  return effort ? `${type} · ${effort}` : type;
+}
+
 /** Folded Interaction Thread timeline with seal badge (GV05–06 Task 8). */
 export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
   const byRun = useQuery({
     queryKey: ["interaction-by-run", runId],
     queryFn: () => getInteractionByRun(runId),
     enabled: Boolean(runId),
+    retry: false,
   });
   const threadId = byRun.data?.thread.id ?? "";
   const foldQuery = useQuery({
     queryKey: ["interaction-fold", threadId],
     queryFn: () => getInteractionThread(threadId),
     enabled: Boolean(threadId),
+    retry: false,
   });
 
   const thread = byRun.data?.thread;
@@ -75,11 +103,19 @@ export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
       </div>
       {!runId ? (
         <p className="muted-line">选择 Run 后加载 Thread 折叠视图</p>
-      ) : byRun.isLoading || foldQuery.isLoading ? (
+      ) : byRun.isLoading || (threadId && foldQuery.isLoading) ? (
         <p className="muted-line">加载中…</p>
+      ) : byRun.isError || foldQuery.isError ? (
+        <p className="error-text" data-testid="thread-timeline-error">
+          {formatInteractionError(
+            (byRun.error as Error | null)?.message ||
+              (foldQuery.error as Error | null)?.message ||
+              "加载 Thread 失败",
+          )}
+        </p>
       ) : nodes.length === 0 ? (
         <p className="muted-line" data-testid="thread-timeline-empty">
-          暂无折叠节点
+          {filter === "all" ? "暂无折叠节点" : "当前筛选下没有节点"}
         </p>
       ) : (
         <ul style={{ listStyle: "none", padding: 0, margin: 0 }} data-testid="thread-timeline-list">
@@ -105,7 +141,8 @@ export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
                   }}
                   onClick={() => onSelectSeq?.(active ? null : n.seq)}
                 >
-                  <span style={{ opacity: 0.55 }}>#{n.seq}</span> {n.type}
+                  <span style={{ opacity: 0.55 }}>#{n.seq}</span>{" "}
+                  {foldNodeTypeLabel(n.type, n.payload)}
                   <span style={{ opacity: 0.55 }}> · {n.visibility}</span>
                   {hasLink ? <span> · link</span> : null}
                 </button>

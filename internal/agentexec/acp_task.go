@@ -10,17 +10,18 @@ const ACPTaskSchemaV1 = "ash.acp.task.v1"
 
 // ACPTaskV1 is the outbound ACP task contract (Sprint DX4).
 type ACPTaskV1 struct {
-	Schema    string `json:"schema"`
-	AgentID   string `json:"agentId"`
-	RunID     string `json:"runId,omitempty"`
-	SessionID string `json:"sessionId,omitempty"`
-	TraceID   string `json:"traceId,omitempty"`
-	StepID    string `json:"stepId,omitempty"`
-	Role      string `json:"role,omitempty"`
-	RepoRoot  string `json:"repoRoot,omitempty"`
-	Prompt    string `json:"prompt"`
-	Issue     string `json:"issue,omitempty"`
-	TimeoutMs int64  `json:"timeoutMs,omitempty"`
+	Schema          string `json:"schema"`
+	AgentID         string `json:"agentId"`
+	RunID           string `json:"runId,omitempty"`
+	SessionID       string `json:"sessionId,omitempty"`
+	TraceID         string `json:"traceId,omitempty"`
+	StepID          string `json:"stepId,omitempty"`
+	Role            string `json:"role,omitempty"`
+	RepoRoot        string `json:"repoRoot,omitempty"`
+	Prompt          string `json:"prompt"`
+	Issue           string `json:"issue,omitempty"`
+	TimeoutMs       int64  `json:"timeoutMs,omitempty"`
+	ReasoningEffort string `json:"reasoningEffort,omitempty"` // low | medium | high | max
 }
 
 // ACPTaskResultV1 is the inbound ACP task result contract.
@@ -40,17 +41,18 @@ func NewACPTaskV1(agentID string, req Request) (ACPTaskV1, error) {
 		timeout = 120000
 	}
 	task := ACPTaskV1{
-		Schema:    ACPTaskSchemaV1,
-		AgentID:   firstNonEmpty(agentID, "ash-acp"),
-		RunID:     strings.TrimSpace(req.RunID),
-		SessionID: firstNonEmpty(metaString(req.Metadata, "sessionId"), req.RunID),
-		TraceID:   strings.TrimSpace(req.TraceID),
-		StepID:    strings.TrimSpace(req.StepID),
-		Role:      strings.TrimSpace(req.Role),
-		RepoRoot:  strings.TrimSpace(req.RepoRoot),
-		Prompt:    req.Prompt,
-		Issue:     req.Issue,
-		TimeoutMs: timeout,
+		Schema:          ACPTaskSchemaV1,
+		AgentID:         firstNonEmpty(agentID, "ash-acp"),
+		RunID:           strings.TrimSpace(req.RunID),
+		SessionID:       firstNonEmpty(metaString(req.Metadata, "sessionId"), req.RunID),
+		TraceID:         strings.TrimSpace(req.TraceID),
+		StepID:          strings.TrimSpace(req.StepID),
+		Role:            strings.TrimSpace(req.Role),
+		RepoRoot:        strings.TrimSpace(req.RepoRoot),
+		Prompt:          req.Prompt,
+		Issue:           req.Issue,
+		TimeoutMs:       timeout,
+		ReasoningEffort: acpReasoningEffort(metaString(req.Metadata, "reasoningEffort")),
 	}
 	if err := task.Validate(); err != nil {
 		return ACPTaskV1{}, err
@@ -73,6 +75,16 @@ func (t ACPTaskV1) Validate() error {
 		return fmt.Errorf("%w: timeoutMs must be >= 0", ErrAgentOutputInvalid)
 	}
 	return nil
+}
+
+func acpReasoningEffort(raw string) string {
+	e := strings.ToLower(strings.TrimSpace(raw))
+	switch e {
+	case "low", "medium", "high", "max":
+		return e
+	default:
+		return ""
+	}
 }
 
 // ParseACPTaskResultV1 decodes and validates an ACP task response body.

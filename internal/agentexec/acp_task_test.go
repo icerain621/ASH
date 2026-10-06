@@ -17,6 +17,19 @@ func TestACPTaskV1Validate(t *testing.T) {
 	if ok.Schema != ACPTaskSchemaV1 || ok.SessionID != "r1" {
 		t.Fatalf("%+v", ok)
 	}
+	if ok.ReasoningEffort != "" {
+		t.Fatalf("empty metadata should omit reasoningEffort, got %q", ok.ReasoningEffort)
+	}
+	withEffort, err := NewACPTaskV1("ash-acp", Request{
+		Prompt: "hi", RunID: "r1",
+		Metadata: map[string]any{"sessionId": "sess_1", "reasoningEffort": "max"},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if withEffort.ReasoningEffort != "max" || withEffort.SessionID != "sess_1" {
+		t.Fatalf("%+v", withEffort)
+	}
 	_, err = NewACPTaskV1("ash-acp", Request{})
 	if err == nil {
 		t.Fatal("expected prompt/issue required")

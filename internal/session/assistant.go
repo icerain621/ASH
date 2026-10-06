@@ -15,6 +15,7 @@ type AssistantReply struct {
 	Text      string   `json:"text"`
 	Source    string   `json:"source,omitempty"` // "echo" | "llm" | adapter name
 	Stopped   bool     `json:"stopped,omitempty"`
+	ReasoningEffort string `json:"reasoningEffort,omitempty"`
 	Chunks    []string `json:"chunks,omitempty"`
 	CreatedAt int64    `json:"createdAt,omitempty"`
 }
@@ -103,14 +104,15 @@ func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source s
 				"turnId": turn.ID, "text": chunk, "index": i,
 			}, events.WithVisibility(events.VisibilityModelVisible))
 		}
-		_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info", map[string]any{
-			"turnId": turn.ID, "text": text, "stopped": stopped, "source": source,
-		}, events.WithVisibility(events.VisibilityModelVisible))
+		_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info",
+			assistantMessagePayload(view, turn, text, source, stopped),
+			events.WithVisibility(events.VisibilityModelVisible))
 		return
 	}
 
 	view.Replies = append(view.Replies, AssistantReply{
 		TurnID: turn.ID, Text: text, Source: source, Stopped: stopped,
+		ReasoningEffort: strings.TrimSpace(view.ReasoningEffort),
 		Chunks: chunks, CreatedAt: turn.CreatedAt,
 	})
 }
@@ -132,9 +134,21 @@ func (s *Service) emitAssistantMessageFinal(view *View, turn Turn, text, source 
 		return
 	}
 	trace := firstNonEmpty(view.TraceID, view.RunID)
-	_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info", map[string]any{
+	_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info",
+		assistantMessagePayload(view, turn, text, source, stopped),
+		events.WithVisibility(events.VisibilityModelVisible))
+}
+
+func assistantMessagePayload(view *View, turn Turn, text, source string, stopped bool) map[string]any {
+	payload := map[string]any{
 		"turnId": turn.ID, "text": text, "stopped": stopped, "source": source,
-	}, events.WithVisibility(events.VisibilityModelVisible))
+	}
+	if view != nil {
+		if effort := strings.TrimSpace(view.ReasoningEffort); effort != "" {
+			payload["reasoningEffort"] = effort
+		}
+	}
+	return payload
 }
 
 // buildChatMessages assembles recent turns (+ assistant replies when present) for LLM chat.

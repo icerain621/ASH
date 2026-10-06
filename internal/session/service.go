@@ -43,6 +43,7 @@ type View struct {
 	ProviderReason   string         `json:"providerReason,omitempty"`
 	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
 	AgentMode        string         `json:"agentMode,omitempty"`      // coding | general
+	ReasoningEffort  string         `json:"reasoningEffort,omitempty"` // low | medium | high | max
 	DisabledTools    []string       `json:"disabledTools,omitempty"`
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
@@ -57,9 +58,10 @@ type PatchRequest struct {
 	Title          *string   `json:"title"`
 	ProviderKind   *string   `json:"providerKind"`
 	PlanID         *string   `json:"planId"`
-	PermissionMode *string   `json:"permissionMode"`
-	AgentMode      *string   `json:"agentMode"`
-	DisabledTools  *[]string `json:"disabledTools"`
+	PermissionMode   *string   `json:"permissionMode"`
+	AgentMode        *string   `json:"agentMode"`
+	ReasoningEffort  *string   `json:"reasoningEffort"`
+	DisabledTools    *[]string `json:"disabledTools"`
 }
 
 const maxTitleRunes = 48
@@ -205,10 +207,12 @@ func (s *Service) Create(req CreateRequest) (*View, error) {
 	view.StreamURL = sessionStreamURL(view.ID)
 	s.applyProviderKind(view, req.ProviderKind)
 	view.AgentMode = AgentModeCoding
+	view.ReasoningEffort = ReasoningEffortHigh
 	if view.Meta == nil {
 		view.Meta = map[string]any{}
 	}
 	view.Meta["agentMode"] = AgentModeCoding
+	view.Meta["reasoningEffort"] = ReasoningEffortHigh
 	s.ensureMainThread(view)
 	if err := s.save(view); err != nil {
 		return nil, err
@@ -364,7 +368,7 @@ func (s *Service) emitSessionTurn(view *View, turn Turn, prompt string, extra ma
 	_, _ = s.events.Append(view.RunID, trace, "session.turn", "info", payload)
 }
 
-// Update applies a partial patch (title / providerKind / planId / permissionMode / agentMode).
+// Update applies a partial patch (title / providerKind / planId / permissionMode / agentMode / reasoningEffort).
 func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 	view, err := s.Get(sessionID)
 	if err != nil {
@@ -404,6 +408,17 @@ func (s *Service) Update(sessionID string, req PatchRequest) (*View, error) {
 			view.Meta = map[string]any{}
 		}
 		view.Meta["agentMode"] = mode
+	}
+	if req.ReasoningEffort != nil {
+		effort, err := normalizeReasoningEffort(*req.ReasoningEffort)
+		if err != nil {
+			return nil, err
+		}
+		view.ReasoningEffort = effort
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		view.Meta["reasoningEffort"] = effort
 	}
 	if req.DisabledTools != nil {
 		cleaned := normalizeDisabledTools(*req.DisabledTools)
@@ -577,9 +592,13 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 			break
 		}
 		msgID := turn.ID + "_assistant"
-		if appendEv(msgID, "assistant.message", ts, map[string]any{
+		msg := map[string]any{
 			"turnId": turn.ID, "text": reply.Text, "stopped": reply.Stopped, "source": reply.Source,
-		}) {
+		}
+		if effort := firstNonEmpty(reply.ReasoningEffort, view.ReasoningEffort); effort != "" {
+			msg["reasoningEffort"] = effort
+		}
+		if appendEv(msgID, "assistant.message", ts, msg) {
 			break
 		}
 	}
@@ -674,6 +693,7 @@ func decodeView(row store.AuditLog) (*View, error) {
 		}
 	}
 	hydrateAgentMode(&view)
+	hydrateReasoningEffort(&view)
 	return &view, nil
 }
 
@@ -690,6 +710,22 @@ func hydrateAgentMode(view *View) {
 		view.AgentMode = mode
 	} else {
 		view.AgentMode = AgentModeCoding
+	}
+}
+
+func hydrateReasoningEffort(view *View) {
+	if view == nil {
+		return
+	}
+	if view.ReasoningEffort == "" && view.Meta != nil {
+		if raw, ok := view.Meta["reasoningEffort"].(string); ok {
+			view.ReasoningEffort = strings.TrimSpace(raw)
+		}
+	}
+	if effort, err := normalizeReasoningEffort(view.ReasoningEffort); err == nil {
+		view.ReasoningEffort = effort
+	} else {
+		view.ReasoningEffort = ReasoningEffortHigh
 	}
 }
 
@@ -812,6 +848,29 @@ func (s *Service) DisabledToolsForRun(runID string) []string {
 		}
 	}
 	return nil
+}
+
+// ReasoningEffortForRun returns the bound session's model reasoning effort (low|medium|high|max).
+func (s *Service) ReasoningEffortForRun(runID string) string {
+	runID = strings.TrimSpace(runID)
+	if s == nil || runID == "" {
+		return ""
+	}
+	var rows []store.AuditLog
+	if err := s.q().Where("event_type = ? AND run_id = ?", auditEventType, runID).Find(&rows).Error; err != nil {
+		return ""
+	}
+	for _, row := range rows {
+		view, err := decodeView(row)
+		if err != nil || view == nil {
+			continue
+		}
+		hydrateReasoningEffort(view)
+		if strings.TrimSpace(view.ReasoningEffort) != "" {
+			return view.ReasoningEffort
+		}
+	}
+	return ""
 }
 
 // AllowedToolsSessionForRun returns session-scoped tool allows for any session bound to runID.

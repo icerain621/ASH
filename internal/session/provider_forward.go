@@ -66,10 +66,14 @@ func (s *Service) forwardTurnProvider(view *View, turn Turn) map[string]any {
 
 	exec := agentexec.Resolve(resolveKind)
 	adapter := agentexec.AdapterNameOf(exec)
+	meta := map[string]any{"sessionId": view.ID}
+	if strings.TrimSpace(view.ReasoningEffort) != "" {
+		meta["reasoningEffort"] = view.ReasoningEffort
+	}
 	res, err := exec.Execute(ctx, agentexec.Request{
 		RunID: view.RunID, TraceID: view.TraceID, StepID: turn.ID,
 		RepoRoot: view.RepoRoot, Prompt: turn.Prompt,
-		Metadata:  map[string]any{"sessionId": view.ID},
+		Metadata:  meta,
 		TimeoutMs: 30000,
 	})
 	if err != nil {

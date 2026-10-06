@@ -82,7 +82,20 @@ export function TrajectoryPane({
                 type="button"
                 data-testid="subrun-spawn"
                 disabled={!scenario?.name || spawnM.isPending}
-                onClick={() => spawnM.mutate()}
+                title={
+                  !scenario?.name
+                    ? "需要可派生场景"
+                    : spawnM.isPending
+                      ? "派生中…"
+                      : "派生子 Run（需确认）"
+                }
+                onClick={() => {
+                  const ok = window.confirm(
+                    `确认派生子 Run（场景「${scenario?.name}」）？`,
+                  );
+                  if (!ok) return;
+                  spawnM.mutate();
+                }}
               >
                 {spawnM.isPending ? "派生中…" : "派生子 Run"}
               </button>

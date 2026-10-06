@@ -31,6 +31,8 @@ export function AgentEmptyHero({ agentMode, compact, onDismiss }: Props) {
           type="button"
           className="btn mini ghost agent-ash-hero-dismiss"
           data-testid="agent-ash-hero-dismiss"
+          title="关闭空态 Hero"
+          aria-label="关闭空态 Hero"
           onClick={onDismiss}
         >
           关闭空态

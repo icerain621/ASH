@@ -38,6 +38,14 @@ const (
 	AgentModeGeneral = "general"
 )
 
+// ReasoningEffort values for session model seats (DSH 推理等级).
+const (
+	ReasoningEffortLow    = "low"
+	ReasoningEffortMedium = "medium"
+	ReasoningEffortHigh   = "high"
+	ReasoningEffortMax    = "max"
+)
+
 // CommandItem is one slash/skill/mcp command catalog entry.
 type CommandItem struct {
 	Name        string `json:"name"`
@@ -277,6 +285,18 @@ func normalizeAgentMode(mode string) (string, error) {
 		return AgentModeGeneral, nil
 	default:
 		return "", fmt.Errorf("invalid agentMode %q (want coding|general)", mode)
+	}
+}
+
+func normalizeReasoningEffort(effort string) (string, error) {
+	m := strings.ToLower(strings.TrimSpace(effort))
+	switch m {
+	case "", ReasoningEffortHigh:
+		return ReasoningEffortHigh, nil
+	case ReasoningEffortLow, ReasoningEffortMedium, ReasoningEffortMax:
+		return m, nil
+	default:
+		return "", fmt.Errorf("invalid reasoningEffort %q (want low|medium|high|max)", effort)
 	}
 }
 

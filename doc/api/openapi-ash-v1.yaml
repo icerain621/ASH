@@ -1794,6 +1794,10 @@ components:
           type: string
           description: "Agent UX mode: coding | general"
           enum: [coding, general]
+        reasoningEffort:
+          type: string
+          description: "Model reasoning effort: low | medium | high | max (default high)"
+          enum: [low, medium, high, max]
         turns:
           type: array
           items: { $ref: "#/components/schemas/AgentSessionTurn" }
@@ -1821,6 +1825,10 @@ components:
           type: string
           description: "Agent UX mode seat"
           enum: [coding, general]
+        reasoningEffort:
+          type: string
+          description: "Reasoning effort seat"
+          enum: [low, medium, high, max]
     AgentCommandItem:
       type: object
       required: [name, description, source]

@@ -101,10 +101,19 @@ esac
 
 func TestExecGoCodexExecutorBypassSandboxIsExplicitOptIn(t *testing.T) {
 	exec := &ExecGoCodexExecutor{BypassSandbox: true}
-	args := exec.codexArgs("do work")
+	args := exec.codexArgs("do work", "")
 	joined := strings.Join(args, " ")
 	if !strings.Contains(joined, "--dangerously-bypass-approvals-and-sandbox") {
 		t.Fatalf("args=%v missing explicit bypass flag", args)
+	}
+}
+
+func TestCodexArgsIncludeReasoningEffort(t *testing.T) {
+	exec := &ExecGoCodexExecutor{}
+	args := exec.codexArgs("do work", "max")
+	joined := strings.Join(args, " ")
+	if !strings.Contains(joined, "model_reasoning_effort=xhigh") {
+		t.Fatalf("args=%v want Codex xhigh for ASH max", args)
 	}
 }
 

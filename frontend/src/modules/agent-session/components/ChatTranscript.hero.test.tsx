@@ -15,7 +15,10 @@ describe("ChatTranscript brand hero", () => {
     );
     expect(screen.getByTestId("agent-ash-hero")).toBeInTheDocument();
     expect(screen.getByTestId("agent-ash-hero-tag")).toHaveTextContent(/通用助手/);
-    fireEvent.click(screen.getByTestId("agent-ash-hero-dismiss"));
+    const dismiss = screen.getByTestId("agent-ash-hero-dismiss");
+    expect(dismiss).toHaveAttribute("title", "关闭空态 Hero");
+    expect(dismiss).toHaveAttribute("aria-label", "关闭空态 Hero");
+    fireEvent.click(dismiss);
     expect(onDismiss).toHaveBeenCalled();
   });
 });

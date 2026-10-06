@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/events"
 	"github.com/ash-repwiki/ash/internal/harness"
 	"github.com/ash-repwiki/ash/internal/rules"
@@ -19,6 +20,7 @@ type fakeSessionLinker struct {
 	lastRun      string
 	id           string
 	allowedTools []string
+	effort       string
 }
 
 func (f *fakeSessionLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy string, bind SessionProviderBind) (string, bool, error) {
@@ -31,6 +33,8 @@ func (f *fakeSessionLinker) EnsureForRun(spaceID, runID, repoRoot, createdBy str
 }
 
 func (f *fakeSessionLinker) DisabledToolsForRun(runID string) []string { return nil }
+
+func (f *fakeSessionLinker) ReasoningEffortForRun(runID string) string { return f.effort }
 
 func (f *fakeSessionLinker) AllowedToolsSessionForRun(runID string) []string {
 	out := make([]string, len(f.allowedTools))
@@ -115,5 +119,38 @@ func TestLinkProviderSessionCreatesDocument(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("events=%+v want session.linked", items)
+	}
+}
+
+type captureAgentExecutor struct {
+	agentexec.StaticExecutor
+	last agentexec.Request
+}
+
+func (c *captureAgentExecutor) Execute(ctx context.Context, req agentexec.Request) (*agentexec.Result, error) {
+	c.last = req
+	return c.StaticExecutor.Execute(ctx, req)
+}
+
+func TestExecuteAgentStepPassesSessionReasoningEffort(t *testing.T) {
+	dir := t.TempDir()
+	db, err := store.Open(filepath.Join(dir, "ash.db"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	ev := events.NewService(db)
+	fake := &fakeSessionLinker{effort: "max"}
+	cap := &captureAgentExecutor{}
+	svc := NewService(db, ev, rules.NewLoader("scenarios"), toolbus.DefaultBus()).
+		WithSessionService(fake).
+		WithAgentExecutor(cap)
+
+	step := rules.Step{ID: "code.implement", Role: "Coder", Kind: "agent", TimeoutMs: 1000}
+	if _, err := svc.executeAgentStep("run_effort", "trace_effort", dir, ".", "issue", step, nil, cap, "sess_effort"); err != nil {
+		t.Fatal(err)
+	}
+	if cap.last.Metadata["reasoningEffort"] != "max" {
+		t.Fatalf("metadata=%v want reasoningEffort=max", cap.last.Metadata)
 	}
 }

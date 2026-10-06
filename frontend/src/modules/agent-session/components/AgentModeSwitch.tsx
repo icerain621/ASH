@@ -1,5 +1,6 @@
 import {
   AGENT_MODE_OPTIONS,
+  agentModeTagline,
   type AgentMode,
 } from "../agentModeLabels";
 
@@ -27,6 +28,7 @@ export function AgentModeSwitch({ value, disabled, onChange }: Props) {
           data-testid={`agent-mode-${opt.value}`}
           disabled={disabled}
           aria-pressed={value === opt.value}
+          title={disabled ? "会话忙，暂不可切换模式" : agentModeTagline(opt.value)}
           onClick={() => onChange(opt.value)}
         >
           {opt.label}

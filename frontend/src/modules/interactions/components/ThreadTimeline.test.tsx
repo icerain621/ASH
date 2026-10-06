@@ -28,6 +28,14 @@ describe("ThreadTimeline", () => {
       nodes: [
         { id: "n1", seq: 1, ts: 1, type: "session.turn", visibility: "model_visible" },
         { id: "n2", seq: 2, ts: 2, type: "memory.hit_used", visibility: "ui_only" },
+        {
+          id: "n3",
+          seq: 3,
+          ts: 3,
+          type: "assistant.message",
+          visibility: "model_visible",
+          payload: { text: "ok", reasoningEffort: "max" },
+        },
       ],
     });
   });
@@ -43,8 +51,9 @@ describe("ThreadTimeline", () => {
     await waitFor(() => expect(screen.getByTestId("thread-timeline-list")).toBeInTheDocument());
     expect(screen.getByTestId("thread-timeline-badge")).toHaveAttribute("data-sealed", "1");
     const nodes = screen.getAllByTestId("thread-timeline-node");
-    expect(nodes).toHaveLength(2);
+    expect(nodes).toHaveLength(3);
     expect(nodes[1]).toHaveAttribute("data-linked", "1");
+    expect(nodes[2]).toHaveTextContent(/assistant\.message · Max/);
     fireEvent.click(nodes[1]);
     expect(onSelectSeq).toHaveBeenCalledWith(2);
   });
@@ -56,9 +65,38 @@ describe("ThreadTimeline", () => {
         <ThreadTimeline runId="run_1" />
       </QueryClientProvider>,
     );
-    await waitFor(() => expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(3));
     fireEvent.click(screen.getByTestId("thread-timeline-filter-model_visible"));
-    expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(1);
-    expect(screen.getByTestId("thread-timeline-node")).toHaveTextContent("session.turn");
+    const visible = screen.getAllByTestId("thread-timeline-node");
+    expect(visible).toHaveLength(2);
+    expect(visible[0]).toHaveTextContent("session.turn");
+    expect(visible[1]).toHaveTextContent(/assistant\.message · Max/);
+  });
+
+  it("explains an empty filter instead of claiming the thread has no nodes", async () => {
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ThreadTimeline runId="run_1" />
+      </QueryClientProvider>,
+    );
+    await waitFor(() => expect(screen.getByTestId("thread-timeline-list")).toBeInTheDocument());
+    fireEvent.click(screen.getByTestId("thread-timeline-filter-tool"));
+    expect(screen.getByTestId("thread-timeline-empty")).toHaveTextContent("当前筛选下没有节点");
+    expect(screen.queryByText("暂无折叠节点")).toBeNull();
+  });
+
+  it("surfaces run-not-found instead of empty timeline", async () => {
+    getInteractionByRun.mockRejectedValueOnce(new Error("run not found"));
+    const qc = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    render(
+      <QueryClientProvider client={qc}>
+        <ThreadTimeline runId="run_missing" />
+      </QueryClientProvider>,
+    );
+    expect(await screen.findByTestId("thread-timeline-error")).toHaveTextContent(
+      "未找到该 Run，请检查 Run ID",
+    );
+    expect(screen.queryByTestId("thread-timeline-empty")).toBeNull();
   });
 });

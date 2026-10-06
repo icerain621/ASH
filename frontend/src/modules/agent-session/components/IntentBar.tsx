@@ -1,10 +1,14 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   listAgentCommands,
   type AgentCommandItem,
   type SessionIntentAction,
 } from "../api/session.api";
+import {
+  COMPOSER_PLACEHOLDER_DEFAULT,
+  COMPOSER_PLACEHOLDER_STEER,
+} from "../reasoningEffort";
 
 export type IntentPayload = {
   action: SessionIntentAction;
@@ -26,6 +30,12 @@ type Props = {
   gateTool?: string;
   /** Follow-up prompts already queued on the session (chip only; Stop does not clear them). */
   queueItems?: string[];
+  /** DSH InputBar: seats / chips left of send, inside the draft card. */
+  toolbarStart?: ReactNode;
+  /** DSH trailing cluster (rarely used; extras go in the + menu). */
+  toolbarEnd?: ReactNode;
+  /** Extra rows in the left + menu (Tools / MCP / Skills). */
+  plusItems?: ReactNode;
   onIntent: (payload: IntentPayload) => void;
 };
 
@@ -35,18 +45,34 @@ function ensureSlash(name: string): string {
   return n.startsWith("/") ? n : `/${n}`;
 }
 
+/** Bare `/` only opens the command menu — not a submittable intent. */
+function isBareSlash(text: string): boolean {
+  return text.trim() === "/";
+}
+
+function isDestructiveCommand(command: string): boolean {
+  return ensureSlash(command).toLowerCase() === "/clear";
+}
+
 function submitText(
   text: string,
   onIntent: (payload: IntentPayload) => void,
   opts?: { steer?: boolean; queue?: boolean },
 ): boolean {
   const trimmed = text.trim();
-  if (!trimmed) return false;
+  if (!trimmed || isBareSlash(trimmed)) return false;
   if (trimmed.startsWith("/")) {
     const sp = trimmed.indexOf(" ");
     const command = sp < 0 ? trimmed : trimmed.slice(0, sp);
     const args = sp < 0 ? "" : trimmed.slice(sp + 1).trim();
-    onIntent({ action: "command", command: ensureSlash(command), args: args || undefined });
+    const cmd = ensureSlash(command);
+    if (isDestructiveCommand(cmd)) {
+      const ok = window.confirm(
+        "确认执行 /clear？将清空当前会话的对话上下文（不可恢复）。",
+      );
+      if (!ok) return false;
+    }
+    onIntent({ action: "command", command: cmd, args: args || undefined });
   } else if (opts?.queue) {
     onIntent({ action: "queue", prompt: trimmed });
   } else {
@@ -66,10 +92,14 @@ export function IntentBar({
   gateReason,
   gateTool,
   queueItems = [],
+  toolbarStart,
+  toolbarEnd,
+  plusItems,
   onIntent,
 }: Props) {
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -86,6 +116,28 @@ export function IntentBar({
     if (!filter || filter === "/") return true;
     return it.name.toLowerCase().startsWith(filter) || it.name.toLowerCase().includes(filter.slice(1));
   });
+  const bareSlash = isBareSlash(prompt);
+  const canSubmitPrompt = Boolean(prompt.trim()) && !bareSlash;
+  const trimmedPrompt = prompt.trim();
+  const destructiveClear =
+    trimmedPrompt.startsWith("/") &&
+    isDestructiveCommand(
+      trimmedPrompt.includes(" ") ? trimmedPrompt.slice(0, trimmedPrompt.indexOf(" ")) : trimmedPrompt,
+    );
+  const submitBlockedTitle = !prompt.trim()
+    ? "需要输入内容"
+    : bareSlash
+      ? "选择命令或继续输入"
+      : null;
+  const sendTitle = busy
+    ? "处理中"
+    : submitBlockedTitle
+      ? submitBlockedTitle
+      : destructiveClear
+        ? "执行 /clear（需确认）"
+        : canStop
+          ? "续写"
+          : "发送";
 
   useEffect(() => {
     if (!prompt.startsWith("/")) setMenuOpen(false);
@@ -210,19 +262,20 @@ export function IntentBar({
             运行中：发送将打断当前生成并以新提示续写（Steer）
           </p>
         ) : null}
-        <label className="wide-field">
-          {canStop ? "Steer" : "意图"}
+        <div className="agent-intent-field" data-testid="agent-intent-field">
+          <label className="sr-only" htmlFor="agent-intent-prompt">
+            {canStop ? "Steer" : "意图"}
+          </label>
           <textarea
+            id="agent-intent-prompt"
             ref={textareaRef}
+            className="agent-intent-input"
             rows={2}
             value={prompt}
             disabled={busy}
             data-testid="agent-intent-prompt"
-            placeholder={
-              canStop
-                ? "打断并续写 · Enter 续写 · Alt+Enter 排队 · Shift+Enter 换行"
-                : "Enter 发送 · Shift+Enter 换行 · / 打开命令（点选填入，可加参数后再发）"
-            }
+            aria-label={canStop ? "Steer" : "意图"}
+            placeholder={canStop ? COMPOSER_PLACEHOLDER_STEER : COMPOSER_PLACEHOLDER_DEFAULT}
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);
@@ -262,7 +315,101 @@ export function IntentBar({
               }
             }}
           />
-        </label>
+          <div className="agent-intent-toolbar" data-testid="agent-intent-toolbar">
+            <div className="agent-composer-tools">
+              <div className="agent-composer-plus-wrap">
+                <button
+                  type="button"
+                  className="agent-composer-plus"
+                  disabled={busy}
+                  data-testid="agent-composer-plus"
+                  aria-label="添加附件或调用指令"
+                  aria-haspopup="menu"
+                  aria-expanded={plusOpen}
+                  title="添加附件或调用指令"
+                  onClick={() => setPlusOpen((open) => !open)}
+                >
+                  +
+                </button>
+                {plusOpen ? (
+                  <ul
+                    className="agent-composer-plus-menu"
+                    data-testid="agent-composer-plus-menu"
+                    role="menu"
+                    onClick={(e) => {
+                      if ((e.target as HTMLElement).closest("button")) setPlusOpen(false);
+                    }}
+                  >
+                    <li>
+                      <button
+                        type="button"
+                        className="agent-composer-plus-item"
+                        disabled={busy}
+                        data-testid="agent-intent-slash"
+                        role="menuitem"
+                        title="命令"
+                        onClick={() => {
+                          setPlusOpen(false);
+                          setMenuOpen(true);
+                          if (!prompt.startsWith("/")) setPrompt("/");
+                        }}
+                      >
+                        命令
+                      </button>
+                    </li>
+                    {plusItems}
+                  </ul>
+                ) : null}
+              </div>
+            </div>
+            {toolbarStart}
+            <div className="agent-composer-trailing">
+              {toolbarEnd}
+              <div className="row-actions">
+              {canStop ? (
+                <>
+                  <button
+                    type="button"
+                    className="btn mini err"
+                    disabled={busy}
+                    data-testid="agent-intent-stop"
+                    title="只停止当前生成或 Run，不清空 follow-up 队列"
+                    onClick={() => onIntent({ action: "stop" })}
+                  >
+                    停止
+                  </button>
+                  <button
+                    type="button"
+                    className="btn mini"
+                    disabled={!canSubmitPrompt || busy}
+                    data-testid="agent-intent-queue"
+                    title={
+                      submitBlockedTitle
+                        ? bareSlash
+                          ? "选择命令或继续输入后再排队"
+                          : "需要输入内容后再排队"
+                        : "当前结束后再发送，不打断 Steer"
+                    }
+                    onClick={queueCurrent}
+                  >
+                    排队
+                  </button>
+                </>
+              ) : null}
+              <button
+                type="button"
+                className="btn mini ok"
+                disabled={busy || !canSubmitPrompt}
+                data-testid="agent-intent-send"
+                title={sendTitle}
+                onClick={sendCurrent}
+              >
+                {canStop ? "续写" : "发送"}
+              </button>
+              </div>
+            </div>
+          </div>
+        </div>
         {showMenu ? (
           <ul className="agent-command-menu" data-testid="agent-command-menu" role="listbox">
             {commandsQuery.isLoading ? (
@@ -279,6 +426,7 @@ export function IntentBar({
                     role="option"
                     aria-selected={idx === activeIndex}
                     data-testid={`agent-command-${it.name.replace(/^\//, "")}`}
+                    title={busy ? "会话忙" : `填入 ${ensureSlash(it.name)}（不自动发送）`}
                     onMouseEnter={() => setActiveIndex(idx)}
                     onClick={() => pickCommand(it)}
                   >
@@ -292,54 +440,6 @@ export function IntentBar({
             )}
           </ul>
         ) : null}
-      </div>
-      <div className="row-actions">
-        <button
-          type="button"
-          className="btn mini"
-          disabled={busy}
-          data-testid="agent-intent-slash"
-          title="命令"
-          onClick={() => {
-            setMenuOpen(true);
-            if (!prompt.startsWith("/")) setPrompt("/");
-          }}
-        >
-          /
-        </button>
-        {canStop ? (
-          <>
-            <button
-              type="button"
-              className="btn mini err"
-              disabled={busy}
-              data-testid="agent-intent-stop"
-              title="只停止当前生成或 Run，不清空 follow-up 队列"
-              onClick={() => onIntent({ action: "stop" })}
-            >
-              停止
-            </button>
-            <button
-              type="button"
-              className="btn mini"
-              disabled={busy || !prompt.trim()}
-              data-testid="agent-intent-queue"
-              title="当前结束后再发送，不打断 Steer"
-              onClick={queueCurrent}
-            >
-              排队
-            </button>
-          </>
-        ) : null}
-        <button
-          type="button"
-          className="btn mini ok"
-          disabled={busy || !prompt.trim()}
-          data-testid="agent-intent-send"
-          onClick={sendCurrent}
-        >
-          {canStop ? "续写" : "发送"}
-        </button>
       </div>
     </div>
   );

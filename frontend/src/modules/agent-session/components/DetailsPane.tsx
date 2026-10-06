@@ -1,3 +1,4 @@
+import { isReasoningEffortId, reasoningEffortLabel } from "../reasoningEffort";
 import type { ChatBubbleSelection } from "./ChatTranscript";
 
 type Props = {
@@ -48,6 +49,7 @@ export function DetailsPane({ open, selection }: Props) {
   const payload = selection ? readablePayload(selection.payload) : null;
   const rec = asRecord(payload);
   const source = str(rec.source);
+  const effortRaw = str(rec.reasoningEffort);
   const toolView = selection && isToolSelection(selection);
   const hookView = selection && isHookSelection(selection);
 
@@ -72,6 +74,11 @@ export function DetailsPane({ open, selection }: Props) {
           {source ? (
             <p className="muted-line" data-testid="agent-chat-details-source">
               source: {source}
+            </p>
+          ) : null}
+          {effortRaw ? (
+            <p className="muted-line" data-testid="agent-chat-details-effort">
+              推理等级: {isReasoningEffortId(effortRaw) ? reasoningEffortLabel(effortRaw) : effortRaw}
             </p>
           ) : null}
 

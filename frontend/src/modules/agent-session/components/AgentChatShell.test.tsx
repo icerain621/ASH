@@ -293,6 +293,12 @@ describe("AgentChatShell", () => {
     });
     const spawnBtn = screen.getByTestId("subrun-spawn");
     expect(spawnBtn).not.toBeDisabled();
+    expect(spawnBtn).toHaveAttribute("title", "派生子 Run（需确认）");
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(spawnBtn);
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining("hotfix"));
+    expect(spawnSubRun).not.toHaveBeenCalled();
+    confirmSpy.mockReturnValue(true);
     fireEvent.click(spawnBtn);
     await waitFor(() => {
       expect(spawnSubRun).toHaveBeenCalledWith(
@@ -303,6 +309,7 @@ describe("AgentChatShell", () => {
         }),
       );
     });
+    confirmSpy.mockRestore();
     fireEvent.click(screen.getByTestId("subrun-focus-root"));
     expect(screen.getByTestId("subrun-lineage-select-run_1")).toBeTruthy();
   });
@@ -336,6 +343,7 @@ describe("AgentChatShell", () => {
 
   it("renames and closes sessions from history list", async () => {
     const onSelectSession = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderShell({ selectedSessionId: "sess_a", onSelectSession });
     fireEvent.click(await screen.findByTestId("agent-history-rename-btn-sess_a"));
     fireEvent.change(screen.getByTestId("agent-history-rename-input-sess_a"), {
@@ -345,18 +353,24 @@ describe("AgentChatShell", () => {
     await waitFor(() => {
       expect(patchAgentSession).toHaveBeenCalledWith("sess_a", { title: "Renamed" });
     });
-    fireEvent.click(screen.getByTestId("agent-history-close-sess_a"));
+    const closeBtn = screen.getByTestId("agent-history-close-sess_a");
+    expect(closeBtn).toHaveAttribute("title", "关闭会话（需确认）");
+    fireEvent.click(closeBtn);
     await waitFor(() => {
+      expect(confirmSpy).toHaveBeenCalled();
       expect(closeAgentSession).toHaveBeenCalledWith("sess_a");
       expect(onSelectSession).toHaveBeenCalledWith(null);
     });
+    confirmSpy.mockRestore();
   });
 
   it("purges session after confirm", async () => {
     const onSelectSession = vi.fn();
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderShell({ selectedSessionId: "sess_a", onSelectSession });
-    fireEvent.click(await screen.findByTestId("agent-history-purge-sess_a"));
+    const purge = await screen.findByTestId("agent-history-purge-sess_a");
+    expect(purge).toHaveAttribute("title", "彻底删除（不可恢复，需确认）");
+    fireEvent.click(purge);
     await waitFor(() => {
       expect(confirmSpy).toHaveBeenCalled();
       expect(purgeAgentSession).toHaveBeenCalledWith("sess_a");

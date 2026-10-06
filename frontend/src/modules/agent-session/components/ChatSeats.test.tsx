@@ -89,7 +89,14 @@ describe("ChatSeats", () => {
     await waitFor(() =>
       expect(screen.getByTestId("agent-chat-seat-model")).toHaveValue("static"),
     );
+    expect(screen.getByTestId("agent-chat-seat-model").getAttribute("title")).toMatch(
+      /^选择本会话模型 \/ provider/,
+    );
     expect(screen.getByTestId("agent-chat-seat-permission")).toHaveDisplayValue(/询问/);
+    expect(screen.getByTestId("agent-chat-seat-permission")).toHaveAttribute(
+      "title",
+      "本会话审批模式（完全访问需确认）",
+    );
 
     const model = screen.getByTestId("agent-chat-seat-model") as HTMLSelectElement;
     fireEvent.change(model, { target: { value: "execgo" } });
@@ -105,6 +112,29 @@ describe("ChatSeats", () => {
     );
     expect(confirmSpy).toHaveBeenCalledWith(FULL_ACCESS_CONFIRM_MESSAGE);
     confirmSpy.mockRestore();
+  });
+
+  it("PATCHes reasoningEffort from the model menu", async () => {
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+          permissionMode: "read-only",
+          reasoningEffort: "high",
+        }}
+      />,
+    );
+    await waitFor(() => expect(listAgentModels).toHaveBeenCalled());
+    fireEvent.click(await screen.findByTestId("agent-chat-seat-model-trigger"));
+    fireEvent.click(screen.getByTestId("agent-chat-seat-effort-open"));
+    fireEvent.click(screen.getByTestId("agent-chat-seat-effort-max"));
+    await waitFor(() =>
+      expect(updateSession).toHaveBeenCalledWith("sess_1", { reasoningEffort: "max" }),
+    );
+    expect(screen.getByTestId("agent-chat-seat-model-trigger")).toHaveTextContent(/Max/);
   });
 
   it("defaults permission seat to read-only when session omits permissionMode", async () => {
@@ -166,5 +196,50 @@ describe("ChatSeats", () => {
     });
     expect(updateSession).not.toHaveBeenCalledWith("sess_1", { permissionMode: "full" });
     confirmSpy.mockRestore();
+  });
+
+  it("tolerates null provider status", async () => {
+    listModelProviders.mockResolvedValueOnce({
+      items: [{ id: "p1", role: "default", status: null }],
+    });
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+          permissionMode: "read-only",
+        }}
+      />,
+    );
+    await waitFor(() => {
+      expect(screen.getByTestId("agent-chat-seats")).toBeInTheDocument();
+      expect(screen.getByText(/未配置/)).toBeInTheDocument();
+    });
+  });
+
+  it("surfaces patch errors and reverts plan draft", async () => {
+    updateSession.mockRejectedValueOnce(new Error("plan not found"));
+    wrap(
+      <ChatSeats
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "static",
+          permissionMode: "read-only",
+          planId: "plan_ok",
+        }}
+      />,
+    );
+    await waitFor(() => expect(listAgentModels).toHaveBeenCalled());
+    const plan = screen.getByTestId("agent-chat-seat-plan");
+    fireEvent.change(plan, { target: { value: "plan_bad" } });
+    fireEvent.blur(plan);
+    expect(await screen.findByTestId("agent-chat-seats-error")).toHaveTextContent(
+      "未找到该 Plan，请检查 planId",
+    );
+    await waitFor(() => expect(plan).toHaveValue("plan_ok"));
   });
 });

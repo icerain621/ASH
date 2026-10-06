@@ -110,7 +110,13 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
       <div className="agent-mcp-panel">
         <div className="pane-title">
           <h2>MCP 工具</h2>
-          <button type="button" className="btn mini" data-testid="agent-mcp-close" onClick={onClose}>
+          <button
+            type="button"
+            className="btn mini"
+            data-testid="agent-mcp-close"
+            title="关闭 MCP 面板"
+            onClick={onClose}
+          >
             关闭
           </button>
         </div>
@@ -139,6 +145,10 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
               setError("name 与 server 必填");
               return;
             }
+            const ok = window.confirm(
+              `确认登记 MCP 工具「${name.trim()}」→ ${server.trim()}（risk=${risk}）？`,
+            );
+            if (!ok) return;
             registerMut.mutate();
           }}
         >
@@ -167,7 +177,16 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
           <button
             type="submit"
             className="btn mini ok"
-            disabled={registerMut.isPending}
+            disabled={registerMut.isPending || !name.trim() || !server.trim()}
+            title={
+              !name.trim()
+                ? "需要填写 name"
+                : !server.trim()
+                  ? "需要填写 server"
+                  : registerMut.isPending
+                    ? "登记中…"
+                    : "登记 MCP 工具（需确认）"
+            }
             data-testid="agent-mcp-register-btn"
           >
             登记
@@ -191,7 +210,20 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
                     className="btn mini"
                     data-testid={`agent-mcp-try-${tool.id}`}
                     disabled={disabled || execMut.isPending}
-                    onClick={() => execMut.mutate(tool)}
+                    title={
+                      disabled
+                        ? "工具已停用，先启用再试执行"
+                        : execMut.isPending
+                          ? "执行中…"
+                          : "试执行（需确认）"
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(
+                        `确认试执行 MCP 工具「${tool.name}」（risk=${tool.risk || "unknown"}）？`,
+                      );
+                      if (!ok) return;
+                      execMut.mutate(tool);
+                    }}
                   >
                     试执行
                   </button>
@@ -200,12 +232,23 @@ export function McpToolsPanel({ open, onClose, sessionId }: Props) {
                     className="btn mini"
                     data-testid={`agent-mcp-toggle-${tool.id}`}
                     disabled={patchMut.isPending}
-                    onClick={() =>
-                      patchMut.mutate({
-                        id: tool.id,
-                        status: disabled ? "registered" : "disabled",
-                      })
+                    title={
+                      patchMut.isPending
+                        ? "更新中…"
+                        : disabled
+                          ? "启用此工具（需确认）"
+                          : "停用此工具（需确认）"
                     }
+                    onClick={() => {
+                      const next = disabled ? "registered" : "disabled";
+                      const ok = window.confirm(
+                        next === "disabled"
+                          ? `确认停用 MCP 工具「${tool.name}」？`
+                          : `确认启用 MCP 工具「${tool.name}」？`,
+                      );
+                      if (!ok) return;
+                      patchMut.mutate({ id: tool.id, status: next });
+                    }}
                   >
                     {disabled ? "启用" : "停用"}
                   </button>

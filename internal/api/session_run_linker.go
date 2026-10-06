@@ -26,6 +26,10 @@ func (l sessionRunLinker) DisabledToolsForRun(runID string) []string {
 	return l.svc.DisabledToolsForRun(runID)
 }
 
+func (l sessionRunLinker) ReasoningEffortForRun(runID string) string {
+	return l.svc.ReasoningEffortForRun(runID)
+}
+
 func (l sessionRunLinker) AllowedToolsSessionForRun(runID string) []string {
 	return l.svc.AllowedToolsSessionForRun(runID)
 }

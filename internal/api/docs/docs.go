@@ -641,7 +641,7 @@ const docTemplate = `{
                 }
             },
             "patch": {
-                "description": "Partial update: title, providerKind, planId, permissionMode, agentMode.",
+                "description": "Partial update: title, providerKind, planId, permissionMode, agentMode, reasoningEffort.",
                 "consumes": [
                     "application/json"
                 ],
@@ -13605,6 +13605,9 @@ const docTemplate = `{
                 "providerKind": {
                     "type": "string"
                 },
+                "reasoningEffort": {
+                    "type": "string"
+                },
                 "title": {
                     "type": "string"
                 }
@@ -13681,6 +13684,10 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "providerReason": {
+                    "type": "string"
+                },
+                "reasoningEffort": {
+                    "description": "low | medium | high | max",
                     "type": "string"
                 },
                 "replies": {
@@ -14259,7 +14266,7 @@ const docTemplate = `{
                 "decisionReason": {
                     "type": "string"
                 },
-                "evidenceJSON": {
+                "evidenceJson": {
                     "type": "string"
                 },
                 "gate": {
@@ -14277,19 +14284,19 @@ const docTemplate = `{
                 "risk": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
                 },
-                "stepID": {
+                "stepId": {
                     "type": "string"
                 },
-                "traceID": {
+                "traceId": {
                     "type": "string"
                 },
                 "updatedAt": {
@@ -14338,7 +14345,7 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_store.AuditLog": {
             "type": "object",
             "properties": {
-                "actorID": {
+                "actorId": {
                     "type": "string"
                 },
                 "createdAt": {
@@ -14353,13 +14360,13 @@ const docTemplate = `{
                 "payloadJSON": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
-                "traceID": {
+                "traceId": {
                     "type": "string"
                 }
             }
@@ -14379,7 +14386,7 @@ const docTemplate = `{
                 "retentionDays": {
                     "type": "integer"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "updatedAt": {
@@ -14496,7 +14503,7 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
                 "sizeBytes": {
@@ -14505,7 +14512,7 @@ const docTemplate = `{
                 "snapshotDigest": {
                     "type": "string"
                 },
-                "stepID": {
+                "stepId": {
                     "type": "string"
                 },
                 "storeKey": {
@@ -14522,7 +14529,7 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_store.Feedback": {
             "type": "object",
             "properties": {
-                "actorID": {
+                "actorId": {
                     "type": "string"
                 },
                 "category": {
@@ -14540,8 +14547,7 @@ const docTemplate = `{
                 "rating": {
                     "type": "integer"
                 },
-                "runID": {
-                    "description": "optional; uniqueness with target when set",
+                "runId": {
                     "type": "string"
                 },
                 "severity": {
@@ -14550,13 +14556,13 @@ const docTemplate = `{
                 "source": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
                 },
-                "targetID": {
+                "targetId": {
                     "type": "string"
                 },
                 "targetType": {
@@ -14585,13 +14591,13 @@ const docTemplate = `{
                 "risk": {
                     "type": "string"
                 },
-                "schemaJSON": {
+                "schemaJson": {
                     "type": "string"
                 },
                 "server": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "status": {
@@ -14611,13 +14617,13 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "orgID": {
+                "orgId": {
                     "type": "string"
                 },
-                "roleID": {
+                "roleId": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "status": {
@@ -14626,7 +14632,7 @@ const docTemplate = `{
                 "updatedAt": {
                     "type": "string"
                 },
-                "userID": {
+                "userId": {
                     "type": "string"
                 }
             }
@@ -14690,7 +14696,7 @@ const docTemplate = `{
                 "protocol": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "status": {
@@ -14885,7 +14891,7 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "orgID": {
+                "orgId": {
                     "type": "string"
                 },
                 "permissions": {

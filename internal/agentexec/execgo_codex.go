@@ -64,6 +64,17 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 	}
 	actionID := stableActionID(req.RunID, req.StepID)
 	prompt := buildCodexPrompt(req)
+	effort := metadataString(req.Metadata, "reasoningEffort")
+	actionMeta := map[string]any{
+		"source":   "ash",
+		"runId":    req.RunID,
+		"traceId":  req.TraceID,
+		"stepId":   req.StepID,
+		"repoRoot": req.RepoRoot,
+	}
+	if effort != "" {
+		actionMeta["reasoningEffort"] = effort
+	}
 	request := map[string]any{
 		"adapter":    "codex",
 		"agent_id":   e.AgentID,
@@ -74,7 +85,7 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 			"timeout": timeout,
 			"input": map[string]any{
 				"program": e.CodexBin,
-				"args":    e.codexArgs(prompt),
+				"args":    e.codexArgs(prompt, effort),
 				"cwd":     req.RepoRoot,
 				"limits": map[string]any{
 					"wall_time_ms": timeout,
@@ -82,13 +93,7 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 				"sandbox": map[string]any{"profile": "process"},
 			},
 		},
-		"metadata": map[string]any{
-			"source":   "ash",
-			"runId":    req.RunID,
-			"traceId":  req.TraceID,
-			"stepId":   req.StepID,
-			"repoRoot": req.RepoRoot,
-		},
+		"metadata": actionMeta,
 	}
 
 	path := filepath.Join(req.RunDir, "agent-"+req.StepID+".json")
@@ -142,12 +147,42 @@ func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result
 	}, nil
 }
 
-func (e *ExecGoCodexExecutor) codexArgs(prompt string) []string {
+func (e *ExecGoCodexExecutor) codexArgs(prompt string, effort string) []string {
 	args := []string{"exec", "--skip-git-repo-check"}
 	if e.BypassSandbox {
 		args = append(args, "--dangerously-bypass-approvals-and-sandbox")
 	}
+	if mapped := mapCodexReasoningEffort(effort); mapped != "" {
+		args = append(args, "-c", "model_reasoning_effort="+mapped)
+	}
 	return append(args, prompt)
+}
+
+func mapCodexReasoningEffort(effort string) string {
+	switch strings.ToLower(strings.TrimSpace(effort)) {
+	case "low":
+		return "low"
+	case "medium":
+		return "medium"
+	case "high":
+		return "high"
+	case "max":
+		return "xhigh"
+	default:
+		return ""
+	}
+}
+
+func metadataString(meta map[string]any, key string) string {
+	if meta == nil {
+		return ""
+	}
+	raw, ok := meta[key]
+	if !ok || raw == nil {
+		return ""
+	}
+	s, _ := raw.(string)
+	return strings.TrimSpace(s)
 }
 
 func (e *ExecGoCodexExecutor) Cancel(ctx context.Context, taskID string) error {

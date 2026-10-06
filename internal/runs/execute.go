@@ -767,6 +767,11 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 	if agentSessionID != "" {
 		meta["sessionId"] = agentSessionID
 	}
+	if s.sessionSvc != nil {
+		if effort := strings.TrimSpace(s.sessionSvc.ReasoningEffortForRun(runID)); effort != "" {
+			meta["reasoningEffort"] = effort
+		}
+	}
 	req := agentexec.Request{
 		RunID: runID, TraceID: traceID, StepID: step.ID, Role: step.Role,
 		RepoRoot: repoRoot, RunDir: runDir, Issue: issue, Prompt: prompt,

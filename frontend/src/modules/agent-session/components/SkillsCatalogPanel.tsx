@@ -115,7 +115,13 @@ export function SkillsCatalogPanel({ open, onClose, onRunSkill, canRun = false }
       <div className="agent-mcp-panel">
         <div className="pane-title">
           <h2>Skills</h2>
-          <button type="button" className="btn mini" data-testid="agent-skills-close" onClick={onClose}>
+          <button
+            type="button"
+            className="btn mini"
+            data-testid="agent-skills-close"
+            title="关闭 Skills 面板"
+            onClick={onClose}
+          >
             关闭
           </button>
         </div>
@@ -158,6 +164,15 @@ export function SkillsCatalogPanel({ open, onClose, onRunSkill, canRun = false }
               className="btn mini"
               data-testid="agent-skills-pack-verify"
               disabled={!packPath.trim() || !packSig.trim() || verifyMut.isPending}
+              title={
+                !packPath.trim()
+                  ? "需要填写 packPath"
+                  : !packSig.trim()
+                    ? "需要填写 signature"
+                    : verifyMut.isPending
+                      ? "验签中…"
+                      : "验签（干跑）"
+              }
               onClick={() => verifyMut.mutate()}
             >
               验签
@@ -167,7 +182,21 @@ export function SkillsCatalogPanel({ open, onClose, onRunSkill, canRun = false }
               className="btn mini ok"
               data-testid="agent-skills-pack-install"
               disabled={!packPath.trim() || !packSig.trim() || installPackMut.isPending}
-              onClick={() => installPackMut.mutate()}
+              title={
+                !packPath.trim()
+                  ? "需要填写 packPath"
+                  : !packSig.trim()
+                    ? "需要填写 signature"
+                    : installPackMut.isPending
+                      ? "安装中…"
+                      : "安装签名 pack（需确认）"
+              }
+              onClick={() => {
+                if (!packPath.trim() || !packSig.trim()) return;
+                const ok = window.confirm(`确认安装签名 skill pack「${packPath.trim()}」？`);
+                if (!ok) return;
+                installPackMut.mutate();
+              }}
             >
               安装 pack
             </button>
@@ -216,9 +245,22 @@ export function SkillsCatalogPanel({ open, onClose, onRunSkill, canRun = false }
                     className="btn mini"
                     data-testid={`agent-skills-catalog-install-${it.name}`}
                     disabled={installCatalogMut.isPending}
-                    onClick={() =>
-                      installCatalogMut.mutate({ name: it.name, version: it.version })
+                    title={
+                      installCatalogMut.isPending
+                        ? "安装中…"
+                        : installed
+                          ? `重新安装「${it.name}」（需确认）`
+                          : `从 catalog 安装「${it.name}」（需确认）`
                     }
+                    onClick={() => {
+                      const ok = window.confirm(
+                        installed
+                          ? `确认重新安装 skill「${it.name}」@${it.version}？`
+                          : `确认从 catalog 安装 skill「${it.name}」@${it.version}？`,
+                      );
+                      if (!ok) return;
+                      installCatalogMut.mutate({ name: it.name, version: it.version });
+                    }}
                   >
                     {installed ? "重装" : "安装"}
                   </button>

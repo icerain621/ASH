@@ -48,6 +48,17 @@ describe("conversationNodes", () => {
     expect(msg.summary).toBe("你好世界");
   });
 
+  it("projects reasoningEffort onto assistant.message title", () => {
+    const msg = resolveConversationNode(
+      ev({
+        type: "assistant.message",
+        payload: { turnId: "t1", text: "ok", source: "llm", reasoningEffort: "max" },
+      }),
+    );
+    expect(msg.title).toBe("助手 · Max");
+    expect(msg.summary).toBe("ok");
+  });
+
   it("resolves tool and step events", () => {
     const called = resolveConversationNode(
       ev({ type: "tool.called", payload: { name: "git.status", args: "{}" } }),
@@ -162,6 +173,19 @@ describe("conversationNodes", () => {
     expect(bubbles[1].streaming).toBe(false);
     expect(bubbles[1].type).toBe("assistant.message");
     expect(bubbles[1].id).toBe("assistant:turn_1");
+  });
+
+  it("projects reasoningEffort onto the merged assistant bubble title", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "m1",
+        seq: 1,
+        type: "assistant.message",
+        payload: { turnId: "t9", text: "ok", source: "llm", reasoningEffort: "max" },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].title).toBe("助手 · Max");
   });
 
   it("keeps a streaming bubble when only deltas arrived", () => {

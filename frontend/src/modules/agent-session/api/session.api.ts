@@ -32,6 +32,7 @@ export type AgentSessionView = {
   providerKind?: string;
   permissionMode?: PermissionMode | string;
   agentMode?: AgentMode | string;
+  reasoningEffort?: string;
   disabledTools?: string[];
   meta?: Record<string, unknown>;
   turns?: Array<{ id: string; prompt: string; createdAt: number }>;
@@ -132,6 +133,7 @@ export async function patchAgentSession(
     planId?: string;
     permissionMode?: PermissionMode | string;
     agentMode?: AgentMode | string;
+    reasoningEffort?: string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {
@@ -141,7 +143,7 @@ export async function patchAgentSession(
   });
 }
 
-/** Alias for seat updates (title / providerKind / planId / permissionMode / disabledTools). */
+/** Alias for seat updates (title / providerKind / planId / permissionMode / reasoningEffort / disabledTools). */
 export async function updateSession(
   sessionId: string,
   body: {
@@ -150,6 +152,7 @@ export async function updateSession(
     planId?: string;
     permissionMode?: PermissionMode | string;
     agentMode?: AgentMode | string;
+    reasoningEffort?: string;
     disabledTools?: string[];
   },
 ): Promise<AgentSessionView> {

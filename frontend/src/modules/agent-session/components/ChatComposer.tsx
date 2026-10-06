@@ -1,5 +1,4 @@
 import { sessionFollowUpQueue, type AgentSessionView } from "../api/session.api";
-import { permissionStripLabel, resolvePermissionMode } from "../permissionModeLabels";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 import { ChatSeats } from "./ChatSeats";
 
@@ -16,7 +15,7 @@ type Props = {
   onOpenSkills?: () => void;
 };
 
-/** Sticky bottom composer — seats + IntentBar with chat-shell card chrome. */
+/** Sticky bottom composer — DSH InputBar: + menu, seats, model/effort, send. */
 export function ChatComposer({
   mode,
   busy,
@@ -29,54 +28,60 @@ export function ChatComposer({
   onOpenMcp,
   onOpenSkills,
 }: Props) {
-  const hasShortcuts = Boolean(onOpenTools || onOpenMcp || onOpenSkills);
   const queueItems = sessionFollowUpQueue(session?.meta);
-
-  return (
-    <div className="agent-chat-composer" data-testid="agent-chat-composer">
-      {mode === "prompt" ? <ChatSeats session={session} disabled={busy} /> : null}
-      {mode === "prompt" && session?.id ? (
-        <p className="muted-line agent-chat-permission-strip" data-testid="agent-chat-permission-strip">
-          审批：{permissionStripLabel(resolvePermissionMode(session.permissionMode))}
-        </p>
-      ) : null}
-      {hasShortcuts && mode === "prompt" ? (
-        <div className="agent-composer-shortcuts" data-testid="agent-composer-shortcuts">
-          {onOpenTools ? (
+  const plusItems =
+    mode === "prompt" && (onOpenTools || onOpenMcp || onOpenSkills) ? (
+      <>
+        {onOpenTools ? (
+          <li>
             <button
               type="button"
-              className="btn mini"
+              className="agent-composer-plus-item"
               data-testid="agent-composer-tools"
               disabled={busy}
+              role="menuitem"
+              title={busy ? "会话忙，稍后再打开 Tools" : "打开 Tools / 风险面板"}
               onClick={onOpenTools}
             >
               Tools
             </button>
-          ) : null}
-          {onOpenMcp ? (
+          </li>
+        ) : null}
+        {onOpenMcp ? (
+          <li>
             <button
               type="button"
-              className="btn mini"
+              className="agent-composer-plus-item"
               data-testid="agent-composer-mcp"
               disabled={busy}
+              role="menuitem"
+              title={busy ? "会话忙，稍后再打开 MCP" : "打开 MCP 工具面板"}
               onClick={onOpenMcp}
             >
               MCP
             </button>
-          ) : null}
-          {onOpenSkills ? (
+          </li>
+        ) : null}
+        {onOpenSkills ? (
+          <li>
             <button
               type="button"
-              className="btn mini"
+              className="agent-composer-plus-item"
               data-testid="agent-composer-skills"
               disabled={busy}
+              role="menuitem"
+              title={busy ? "会话忙，稍后再打开 Skills" : "打开 Skills 目录"}
               onClick={onOpenSkills}
             >
               Skills
             </button>
-          ) : null}
-        </div>
-      ) : null}
+          </li>
+        ) : null}
+      </>
+    ) : null;
+
+  return (
+    <div className="agent-chat-composer" data-testid="agent-chat-composer" data-composer-card="">
       <IntentBar
         mode={mode}
         busy={busy}
@@ -84,6 +89,8 @@ export function ChatComposer({
         gateReason={gateReason}
         gateTool={gateTool}
         queueItems={queueItems}
+        toolbarStart={mode === "prompt" ? <ChatSeats session={session} disabled={busy} /> : null}
+        plusItems={plusItems}
         onIntent={onIntent}
       />
     </div>

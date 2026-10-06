@@ -1,5 +1,6 @@
 import type { SessionEventEnvelope } from "../api/session.api";
 import { eventVisibility } from "../api/session.api";
+import { reasoningEffortCaption } from "../reasoningEffort";
 
 export type ConversationNodeKind =
   | "session.turn"
@@ -90,13 +91,15 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
         visibility,
       };
     case "assistant.delta":
-    case "assistant.message":
+    case "assistant.message": {
+      const effort = reasoningEffortCaption(str(p.reasoningEffort));
       return {
         kind: "assistant",
-        title: "助手",
+        title: effort ? `助手 · ${effort}` : "助手",
         summary: str(p.text) || "",
         visibility,
       };
+    }
     case "gate.waiting_approval":
       return {
         kind: "gate.waiting_approval",
@@ -342,7 +345,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
         role: "assistant",
         type: "assistant.message",
         kind: "assistant",
-        title: "助手",
+        title: node.title,
         summary: text,
         streaming: false,
         turnId: turnId || undefined,

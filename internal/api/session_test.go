@@ -395,21 +395,22 @@ func TestAgentCommandsAndModelsAndPatchSeats(t *testing.T) {
 
 	patchW := httptest.NewRecorder()
 	patchReq := httptest.NewRequest(http.MethodPatch, "/api/v1/agents/sessions/"+sess.ID,
-		bytes.NewReader([]byte(`{"providerKind":"static","planId":"plan_x","permissionMode":"full"}`)))
+		bytes.NewReader([]byte(`{"providerKind":"static","planId":"plan_x","permissionMode":"full","reasoningEffort":"max"}`)))
 	patchReq.Header.Set("Content-Type", "application/json")
 	r.ServeHTTP(patchW, patchReq)
 	if patchW.Code != http.StatusOK {
 		t.Fatalf("patch seats status=%d body=%s", patchW.Code, patchW.Body.String())
 	}
 	var patched struct {
-		ProviderKind   string `json:"providerKind"`
-		PlanID         string `json:"planId"`
-		PermissionMode string `json:"permissionMode"`
+		ProviderKind    string `json:"providerKind"`
+		PlanID          string `json:"planId"`
+		PermissionMode  string `json:"permissionMode"`
+		ReasoningEffort string `json:"reasoningEffort"`
 	}
 	if err := json.Unmarshal(patchW.Body.Bytes(), &patched); err != nil {
 		t.Fatal(err)
 	}
-	if patched.ProviderKind != "static" || patched.PlanID != "plan_x" || patched.PermissionMode != "full" {
+	if patched.ProviderKind != "static" || patched.PlanID != "plan_x" || patched.PermissionMode != "full" || patched.ReasoningEffort != "max" {
 		t.Fatalf("patched=%+v", patched)
 	}
 

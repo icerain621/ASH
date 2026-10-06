@@ -224,12 +224,18 @@ export function SessionHistoryList({
               type="button"
               className="btn mini ok"
               disabled={renamingId === item.id || !draft.trim()}
+              title={!draft.trim() ? "需要填写标题" : "保存标题"}
               data-testid={`agent-history-rename-save-${item.id}`}
               onClick={() => commitRename(item.id)}
             >
               保存
             </button>
-            <button type="button" className="btn mini" onClick={() => setEditingId(null)}>
+            <button
+              type="button"
+              className="btn mini"
+              title="取消重命名"
+              onClick={() => setEditingId(null)}
+            >
               取消
             </button>
           </div>
@@ -244,7 +250,7 @@ export function SessionHistoryList({
               <strong>{sessionTitle(item)}</strong>
               <span className="muted-line">
                 {item.status}
-                {item.runId ? ` · ${shortId(item.runId)}` : " · blank"}
+                {item.runId ? ` · ${shortId(item.runId)}` : " · 未绑定"}
               </span>
             </button>
             <div className="agent-history-actions">
@@ -253,6 +259,7 @@ export function SessionHistoryList({
                 className="btn mini"
                 data-testid={`agent-history-rename-btn-${item.id}`}
                 disabled={renamingId === item.id}
+                title={renamingId === item.id ? "改名中…" : "重命名会话"}
                 onClick={(e) => {
                   e.stopPropagation();
                   startRename(item);
@@ -265,8 +272,13 @@ export function SessionHistoryList({
                 className="btn mini err"
                 data-testid={`agent-history-close-${item.id}`}
                 disabled={closingId === item.id || purgingId === item.id || item.status === "closed"}
+                title={item.status === "closed" ? "会话已关闭" : "关闭会话（需确认）"}
                 onClick={(e) => {
                   e.stopPropagation();
+                  if (item.status === "closed") return;
+                  if (!window.confirm("确认关闭该会话？关闭后仍可在历史中查看，也可彻底删除。")) {
+                    return;
+                  }
                   onClose?.(item.id);
                 }}
               >
@@ -277,7 +289,7 @@ export function SessionHistoryList({
                 className="btn mini err"
                 data-testid={`agent-history-purge-${item.id}`}
                 disabled={purgingId === item.id || closingId === item.id}
-                title="彻底删除（不可恢复）"
+                title="彻底删除（不可恢复，需确认）"
                 onClick={(e) => {
                   e.stopPropagation();
                   if (
@@ -317,6 +329,7 @@ export function SessionHistoryList({
             onClick={onNewWorkspace}
             disabled={creatingWorkspace}
             data-testid="agent-workspace-new"
+            title={creatingWorkspace ? "创建中…" : "新建工作区分组"}
           >
             新建工作区
           </button>
@@ -326,6 +339,7 @@ export function SessionHistoryList({
             onClick={onNew}
             disabled={creating}
             data-testid="agent-history-new"
+            title={creating ? "创建中…" : "新建会话"}
           >
             新建
           </button>
@@ -398,12 +412,18 @@ export function SessionHistoryList({
                       disabled={
                         renamingWorkspaceId === group.workspace.id || !wsDraft.trim()
                       }
+                      title={!wsDraft.trim() ? "需要填写工作区名称" : "保存工作区名称"}
                       data-testid={`agent-workspace-rename-save-${group.workspace.id}`}
                       onClick={() => commitWorkspaceRename(group.workspace!.id)}
                     >
                       保存
                     </button>
-                    <button type="button" className="btn mini" onClick={() => setEditingWsId(null)}>
+                    <button
+                      type="button"
+                      className="btn mini"
+                      title="取消重命名"
+                      onClick={() => setEditingWsId(null)}
+                    >
                       取消
                     </button>
                   </div>
@@ -413,6 +433,11 @@ export function SessionHistoryList({
                       type="button"
                       className="agent-workspace-toggle"
                       aria-expanded={isOpen}
+                      title={
+                        isOpen
+                          ? `折叠「${group.workspace?.title ?? "未分组"}」`
+                          : `展开「${group.workspace?.title ?? "未分组"}」`
+                      }
                       onClick={() => {
                         toggleGroup(key);
                         onSelectWorkspace(group.workspace?.id ?? null);
@@ -429,6 +454,7 @@ export function SessionHistoryList({
                           className="btn mini"
                           data-testid={`agent-workspace-rename-btn-${group.workspace.id}`}
                           disabled={renamingWorkspaceId === group.workspace.id}
+                          title={renamingWorkspaceId === group.workspace.id ? "改名中…" : "重命名工作区"}
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingWsId(group.workspace!.id);
@@ -444,6 +470,13 @@ export function SessionHistoryList({
                           disabled={
                             closingWorkspaceId === group.workspace.id ||
                             group.workspace.status === "closed"
+                          }
+                          title={
+                            group.workspace.status === "closed"
+                              ? "工作区已关闭"
+                              : closingWorkspaceId === group.workspace.id
+                                ? "关闭中…"
+                                : `关闭工作区「${group.workspace.title || "未命名"}」（会话不会删除，需确认）`
                           }
                           onClick={(e) => {
                             e.stopPropagation();

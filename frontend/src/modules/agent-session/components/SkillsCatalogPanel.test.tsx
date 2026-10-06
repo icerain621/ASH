@@ -95,13 +95,22 @@ describe("SkillsCatalogPanel", () => {
 
   it("verifies and installs signed pack", async () => {
     renderPanel();
-    fireEvent.change(await screen.findByTestId("agent-skills-pack-path"), {
+    const verifyBtn = await screen.findByTestId("agent-skills-pack-verify");
+    const installBtn = screen.getByTestId("agent-skills-pack-install");
+    expect(verifyBtn).toBeDisabled();
+    expect(verifyBtn).toHaveAttribute("title", "需要填写 packPath");
+    expect(installBtn).toBeDisabled();
+    expect(installBtn).toHaveAttribute("title", "需要填写 packPath");
+
+    fireEvent.change(screen.getByTestId("agent-skills-pack-path"), {
       target: { value: "/tmp/demo.ash-skill.zip" },
     });
+    expect(verifyBtn).toHaveAttribute("title", "需要填写 signature");
+
     fireEvent.change(screen.getByTestId("agent-skills-pack-sig"), {
       target: { value: "deadbeef" },
     });
-    fireEvent.click(screen.getByTestId("agent-skills-pack-verify"));
+    fireEvent.click(verifyBtn);
     await waitFor(() => {
       expect(verifySkillPack).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -112,21 +121,34 @@ describe("SkillsCatalogPanel", () => {
     });
     expect(await screen.findByTestId("agent-skills-message")).toHaveTextContent(/验签通过/);
 
-    fireEvent.click(screen.getByTestId("agent-skills-pack-install"));
+    expect(installBtn).toHaveAttribute("title", "安装签名 pack（需确认）");
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(installBtn);
+    expect(installSkillPack).not.toHaveBeenCalled();
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(installBtn);
     await waitFor(() => {
       expect(installSkillPack).toHaveBeenCalled();
     });
     expect(await screen.findByTestId("agent-skills-message")).toHaveTextContent(/已安装/);
+    confirmSpy.mockRestore();
   });
 
   it("installs from org catalog", async () => {
     renderPanel();
-    fireEvent.click(await screen.findByTestId("agent-skills-catalog-install-pack-demo"));
+    const install = await screen.findByTestId("agent-skills-catalog-install-pack-demo");
+    expect(install).toHaveAttribute("title", "从 catalog 安装「pack-demo」（需确认）");
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(false);
+    fireEvent.click(install);
+    expect(installSkillFromCatalog).not.toHaveBeenCalled();
+    confirmSpy.mockReturnValue(true);
+    fireEvent.click(install);
     await waitFor(() => {
       expect(installSkillFromCatalog).toHaveBeenCalledWith(
         expect.objectContaining({ name: "pack-demo", version: "1.0.0" }),
       );
     });
+    confirmSpy.mockRestore();
   });
 
   it("runs skill when session active", async () => {

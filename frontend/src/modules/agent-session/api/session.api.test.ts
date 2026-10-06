@@ -85,10 +85,10 @@ describe("patch/close session", () => {
   });
 
   it("updateSession aliases PATCH seats", async () => {
-    await updateSession("sess_1", { providerKind: "static", permissionMode: "full" });
+    await updateSession("sess_1", { providerKind: "static", permissionMode: "full", reasoningEffort: "max" });
     expect(api).toHaveBeenCalledWith("/agents/sessions/sess_1", {
       method: "PATCH",
-      body: JSON.stringify({ providerKind: "static", permissionMode: "full" }),
+      body: JSON.stringify({ providerKind: "static", permissionMode: "full", reasoningEffort: "max" }),
     });
   });
 

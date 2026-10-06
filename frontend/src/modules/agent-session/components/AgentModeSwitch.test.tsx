@@ -9,4 +9,10 @@ describe("AgentModeSwitch", () => {
     fireEvent.click(screen.getByTestId("agent-mode-general"));
     expect(onChange).toHaveBeenCalledWith("general");
   });
+
+  it("exposes mode taglines as title", () => {
+    render(<AgentModeSwitch value="coding" onChange={() => {}} />);
+    expect(screen.getByTestId("agent-mode-coding").getAttribute("title")).toMatch(/交付编排/);
+    expect(screen.getByTestId("agent-mode-general").getAttribute("title")).toMatch(/通用助手/);
+  });
 });

@@ -23,6 +23,26 @@ const (
 	defaultTimeout = 60 * time.Second
 )
 
+// CallOptions are optional extras for a chat completion.
+type CallOptions struct {
+	ReasoningEffort string
+}
+
+func firstCallOptions(opts []CallOptions) CallOptions {
+	if len(opts) == 0 {
+		return CallOptions{}
+	}
+	return opts[0]
+}
+
+func attachReasoningEffort(body map[string]any, effort string) {
+	e := strings.ToLower(strings.TrimSpace(effort))
+	switch e {
+	case "low", "medium", "high", "max":
+		body["reasoning_effort"] = e
+	}
+}
+
 // Message is one OpenAI-compatible chat message.
 type Message struct {
 	Role    string `json:"role"`
@@ -85,7 +105,7 @@ func (c *Client) Model() string {
 }
 
 // Complete posts a non-streaming chat completion and returns assistant text.
-func (c *Client) Complete(ctx context.Context, messages []Message) (string, error) {
+func (c *Client) Complete(ctx context.Context, messages []Message, opts ...CallOptions) (string, error) {
 	if c == nil || c.client == nil {
 		return "", fmt.Errorf("llmchat client is nil")
 	}
@@ -98,6 +118,7 @@ func (c *Client) Complete(ctx context.Context, messages []Message) (string, erro
 		"messages": messages,
 		"stream":   false,
 	}
+	attachReasoningEffort(body, firstCallOptions(opts).ReasoningEffort)
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return "", err
@@ -133,18 +154,19 @@ func (c *Client) Complete(ctx context.Context, messages []Message) (string, erro
 // Stream posts stream:true and invokes onDelta for each content chunk.
 // On stream failure it falls back to Complete, except when ctx is canceled/deadline exceeded
 // (mid-flight stop must not restart a non-streaming completion).
-func (c *Client) Stream(ctx context.Context, messages []Message, onDelta func(string)) (string, error) {
+func (c *Client) Stream(ctx context.Context, messages []Message, onDelta func(string), opts ...CallOptions) (string, error) {
 	if c == nil || c.client == nil {
 		return "", fmt.Errorf("llmchat client is nil")
 	}
-	full, err := c.streamOnce(ctx, messages, onDelta)
+	opt := firstCallOptions(opts)
+	full, err := c.streamOnce(ctx, messages, onDelta, opt)
 	if err == nil {
 		return full, nil
 	}
 	if ctx != nil && ctx.Err() != nil {
 		return full, ctx.Err()
 	}
-	text, cerr := c.Complete(ctx, messages)
+	text, cerr := c.Complete(ctx, messages, opt)
 	if cerr != nil {
 		return full, fmt.Errorf("stream failed (%v); complete failed: %w", err, cerr)
 	}
@@ -154,7 +176,7 @@ func (c *Client) Stream(ctx context.Context, messages []Message, onDelta func(st
 	return text, nil
 }
 
-func (c *Client) streamOnce(ctx context.Context, messages []Message, onDelta func(string)) (string, error) {
+func (c *Client) streamOnce(ctx context.Context, messages []Message, onDelta func(string), opt CallOptions) (string, error) {
 	url := chatCompletionsEndpoint(c.baseURL)
 	if url == "" {
 		return "", fmt.Errorf("%s is empty", envBaseURL)
@@ -164,6 +186,7 @@ func (c *Client) streamOnce(ctx context.Context, messages []Message, onDelta fun
 		"messages": messages,
 		"stream":   true,
 	}
+	attachReasoningEffort(body, opt.ReasoningEffort)
 	raw, err := json.Marshal(body)
 	if err != nil {
 		return "", err

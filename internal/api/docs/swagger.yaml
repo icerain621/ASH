@@ -2941,6 +2941,8 @@ definitions:
         type: string
       providerKind:
         type: string
+      reasoningEffort:
+        type: string
       title:
         type: string
     type: object
@@ -2992,6 +2994,9 @@ definitions:
       providerKind:
         type: string
       providerReason:
+        type: string
+      reasoningEffort:
+        description: low | medium | high | max
         type: string
       replies:
         description: blank-session assistant prose (no runId)
@@ -3371,7 +3376,7 @@ definitions:
         type: string
       decisionReason:
         type: string
-      evidenceJSON:
+      evidenceJson:
         type: string
       gate:
         type: string
@@ -3383,15 +3388,15 @@ definitions:
         type: string
       risk:
         type: string
-      runID:
+      runId:
         type: string
-      spaceID:
+      spaceId:
         type: string
       status:
         type: string
-      stepID:
+      stepId:
         type: string
-      traceID:
+      traceId:
         type: string
       updatedAt:
         type: string
@@ -3423,7 +3428,7 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_store.AuditLog:
     properties:
-      actorID:
+      actorId:
         type: string
       createdAt:
         type: string
@@ -3433,11 +3438,11 @@ definitions:
         type: string
       payloadJSON:
         type: string
-      runID:
+      runId:
         type: string
-      spaceID:
+      spaceId:
         type: string
-      traceID:
+      traceId:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_store.AuditPolicy:
@@ -3450,7 +3455,7 @@ definitions:
         type: boolean
       retentionDays:
         type: integer
-      spaceID:
+      spaceId:
         type: string
       updatedAt:
         type: string
@@ -3527,13 +3532,13 @@ definitions:
         type: string
       id:
         type: string
-      runID:
+      runId:
         type: string
       sizeBytes:
         type: integer
       snapshotDigest:
         type: string
-      stepID:
+      stepId:
         type: string
       storeKey:
         type: string
@@ -3544,7 +3549,7 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_store.Feedback:
     properties:
-      actorID:
+      actorId:
         type: string
       category:
         type: string
@@ -3556,18 +3561,17 @@ definitions:
         type: string
       rating:
         type: integer
-      runID:
-        description: optional; uniqueness with target when set
+      runId:
         type: string
       severity:
         type: string
       source:
         type: string
-      spaceID:
+      spaceId:
         type: string
       status:
         type: string
-      targetID:
+      targetId:
         type: string
       targetType:
         type: string
@@ -3586,11 +3590,11 @@ definitions:
         type: string
       risk:
         type: string
-      schemaJSON:
+      schemaJson:
         type: string
       server:
         type: string
-      spaceID:
+      spaceId:
         type: string
       status:
         type: string
@@ -3603,17 +3607,17 @@ definitions:
         type: string
       id:
         type: string
-      orgID:
+      orgId:
         type: string
-      roleID:
+      roleId:
         type: string
-      spaceID:
+      spaceId:
         type: string
       status:
         type: string
       updatedAt:
         type: string
-      userID:
+      userId:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_store.Org:
@@ -3655,7 +3659,7 @@ definitions:
         type: string
       protocol:
         type: string
-      spaceID:
+      spaceId:
         type: string
       status:
         type: string
@@ -3783,7 +3787,7 @@ definitions:
         type: string
       name:
         type: string
-      orgID:
+      orgId:
         type: string
       permissions:
         type: string
@@ -6062,7 +6066,8 @@ paths:
     patch:
       consumes:
       - application/json
-      description: 'Partial update: title, providerKind, planId, permissionMode, agentMode.'
+      description: 'Partial update: title, providerKind, planId, permissionMode, agentMode,
+        reasoningEffort.'
       parameters:
       - description: session id
         in: path

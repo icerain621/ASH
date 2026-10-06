@@ -320,6 +320,36 @@ func TestEnsureForRunIdempotent(t *testing.T) {
 	}
 }
 
+func TestReasoningEffortForRun(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := NewService(db, nil, ev)
+	now := time.Now().UTC()
+	run := store.RunRecord{
+		ID: "run_effort_1", TraceID: "trace_effort_1",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		PolicyProfile: "default", Status: "running", SpaceID: "local",
+		RepoRoot: ".", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	if err := db.Create(&run).Error; err != nil {
+		t.Fatal(err)
+	}
+	view, _, err := svc.EnsureForRun("local", run.ID, ".", "test", ProviderBinding{Kind: "acp_sdk"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.ReasoningEffortForRun(run.ID); got != ReasoningEffortHigh {
+		t.Fatalf("default=%q", got)
+	}
+	max := ReasoningEffortMax
+	if _, err := svc.Update(view.ID, PatchRequest{ReasoningEffort: &max}); err != nil {
+		t.Fatal(err)
+	}
+	if got := svc.ReasoningEffortForRun(run.ID); got != ReasoningEffortMax {
+		t.Fatalf("got=%q want max", got)
+	}
+}
+
 func TestListBlankSessionAndSynthesizeEvents(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	ev := events.NewService(db)
@@ -602,6 +632,58 @@ func TestPromptTurnLLMStreamBlank(t *testing.T) {
 	}
 	if !sawDelta || !sawMsg {
 		t.Fatalf("events=%+v", evResp.Items)
+	}
+}
+
+func TestPromptTurnLLMSendsSessionReasoningEffort(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		_ = json.NewDecoder(r.Body).Decode(&gotBody)
+		w.Header().Set("Content-Type", "text/event-stream")
+		_, _ = w.Write([]byte("data: {\"choices\":[{\"delta\":{\"content\":\"ok\"}}]}\n\n"))
+		_, _ = w.Write([]byte("data: [DONE]\n\n"))
+	}))
+	t.Cleanup(srv.Close)
+	t.Setenv("ASH_LLM_BASE_URL", srv.URL)
+	t.Setenv("ASH_LLM_API_KEY", "sk-test")
+	t.Setenv("ASH_LLM_MODEL", "gpt-4o-mini")
+
+	db := store.OpenTest(t, t.TempDir())
+	svc := NewService(db, nil, events.NewService(db))
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	if err != nil {
+		t.Fatal(err)
+	}
+	max := ReasoningEffortMax
+	if _, err := svc.Update(blank.ID, PatchRequest{ReasoningEffort: &max}); err != nil {
+		t.Fatal(err)
+	}
+	if _, _, err := svc.PromptTurn(blank.ID, TurnRequest{Prompt: "ping"}); err != nil {
+		t.Fatal(err)
+	}
+	if gotBody["reasoning_effort"] != "max" {
+		t.Fatalf("llm body=%v want reasoning_effort=max", gotBody)
+	}
+	evResp, err := svc.ListEvents(blank.ID, 0, 50)
+	if err != nil {
+		t.Fatal(err)
+	}
+	found := false
+	for _, item := range evResp.Items {
+		if item.Type != "assistant.message" {
+			continue
+		}
+		var payload map[string]any
+		if err := json.Unmarshal(item.Payload, &payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload["reasoningEffort"] != "max" {
+			t.Fatalf("assistant.message payload=%v want reasoningEffort=max", payload)
+		}
+		found = true
+	}
+	if !found {
+		t.Fatalf("events=%+v want assistant.message", evResp.Items)
 	}
 }
 

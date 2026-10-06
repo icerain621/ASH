@@ -39,7 +39,7 @@ func (s *Service) replyViaLLM(
 		if turned || !bound || emitTurn == nil {
 			return
 		}
-		emitTurn(map[string]any{"llm": true, "llmModel": client.Model()})
+		emitTurn(map[string]any{"llm": true, "llmModel": client.Model(), "reasoningEffort": view.ReasoningEffort})
 		turned = true
 	}
 
@@ -60,7 +60,7 @@ func (s *Service) replyViaLLM(
 			s.emitAssistantDelta(view, turn, delta, index)
 			index++
 		}
-	})
+	}, llmchat.CallOptions{ReasoningEffort: view.ReasoningEffort})
 	stopped := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil
 	if strings.TrimSpace(full) == "" && acc.Len() > 0 {
 		full = acc.String()
@@ -138,7 +138,7 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 			s.emitAssistantDelta(view, turn, delta, index)
 			index++
 		}
-	})
+	}, llmchat.CallOptions{ReasoningEffort: view.ReasoningEffort})
 	stopped := errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded) || ctx.Err() != nil
 	if stopped {
 		if strings.TrimSpace(full) == "" {

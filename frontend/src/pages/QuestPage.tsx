@@ -288,11 +288,13 @@ export function QuestPage() {
     setArtifactAccess(null);
     const runId = session?.runId?.trim() || null;
     setSelectedRunId(runId);
+    if (!session) return;
+    const label = (session.title || "").trim() || (session.goal || "").trim() || shortId(session.id);
     if (runId) {
       setActivePlan(null);
-      setMessage(`会话 ${shortId(session!.id)} · run ${shortId(runId)}`);
-    } else if (session) {
-      setMessage(`空白会话 ${shortId(session.id)}`);
+      setMessage(`会话 ${label} · run ${shortId(runId)}`);
+    } else {
+      setMessage(`会话 ${label}`);
     }
   }
 
@@ -310,7 +312,6 @@ export function QuestPage() {
     const planId = item.planId || (item.kind === "plan" ? item.id : "");
     if (planId) {
       setSelectedRunId(null);
-      setSelectedSessionId(null);
       setHighlightSeq(null);
       setTaskBoardOpen(true);
       try {
@@ -378,6 +379,7 @@ export function QuestPage() {
                 className="nav-dropdown-item"
                 role="menuitem"
                 data-testid="agent-settings-tools"
+                title="打开 Tools / 风险面板"
                 onClick={() => setToolsOpen(true)}
               >
                 Tools
@@ -387,6 +389,7 @@ export function QuestPage() {
                 className="nav-dropdown-item"
                 role="menuitem"
                 data-testid="agent-settings-skills"
+                title="打开 Skills 面板"
                 onClick={() => setSkillsOpen(true)}
               >
                 Skills
@@ -396,13 +399,19 @@ export function QuestPage() {
                 className="nav-dropdown-item"
                 role="menuitem"
                 data-testid="agent-settings-mcp"
+                title="打开 MCP 面板"
                 onClick={() => setMcpOpen(true)}
               >
                 MCP
               </button>
             </div>
           </details>
-          <button type="button" className="btn icon-btn" onClick={() => boardQuery.refetch()}>
+          <button
+            type="button"
+            className="btn icon-btn"
+            onClick={() => boardQuery.refetch()}
+            title={boardQuery.isFetching ? "刷新中…" : "刷新任务看板"}
+          >
             <RefreshCcw size={16} /> 刷新
           </button>
         </div>
@@ -483,7 +492,19 @@ export function QuestPage() {
                   type="button"
                   className="btn mini ok"
                   disabled={approveGateMut.isPending || fullRejected}
-                  onClick={() => approveGateMut.mutate()}
+                  title={
+                    fullRejected
+                      ? "已拒绝，无法批准"
+                      : approveGateMut.isPending
+                        ? "批准中…"
+                        : "批准门禁并继续（需确认）"
+                  }
+                  onClick={() => {
+                    if (fullRejected) return;
+                    const ok = window.confirm("确认批准门禁并继续当前 Run？");
+                    if (!ok) return;
+                    approveGateMut.mutate();
+                  }}
                   data-testid="quest-gate-approve"
                 >
                   批准并继续
@@ -492,7 +513,13 @@ export function QuestPage() {
                   type="button"
                   className="btn mini err"
                   disabled={!canCancel || cancelMut.isPending}
-                  onClick={() => cancelMut.mutate()}
+                  title={!canCancel ? "当前 Run 不可取消" : cancelMut.isPending ? "取消中…" : "取消 Run（需确认）"}
+                  onClick={() => {
+                    if (!canCancel) return;
+                    const ok = window.confirm("确认取消当前 Run？");
+                    if (!ok) return;
+                    cancelMut.mutate();
+                  }}
                   data-testid="quest-gate-cancel"
                 >
                   取消 Run
@@ -528,13 +555,25 @@ export function QuestPage() {
                   type="button"
                   className="btn mini err"
                   disabled={!activeFile?.path || fileRejected || fullRejected || rejectDiffMut.isPending}
-                  onClick={() =>
+                  title={
+                    !activeFile?.path
+                      ? "需要选择文件"
+                      : fileRejected || fullRejected
+                        ? "已拒绝"
+                        : rejectDiffMut.isPending
+                          ? "拒绝中…"
+                          : "拒绝当前文件（需确认）"
+                  }
+                  onClick={() => {
+                    if (!activeFile?.path || fileRejected || fullRejected) return;
+                    const ok = window.confirm(`确认拒绝文件「${activeFile.path}」？`);
+                    if (!ok) return;
                     rejectDiffMut.mutate({
                       scope: "file",
-                      filePath: activeFile!.path,
-                      reason: `reject file ${activeFile!.path}`,
-                    })
-                  }
+                      filePath: activeFile.path,
+                      reason: `reject file ${activeFile.path}`,
+                    });
+                  }}
                   data-testid="quest-diff-reject-file"
                 >
                   拒绝当前文件
@@ -543,7 +582,19 @@ export function QuestPage() {
                   type="button"
                   className="btn mini err"
                   disabled={fullRejected || rejectDiffMut.isPending}
-                  onClick={() => rejectDiffMut.mutate({ scope: "all", reason: "reject full diff" })}
+                  title={
+                    fullRejected
+                      ? "已拒绝全部"
+                      : rejectDiffMut.isPending
+                        ? "拒绝中…"
+                        : "拒绝全部 Diff（需确认）"
+                  }
+                  onClick={() => {
+                    if (fullRejected) return;
+                    const ok = window.confirm("确认拒绝全部 Diff？");
+                    if (!ok) return;
+                    rejectDiffMut.mutate({ scope: "all", reason: "reject full diff" });
+                  }}
                   data-testid="quest-diff-reject-all"
                 >
                   拒绝全部 Diff
@@ -553,7 +604,19 @@ export function QuestPage() {
                     type="button"
                     className="btn mini ok"
                     disabled={approveGateMut.isPending || fullRejected}
-                    onClick={() => approveGateMut.mutate()}
+                    title={
+                      fullRejected
+                        ? "已拒绝，无法批准"
+                        : approveGateMut.isPending
+                          ? "批准中…"
+                          : "批准门禁并继续（需确认）"
+                    }
+                    onClick={() => {
+                      if (fullRejected) return;
+                      const ok = window.confirm("确认批准门禁并继续当前 Run？");
+                      if (!ok) return;
+                      approveGateMut.mutate();
+                    }}
                     data-testid="quest-diff-approve-gate"
                   >
                     批准并继续
@@ -584,7 +647,7 @@ export function QuestPage() {
                 </select>
               </div>
               {!files.length ? <p className="muted-line">无 diff 产物</p> : null}
-              {activeFile?.hunks.map((hunk, hi) => (
+              {activeFile?.hunks?.map((hunk, hi) => (
                 <div key={`${activeFile.path}-${hi}`} style={{ marginBottom: "0.75rem" }}>
                   <pre className="code-block compact">{hunk.header}</pre>
                   <div className="code-block" style={{ padding: 0 }}>
@@ -640,8 +703,22 @@ export function QuestPage() {
                   <button
                     type="button"
                     className="btn primary"
+                    data-testid="quest-comment-submit"
                     disabled={!draftComment.trim() || commentMut.isPending}
-                    onClick={() => commentMut.mutate()}
+                    title={
+                      !draftComment.trim()
+                        ? "需要填写批注内容"
+                        : commentMut.isPending
+                          ? "提交中…"
+                          : "发表批注（需确认）"
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(
+                        `确认在 ${anchor!.filePath}:${anchor!.lineIndex} 发表批注？`,
+                      );
+                      if (!ok) return;
+                      commentMut.mutate();
+                    }}
                   >
                     <MessageSquarePlus size={14} /> 发表批注
                   </button>
@@ -720,6 +797,7 @@ export function QuestPage() {
           className="btn"
           data-testid="agent-task-board-toggle"
           aria-expanded={taskBoardOpen}
+          title={taskBoardOpen ? "收起任务板" : "展开任务板（看板 / 从目标创建）"}
           onClick={() => setTaskBoardOpen((open) => !open)}
         >
           {taskBoardOpen ? "收起任务板" : "展开任务板"} · 看板 / 从目标创建
@@ -731,6 +809,7 @@ export function QuestPage() {
             style={{ marginLeft: "0.75rem" }}
             onClick={openGoalCompose}
             data-testid="agent-open-goal-compose"
+            title="打开从目标创建 Plan"
           >
             从目标创建
           </button>
@@ -765,7 +844,20 @@ export function QuestPage() {
                   className="btn primary"
                   type="button"
                   disabled={fromGoalMut.isPending || !goalText.trim()}
-                  onClick={() => fromGoalMut.mutate()}
+                  title={
+                    !goalText.trim()
+                      ? "需要填写 Goal"
+                      : fromGoalMut.isPending
+                        ? "生成中…"
+                        : "根据 Goal 生成 Plan（需确认）"
+                  }
+                  onClick={() => {
+                    if (!goalText.trim()) return;
+                    const snippet = goalText.trim().slice(0, 80);
+                    const ok = window.confirm(`确认根据 Goal「${snippet}」生成 Plan？`);
+                    if (!ok) return;
+                    fromGoalMut.mutate();
+                  }}
                   data-testid="quest-wb-route"
                 >
                   生成 Plan
@@ -777,6 +869,15 @@ export function QuestPage() {
                     {activePlan.scenarioName}@{activePlan.scenarioVersion} · {activePlan.routeReason} ·{" "}
                     {activePlan.steps?.length ?? 0} steps
                   </p>
+                  {activePlan.status !== "draft" ? (
+                    <p className="muted-line" data-testid="quest-wb-plan-status-hint">
+                      {activePlan.status === "rejected"
+                        ? "此 Plan 已拒绝，不可再批准启动；可重新填写 Goal 生成新 Plan。"
+                        : activePlan.status === "approved" || activePlan.status === "running"
+                          ? `此 Plan 状态为 ${activePlan.status}，无需再次批准。`
+                          : `此 Plan 状态为 ${activePlan.status}。`}
+                    </p>
+                  ) : null}
                   <pre className="code-block compact">
                     {JSON.stringify({ inputs: activePlan.inputs, steps: activePlan.steps }, null, 2)}
                   </pre>
@@ -786,7 +887,14 @@ export function QuestPage() {
                         className="btn mini ok"
                         type="button"
                         disabled={approvePlanMut.isPending}
-                        onClick={() => approvePlanMut.mutate(activePlan.id)}
+                        title={approvePlanMut.isPending ? "启动中…" : "批准并启动此 Plan（需确认）"}
+                        onClick={() => {
+                          const ok = window.confirm(
+                            "确认批准 Plan 并启动 Run？将按所选场景写入工作区并执行。",
+                          );
+                          if (!ok) return;
+                          approvePlanMut.mutate(activePlan.id);
+                        }}
                         data-testid="quest-wb-approve"
                       >
                         批准并启动
@@ -795,7 +903,12 @@ export function QuestPage() {
                         className="btn mini err"
                         type="button"
                         disabled={rejectPlanMut.isPending}
-                        onClick={() => rejectPlanMut.mutate(activePlan.id)}
+                        title={rejectPlanMut.isPending ? "拒绝中…" : "拒绝此 Plan（需确认）"}
+                        onClick={() => {
+                          const ok = window.confirm("确认拒绝此 Plan？");
+                          if (!ok) return;
+                          rejectPlanMut.mutate(activePlan.id);
+                        }}
                         data-testid="quest-wb-reject"
                       >
                         拒绝
@@ -826,6 +939,7 @@ export function QuestPage() {
                           style={{ width: "100%", textAlign: "left" }}
                           onClick={() => void selectItem(item)}
                           data-testid={`quest-card-${item.kind}`}
+                          title={`打开 ${item.kind}「${item.title}」· ${item.status}`}
                         >
                           <strong>{item.title}</strong>
                           <div className="muted-line">

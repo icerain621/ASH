@@ -60,6 +60,26 @@ func TestCompleteNonStream(t *testing.T) {
 	}
 }
 
+func TestCompleteSendsReasoningEffort(t *testing.T) {
+	var gotBody map[string]any
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		b, _ := io.ReadAll(r.Body)
+		_ = json.Unmarshal(b, &gotBody)
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"choices":[{"message":{"role":"assistant","content":"ok"}}]}`))
+	}))
+	t.Cleanup(srv.Close)
+
+	c := New(srv.URL, "", "m", 0)
+	_, err := c.Complete(context.Background(), []Message{{Role: "user", Content: "hi"}}, CallOptions{ReasoningEffort: "max"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotBody["reasoning_effort"] != "max" {
+		t.Fatalf("body=%v want reasoning_effort=max", gotBody)
+	}
+}
+
 func TestStreamSSE(t *testing.T) {
 	var deltas []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

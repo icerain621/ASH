@@ -223,6 +223,54 @@ func TestUpdate_agentMode(t *testing.T) {
 	}
 }
 
+func TestUpdate_reasoningEffort(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	ev := events.NewService(db)
+	svc := session.NewService(db, nil, ev)
+
+	view, err := svc.Create(session.CreateRequest{SpaceID: "local", CreatedBy: "actor1", ProviderKind: "static"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if view.ReasoningEffort != session.ReasoningEffortHigh {
+		t.Fatalf("default reasoningEffort=%q want high", view.ReasoningEffort)
+	}
+
+	got, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.ReasoningEffort != session.ReasoningEffortHigh {
+		t.Fatalf("get reasoningEffort=%q", got.ReasoningEffort)
+	}
+
+	max := session.ReasoningEffortMax
+	patched, err := svc.Update(view.ID, session.PatchRequest{ReasoningEffort: &max})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if patched.ReasoningEffort != session.ReasoningEffortMax {
+		t.Fatalf("patched reasoningEffort=%q", patched.ReasoningEffort)
+	}
+	if patched.Meta["reasoningEffort"] != session.ReasoningEffortMax {
+		t.Fatalf("meta reasoningEffort=%v", patched.Meta["reasoningEffort"])
+	}
+
+	again, err := svc.Get(view.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if again.ReasoningEffort != session.ReasoningEffortMax {
+		t.Fatalf("reload reasoningEffort=%q", again.ReasoningEffort)
+	}
+
+	bad := "turbo"
+	_, err = svc.Update(view.ID, session.PatchRequest{ReasoningEffort: &bad})
+	if err == nil {
+		t.Fatal("expected invalid reasoningEffort")
+	}
+}
+
 func TestListCommandsForSpace_includesMCP(t *testing.T) {
 	db := store.OpenTest(t, t.TempDir())
 	now := time.Now().UTC()

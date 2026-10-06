@@ -70,7 +70,13 @@ export function ToolsRiskPanel({ open, onClose, session = null }: Props) {
       <div className="agent-mcp-panel">
         <div className="pane-title">
           <h2>内置工具风险</h2>
-          <button type="button" className="btn mini" data-testid="agent-tools-close" onClick={onClose}>
+          <button
+            type="button"
+            className="btn mini"
+            data-testid="agent-tools-close"
+            title="关闭 Tools 风险面板"
+            onClick={onClose}
+          >
             关闭
           </button>
         </div>
@@ -135,7 +141,24 @@ export function ToolsRiskPanel({ open, onClose, session = null }: Props) {
                     className="btn mini"
                     data-testid={`agent-tools-toggle-${tool.name}`}
                     disabled={!session?.id || toggleMut.isPending}
-                    onClick={() => toggleMut.mutate(tool.name)}
+                    title={
+                      !session?.id
+                        ? "需要先选择会话"
+                        : toggleMut.isPending
+                          ? "更新中…"
+                          : off
+                            ? `启用 ${tool.name}（需确认）`
+                            : `停用 ${tool.name}（需确认）`
+                    }
+                    onClick={() => {
+                      const ok = window.confirm(
+                        off
+                          ? `确认启用工具「${tool.name}」？`
+                          : `确认停用工具「${tool.name}」？会话级停用会在绑定 run 执行时拒绝该工具。`,
+                      );
+                      if (!ok) return;
+                      toggleMut.mutate(tool.name);
+                    }}
                   >
                     {off ? "启用" : "停用"}
                   </button>

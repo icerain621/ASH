@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   closeAgentSession,
   createAgentSession,
@@ -60,24 +60,51 @@ function parseStreamPayload(raw: string): unknown {
   }
 }
 
-function streamLinesToEvents(lines: StreamLine[], runId: string): SessionEventEnvelope[] {
+function eventEnvelope(parsed: unknown): {
+  id?: string;
+  seq: number;
+  ts?: number;
+  severity?: string;
+  visibility?: string;
+  payload: unknown;
+} | null {
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) return null;
+  const rec = parsed as Record<string, unknown>;
+  if (!("payload" in rec)) return null;
+  if (typeof rec.type !== "string" && typeof rec.seq !== "number") return null;
+  return {
+    id: typeof rec.id === "string" ? rec.id : undefined,
+    seq: typeof rec.seq === "number" ? rec.seq : 0,
+    ts: typeof rec.ts === "number" ? rec.ts : undefined,
+    severity: typeof rec.severity === "string" ? rec.severity : undefined,
+    visibility: typeof rec.visibility === "string" ? rec.visibility : undefined,
+    payload: rec.payload,
+  };
+}
+
+export function streamLinesToEvents(lines: StreamLine[], runId: string): SessionEventEnvelope[] {
   const out: SessionEventEnvelope[] = [];
   for (const line of lines) {
     if (!line.type || line.type === "sse" || line.type === "message") continue;
-    const payload = parseStreamPayload(line.payload);
-    let seq = 0;
-    if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+    const parsed = parseStreamPayload(line.payload);
+    const env = eventEnvelope(parsed);
+    const payload = env ? env.payload : parsed;
+    let seq = env?.seq ?? 0;
+    if (!env && payload && typeof payload === "object" && !Array.isArray(payload)) {
       const s = (payload as { seq?: unknown }).seq;
       if (typeof s === "number") seq = s;
     }
+    const visibility =
+      env?.visibility ||
+      (line.type.startsWith("tool.") || line.type.startsWith("step.") ? "ui_only" : undefined);
     out.push({
-      id: line.id,
+      id: line.id || env?.id || "",
       runId,
       seq,
-      ts: Date.now(),
+      ts: env?.ts || Date.now(),
       type: line.type,
-      severity: "info",
-      visibility: line.type.startsWith("tool.") || line.type.startsWith("step.") ? "ui_only" : undefined,
+      severity: env?.severity || "info",
+      visibility,
       payload,
     });
   }
@@ -409,7 +436,24 @@ export function AgentChatShell({
   };
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
   const stickToBottomRef = useRef(true);
+
+  const publishColumnWidth = useCallback(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    el.style.setProperty("--ash-conversation-column-width", `${el.clientWidth}px`);
+  }, []);
+
+  useEffect(() => {
+    const el = mainRef.current;
+    if (!el) return;
+    publishColumnWidth();
+    if (typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver(() => publishColumnWidth());
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [publishColumnWidth]);
 
   useEffect(() => {
     setSelection(null);
@@ -505,7 +549,7 @@ export function AgentChatShell({
         }}
       />
 
-      <div className="agent-chat-main">
+      <div className="agent-chat-main" ref={mainRef}>
         <header className="agent-chat-header">
           <div className="agent-chat-header-title">
             {editingTitle && selectedSessionId ? (
@@ -550,6 +594,7 @@ export function AgentChatShell({
                 className={viewTab === "chat" ? "btn mini active" : "btn mini"}
                 aria-selected={viewTab === "chat"}
                 data-testid="agent-chat-tab-chat"
+                title="聊天视图"
                 onClick={() => setViewTab("chat")}
               >
                 Chat
@@ -560,6 +605,7 @@ export function AgentChatShell({
                 className={viewTab === "trajectory" ? "btn mini active" : "btn mini"}
                 aria-selected={viewTab === "trajectory"}
                 data-testid="agent-chat-tab-trajectory"
+                title="轨迹 / 工具调用视图"
                 onClick={() => setViewTab("trajectory")}
               >
                 Trajectory
@@ -582,6 +628,7 @@ export function AgentChatShell({
               className="btn mini"
               data-testid="agent-chat-details-toggle"
               aria-pressed={detailsOpen}
+              title={detailsOpen ? "隐藏侧栏 Details" : "显示侧栏 Details"}
               onClick={() => setDetailsOpen((v) => !v)}
             >
               {detailsOpen ? "隐藏 Details" : "显示 Details"}
@@ -603,6 +650,7 @@ export function AgentChatShell({
                 type="button"
                 className="agent-ash-hero-create"
                 disabled={createMut.isPending}
+                title={createMut.isPending ? "创建中…" : "新建会话"}
                 onClick={() => createMut.mutate()}
                 data-testid="agent-empty-create-session"
               >
