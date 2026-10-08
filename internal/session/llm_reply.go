@@ -57,7 +57,7 @@ func (s *Service) replyViaLLM(
 			flight.setPartial(turn.ID, acc.String())
 		}
 		if bound {
-			s.emitAssistantDelta(view, turn, delta, index)
+			s.emitAssistantDelta(view, turn, delta, index, client.Model())
 			index++
 		}
 	}, llmchat.CallOptions{ReasoningEffort: view.ReasoningEffort})
@@ -72,13 +72,13 @@ func (s *Service) replyViaLLM(
 		}
 		if bound {
 			ensureTurn()
-			s.emitAssistantMessageFinal(view, turn, full, "llm", true)
+			s.emitAssistantMessageFinal(view, turn, full, "llm", true, client.Model())
 			return true
 		}
 		if len(chunks) == 0 {
 			chunks = splitReplyChunks(full)
 		}
-		s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, true)
+		s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, true, client.Model())
 		return true
 	}
 	if err != nil || strings.TrimSpace(full) == "" {
@@ -87,14 +87,14 @@ func (s *Service) replyViaLLM(
 
 	if bound {
 		ensureTurn()
-		s.emitAssistantMessageFinal(view, turn, full, "llm", false)
+		s.emitAssistantMessageFinal(view, turn, full, "llm", false, client.Model())
 		return true
 	}
 
 	if len(chunks) == 0 {
 		chunks = splitReplyChunks(full)
 	}
-	s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, false)
+	s.emitAssistantReplyChunks(view, turn, full, "llm", chunks, false, client.Model())
 	return true
 }
 
@@ -135,7 +135,7 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 		}
 		chunks = append(chunks, delta)
 		if bound {
-			s.emitAssistantDelta(view, turn, delta, index)
+			s.emitAssistantDelta(view, turn, delta, index, client.Model())
 			index++
 		}
 	}, llmchat.CallOptions{ReasoningEffort: view.ReasoningEffort})
@@ -146,25 +146,25 @@ func (s *Service) replyViaSkillLLM(view *View, turn Turn, sk *skills.Skill, args
 			chunks = []string{full}
 		}
 		if bound {
-			s.emitAssistantMessageFinal(view, turn, full, "skill", true)
+			s.emitAssistantMessageFinal(view, turn, full, "skill", true, client.Model())
 			return true
 		}
 		if len(chunks) == 0 {
 			chunks = splitReplyChunks(full)
 		}
-		s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, true)
+		s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, true, client.Model())
 		return true
 	}
 	if err != nil || strings.TrimSpace(full) == "" {
 		return false
 	}
 	if bound {
-		s.emitAssistantMessageFinal(view, turn, full, "skill", false)
+		s.emitAssistantMessageFinal(view, turn, full, "skill", false, client.Model())
 		return true
 	}
 	if len(chunks) == 0 {
 		chunks = splitReplyChunks(full)
 	}
-	s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, false)
+	s.emitAssistantReplyChunks(view, turn, full, "skill", chunks, false, client.Model())
 	return true
 }

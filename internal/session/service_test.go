@@ -650,7 +650,7 @@ func TestPromptTurnLLMSendsSessionReasoningEffort(t *testing.T) {
 
 	db := store.OpenTest(t, t.TempDir())
 	svc := NewService(db, nil, events.NewService(db))
-	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: "."})
+	blank, err := svc.Create(CreateRequest{SpaceID: "local", CreatedBy: "test", RepoRoot: ".", ProviderKind: "static"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -668,9 +668,10 @@ func TestPromptTurnLLMSendsSessionReasoningEffort(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	found := false
+	foundMsg := false
+	foundDelta := false
 	for _, item := range evResp.Items {
-		if item.Type != "assistant.message" {
+		if item.Type != "assistant.message" && item.Type != "assistant.delta" {
 			continue
 		}
 		var payload map[string]any
@@ -678,12 +679,25 @@ func TestPromptTurnLLMSendsSessionReasoningEffort(t *testing.T) {
 			t.Fatal(err)
 		}
 		if payload["reasoningEffort"] != "max" {
-			t.Fatalf("assistant.message payload=%v want reasoningEffort=max", payload)
+			t.Fatalf("%s payload=%v want reasoningEffort=max", item.Type, payload)
 		}
-		found = true
+		if payload["llmModel"] != "gpt-4o-mini" {
+			t.Fatalf("%s payload=%v want llmModel=gpt-4o-mini", item.Type, payload)
+		}
+		if payload["providerKind"] != "static" {
+			t.Fatalf("%s payload=%v want providerKind=static", item.Type, payload)
+		}
+		if item.Type == "assistant.message" {
+			foundMsg = true
+		} else {
+			foundDelta = true
+		}
 	}
-	if !found {
+	if !foundMsg {
 		t.Fatalf("events=%+v want assistant.message", evResp.Items)
+	}
+	if !foundDelta {
+		t.Fatalf("events=%+v want assistant.delta with projection fields", evResp.Items)
 	}
 }
 
@@ -798,5 +812,33 @@ func TestPromptTurnProviderStatic(t *testing.T) {
 	}
 	if !found {
 		t.Fatalf("events=%+v want source=static", evResp.Items)
+	}
+}
+
+func TestAppendLivePartialProjectsEffortAndProvider(t *testing.T) {
+	view := &View{
+		ID:              "sess_live",
+		ReasoningEffort: "high",
+		ProviderKind:    "execgo",
+	}
+	items := appendLivePartial(nil, view, "turn_1", "partial", 0)
+	if len(items) != 1 {
+		t.Fatalf("len=%d want 1", len(items))
+	}
+	if items[0].Type != "assistant.delta" {
+		t.Fatalf("type=%q", items[0].Type)
+	}
+	var payload map[string]any
+	if err := json.Unmarshal(items[0].Payload, &payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["text"] != "partial" || payload["streaming"] != true {
+		t.Fatalf("payload=%v", payload)
+	}
+	if payload["reasoningEffort"] != "high" {
+		t.Fatalf("reasoningEffort=%v", payload["reasoningEffort"])
+	}
+	if payload["providerKind"] != "execgo" {
+		t.Fatalf("providerKind=%v", payload["providerKind"])
 	}
 }

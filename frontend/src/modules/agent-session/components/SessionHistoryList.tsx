@@ -246,6 +246,7 @@ export function SessionHistoryList({
               className={active ? "agent-history-item active" : "agent-history-item"}
               onClick={() => onSelect(item)}
               data-testid={`agent-history-item-${item.id}`}
+              aria-current={active ? "true" : undefined}
             >
               <strong>{sessionTitle(item)}</strong>
               <span className="muted-line">
@@ -312,7 +313,11 @@ export function SessionHistoryList({
   }
 
   return (
-    <aside className="agent-session-history" data-testid="agent-session-history">
+    <aside
+      className="agent-session-history"
+      data-testid="agent-session-history"
+      aria-label="会话历史"
+    >
       {onAgentModeChange ? (
         <AgentModeSwitch
           value={agentMode}

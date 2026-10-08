@@ -2922,6 +2922,9 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_session.ModelsResponse:
     properties:
+      chatModel:
+        description: ASH_LLM chat model id when configured; omitted otherwise.
+        type: string
       items:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_session.ModelItem'

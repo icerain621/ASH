@@ -1,4 +1,5 @@
 import { isReasoningEffortId, reasoningEffortLabel } from "../reasoningEffort";
+import { assistantCaption } from "./conversationNodes";
 import type { ChatBubbleSelection } from "./ChatTranscript";
 
 type Props = {
@@ -50,15 +51,20 @@ export function DetailsPane({ open, selection }: Props) {
   const rec = asRecord(payload);
   const source = str(rec.source);
   const effortRaw = str(rec.reasoningEffort);
+  const llmModel = str(rec.llmModel).trim();
+  const providerKind = str(rec.providerKind).trim();
+  const caption = selection ? assistantCaption(rec) : "";
   const toolView = selection && isToolSelection(selection);
   const hookView = selection && isHookSelection(selection);
 
   return (
     <aside
+      id="agent-chat-details"
       className={`agent-chat-details${open ? " open" : ""}`}
       data-testid="agent-chat-details"
       data-open={open ? "1" : "0"}
       hidden={!open}
+      aria-hidden={!open}
     >
       <div className="pane-title">
         <h2>Details</h2>
@@ -71,9 +77,24 @@ export function DetailsPane({ open, selection }: Props) {
           <p>
             <strong>{selection.title}</strong>
           </p>
+          {caption ? (
+            <p className="muted-line" data-testid="agent-chat-details-caption">
+              {caption}
+            </p>
+          ) : null}
           {source ? (
             <p className="muted-line" data-testid="agent-chat-details-source">
               source: {source}
+            </p>
+          ) : null}
+          {providerKind ? (
+            <p className="muted-line" data-testid="agent-chat-details-provider">
+              provider: {providerKind}
+            </p>
+          ) : null}
+          {llmModel ? (
+            <p className="muted-line" data-testid="agent-chat-details-model">
+              模型: {llmModel}
             </p>
           ) : null}
           {effortRaw ? (

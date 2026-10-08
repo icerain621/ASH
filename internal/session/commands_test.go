@@ -36,6 +36,7 @@ func TestListCommands_builtin(t *testing.T) {
 }
 
 func TestListModels_builtinKinds(t *testing.T) {
+	t.Setenv("ASH_LLM_BASE_URL", "")
 	out := session.ListModels()
 	kinds := map[string]bool{}
 	for _, it := range out.Items {
@@ -48,6 +49,18 @@ func TestListModels_builtinKinds(t *testing.T) {
 		if !kinds[want] {
 			t.Fatalf("missing kind %s in %+v", want, out.Items)
 		}
+	}
+	if out.ChatModel != "" {
+		t.Fatalf("chatModel=%q want empty when ASH_LLM unset", out.ChatModel)
+	}
+}
+
+func TestListModels_chatModelWhenConfigured(t *testing.T) {
+	t.Setenv("ASH_LLM_BASE_URL", "http://127.0.0.1:9")
+	t.Setenv("ASH_LLM_MODEL", "deepseek-reasoner")
+	out := session.ListModels()
+	if out.ChatModel != "deepseek-reasoner" {
+		t.Fatalf("chatModel=%q want deepseek-reasoner", out.ChatModel)
 	}
 }
 

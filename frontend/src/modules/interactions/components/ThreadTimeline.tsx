@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { reasoningEffortCaption } from "@/modules/agent-session/reasoningEffort";
+import { assistantCaption } from "@/modules/agent-session/components/conversationNodes";
 import { getInteractionByRun, getInteractionThread } from "../api/interactions.api";
 import { formatInteractionError } from "../formatInteractionError";
 
@@ -50,9 +50,8 @@ function payloadRecord(payload: unknown): Record<string, unknown> {
 
 function foldNodeTypeLabel(type: string, payload: unknown): string {
   if (type !== "assistant.message") return type;
-  const raw = payloadRecord(payload).reasoningEffort;
-  const effort = reasoningEffortCaption(typeof raw === "string" ? raw : "");
-  return effort ? `${type} · ${effort}` : type;
+  const caption = assistantCaption(payloadRecord(payload));
+  return caption ? `${type} · ${caption}` : type;
 }
 
 /** Folded Interaction Thread timeline with seal badge (GV05–06 Task 8). */

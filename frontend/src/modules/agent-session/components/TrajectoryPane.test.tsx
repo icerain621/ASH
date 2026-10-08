@@ -22,12 +22,41 @@ describe("TrajectoryPane", () => {
               ts: 1,
               severity: "info",
               type: "assistant.message",
-              payload: { text: "ok", source: "llm", reasoningEffort: "max" },
+              payload: { text: "ok", source: "llm", llmModel: "gpt-4o-mini", reasoningEffort: "max" },
             },
           ]}
         />,
       ),
     );
-    expect(screen.getByTestId("agent-trajectory-row-2")).toHaveTextContent("助手 · Max");
+    expect(screen.getByTestId("agent-trajectory-row-2")).toHaveTextContent("助手 · gpt-4o-mini · Max");
+  });
+
+  it("projects providerKind onto the assistant.message row title", () => {
+    render(
+      wrap(
+        <TrajectoryPane
+          events={[
+            {
+              id: "m1",
+              runId: "",
+              seq: 3,
+              ts: 1,
+              severity: "info",
+              type: "assistant.message",
+              payload: {
+                text: "ok",
+                source: "llm",
+                providerKind: "execgo",
+                llmModel: "gpt-4o-mini",
+                reasoningEffort: "high",
+              },
+            },
+          ]}
+        />,
+      ),
+    );
+    expect(screen.getByTestId("agent-trajectory-row-3")).toHaveTextContent(
+      "助手 · execgo · gpt-4o-mini · High",
+    );
   });
 });

@@ -13576,6 +13576,10 @@ const docTemplate = `{
         "github_com_ash-repwiki_ash_internal_session.ModelsResponse": {
             "type": "object",
             "properties": {
+                "chatModel": {
+                    "description": "ASH_LLM chat model id when configured; omitted otherwise.",
+                    "type": "string"
+                },
                 "items": {
                     "type": "array",
                     "items": {

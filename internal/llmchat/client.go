@@ -96,6 +96,14 @@ func Configured() bool {
 	return strings.TrimSpace(os.Getenv(envBaseURL)) != ""
 }
 
+// ConfiguredModel returns the ASH_LLM model id when chat is configured; otherwise "".
+func ConfiguredModel() string {
+	if !Configured() {
+		return ""
+	}
+	return NewFromEnv().Model()
+}
+
 // Model returns the configured model id.
 func (c *Client) Model() string {
 	if c == nil {

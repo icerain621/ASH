@@ -433,6 +433,53 @@ func TestAgentCommandsAndModelsAndPatchSeats(t *testing.T) {
 	}
 }
 
+func TestListAgentModelsHTTP_chatModel(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	t.Setenv("ASH_LLM_BASE_URL", "")
+	t.Setenv("ASH_LLM_MODEL", "")
+	r, _ := newPlatformTestRouter(t)
+
+	unsetW := httptest.NewRecorder()
+	unsetReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/models", nil)
+	r.ServeHTTP(unsetW, unsetReq)
+	if unsetW.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", unsetW.Code, unsetW.Body.String())
+	}
+	var unsetResp struct {
+		ChatModel string `json:"chatModel"`
+		Items     []struct {
+			ID string `json:"id"`
+		} `json:"items"`
+	}
+	if err := json.Unmarshal(unsetW.Body.Bytes(), &unsetResp); err != nil {
+		t.Fatal(err)
+	}
+	if unsetResp.ChatModel != "" {
+		t.Fatalf("chatModel=%q want empty when ASH_LLM unset", unsetResp.ChatModel)
+	}
+	if len(unsetResp.Items) < 3 {
+		t.Fatalf("items=%+v", unsetResp.Items)
+	}
+
+	t.Setenv("ASH_LLM_BASE_URL", "http://127.0.0.1:9")
+	t.Setenv("ASH_LLM_MODEL", "deepseek-reasoner")
+	setW := httptest.NewRecorder()
+	setReq := httptest.NewRequest(http.MethodGet, "/api/v1/agents/models", nil)
+	r.ServeHTTP(setW, setReq)
+	if setW.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", setW.Code, setW.Body.String())
+	}
+	var setResp struct {
+		ChatModel string `json:"chatModel"`
+	}
+	if err := json.Unmarshal(setW.Body.Bytes(), &setResp); err != nil {
+		t.Fatal(err)
+	}
+	if setResp.ChatModel != "deepseek-reasoner" {
+		t.Fatalf("chatModel=%q want deepseek-reasoner", setResp.ChatModel)
+	}
+}
+
 func TestAgentSessionStreamBlankSeesTurn(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	t.Setenv("ASH_AGENT_EXECUTOR", "static")

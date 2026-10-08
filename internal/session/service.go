@@ -26,25 +26,25 @@ const (
 
 // View is the public session document.
 type View struct {
-	ID               string         `json:"id"`
-	SpaceID          string         `json:"spaceId"`
-	Status           string         `json:"status"`
-	Title            string         `json:"title,omitempty"`
-	Goal             string         `json:"goal,omitempty"`
-	PlanID           string         `json:"planId,omitempty"`
-	RunID            string         `json:"runId,omitempty"`
-	TraceID          string         `json:"traceId,omitempty"`
-	RepoRoot         string         `json:"repoRoot,omitempty"`
-	WorkspaceID      string         `json:"workspaceId,omitempty"`
-	StreamURL        string         `json:"streamUrl,omitempty"`
-	ProviderKind     string         `json:"providerKind,omitempty"`
-	ProviderAdapter  string         `json:"providerAdapter,omitempty"`
-	ProviderFallback bool           `json:"providerFallback,omitempty"`
-	ProviderReason   string         `json:"providerReason,omitempty"`
-	PermissionMode   string         `json:"permissionMode,omitempty"` // read-only | workspace-write | full
-	AgentMode        string         `json:"agentMode,omitempty"`      // coding | general
-	ReasoningEffort  string         `json:"reasoningEffort,omitempty"` // low | medium | high | max
-	DisabledTools    []string       `json:"disabledTools,omitempty"`
+	ID               string           `json:"id"`
+	SpaceID          string           `json:"spaceId"`
+	Status           string           `json:"status"`
+	Title            string           `json:"title,omitempty"`
+	Goal             string           `json:"goal,omitempty"`
+	PlanID           string           `json:"planId,omitempty"`
+	RunID            string           `json:"runId,omitempty"`
+	TraceID          string           `json:"traceId,omitempty"`
+	RepoRoot         string           `json:"repoRoot,omitempty"`
+	WorkspaceID      string           `json:"workspaceId,omitempty"`
+	StreamURL        string           `json:"streamUrl,omitempty"`
+	ProviderKind     string           `json:"providerKind,omitempty"`
+	ProviderAdapter  string           `json:"providerAdapter,omitempty"`
+	ProviderFallback bool             `json:"providerFallback,omitempty"`
+	ProviderReason   string           `json:"providerReason,omitempty"`
+	PermissionMode   string           `json:"permissionMode,omitempty"`  // read-only | workspace-write | full
+	AgentMode        string           `json:"agentMode,omitempty"`       // coding | general
+	ReasoningEffort  string           `json:"reasoningEffort,omitempty"` // low | medium | high | max
+	DisabledTools    []string         `json:"disabledTools,omitempty"`
 	Turns            []Turn           `json:"turns"`
 	Replies          []AssistantReply `json:"replies,omitempty"` // blank-session assistant prose (no runId)
 	CreatedBy        string           `json:"createdBy,omitempty"`
@@ -55,13 +55,13 @@ type View struct {
 
 // PatchRequest updates mutable session seat fields.
 type PatchRequest struct {
-	Title          *string   `json:"title"`
-	ProviderKind   *string   `json:"providerKind"`
-	PlanID         *string   `json:"planId"`
-	PermissionMode   *string   `json:"permissionMode"`
-	AgentMode        *string   `json:"agentMode"`
-	ReasoningEffort  *string   `json:"reasoningEffort"`
-	DisabledTools    *[]string `json:"disabledTools"`
+	Title           *string   `json:"title"`
+	ProviderKind    *string   `json:"providerKind"`
+	PlanID          *string   `json:"planId"`
+	PermissionMode  *string   `json:"permissionMode"`
+	AgentMode       *string   `json:"agentMode"`
+	ReasoningEffort *string   `json:"reasoningEffort"`
+	DisabledTools   *[]string `json:"disabledTools"`
 }
 
 const maxTitleRunes = 48
@@ -581,9 +581,19 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 		full := false
 		for i, chunk := range chunks {
 			deltaID := fmt.Sprintf("%s_delta_%d", turn.ID, i)
-			if appendEv(deltaID, "assistant.delta", ts, map[string]any{
+			delta := map[string]any{
 				"turnId": turn.ID, "text": chunk, "index": i,
-			}) {
+			}
+			if effort := firstNonEmpty(reply.ReasoningEffort, view.ReasoningEffort); effort != "" {
+				delta["reasoningEffort"] = effort
+			}
+			if model := strings.TrimSpace(reply.LLMModel); model != "" {
+				delta["llmModel"] = model
+			}
+			if pk := firstNonEmpty(reply.ProviderKind, view.ProviderKind); pk != "" {
+				delta["providerKind"] = pk
+			}
+			if appendEv(deltaID, "assistant.delta", ts, delta) {
 				full = true
 				break
 			}
@@ -597,6 +607,12 @@ func synthesizeTurnEvents(view *View, afterSeq int64, limit int) []events.Envelo
 		}
 		if effort := firstNonEmpty(reply.ReasoningEffort, view.ReasoningEffort); effort != "" {
 			msg["reasoningEffort"] = effort
+		}
+		if model := strings.TrimSpace(reply.LLMModel); model != "" {
+			msg["llmModel"] = model
+		}
+		if pk := firstNonEmpty(reply.ProviderKind, view.ProviderKind); pk != "" {
+			msg["providerKind"] = pk
 		}
 		if appendEv(msgID, "assistant.message", ts, msg) {
 			break
@@ -620,7 +636,14 @@ func appendLivePartial(items []events.Envelope, view *View, turnID, text string,
 	if seq <= afterSeq {
 		return items
 	}
-	raw, _ := json.Marshal(map[string]any{"turnId": turnID, "text": text, "index": 0, "streaming": true})
+	live := map[string]any{"turnId": turnID, "text": text, "index": 0, "streaming": true}
+	if effort := strings.TrimSpace(view.ReasoningEffort); effort != "" {
+		live["reasoningEffort"] = effort
+	}
+	if pk := strings.TrimSpace(view.ProviderKind); pk != "" {
+		live["providerKind"] = pk
+	}
+	raw, _ := json.Marshal(live)
 	ts := time.Now().UTC().UnixMilli()
 	items = append(items, events.Envelope{
 		ID: turnID + "_live", RunID: "", Seq: seq, TS: ts,

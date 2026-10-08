@@ -154,3 +154,20 @@ func TestConfigured(t *testing.T) {
 		t.Fatal("want true")
 	}
 }
+
+func TestConfiguredModel(t *testing.T) {
+	t.Setenv(envBaseURL, "")
+	t.Setenv(envModel, "ignored")
+	if ConfiguredModel() != "" {
+		t.Fatalf("want empty, got %q", ConfiguredModel())
+	}
+	t.Setenv(envBaseURL, "http://localhost:1")
+	t.Setenv(envModel, "deepseek-reasoner")
+	if got := ConfiguredModel(); got != "deepseek-reasoner" {
+		t.Fatalf("got %q", got)
+	}
+	t.Setenv(envModel, "")
+	if got := ConfiguredModel(); got != defaultModel {
+		t.Fatalf("default got %q want %q", got, defaultModel)
+	}
+}

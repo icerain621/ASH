@@ -68,6 +68,16 @@ describe("commands and models", () => {
     await listAgentModels();
     expect(api).toHaveBeenCalledWith("/agents/models");
   });
+
+  it("returns chatModel from GET /agents/models", async () => {
+    api.mockResolvedValue({
+      items: [{ id: "static", label: "static", providerKind: "static" }],
+      chatModel: "deepseek-reasoner",
+    });
+    const res = await listAgentModels();
+    expect(res.chatModel).toBe("deepseek-reasoner");
+    expect(res.items).toHaveLength(1);
+  });
 });
 
 describe("patch/close session", () => {

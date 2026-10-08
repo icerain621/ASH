@@ -62,7 +62,11 @@ export function ChatTranscript({
   };
 
   return (
-    <div className="agent-chat-transcript" data-testid="agent-chat-transcript">
+    <div
+      className="agent-chat-transcript"
+      data-testid="agent-chat-transcript"
+      aria-label="对话"
+    >
       {bubbles.length === 0 ? (
         showBrandHero ? (
           <AgentEmptyHero
@@ -76,7 +80,7 @@ export function ChatTranscript({
           </p>
         )
       ) : (
-        <ul className="agent-chat-bubbles">
+        <ul className="agent-chat-bubbles" aria-label="消息列表">
           {bubbles.map((item) => {
             const active = selectedId === item.id;
             if (item.role === "tool") {
@@ -99,12 +103,18 @@ export function ChatTranscript({
                   data-stopped={item.stopped ? "1" : "0"}
                   data-streaming={item.streaming ? "1" : "0"}
                   data-active={active ? "1" : "0"}
+                  aria-busy={item.streaming || undefined}
+                  aria-current={active ? "true" : undefined}
                   onClick={() => select(item)}
                 >
                   <div className="agent-chat-bubble-meta">
                     <strong>{item.title}</strong>
                     {item.stopped ? (
-                      <span className="agent-stopped-badge" data-testid="agent-chat-stopped-badge">
+                      <span
+                        className="agent-stopped-badge"
+                        data-testid="agent-chat-stopped-badge"
+                        role="status"
+                      >
                         已停止
                       </span>
                     ) : null}

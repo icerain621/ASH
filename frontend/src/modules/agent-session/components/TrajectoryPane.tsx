@@ -72,7 +72,11 @@ export function TrajectoryPane({
   });
 
   return (
-    <div className="agent-chat-trajectory" data-testid="agent-chat-trajectory">
+    <div
+      className="agent-chat-trajectory"
+      data-testid="agent-chat-trajectory"
+      aria-label="轨迹"
+    >
       {runId ? (
         <>
           <div data-testid="subrun-lineage">

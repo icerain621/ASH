@@ -37,13 +37,21 @@ export function ToolCallBubble({ item, active = false, onSelect }: Props) {
       data-tool-status={item.toolStatus || undefined}
       data-expanded={open ? "1" : "0"}
       data-active={active ? "1" : "0"}
+      aria-expanded={hasBody ? open : undefined}
+      aria-busy={item.toolStatus === "running" || undefined}
+      aria-current={active ? "true" : undefined}
       onClick={() => onSelect?.()}
     >
       <div className="agent-chat-bubble-meta">
         <span className="agent-tool-dot" data-status={item.toolStatus || "running"} aria-hidden />
         <strong>{item.title}</strong>
         {label ? (
-          <span className="agent-tool-status" data-testid="agent-tool-status" data-status={item.toolStatus}>
+          <span
+            className="agent-tool-status"
+            data-testid="agent-tool-status"
+            data-status={item.toolStatus}
+            role="status"
+          >
             {label}
           </span>
         ) : null}

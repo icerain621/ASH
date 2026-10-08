@@ -91,6 +91,8 @@ export type AgentModelItem = {
 
 export type AgentModelsResponse = {
   items: AgentModelItem[];
+  /** ASH_LLM model id when Worker chat is configured. */
+  chatModel?: string;
 };
 
 export async function listAgentSessions(opts?: {

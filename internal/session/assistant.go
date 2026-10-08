@@ -11,13 +11,15 @@ import (
 // AssistantReply is a persisted assistant prose reply for sessions without a bound run.
 // Bound-run replies live on the run event ledger (assistant.delta / assistant.message).
 type AssistantReply struct {
-	TurnID    string   `json:"turnId"`
-	Text      string   `json:"text"`
-	Source    string   `json:"source,omitempty"` // "echo" | "llm" | adapter name
-	Stopped   bool     `json:"stopped,omitempty"`
-	ReasoningEffort string `json:"reasoningEffort,omitempty"`
-	Chunks    []string `json:"chunks,omitempty"`
-	CreatedAt int64    `json:"createdAt,omitempty"`
+	TurnID          string   `json:"turnId"`
+	Text            string   `json:"text"`
+	Source          string   `json:"source,omitempty"` // "echo" | "llm" | adapter name
+	Stopped         bool     `json:"stopped,omitempty"`
+	ReasoningEffort string   `json:"reasoningEffort,omitempty"`
+	LLMModel        string   `json:"llmModel,omitempty"`
+	ProviderKind    string   `json:"providerKind,omitempty"`
+	Chunks          []string `json:"chunks,omitempty"`
+	CreatedAt       int64    `json:"createdAt,omitempty"`
 }
 
 // resolveAssistantText prefers a usable provider response string; otherwise returns an echo stub
@@ -89,23 +91,27 @@ func (s *Service) emitAssistantReply(view *View, turn Turn, text, source string)
 	s.emitAssistantReplyChunks(view, turn, text, source, splitReplyChunks(text), false)
 }
 
-func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source string, chunks []string, stopped bool) {
+func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source string, chunks []string, stopped bool, llmModel ...string) {
 	if view == nil {
 		return
 	}
 	if len(chunks) == 0 {
 		chunks = []string{text}
 	}
+	model := ""
+	if len(llmModel) > 0 {
+		model = strings.TrimSpace(llmModel[0])
+	}
 
 	if strings.TrimSpace(view.RunID) != "" && s.events != nil {
 		trace := firstNonEmpty(view.TraceID, view.RunID)
 		for i, chunk := range chunks {
-			_, _ = s.events.Append(view.RunID, trace, "assistant.delta", "info", map[string]any{
-				"turnId": turn.ID, "text": chunk, "index": i,
-			}, events.WithVisibility(events.VisibilityModelVisible))
+			_, _ = s.events.Append(view.RunID, trace, "assistant.delta", "info",
+				assistantDeltaPayload(view, turn, chunk, i, model),
+				events.WithVisibility(events.VisibilityModelVisible))
 		}
 		_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info",
-			assistantMessagePayload(view, turn, text, source, stopped),
+			assistantMessagePayload(view, turn, text, source, stopped, model),
 			events.WithVisibility(events.VisibilityModelVisible))
 		return
 	}
@@ -113,42 +119,71 @@ func (s *Service) emitAssistantReplyChunks(view *View, turn Turn, text, source s
 	view.Replies = append(view.Replies, AssistantReply{
 		TurnID: turn.ID, Text: text, Source: source, Stopped: stopped,
 		ReasoningEffort: strings.TrimSpace(view.ReasoningEffort),
-		Chunks: chunks, CreatedAt: turn.CreatedAt,
+		LLMModel:        model,
+		ProviderKind:    strings.TrimSpace(view.ProviderKind),
+		Chunks:          chunks, CreatedAt: turn.CreatedAt,
 	})
 }
 
 // emitAssistantDelta appends one live delta to the run ledger (bound sessions only).
-func (s *Service) emitAssistantDelta(view *View, turn Turn, text string, index int) {
+func (s *Service) emitAssistantDelta(view *View, turn Turn, text string, index int, llmModel ...string) {
 	if view == nil || strings.TrimSpace(view.RunID) == "" || s.events == nil {
 		return
 	}
-	trace := firstNonEmpty(view.TraceID, view.RunID)
-	_, _ = s.events.Append(view.RunID, trace, "assistant.delta", "info", map[string]any{
-		"turnId": turn.ID, "text": text, "index": index,
-	}, events.WithVisibility(events.VisibilityModelVisible))
-}
-
-// emitAssistantMessageFinal writes the closing assistant.message (bound sessions only).
-func (s *Service) emitAssistantMessageFinal(view *View, turn Turn, text, source string, stopped bool) {
-	if view == nil || strings.TrimSpace(view.RunID) == "" || s.events == nil {
-		return
+	model := ""
+	if len(llmModel) > 0 {
+		model = strings.TrimSpace(llmModel[0])
 	}
 	trace := firstNonEmpty(view.TraceID, view.RunID)
-	_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info",
-		assistantMessagePayload(view, turn, text, source, stopped),
+	_, _ = s.events.Append(view.RunID, trace, "assistant.delta", "info",
+		assistantDeltaPayload(view, turn, text, index, model),
 		events.WithVisibility(events.VisibilityModelVisible))
 }
 
-func assistantMessagePayload(view *View, turn Turn, text, source string, stopped bool) map[string]any {
+// emitAssistantMessageFinal writes the closing assistant.message (bound sessions only).
+func (s *Service) emitAssistantMessageFinal(view *View, turn Turn, text, source string, stopped bool, llmModel ...string) {
+	if view == nil || strings.TrimSpace(view.RunID) == "" || s.events == nil {
+		return
+	}
+	model := ""
+	if len(llmModel) > 0 {
+		model = strings.TrimSpace(llmModel[0])
+	}
+	trace := firstNonEmpty(view.TraceID, view.RunID)
+	_, _ = s.events.Append(view.RunID, trace, "assistant.message", "info",
+		assistantMessagePayload(view, turn, text, source, stopped, model),
+		events.WithVisibility(events.VisibilityModelVisible))
+}
+
+func assistantMessagePayload(view *View, turn Turn, text, source string, stopped bool, llmModel string) map[string]any {
 	payload := map[string]any{
 		"turnId": turn.ID, "text": text, "stopped": stopped, "source": source,
 	}
+	attachAssistantProjection(payload, view, llmModel)
+	return payload
+}
+
+// assistantDeltaPayload is the streaming chunk shape; caption fields mirror the final message so UI can project mid-flight.
+func assistantDeltaPayload(view *View, turn Turn, text string, index int, llmModel string) map[string]any {
+	payload := map[string]any{
+		"turnId": turn.ID, "text": text, "index": index,
+	}
+	attachAssistantProjection(payload, view, llmModel)
+	return payload
+}
+
+func attachAssistantProjection(payload map[string]any, view *View, llmModel string) {
 	if view != nil {
 		if effort := strings.TrimSpace(view.ReasoningEffort); effort != "" {
 			payload["reasoningEffort"] = effort
 		}
+		if pk := strings.TrimSpace(view.ProviderKind); pk != "" {
+			payload["providerKind"] = pk
+		}
 	}
-	return payload
+	if model := strings.TrimSpace(llmModel); model != "" {
+		payload["llmModel"] = model
+	}
 }
 
 // buildChatMessages assembles recent turns (+ assistant replies when present) for LLM chat.

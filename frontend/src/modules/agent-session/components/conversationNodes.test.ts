@@ -59,6 +59,39 @@ describe("conversationNodes", () => {
     expect(msg.summary).toBe("ok");
   });
 
+  it("projects llmModel onto assistant.message title", () => {
+    const msg = resolveConversationNode(
+      ev({
+        type: "assistant.message",
+        payload: {
+          turnId: "t1",
+          text: "ok",
+          source: "llm",
+          llmModel: "gpt-4o-mini",
+          reasoningEffort: "max",
+        },
+      }),
+    );
+    expect(msg.title).toBe("助手 · gpt-4o-mini · Max");
+  });
+
+  it("projects providerKind with llmModel and reasoningEffort onto assistant title", () => {
+    const msg = resolveConversationNode(
+      ev({
+        type: "assistant.message",
+        payload: {
+          turnId: "t1",
+          text: "ok",
+          source: "llm",
+          providerKind: "execgo",
+          llmModel: "gpt-4o-mini",
+          reasoningEffort: "high",
+        },
+      }),
+    );
+    expect(msg.title).toBe("助手 · execgo · gpt-4o-mini · High");
+  });
+
   it("resolves tool and step events", () => {
     const called = resolveConversationNode(
       ev({ type: "tool.called", payload: { name: "git.status", args: "{}" } }),
@@ -186,6 +219,27 @@ describe("conversationNodes", () => {
     ]);
     expect(bubbles).toHaveLength(1);
     expect(bubbles[0].title).toBe("助手 · Max");
+  });
+
+  it("projects caption fields onto a streaming assistant.delta bubble", () => {
+    const bubbles = mergeAssistantBubbles([
+      ev({
+        id: "d0",
+        seq: 1,
+        type: "assistant.delta",
+        payload: {
+          turnId: "t_stream",
+          text: "partial",
+          index: 0,
+          providerKind: "static",
+          llmModel: "gpt-4o-mini",
+          reasoningEffort: "high",
+        },
+      }),
+    ]);
+    expect(bubbles).toHaveLength(1);
+    expect(bubbles[0].streaming).toBe(true);
+    expect(bubbles[0].title).toBe("助手 · static · gpt-4o-mini · High");
   });
 
   it("keeps a streaming bubble when only deltas arrived", () => {

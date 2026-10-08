@@ -34,7 +34,12 @@ describe("ThreadTimeline", () => {
           ts: 3,
           type: "assistant.message",
           visibility: "model_visible",
-          payload: { text: "ok", reasoningEffort: "max" },
+          payload: {
+            text: "ok",
+            reasoningEffort: "max",
+            llmModel: "gpt-4o-mini",
+            providerKind: "execgo",
+          },
         },
       ],
     });
@@ -53,7 +58,7 @@ describe("ThreadTimeline", () => {
     const nodes = screen.getAllByTestId("thread-timeline-node");
     expect(nodes).toHaveLength(3);
     expect(nodes[1]).toHaveAttribute("data-linked", "1");
-    expect(nodes[2]).toHaveTextContent(/assistant\.message · Max/);
+    expect(nodes[2]).toHaveTextContent(/assistant\.message · execgo · gpt-4o-mini · Max/);
     fireEvent.click(nodes[1]);
     expect(onSelectSeq).toHaveBeenCalledWith(2);
   });
@@ -70,7 +75,7 @@ describe("ThreadTimeline", () => {
     const visible = screen.getAllByTestId("thread-timeline-node");
     expect(visible).toHaveLength(2);
     expect(visible[0]).toHaveTextContent("session.turn");
-    expect(visible[1]).toHaveTextContent(/assistant\.message · Max/);
+    expect(visible[1]).toHaveTextContent(/assistant\.message · execgo · gpt-4o-mini · Max/);
   });
 
   it("explains an empty filter instead of claiming the thread has no nodes", async () => {

@@ -13,6 +13,7 @@ import (
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/llmchat"
 	"github.com/ash-repwiki/ash/internal/skills"
 	"github.com/ash-repwiki/ash/internal/store"
 	"github.com/ash-repwiki/ash/internal/toolbus"
@@ -67,7 +68,8 @@ type ModelItem struct {
 
 // ModelsResponse is returned by GET /agents/models.
 type ModelsResponse struct {
-	Items []ModelItem `json:"items"`
+	Items     []ModelItem `json:"items"`
+	ChatModel string      `json:"chatModel,omitempty"` // ASH_LLM model when configured
 }
 
 // BuiltinCommands returns the always-available slash commands.
@@ -240,6 +242,7 @@ func (s *Service) emitMCPToolEvents(view *View, tool *store.MCPTool, args map[st
 }
 
 // ListModels returns builtin provider kinds used by applyProviderKind.
+// When ASH_LLM is configured, ChatModel echoes the chat completion model id.
 func ListModels() ModelsResponse {
 	kinds := []string{"static", "acp_sdk", "execgo"}
 	items := make([]ModelItem, 0, len(kinds))
@@ -248,7 +251,7 @@ func ListModels() ModelsResponse {
 			ID: k, Label: agentexec.DescribeKind(k), ProviderKind: k,
 		})
 	}
-	return ModelsResponse{Items: items}
+	return ModelsResponse{Items: items, ChatModel: llmchat.ConfiguredModel()}
 }
 
 func normalizeCommandName(cmd string) string {

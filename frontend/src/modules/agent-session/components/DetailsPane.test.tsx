@@ -13,11 +13,22 @@ describe("DetailsPane", () => {
           kind: "assistant",
           title: "助手",
           summary: "ok",
-          payload: { text: "ok", source: "llm", reasoningEffort: "max" },
+          payload: {
+            text: "ok",
+            source: "llm",
+            reasoningEffort: "max",
+            llmModel: "gpt-4o-mini",
+            providerKind: "static",
+          },
         }}
       />,
     );
+    expect(screen.getByTestId("agent-chat-details-caption")).toHaveTextContent(
+      "static · gpt-4o-mini · Max",
+    );
     expect(screen.getByTestId("agent-chat-details-effort")).toHaveTextContent(/Max/);
+    expect(screen.getByTestId("agent-chat-details-model")).toHaveTextContent("gpt-4o-mini");
+    expect(screen.getByTestId("agent-chat-details-provider")).toHaveTextContent("static");
   });
 
   it("shows compact summary for replay", () => {

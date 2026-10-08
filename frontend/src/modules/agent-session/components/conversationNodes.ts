@@ -76,6 +76,17 @@ function compactJSON(p: Record<string, unknown>, max = 160): string {
   }
 }
 
+export function assistantCaption(p: Record<string, unknown>): string {
+  const parts: string[] = [];
+  const provider = str(p.providerKind).trim();
+  if (provider) parts.push(provider);
+  const model = str(p.llmModel).trim();
+  if (model) parts.push(model);
+  const effort = reasoningEffortCaption(str(p.reasoningEffort));
+  if (effort) parts.push(effort);
+  return parts.join(" · ");
+}
+
 /** Registry: map event type → thin ConversationNode descriptor (no private scoring). */
 export function resolveConversationNode(ev: SessionEventEnvelope): ConversationNodeDescriptor {
   const visibility = eventVisibility(ev);
@@ -92,10 +103,10 @@ export function resolveConversationNode(ev: SessionEventEnvelope): ConversationN
       };
     case "assistant.delta":
     case "assistant.message": {
-      const effort = reasoningEffortCaption(str(p.reasoningEffort));
+      const caption = assistantCaption(p);
       return {
         kind: "assistant",
-        title: effort ? `助手 · ${effort}` : "助手",
+        title: caption ? `助手 · ${caption}` : "助手",
         summary: str(p.text) || "",
         visibility,
       };
@@ -310,6 +321,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
       if (existing != null && out[existing]) {
         out[existing] = {
           ...out[existing],
+          title: node.title,
           summary: out[existing].summary + text,
           streaming: true,
           type: "assistant.delta",
@@ -324,7 +336,7 @@ export function mergeAssistantBubbles(events: SessionEventEnvelope[]): MergedCha
           role: "assistant",
           type: "assistant.delta",
           kind: "assistant",
-          title: "助手",
+          title: node.title,
           summary: text,
           streaming: true,
           turnId: turnId || undefined,

@@ -1859,6 +1859,9 @@ components:
         items:
           type: array
           items: { $ref: "#/components/schemas/AgentModelItem" }
+        chatModel:
+          type: string
+          description: ASH_LLM chat model id when configured; omitted otherwise.
     AgentSessionListResponse:
       type: object
       required: [items]
