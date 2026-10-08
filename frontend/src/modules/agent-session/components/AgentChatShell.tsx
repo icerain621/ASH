@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react";
 import {
   closeAgentSession,
   createAgentSession,
@@ -28,7 +35,13 @@ import { type IntentPayload } from "./IntentBar";
 import { SessionHistoryList, type SessionMoveRequest } from "./SessionHistoryList";
 import { TrajectoryPane } from "./TrajectoryPane";
 import { deriveGateFromEvents } from "./deriveGateFromEvents";
-import { useChatColumnWidths } from "./useChatColumnWidths";
+import {
+  DETAILS_MAX,
+  DETAILS_MIN,
+  SIDEBAR_MAX,
+  SIDEBAR_MIN,
+  useChatColumnWidths,
+} from "./useChatColumnWidths";
 import { shortId } from "@/shared/utils/format";
 import {
   EMPTY_HERO_DISMISS_KEY,
@@ -170,7 +183,13 @@ export function AgentChatShell({
   const [heroDismissed, setHeroDismissed] = useState(
     () => localStorage.getItem(EMPTY_HERO_DISMISS_KEY) === "1",
   );
-  const { shellStyle, startResize } = useChatColumnWidths();
+  const {
+    shellStyle,
+    startResize,
+    sidebarWidth,
+    detailsWidth,
+    onResizeKeyDown,
+  } = useChatColumnWidths();
 
   const listQuery = useQuery({
     queryKey: ["agent-sessions", includeClosed],
@@ -543,10 +562,15 @@ export function AgentChatShell({
         role="separator"
         aria-orientation="vertical"
         aria-label="调整侧栏宽度"
+        aria-valuemin={SIDEBAR_MIN}
+        aria-valuemax={SIDEBAR_MAX}
+        aria-valuenow={sidebarWidth}
+        tabIndex={0}
         onMouseDown={(e) => {
           e.preventDefault();
           startResize("sidebar", e.clientX);
         }}
+        onKeyDown={(e) => onResizeKeyDown("sidebar", e)}
       />
 
       <div className="agent-chat-main" ref={mainRef}>
@@ -587,12 +611,44 @@ export function AgentChatShell({
             </span>
           </div>
           <div className="agent-chat-header-actions">
-            <div className="agent-chat-view-tabs" data-testid="agent-chat-view-tabs" role="tablist">
+            <div
+              className="agent-chat-view-tabs"
+              data-testid="agent-chat-view-tabs"
+              role="tablist"
+              aria-label="中心视图"
+              onKeyDown={(e: ReactKeyboardEvent<HTMLDivElement>) => {
+                if (
+                  e.key !== "ArrowLeft" &&
+                  e.key !== "ArrowRight" &&
+                  e.key !== "Home" &&
+                  e.key !== "End"
+                ) {
+                  return;
+                }
+                const tabs: CenterTab[] = ["chat", "trajectory"];
+                const i = tabs.indexOf(viewTab);
+                let next = i;
+                if (e.key === "Home") next = 0;
+                else if (e.key === "End") next = tabs.length - 1;
+                else if (e.key === "ArrowRight") next = (i + 1) % tabs.length;
+                else next = (i - 1 + tabs.length) % tabs.length;
+                if (next === i) return;
+                e.preventDefault();
+                const id = tabs[next]!;
+                setViewTab(id);
+                queueMicrotask(() =>
+                  document.getElementById(`agent-chat-tab-${id}`)?.focus(),
+                );
+              }}
+            >
               <button
                 type="button"
+                id="agent-chat-tab-chat"
                 role="tab"
                 className={viewTab === "chat" ? "btn mini active" : "btn mini"}
                 aria-selected={viewTab === "chat"}
+                aria-controls="agent-chat-tabpanel"
+                tabIndex={viewTab === "chat" ? 0 : -1}
                 data-testid="agent-chat-tab-chat"
                 title="聊天视图"
                 onClick={() => setViewTab("chat")}
@@ -601,9 +657,12 @@ export function AgentChatShell({
               </button>
               <button
                 type="button"
+                id="agent-chat-tab-trajectory"
                 role="tab"
                 className={viewTab === "trajectory" ? "btn mini active" : "btn mini"}
                 aria-selected={viewTab === "trajectory"}
+                aria-controls="agent-chat-tabpanel"
+                tabIndex={viewTab === "trajectory" ? 0 : -1}
                 data-testid="agent-chat-tab-trajectory"
                 title="轨迹 / 工具调用视图"
                 onClick={() => setViewTab("trajectory")}
@@ -628,6 +687,8 @@ export function AgentChatShell({
               className="btn mini"
               data-testid="agent-chat-details-toggle"
               aria-pressed={detailsOpen}
+              aria-expanded={detailsOpen}
+              aria-controls="agent-chat-details"
               title={detailsOpen ? "隐藏侧栏 Details" : "显示侧栏 Details"}
               onClick={() => setDetailsOpen((v) => !v)}
             >
@@ -674,39 +735,50 @@ export function AgentChatShell({
                   setShowJumpBottom(!pinned);
                 }}
               >
-                {viewTab === "chat" ? (
-                  <ChatTranscript
-                    events={events}
-                    selectedId={selection?.id}
-                    agentMode={effectiveAgentMode}
-                    showBrandHero={showBrandHero}
-                    onDismissBrandHero={dismissBrandHero}
-                    onSelect={(node) => {
-                      setSelection(node);
-                      if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
-                    }}
-                  />
-                ) : (
-                  <TrajectoryPane
-                    events={events}
-                    runId={runId || undefined}
-                    highlightSeq={highlightSeq}
-                    onSelectSeq={(seq) => {
-                      setHighlightSeq(seq);
-                    }}
-                    onSelectEvent={(node) => {
-                      setSelection(node);
-                      if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
-                      setDetailsOpen(true);
-                    }}
-                  />
-                )}
+                <div
+                  id="agent-chat-tabpanel"
+                  role="tabpanel"
+                  data-testid="agent-chat-tabpanel"
+                  aria-labelledby={
+                    viewTab === "chat" ? "agent-chat-tab-chat" : "agent-chat-tab-trajectory"
+                  }
+                >
+                  {viewTab === "chat" ? (
+                    <ChatTranscript
+                      events={events}
+                      selectedId={selection?.id}
+                      agentMode={effectiveAgentMode}
+                      showBrandHero={showBrandHero}
+                      onDismissBrandHero={dismissBrandHero}
+                      onSelect={(node) => {
+                        setSelection(node);
+                        if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
+                      }}
+                    />
+                  ) : (
+                    <TrajectoryPane
+                      events={events}
+                      runId={runId || undefined}
+                      highlightSeq={highlightSeq}
+                      onSelectSeq={(seq) => {
+                        setHighlightSeq(seq);
+                      }}
+                      onSelectEvent={(node) => {
+                        setSelection(node);
+                        if (node.seq && node.seq > 0) setHighlightSeq(node.seq);
+                        setDetailsOpen(true);
+                      }}
+                    />
+                  )}
+                </div>
               </div>
               {showJumpBottom ? (
                 <button
                   type="button"
                   className="agent-chat-jump-bottom"
                   data-testid="agent-chat-jump-bottom"
+                  aria-label="回到对话底部"
+                  title="回到对话底部"
                   onClick={jumpToBottom}
                 >
                   ↓ 回到底部
@@ -736,10 +808,15 @@ export function AgentChatShell({
           role="separator"
           aria-orientation="vertical"
           aria-label="调整详情栏宽度"
+          aria-valuemin={DETAILS_MIN}
+          aria-valuemax={DETAILS_MAX}
+          aria-valuenow={detailsWidth}
+          tabIndex={0}
           onMouseDown={(e) => {
             e.preventDefault();
             startResize("details", e.clientX);
           }}
+          onKeyDown={(e) => onResizeKeyDown("details", e)}
         />
       ) : null}
 

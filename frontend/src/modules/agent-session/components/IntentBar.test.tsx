@@ -80,7 +80,7 @@ describe("IntentBar", () => {
     expect(onIntent).toHaveBeenCalledWith({ action: "command", command: "/help", args: undefined });
   });
 
-  it("shows four gate buttons: once / session / reject / cancel run", () => {
+  it("shows four gate buttons: once / session / reject / cancel run", async () => {
     const onIntent = vi.fn();
     wrap(
       <IntentBar
@@ -92,6 +92,22 @@ describe("IntentBar", () => {
       />,
     );
     expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-mode", "gate");
+    expect(screen.getByTestId("agent-intent-gate-reason")).toHaveAttribute("role", "status");
+    expect(screen.getByTestId("agent-intent-allow-once")).toHaveAttribute(
+      "title",
+      "允许一次执行 danger.tool",
+    );
+    expect(screen.getByTestId("agent-intent-reject")).toHaveAttribute("title", "拒绝本次工具调用");
+    expect(screen.getByTestId("agent-intent-cancel")).toHaveAttribute("title", "取消当前 Run");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-intent-allow-once")),
+    );
+    fireEvent.keyDown(document, { key: "ArrowRight" });
+    expect(document.activeElement).toBe(screen.getByTestId("agent-intent-allow-session"));
+    fireEvent.keyDown(document, { key: "End" });
+    expect(document.activeElement).toBe(screen.getByTestId("agent-intent-cancel"));
+    fireEvent.keyDown(document, { key: "Home" });
+    expect(document.activeElement).toBe(screen.getByTestId("agent-intent-allow-once"));
     fireEvent.click(screen.getByTestId("agent-intent-allow-once"));
     expect(onIntent).toHaveBeenCalledWith({
       action: "approve",
@@ -123,6 +139,7 @@ describe("IntentBar", () => {
     const onIntent = vi.fn();
     wrap(<IntentBar mode="prompt" canStop busy={false} onIntent={onIntent} />);
     expect(screen.getByTestId("agent-intent-bar")).toHaveAttribute("data-steer", "true");
+    expect(screen.getByTestId("agent-intent-steer-hint")).toHaveAttribute("role", "status");
     expect(screen.getByTestId("agent-intent-steer-hint")).toBeInTheDocument();
     expect(screen.getByTestId("agent-intent-send")).toHaveTextContent("续写");
     fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
@@ -144,6 +161,7 @@ describe("IntentBar", () => {
       />,
     );
     const chip = screen.getByTestId("agent-intent-queue-chip");
+    expect(chip).toHaveAttribute("role", "status");
     expect(chip).toHaveTextContent("队列 1");
     expect(chip).toHaveTextContent("after this");
     expect(chip).toHaveTextContent("停止只结束当前");
@@ -182,6 +200,199 @@ describe("IntentBar", () => {
     fireEvent.click(screen.getByTestId("agent-command-help"));
     expect(onIntent).not.toHaveBeenCalled();
     expect(screen.getByTestId("agent-intent-prompt")).toHaveValue("/help ");
+  });
+
+  it("wires aria-controls from the plus trigger to the open menu", () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    const trigger = screen.getByTestId("agent-composer-plus");
+    expect(trigger).not.toHaveAttribute("aria-controls");
+    fireEvent.click(trigger);
+    const menu = screen.getByTestId("agent-composer-plus-menu");
+    expect(trigger).toHaveAttribute("aria-controls", menu.id);
+    expect(menu.id).toBeTruthy();
+  });
+
+  it("focuses the first plus menu item on open and ArrowDown/ArrowUp/Home/End cycles", async () => {
+    wrap(
+      <IntentBar
+        mode="prompt"
+        busy={false}
+        onIntent={vi.fn()}
+        plusItems={
+          <>
+            <li>
+              <button type="button" role="menuitem" data-testid="agent-plus-extra">
+                附件
+              </button>
+            </li>
+          </>
+        }
+      />,
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    const slash = screen.getByTestId("agent-intent-slash");
+    const extra = screen.getByTestId("agent-plus-extra");
+    await waitFor(() => expect(document.activeElement).toBe(slash));
+    fireEvent.keyDown(document, { key: "ArrowDown" });
+    expect(document.activeElement).toBe(extra);
+    fireEvent.keyDown(document, { key: "ArrowUp" });
+    expect(document.activeElement).toBe(slash);
+    fireEvent.keyDown(document, { key: "End" });
+    expect(document.activeElement).toBe(extra);
+    fireEvent.keyDown(document, { key: "Home" });
+    expect(document.activeElement).toBe(slash);
+  });
+
+  it("moves focus to the prompt after choosing 命令 from the plus menu", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    fireEvent.click(screen.getByTestId("agent-intent-slash"));
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-intent-prompt")),
+    );
+    expect(screen.getByTestId("agent-intent-prompt")).toHaveValue("/");
+    await waitFor(() => expect(screen.getByTestId("agent-command-menu")).toBeInTheDocument());
+  });
+
+  it("closes the plus menu on Escape and outside pointerdown", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-composer-plus")),
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.pointerDown(document.body);
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("jumps plus menu items via typeahead and marks vertical orientation", async () => {
+    wrap(
+      <IntentBar
+        mode="prompt"
+        busy={false}
+        onIntent={vi.fn()}
+        plusItems={
+          <>
+            <li>
+              <button type="button" role="menuitem" data-testid="agent-plus-extra">
+                Tools
+              </button>
+            </li>
+          </>
+        }
+      />,
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    const menu = screen.getByTestId("agent-composer-plus-menu");
+    expect(menu).toHaveAttribute("aria-orientation", "vertical");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-intent-slash")),
+    );
+    fireEvent.keyDown(document, { key: "t" });
+    expect(document.activeElement).toBe(screen.getByTestId("agent-plus-extra"));
+  });
+
+  it("opens the plus menu from the trigger with ArrowDown/ArrowUp", async () => {
+    wrap(
+      <IntentBar
+        mode="prompt"
+        busy={false}
+        onIntent={vi.fn()}
+        plusItems={
+          <>
+            <li>
+              <button type="button" role="menuitem" data-testid="agent-plus-extra">
+                附件
+              </button>
+            </li>
+          </>
+        }
+      />,
+    );
+    const trigger = screen.getByTestId("agent-composer-plus");
+    fireEvent.keyDown(trigger, { key: "ArrowDown" });
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-intent-slash")),
+    );
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+    fireEvent.keyDown(trigger, { key: "ArrowUp" });
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-plus-extra")),
+    );
+  });
+
+  it("closes the plus menu when focus leaves the + seat", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.blur(screen.getByTestId("agent-intent-slash"), {
+      relatedTarget: document.body,
+    });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("dismisses slash menu when prompt blurs outside the listbox", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    fireEvent.change(area, { target: { value: "/" } });
+    await screen.findByTestId("agent-command-menu");
+    fireEvent.blur(area, { relatedTarget: screen.getByTestId("agent-intent-send") });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-command-menu")).not.toBeInTheDocument(),
+    );
+    expect(area).toHaveValue("/");
+  });
+
+  it("keeps plus menu and slash command menu mutually exclusive", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/" } });
+    await waitFor(() => expect(screen.getByTestId("agent-command-menu")).toBeInTheDocument());
+    expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-command-menu")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("dismisses slash command menu on Escape without clearing the draft", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/" } });
+    await waitFor(() => expect(screen.getByTestId("agent-command-menu")).toBeInTheDocument());
+    fireEvent.keyDown(document, { key: "Escape" });
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-command-menu")).not.toBeInTheDocument(),
+    );
+    expect(screen.getByTestId("agent-intent-prompt")).toHaveValue("/");
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-intent-prompt")),
+    );
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/h" } });
+    await waitFor(() => expect(screen.getByTestId("agent-command-menu")).toBeInTheDocument());
+    fireEvent.pointerDown(document.body);
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-command-menu")).not.toBeInTheDocument(),
+    );
   });
 
   it("requires confirm before sending /clear command", () => {
@@ -245,5 +456,53 @@ describe("IntentBar", () => {
     fireEvent.keyDown(area, { key: "Enter", shiftKey: false });
     expect(onIntent).not.toHaveBeenCalled();
     expect(area).toHaveValue("/clear ");
+  });
+
+  it("wires slash listbox aria-controls and aria-activedescendant on the prompt", async () => {
+    HTMLElement.prototype.scrollIntoView = vi.fn();
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    const area = screen.getByTestId("agent-intent-prompt");
+    expect(area).toHaveAttribute("aria-haspopup", "listbox");
+    expect(area).not.toHaveAttribute("aria-controls");
+    expect(area).toHaveAttribute("aria-expanded", "false");
+    fireEvent.change(area, { target: { value: "/" } });
+    const menu = await screen.findByTestId("agent-command-menu");
+    expect(area).toHaveAttribute("aria-controls", menu.id);
+    expect(area).toHaveAttribute("aria-expanded", "true");
+    expect(area).toHaveAttribute("aria-autocomplete", "list");
+    expect(menu).toHaveAttribute("aria-orientation", "vertical");
+    const help = await screen.findByTestId("agent-command-help");
+    expect(menu).not.toHaveAttribute("aria-busy");
+    expect(area).toHaveAttribute("aria-activedescendant", help.id);
+    await waitFor(() => expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled());
+    vi.mocked(HTMLElement.prototype.scrollIntoView).mockClear();
+    fireEvent.keyDown(area, { key: "ArrowDown" });
+    const clear = screen.getByTestId("agent-command-clear");
+    expect(area).toHaveAttribute("aria-activedescendant", clear.id);
+    await waitFor(() => expect(HTMLElement.prototype.scrollIntoView).toHaveBeenCalled());
+    fireEvent.keyDown(area, { key: "Home" });
+    expect(area).toHaveAttribute("aria-activedescendant", help.id);
+    fireEvent.keyDown(area, { key: "End" });
+    expect(area).toHaveAttribute("aria-activedescendant", clear.id);
+  });
+
+  it("marks slash listbox aria-busy while commands load", async () => {
+    listAgentCommands.mockReturnValueOnce(new Promise(() => {}));
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), { target: { value: "/" } });
+    const menu = await screen.findByTestId("agent-command-menu");
+    expect(menu).toHaveAttribute("aria-busy", "true");
+    expect(screen.getByRole("status")).toHaveTextContent("加载命令…");
+  });
+
+  it("announces empty slash matches with role=status", async () => {
+    wrap(<IntentBar mode="prompt" busy={false} onIntent={vi.fn()} />);
+    fireEvent.change(screen.getByTestId("agent-intent-prompt"), {
+      target: { value: "/zzznomatch" },
+    });
+    await screen.findByTestId("agent-command-menu");
+    await waitFor(() =>
+      expect(screen.getByRole("status")).toHaveTextContent("无匹配命令"),
+    );
   });
 });

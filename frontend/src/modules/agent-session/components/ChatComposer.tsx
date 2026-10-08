@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { sessionFollowUpQueue, type AgentSessionView } from "../api/session.api";
 import { IntentBar, type IntentPayload } from "./IntentBar";
 import { ChatSeats } from "./ChatSeats";
@@ -29,6 +30,8 @@ export function ChatComposer({
   onOpenSkills,
 }: Props) {
   const queueItems = sessionFollowUpQueue(session?.meta);
+  const [closeSeatsSignal, setCloseSeatsSignal] = useState(0);
+  const [closePlusSignal, setClosePlusSignal] = useState(0);
   const plusItems =
     mode === "prompt" && (onOpenTools || onOpenMcp || onOpenSkills) ? (
       <>
@@ -89,8 +92,19 @@ export function ChatComposer({
         gateReason={gateReason}
         gateTool={gateTool}
         queueItems={queueItems}
-        toolbarStart={mode === "prompt" ? <ChatSeats session={session} disabled={busy} /> : null}
+        toolbarStart={
+          mode === "prompt" ? (
+            <ChatSeats
+              session={session}
+              disabled={busy}
+              closeMenuSignal={closeSeatsSignal}
+              onMenuOpened={() => setClosePlusSignal((n) => n + 1)}
+            />
+          ) : null
+        }
         plusItems={plusItems}
+        closePlusSignal={closePlusSignal}
+        onPlusOpened={() => setCloseSeatsSignal((n) => n + 1)}
         onIntent={onIntent}
       />
     </div>

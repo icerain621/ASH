@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ChatComposer } from "./ChatComposer";
@@ -112,5 +112,63 @@ describe("ChatComposer", () => {
     fireEvent.click(screen.getByTestId("agent-chat-seat-effort-open"));
     fireEvent.click(screen.getByTestId("agent-chat-seat-effort-max"));
     expect(screen.getByTestId("agent-chat-seat-model-trigger")).toHaveTextContent(/Max/);
+  });
+
+  it("keeps plus menu and model menu mutually exclusive", async () => {
+    wrap(
+      <ChatComposer
+        mode="prompt"
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "execgo",
+          permissionMode: "read-only",
+        }}
+        onIntent={vi.fn()}
+        onOpenTools={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId("agent-chat-seat-model-trigger"));
+    expect(screen.getByTestId("agent-chat-seat-model-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-chat-seat-model-menu")).not.toBeInTheDocument(),
+    );
+  });
+
+  it("keeps plus menu and permission menu mutually exclusive", async () => {
+    wrap(
+      <ChatComposer
+        mode="prompt"
+        session={{
+          id: "sess_1",
+          spaceId: "local",
+          status: "active",
+          providerKind: "execgo",
+          permissionMode: "read-only",
+        }}
+        onIntent={vi.fn()}
+        onOpenTools={vi.fn()}
+      />,
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    fireEvent.click(await screen.findByTestId("agent-chat-seat-permission"));
+    expect(screen.getByTestId("agent-chat-seat-permission-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-composer-plus-menu")).not.toBeInTheDocument(),
+    );
+    fireEvent.click(screen.getByTestId("agent-composer-plus"));
+    expect(screen.getByTestId("agent-composer-plus-menu")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.queryByTestId("agent-chat-seat-permission-menu")).not.toBeInTheDocument(),
+    );
   });
 });

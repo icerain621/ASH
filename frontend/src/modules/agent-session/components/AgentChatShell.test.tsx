@@ -93,6 +93,8 @@ function renderShell(props: Partial<ComponentProps<typeof AgentChatShell>> = {})
 describe("AgentChatShell", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    localStorage.removeItem("ash.agentChat.sidebarWidth");
+    localStorage.removeItem("ash.agentChat.detailsWidth");
     getRunTree.mockResolvedValue({
       rootRunId: "run_1",
       tree: {
@@ -232,13 +234,51 @@ describe("AgentChatShell", () => {
   it("renders three-column shell with session list", async () => {
     renderShell();
     expect(await screen.findByTestId("agent-chat-shell")).toBeTruthy();
-    expect(screen.getByTestId("agent-session-history")).toBeTruthy();
+    expect(screen.getByTestId("agent-session-history")).toHaveAttribute(
+      "aria-label",
+      "会话历史",
+    );
     expect(screen.getByTestId("agent-workspace-list")).toBeTruthy();
     expect(await screen.findByText("Ship chat")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-view-tabs")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-resize-sidebar")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-resize-details")).toBeTruthy();
     expect(screen.getByTestId("agent-chat-details")).toBeTruthy();
+  });
+
+  it("exposes APG separator values and keyboard-nudges column widths", async () => {
+    renderShell();
+    const sidebar = await screen.findByTestId("agent-chat-resize-sidebar");
+    expect(sidebar).toHaveAttribute("role", "separator");
+    expect(sidebar).toHaveAttribute("aria-orientation", "vertical");
+    expect(sidebar).toHaveAttribute("aria-valuemin", "200");
+    expect(sidebar).toHaveAttribute("aria-valuemax", "420");
+    expect(sidebar).toHaveAttribute("aria-valuenow", "280");
+    expect(sidebar).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(sidebar, { key: "ArrowRight" });
+    expect(sidebar).toHaveAttribute("aria-valuenow", "296");
+    fireEvent.keyDown(sidebar, { key: "Home" });
+    expect(sidebar).toHaveAttribute("aria-valuenow", "200");
+    fireEvent.keyDown(sidebar, { key: "End" });
+    expect(sidebar).toHaveAttribute("aria-valuenow", "420");
+
+    const details = screen.getByTestId("agent-chat-resize-details");
+    expect(details).toHaveAttribute("aria-valuemin", "220");
+    expect(details).toHaveAttribute("aria-valuemax", "440");
+    expect(details).toHaveAttribute("aria-valuenow", "300");
+    expect(details).toHaveAttribute("tabindex", "0");
+    fireEvent.keyDown(details, { key: "ArrowRight" });
+    expect(details).toHaveAttribute("aria-valuenow", "284");
+    fireEvent.keyDown(details, { key: "Home" });
+    expect(details).toHaveAttribute("aria-valuenow", "220");
+  });
+
+  it("marks the selected session with aria-current", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    expect(await screen.findByTestId("agent-history-item-sess_a")).toHaveAttribute(
+      "aria-current",
+      "true",
+    );
   });
 
   it("creates a blank session on New without requiring goal", async () => {
@@ -278,10 +318,53 @@ describe("AgentChatShell", () => {
   it("switches Chat and Trajectory tabs", async () => {
     renderShell({ selectedSessionId: "sess_a" });
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
-    fireEvent.click(screen.getByTestId("agent-chat-tab-trajectory"));
-    expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    const tabs = screen.getByTestId("agent-chat-view-tabs");
+    expect(tabs).toHaveAttribute("role", "tablist");
+    expect(tabs).toHaveAttribute("aria-label", "中心视图");
+    const chatTab = screen.getByTestId("agent-chat-tab-chat");
+    const trajTab = screen.getByTestId("agent-chat-tab-trajectory");
+    expect(chatTab).toHaveAttribute("aria-controls", "agent-chat-tabpanel");
+    expect(chatTab).toHaveAttribute("aria-selected", "true");
+    expect(chatTab).toHaveAttribute("tabIndex", "0");
+    expect(trajTab).toHaveAttribute("tabIndex", "-1");
+    expect(screen.getByTestId("agent-chat-tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "agent-chat-tab-chat",
+    );
+    fireEvent.click(trajTab);
+    const trajectory = await screen.findByTestId("agent-chat-trajectory");
+    expect(trajectory).toHaveAttribute("aria-label", "轨迹");
+    expect(trajTab).toHaveAttribute("aria-selected", "true");
+    expect(trajTab).toHaveAttribute("tabIndex", "0");
+    expect(chatTab).toHaveAttribute("tabIndex", "-1");
+    expect(screen.getByTestId("agent-chat-tabpanel")).toHaveAttribute(
+      "aria-labelledby",
+      "agent-chat-tab-trajectory",
+    );
     expect(await screen.findByTestId("subrun-lineage")).toHaveTextContent("run_child");
-    fireEvent.click(screen.getByTestId("agent-chat-tab-chat"));
+    fireEvent.click(chatTab);
+    expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
+  });
+
+  it("moves between Chat and Trajectory tabs with ArrowRight/ArrowLeft", async () => {
+    renderShell({ selectedSessionId: "sess_a" });
+    await screen.findByTestId("agent-chat-transcript");
+    const tabs = screen.getByTestId("agent-chat-view-tabs");
+    const chatTab = screen.getByTestId("agent-chat-tab-chat");
+    chatTab.focus();
+    fireEvent.keyDown(tabs, { key: "ArrowRight" });
+    expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-chat-tab-trajectory")),
+    );
+    fireEvent.keyDown(tabs, { key: "ArrowLeft" });
+    expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
+    await waitFor(() =>
+      expect(document.activeElement).toBe(screen.getByTestId("agent-chat-tab-chat")),
+    );
+    fireEvent.keyDown(tabs, { key: "End" });
+    expect(await screen.findByTestId("agent-chat-trajectory")).toBeTruthy();
+    fireEvent.keyDown(tabs, { key: "Home" });
     expect(await screen.findByTestId("agent-chat-transcript")).toBeTruthy();
   });
 
@@ -325,9 +408,16 @@ describe("AgentChatShell", () => {
   it("toggles details pane", async () => {
     renderShell({ selectedSessionId: "sess_a" });
     const details = await screen.findByTestId("agent-chat-details");
+    const toggle = screen.getByTestId("agent-chat-details-toggle");
     expect(details).toHaveAttribute("data-open", "1");
-    fireEvent.click(screen.getByTestId("agent-chat-details-toggle"));
+    expect(details).toHaveAttribute("id", "agent-chat-details");
+    expect(toggle).toHaveAttribute("aria-controls", "agent-chat-details");
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(toggle).toHaveAttribute("aria-pressed", "true");
+    fireEvent.click(toggle);
     expect(details).toHaveAttribute("data-open", "0");
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(details).toHaveAttribute("aria-hidden", "true");
   });
 
   it("shows stop when run is running and submits stop intent", async () => {

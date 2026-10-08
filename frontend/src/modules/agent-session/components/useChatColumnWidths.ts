@@ -1,14 +1,16 @@
-import { useCallback, useEffect, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useState, type CSSProperties, type KeyboardEvent } from "react";
 
 const SIDEBAR_KEY = "ash.agentChat.sidebarWidth";
 const DETAILS_KEY = "ash.agentChat.detailsWidth";
 
-const SIDEBAR_DEFAULT = 280;
-const DETAILS_DEFAULT = 300;
-const SIDEBAR_MIN = 200;
-const SIDEBAR_MAX = 420;
-const DETAILS_MIN = 220;
-const DETAILS_MAX = 440;
+export const SIDEBAR_DEFAULT = 280;
+export const DETAILS_DEFAULT = 300;
+export const SIDEBAR_MIN = 200;
+export const SIDEBAR_MAX = 420;
+export const DETAILS_MIN = 220;
+export const DETAILS_MAX = 440;
+/** Keyboard nudge step (px), APG Window Splitter. */
+export const RESIZE_STEP = 16;
 
 function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
@@ -38,6 +40,10 @@ export type ChatColumnWidths = {
   detailsWidth: number;
   shellStyle: CSSProperties;
   startResize: (side: "sidebar" | "details", clientX: number) => void;
+  /** Move separator: positive delta = to the right (sidebar grows / details shrinks). */
+  nudgeWidth: (side: "sidebar" | "details", delta: number) => void;
+  setWidth: (side: "sidebar" | "details", value: number) => void;
+  onResizeKeyDown: (side: "sidebar" | "details", e: KeyboardEvent) => void;
 };
 
 /** Persistable left/right column widths for AgentChatShell (DSH-like drag). */
@@ -51,6 +57,52 @@ export function useChatColumnWidths(): ChatColumnWidths {
 
   useEffect(() => writeStored(SIDEBAR_KEY, sidebarWidth), [sidebarWidth]);
   useEffect(() => writeStored(DETAILS_KEY, detailsWidth), [detailsWidth]);
+
+  const setWidth = useCallback((side: "sidebar" | "details", value: number) => {
+    if (side === "sidebar") {
+      setSidebarWidth(clamp(value, SIDEBAR_MIN, SIDEBAR_MAX));
+    } else {
+      setDetailsWidth(clamp(value, DETAILS_MIN, DETAILS_MAX));
+    }
+  }, []);
+
+  const nudgeWidth = useCallback(
+    (side: "sidebar" | "details", delta: number) => {
+      if (side === "sidebar") {
+        setSidebarWidth((w) => clamp(w + delta, SIDEBAR_MIN, SIDEBAR_MAX));
+      } else {
+        // Separator moves with delta; details width is to the right of it.
+        setDetailsWidth((w) => clamp(w - delta, DETAILS_MIN, DETAILS_MAX));
+      }
+    },
+    [],
+  );
+
+  const onResizeKeyDown = useCallback(
+    (side: "sidebar" | "details", e: KeyboardEvent) => {
+      switch (e.key) {
+        case "ArrowRight":
+          e.preventDefault();
+          nudgeWidth(side, RESIZE_STEP);
+          break;
+        case "ArrowLeft":
+          e.preventDefault();
+          nudgeWidth(side, -RESIZE_STEP);
+          break;
+        case "Home":
+          e.preventDefault();
+          setWidth(side, side === "sidebar" ? SIDEBAR_MIN : DETAILS_MIN);
+          break;
+        case "End":
+          e.preventDefault();
+          setWidth(side, side === "sidebar" ? SIDEBAR_MAX : DETAILS_MAX);
+          break;
+        default:
+          break;
+      }
+    },
+    [nudgeWidth, setWidth],
+  );
 
   const startResize = useCallback((side: "sidebar" | "details", clientX: number) => {
     const startX = clientX;
@@ -85,5 +137,8 @@ export function useChatColumnWidths(): ChatColumnWidths {
       ["--ash-details-width" as string]: `${detailsWidth}px`,
     },
     startResize,
+    nudgeWidth,
+    setWidth,
+    onResizeKeyDown,
   };
 }

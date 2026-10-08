@@ -1,5 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type FocusEvent as ReactFocusEvent,
+  type ReactNode,
+} from "react";
 import {
   listAgentCommands,
   type AgentCommandItem,
@@ -36,6 +42,10 @@ type Props = {
   toolbarEnd?: ReactNode;
   /** Extra rows in the left + menu (Tools / MCP / Skills). */
   plusItems?: ReactNode;
+  /** Bump to force-close the + menu (Composer mutual exclusion). */
+  closePlusSignal?: number;
+  /** Fired when the + menu transitions closed → open. */
+  onPlusOpened?: () => void;
   onIntent: (payload: IntentPayload) => void;
 };
 
@@ -52,6 +62,23 @@ function isBareSlash(text: string): boolean {
 
 function isDestructiveCommand(command: string): boolean {
   return ensureSlash(command).toLowerCase() === "/clear";
+}
+
+/** APG menu typeahead: next item whose label starts with the typed character. */
+function menuItemMatchingTypeahead(
+  items: HTMLButtonElement[],
+  key: string,
+): HTMLButtonElement | undefined {
+  if (key.length !== 1 || key === " ") return undefined;
+  const ch = key.toLowerCase();
+  const active = items.findIndex((el) => el === document.activeElement);
+  const start = active < 0 ? 0 : active + 1;
+  for (let i = 0; i < items.length; i++) {
+    const idx = (start + i) % items.length;
+    const label = (items[idx]!.textContent ?? "").replace(/\s+/g, " ").trim().toLowerCase();
+    if (label.startsWith(ch)) return items[idx];
+  }
+  return undefined;
 }
 
 function submitText(
@@ -95,13 +122,26 @@ export function IntentBar({
   toolbarStart,
   toolbarEnd,
   plusItems,
+  closePlusSignal = 0,
+  onPlusOpened,
   onIntent,
 }: Props) {
   const [prompt, setPrompt] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
+  const [suppressCommandMenu, setSuppressCommandMenu] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const plusMenuRef = useRef<HTMLDivElement>(null);
+  const plusTriggerRef = useRef<HTMLButtonElement>(null);
+  const plusFocusPreferLastRef = useRef(false);
+  const commandMenuRef = useRef<HTMLDivElement>(null);
+  const gateActionsRef = useRef<HTMLDivElement>(null);
+  const plusMenuDomId = "agent-composer-plus-menu";
+  const commandMenuDomId = "agent-command-menu";
+
+  const commandOptionDomId = (name: string) =>
+    `agent-command-option-${name.replace(/^\//, "").replace(/[^a-zA-Z0-9_-]/g, "-") || "item"}`;
 
   const commandsQuery = useQuery({
     queryKey: ["agent-commands"],
@@ -110,12 +150,194 @@ export function IntentBar({
     staleTime: 60_000,
   });
 
-  const showMenu = menuOpen || (prompt.startsWith("/") && !busy);
+  useEffect(() => {
+    setSuppressCommandMenu(false);
+  }, [prompt]);
+
+  useEffect(() => {
+    if (mode !== "gate") return;
+    queueMicrotask(() => {
+      gateActionsRef.current
+        ?.querySelector<HTMLButtonElement>("button:not([disabled])")
+        ?.focus();
+    });
+  }, [mode, gateReason, gateTool]);
+
+  useEffect(() => {
+    if (mode !== "gate") return;
+    const onKey = (e: KeyboardEvent) => {
+      if (
+        e.key !== "ArrowLeft" &&
+        e.key !== "ArrowRight" &&
+        e.key !== "Home" &&
+        e.key !== "End"
+      ) {
+        return;
+      }
+      const root = gateActionsRef.current;
+      if (!root || !root.contains(document.activeElement)) return;
+      const items = Array.from(root.querySelectorAll<HTMLButtonElement>("button")).filter(
+        (el) => !el.disabled,
+      );
+      if (items.length === 0) return;
+      e.preventDefault();
+      if (e.key === "Home") {
+        items[0]?.focus();
+        return;
+      }
+      if (e.key === "End") {
+        items[items.length - 1]?.focus();
+        return;
+      }
+      const active = items.findIndex((el) => el === document.activeElement);
+      const delta = e.key === "ArrowRight" ? 1 : -1;
+      const next = active < 0 ? 0 : (active + delta + items.length) % items.length;
+      items[next]?.focus();
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [mode]);
+
+  useEffect(() => {
+    setPlusOpen(false);
+  }, [closePlusSignal]);
+
+  useEffect(() => {
+    if (!plusOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setPlusOpen(false);
+        queueMicrotask(() => plusTriggerRef.current?.focus());
+        return;
+      }
+      const root = plusMenuRef.current;
+      if (!root) return;
+      const items = Array.from(
+        root.querySelectorAll<HTMLButtonElement>('[role="menuitem"]'),
+      ).filter((el) => !el.disabled);
+      if (items.length === 0) return;
+      const focusItem = (el: HTMLButtonElement | undefined) => {
+        el?.focus();
+        el?.scrollIntoView?.({ block: "nearest" });
+      };
+      if (e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) {
+        const hit = menuItemMatchingTypeahead(items, e.key);
+        if (hit) {
+          e.preventDefault();
+          focusItem(hit);
+        }
+        return;
+      }
+      if (
+        e.key !== "ArrowDown" &&
+        e.key !== "ArrowUp" &&
+        e.key !== "Home" &&
+        e.key !== "End"
+      ) {
+        return;
+      }
+      e.preventDefault();
+      if (e.key === "Home") {
+        focusItem(items[0]);
+        return;
+      }
+      if (e.key === "End") {
+        focusItem(items[items.length - 1]);
+        return;
+      }
+      const active = items.findIndex((el) => el === document.activeElement);
+      const delta = e.key === "ArrowDown" ? 1 : -1;
+      const next = active < 0 ? 0 : (active + delta + items.length) % items.length;
+      focusItem(items[next]);
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (!plusMenuRef.current?.contains(e.target as Node)) {
+        setPlusOpen(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    queueMicrotask(() => {
+      const items = Array.from(
+        plusMenuRef.current?.querySelectorAll<HTMLButtonElement>('[role="menuitem"]') ?? [],
+      ).filter((el) => !el.disabled);
+      const preferLast = plusFocusPreferLastRef.current;
+      plusFocusPreferLastRef.current = false;
+      const el = preferLast ? items[items.length - 1] : items[0];
+      el?.focus();
+      el?.scrollIntoView?.({ block: "nearest" });
+    });
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [plusOpen]);
+
+  const showMenu = !suppressCommandMenu && (menuOpen || (prompt.startsWith("/") && !busy));
+
+  const dismissCommandMenu = (restoreFocus = false) => {
+    setMenuOpen(false);
+    setSuppressCommandMenu(true);
+    if (restoreFocus) queueMicrotask(() => textareaRef.current?.focus());
+  };
+
+  /** DSH: leave the + seat → close (focus may already have moved). */
+  const onPlusRootBlur = (e: ReactFocusEvent<HTMLDivElement>) => {
+    if (!plusOpen) return;
+    const next = e.relatedTarget;
+    if (next instanceof Node && plusMenuRef.current?.contains(next)) return;
+    setPlusOpen(false);
+  };
+
+  /** Slash listbox dismisses when focus leaves the prompt (not when clicking an option). */
+  const onPromptBlur = (e: ReactFocusEvent<HTMLTextAreaElement>) => {
+    if (!showMenu) return;
+    const next = e.relatedTarget;
+    const menuEl = document.getElementById(commandMenuDomId);
+    if (next instanceof Node && menuEl?.contains(next)) return;
+    dismissCommandMenu(false);
+  };
+
+  useEffect(() => {
+    if (showMenu) setPlusOpen(false);
+  }, [showMenu]);
+
+  useEffect(() => {
+    if (!showMenu) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        dismissCommandMenu(true);
+      }
+    };
+    const onPointer = (e: PointerEvent) => {
+      if (!commandMenuRef.current?.contains(e.target as Node)) {
+        dismissCommandMenu(false);
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.removeEventListener("pointerdown", onPointer);
+    };
+  }, [showMenu]);
   const filter = prompt.startsWith("/") ? prompt.toLowerCase() : "";
   const items: AgentCommandItem[] = (commandsQuery.data?.items ?? []).filter((it) => {
     if (!filter || filter === "/") return true;
     return it.name.toLowerCase().startsWith(filter) || it.name.toLowerCase().includes(filter.slice(1));
   });
+  const safeActiveIndex =
+    items.length === 0 ? 0 : Math.min(Math.max(activeIndex, 0), items.length - 1);
+  const activeCommandOptionId =
+    showMenu && items.length > 0 ? commandOptionDomId(items[safeActiveIndex]!.name) : undefined;
+
+  useEffect(() => {
+    if (!showMenu || !activeCommandOptionId) return;
+    document.getElementById(activeCommandOptionId)?.scrollIntoView?.({ block: "nearest" });
+  }, [showMenu, activeCommandOptionId]);
+
   const bareSlash = isBareSlash(prompt);
   const canSubmitPrompt = Boolean(prompt.trim()) && !bareSlash;
   const trimmedPrompt = prompt.trim();
@@ -181,15 +403,26 @@ export function IntentBar({
     const tool = (gateTool || "").trim();
     return (
       <div className="agent-intent-bar" data-testid="agent-intent-bar" data-mode="gate">
-        <p className="muted-line" data-testid="agent-intent-gate-reason">
+        <p
+          className="muted-line"
+          data-testid="agent-intent-gate-reason"
+          role="status"
+          aria-live="polite"
+        >
           {gateReason || "Run 等待审批"}
         </p>
-        <div className="row-actions">
+        <div
+          className="row-actions"
+          role="group"
+          aria-label="审批操作"
+          ref={gateActionsRef}
+        >
           <button
             type="button"
             className="btn mini ok"
             disabled={busy}
             data-testid="agent-intent-allow-once"
+            title={tool ? `允许一次执行 ${tool}` : "允许一次"}
             onClick={() =>
               onIntent({
                 action: "approve",
@@ -223,6 +456,7 @@ export function IntentBar({
             className="btn mini err"
             disabled={busy}
             data-testid="agent-intent-reject"
+            title="拒绝本次工具调用"
             onClick={() => onIntent({ action: "reject", reason: "rejected from IntentBar" })}
           >
             拒绝
@@ -232,6 +466,7 @@ export function IntentBar({
             className="btn mini"
             disabled={busy}
             data-testid="agent-intent-cancel"
+            title="取消当前 Run"
             onClick={() => onIntent({ action: "cancel" })}
           >
             取消 Run
@@ -249,16 +484,26 @@ export function IntentBar({
       data-steer={canStop ? "true" : "false"}
       data-queue-count={queueItems.length}
     >
-      <div className="agent-intent-prompt-wrap">
+      <div className="agent-intent-prompt-wrap" ref={commandMenuRef}>
         {queueItems.length > 0 ? (
-          <p className="agent-intent-queue-chip muted-line" data-testid="agent-intent-queue-chip">
+          <p
+            className="agent-intent-queue-chip muted-line"
+            data-testid="agent-intent-queue-chip"
+            role="status"
+            aria-live="polite"
+          >
             队列 {queueItems.length}
             {queueItems[0] ? ` · ${queueItems[0].trim().slice(0, 24)}` : ""}
             {" · 停止只结束当前"}
           </p>
         ) : null}
         {canStop ? (
-          <p className="muted-line" data-testid="agent-intent-steer-hint">
+          <p
+            className="muted-line"
+            data-testid="agent-intent-steer-hint"
+            role="status"
+            aria-live="polite"
+          >
             运行中：发送将打断当前生成并以新提示续写（Steer）
           </p>
         ) : null}
@@ -275,12 +520,18 @@ export function IntentBar({
             disabled={busy}
             data-testid="agent-intent-prompt"
             aria-label={canStop ? "Steer" : "意图"}
+            aria-haspopup="listbox"
+            aria-controls={showMenu ? commandMenuDomId : undefined}
+            aria-expanded={showMenu}
+            aria-autocomplete="list"
+            aria-activedescendant={activeCommandOptionId}
             placeholder={canStop ? COMPOSER_PLACEHOLDER_STEER : COMPOSER_PLACEHOLDER_DEFAULT}
             onChange={(e) => {
               const v = e.target.value;
               setPrompt(v);
               if (v.startsWith("/")) setMenuOpen(true);
             }}
+            onBlur={onPromptBlur}
             onKeyDown={(e) => {
               if (showMenu && items.length > 0) {
                 if (e.key === "ArrowDown") {
@@ -293,14 +544,24 @@ export function IntentBar({
                   setActiveIndex((i) => (i - 1 + items.length) % items.length);
                   return;
                 }
+                if (e.key === "Home") {
+                  e.preventDefault();
+                  setActiveIndex(0);
+                  return;
+                }
+                if (e.key === "End") {
+                  e.preventDefault();
+                  setActiveIndex(items.length - 1);
+                  return;
+                }
                 if (e.key === "Escape") {
                   e.preventDefault();
-                  setMenuOpen(false);
+                  dismissCommandMenu(true);
                   return;
                 }
                 if (e.key === "Enter" && !e.shiftKey) {
                   e.preventDefault();
-                  const it = items[Math.min(activeIndex, items.length - 1)];
+                  const it = items[safeActiveIndex];
                   if (it) pickCommand(it);
                   return;
                 }
@@ -317,8 +578,13 @@ export function IntentBar({
           />
           <div className="agent-intent-toolbar" data-testid="agent-intent-toolbar">
             <div className="agent-composer-tools">
-              <div className="agent-composer-plus-wrap">
+              <div
+                className="agent-composer-plus-wrap"
+                ref={plusMenuRef}
+                onBlur={onPlusRootBlur}
+              >
                 <button
+                  ref={plusTriggerRef}
                   type="button"
                   className="agent-composer-plus"
                   disabled={busy}
@@ -326,16 +592,36 @@ export function IntentBar({
                   aria-label="添加附件或调用指令"
                   aria-haspopup="menu"
                   aria-expanded={plusOpen}
+                  aria-controls={plusOpen ? plusMenuDomId : undefined}
                   title="添加附件或调用指令"
-                  onClick={() => setPlusOpen((open) => !open)}
+                  onClick={() => {
+                    if (plusOpen) {
+                      setPlusOpen(false);
+                      return;
+                    }
+                    dismissCommandMenu();
+                    setPlusOpen(true);
+                    onPlusOpened?.();
+                  }}
+                  onKeyDown={(e) => {
+                    if (busy || plusOpen) return;
+                    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
+                    e.preventDefault();
+                    plusFocusPreferLastRef.current = e.key === "ArrowUp";
+                    dismissCommandMenu();
+                    setPlusOpen(true);
+                    onPlusOpened?.();
+                  }}
                 >
                   +
                 </button>
                 {plusOpen ? (
                   <ul
+                    id={plusMenuDomId}
                     className="agent-composer-plus-menu"
                     data-testid="agent-composer-plus-menu"
                     role="menu"
+                    aria-orientation="vertical"
                     onClick={(e) => {
                       if ((e.target as HTMLElement).closest("button")) setPlusOpen(false);
                     }}
@@ -352,6 +638,7 @@ export function IntentBar({
                           setPlusOpen(false);
                           setMenuOpen(true);
                           if (!prompt.startsWith("/")) setPrompt("/");
+                          queueMicrotask(() => textareaRef.current?.focus());
                         }}
                       >
                         命令
@@ -411,20 +698,33 @@ export function IntentBar({
           </div>
         </div>
         {showMenu ? (
-          <ul className="agent-command-menu" data-testid="agent-command-menu" role="listbox">
+          <ul
+            id={commandMenuDomId}
+            className="agent-command-menu"
+            data-testid="agent-command-menu"
+            role="listbox"
+            aria-orientation="vertical"
+            aria-label="斜杠命令"
+            aria-busy={commandsQuery.isLoading || undefined}
+          >
             {commandsQuery.isLoading ? (
-              <li className="muted-line">加载命令…</li>
+              <li className="muted-line" role="status">
+                加载命令…
+              </li>
             ) : items.length === 0 ? (
-              <li className="muted-line">无匹配命令</li>
+              <li className="muted-line" role="status">
+                无匹配命令
+              </li>
             ) : (
               items.map((it, idx) => (
                 <li key={`${it.source}:${it.name}`}>
                   <button
+                    id={commandOptionDomId(it.name)}
                     type="button"
-                    className={`agent-command-menu-item${idx === activeIndex ? " active" : ""}`}
+                    className={`agent-command-menu-item${idx === safeActiveIndex ? " active" : ""}`}
                     disabled={busy}
                     role="option"
-                    aria-selected={idx === activeIndex}
+                    aria-selected={idx === safeActiveIndex}
                     data-testid={`agent-command-${it.name.replace(/^\//, "")}`}
                     title={busy ? "会话忙" : `填入 ${ensureSlash(it.name)}（不自动发送）`}
                     onMouseEnter={() => setActiveIndex(idx)}
