@@ -23,6 +23,7 @@ describe("workModeFromPath", () => {
     expect(workModeFromPath("/m/reviews")).toBe("review");
     expect(workModeFromPath("/metrics")).toBe("review");
     expect(workModeFromPath("/observability")).toBe("review");
+    expect(workModeFromPath("/observe")).toBe("review");
   });
 
   it("returns null for more/account routes", () => {

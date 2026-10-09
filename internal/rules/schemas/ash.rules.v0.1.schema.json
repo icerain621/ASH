@@ -154,7 +154,7 @@
         "role": { "type": "string", "minLength": 1 },
         "kind": {
           "type": "string",
-          "enum": ["llm", "agent", "tool_chain", "human", "verify"]
+          "enum": ["llm", "agent", "tool_chain", "human", "verify", "review"]
         },
         "promptRef": { "type": "string" },
         "rag": { "$ref": "#/$defs/ragSpec" },
@@ -212,6 +212,7 @@
       "additionalProperties": false,
       "properties": {
         "adapter": { "type": "string", "minLength": 1 },
+        "templateId": { "type": "string", "minLength": 1 },
         "capabilities": {
           "type": "array",
           "items": { "type": "string", "minLength": 1 }

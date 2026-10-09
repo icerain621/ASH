@@ -1,0 +1,36 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "legacy_step_kinds"
+  scenarioVersion: "1.0.0"
+  description: "C02 compat probe: old step kinds map to templates"
+  policyProfile: "default"
+  roles:
+    PM: { maxParallel: 1 }
+    Coder: { maxParallel: 1 }
+    QA: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec, repoRoot]
+  artifacts:
+    required:
+      - { type: "diff" }
+      - { type: "test_report" }
+      - { type: "release_notes" }
+      - { type: "rollback_plan" }
+  steps:
+    - id: "legacy.llm"
+      role: "PM"
+      kind: "llm"
+      promptRef: "prompts/pm_clarify.md"
+    - id: "legacy.chain"
+      role: "Coder"
+      kind: "tool_chain"
+      chain:
+        - { tool: "git.status" }
+    - id: "legacy.verify"
+      role: "QA"
+      kind: "verify"
+      verify:
+        checks:
+          - { tool: "git.status" }
+        onFail: fail

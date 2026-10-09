@@ -54,6 +54,9 @@ func (e *ExecGoCodexExecutor) Plan(ctx context.Context, req Request) (*Result, e
 
 func (e *ExecGoCodexExecutor) Execute(ctx context.Context, req Request) (*Result, error) {
 	start := time.Now()
+	if err := requireContextPack(req); err != nil {
+		return nil, err
+	}
 	if err := e.health(ctx); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBridgeUnavailable, err)
 	}
@@ -282,6 +285,11 @@ func buildCodexPrompt(req Request) string {
 	if req.Prompt != "" {
 		b.WriteString("Step prompt:\n")
 		b.WriteString(req.Prompt)
+		b.WriteString("\n\n")
+	}
+	if req.ContextPack != nil && req.ContextPack.Prefix != "" {
+		b.WriteString("Context pack:\n")
+		b.WriteString(req.ContextPack.Prefix)
 		b.WriteString("\n\n")
 	}
 	b.WriteString("ASH run: " + req.RunID + "\nStep: " + req.StepID + "\n")

@@ -3,7 +3,7 @@ version: "ash.rules/v0.1"
 scenario:
   name: "feature_delivery"
   scenarioVersion: "1.0.0"
-  description: "Feature 从需求到交付的标准流程（M0）"
+  description: "Feature 从需求到交付的薄模板链（v7 P3）"
   policyProfile: "default"
   skills:
     - ash-test-discipline
@@ -13,12 +13,9 @@ scenario:
     retain: 50
 
   roles:
-    PM:        { maxParallel: 1 }
-    Architect: { maxParallel: 1 }
-    Coder:     { maxParallel: 1 }
-    Reviewer:  { maxParallel: 1 }
-    QA:        { maxParallel: 1 }
-    Shipper:   { maxParallel: 1 }
+    Planner:  { maxParallel: 1 }
+    Coder:    { maxParallel: 1 }
+    Reviewer: { maxParallel: 1 }
 
   inputs:
     required: [issueOrSpec, repoRoot]
@@ -44,15 +41,13 @@ scenario:
           - { tool: "git.diff" }
 
   steps:
-    - id: "pm.clarify"
-      role: "PM"
-      kind: "llm"
-      promptRef: "prompts/pm_clarify.md"
-
-    - id: "arch.design"
-      role: "Architect"
-      kind: "llm"
-      promptRef: "prompts/arch_design.md"
+    - id: "plan.clarify"
+      role: "Planner"
+      kind: "agent"
+      timeoutMs: 120000
+      agent:
+        templateId: "tpl.plan-solve"
+        prompt: "Clarify the issue and produce a short executable plan."
       rag:
         sources: ["code", "docs", "memory:L1"]
         requireCitations: true
@@ -62,30 +57,16 @@ scenario:
       kind: "agent"
       timeoutMs: 120000
       agent:
-        adapter: "codex"
-        capabilities: ["code.modify", "test.run", "artifact.diff"]
+        templateId: "tpl.react"
         prompt: "Implement the requested feature or fix with the smallest safe change. Run relevant tests and leave the working tree with the intended diff."
-
-    - id: "qa.verify"
-      role: "QA"
-      kind: "verify"
-      verify:
-        checks:
-          - { tool: "test.run", args: { scope: "changed" }, timeoutMs: 120000 }
-        onFail: improve
-      retry:
-        maxAttempts: 2
-        backoffMs: 200
 
     - id: "review.quality"
       role: "Reviewer"
-      kind: "llm"
-      promptRef: "prompts/review_quality.md"
-
-    - id: "ship.release"
-      role: "Shipper"
-      kind: "llm"
-      promptRef: "prompts/release_pack.md"
+      kind: "review"
+      timeoutMs: 60000
+      agent:
+        templateId: "tpl.reviewer"
+        prompt: "Review the change for correctness, risk, and missing tests."
 
 hooks:
   - id: "hook.pre_tool"

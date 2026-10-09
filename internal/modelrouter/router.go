@@ -101,6 +101,17 @@ func (r Router) Route(req Request) Decision {
 	}
 }
 
+// Completer is the provider port an agent template calls.
+// Vendor SDKs stay behind Router.
+type Completer interface {
+	Complete(req Request) Decision
+}
+
+// Complete routes a prompt through this router.
+func (r Router) Complete(req Request) Decision {
+	return r.Route(req)
+}
+
 func UsageRow(dec Decision, req Request) store.ModelUsage {
 	return store.ModelUsage{
 		ID:    "model_usage_" + uuid.NewString(),

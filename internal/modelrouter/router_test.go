@@ -37,3 +37,11 @@ func TestRouteReportsNotConfiguredWithoutProviders(t *testing.T) {
 		t.Fatalf("provider=%q want primary", decision.Provider.ID)
 	}
 }
+
+func TestCompleterPortDoesNotRequireVendorSDK(t *testing.T) {
+	var port Completer = New(nil)
+	decision := port.Complete(Request{Prompt: "hello from a template"})
+	if decision.Status == "" {
+		t.Fatal("expected a decision from the provider port")
+	}
+}

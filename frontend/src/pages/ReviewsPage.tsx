@@ -19,7 +19,7 @@ import { getAuthMe } from "@/modules/platform/api/platform.api";
 import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPanel";
 import { ThreadComparePanel } from "@/modules/interactions/components/ThreadComparePanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
-import { ObservabilityPage } from "@/pages/ObservabilityPage";
+import { LensPanel } from "@/modules/observability/components/LensPanel";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 type RubricForm = {
@@ -351,6 +351,15 @@ export function ReviewsPage() {
         <div data-testid="review-observe-panel">
           <div className="toolbar metrics-toolbar" style={{ marginBottom: 8 }}>
             <Link
+              to="/observe"
+              search={{ lens: "global" }}
+              className="btn mini"
+              data-testid="review-open-observe"
+              title="打开三镜头观测"
+            >
+              打开观测
+            </Link>
+            <Link
               to="/metrics"
               className="btn mini"
               data-testid="review-open-metrics"
@@ -358,9 +367,9 @@ export function ReviewsPage() {
             >
               打开完整指标
             </Link>
-            <span className="muted-line">观测面板含 review_sla Waker / 告警可见性</span>
+            <span className="muted-line">评审台嵌入全局镜头；运维告警仍在「运维观测」</span>
           </div>
-          <ObservabilityPage />
+          <LensPanel lens="global" compact />
         </div>
       ) : null}
 

@@ -22,6 +22,7 @@ type ACPTaskV1 struct {
 	Issue           string `json:"issue,omitempty"`
 	TimeoutMs       int64  `json:"timeoutMs,omitempty"`
 	ReasoningEffort string `json:"reasoningEffort,omitempty"` // low | medium | high | max
+	ContextPrefix   string `json:"contextPrefix,omitempty"`
 }
 
 // ACPTaskResultV1 is the inbound ACP task result contract.
@@ -53,6 +54,7 @@ func NewACPTaskV1(agentID string, req Request) (ACPTaskV1, error) {
 		Issue:           req.Issue,
 		TimeoutMs:       timeout,
 		ReasoningEffort: acpReasoningEffort(metaString(req.Metadata, "reasoningEffort")),
+		ContextPrefix:   contextPrefix(req),
 	}
 	if err := task.Validate(); err != nil {
 		return ACPTaskV1{}, err

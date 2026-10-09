@@ -1,6 +1,10 @@
 # 进度归属（progress）
 
-**本目录是发布勾选（标准类别：发布证据）。计划与完成度在 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。**
+**本目录是发布勾选（标准类别：发布证据）。计划与完成度在 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。**  
+**This folder holds release checklists. Plan narrative lives in PLAN.**
+
+> 快照 2026-10-08：功能代 **v6.7 已冻结**；代码 `7b474964`；冻结后 P02/推理等级已合入。发布侧仍待云 RDS 与真人签字（见 [`../plan/GA-上线推进计划.md`](../plan/GA-上线推进计划.md)）。  
+> Snapshot 2026-10-08: **v6.7 frozen**; HEAD `7b474964`; post-freeze thin work landed. Release track still waits on cloud RDS and human sign-off.
 
 | 路径 | 用途 |
 |------|------|

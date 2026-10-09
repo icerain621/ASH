@@ -48,7 +48,8 @@ func TestACPExecutorHealthAndExecute(t *testing.T) {
 	}
 	res, err := e.Execute(ctx, Request{
 		RunID: "r1", StepID: "s1", Prompt: "hi",
-		Metadata: map[string]any{"sessionId": "sess_test"},
+		Metadata:    map[string]any{"sessionId": "sess_test"},
+		ContextPack: &ContextPack{},
 	})
 	if err != nil {
 		t.Fatal(err)

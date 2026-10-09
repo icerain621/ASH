@@ -682,6 +682,18 @@ export function AgentChatShell({
             >
               记忆
             </a>
+            <a
+              className="btn mini"
+              data-testid="agent-goto-observe-lens"
+              title="Agent 观测镜头"
+              href={
+                runId
+                  ? `/ui/observe?lens=agent&run=${encodeURIComponent(runId)}`
+                  : "/ui/observe?lens=global"
+              }
+            >
+              观测
+            </a>
             <button
               type="button"
               className="btn mini"

@@ -19,7 +19,7 @@ func TestExecGoCodexExecutorBridgeUnavailableWhenCLIIsMissing(t *testing.T) {
 		RuntimeURL: defaultExecGoRuntimeURL,
 		AgentID:    "test-agent",
 	}
-	_, err := exec.Execute(context.Background(), Request{RunID: "run_missing", StepID: "code.implement", RunDir: t.TempDir()})
+	_, err := exec.Execute(context.Background(), Request{RunID: "run_missing", StepID: "code.implement", RunDir: t.TempDir(), ContextPack: &ContextPack{}})
 	if !errors.Is(err, ErrBridgeUnavailable) {
 		t.Fatalf("err=%v want ErrBridgeUnavailable", err)
 	}
@@ -44,7 +44,7 @@ esac
 		RuntimeURL: defaultExecGoRuntimeURL,
 		AgentID:    "test-agent",
 	}
-	_, err := exec.Execute(context.Background(), Request{RunID: "run_tools", StepID: "code.implement", RunDir: t.TempDir()})
+	_, err := exec.Execute(context.Background(), Request{RunID: "run_tools", StepID: "code.implement", RunDir: t.TempDir(), ContextPack: &ContextPack{}})
 	if !errors.Is(err, ErrBridgeUnavailable) {
 		t.Fatalf("err=%v want ErrBridgeUnavailable", err)
 	}
@@ -75,7 +75,7 @@ esac
 	res, err := exec.Execute(context.Background(), Request{
 		RunID: "run_submit", TraceID: "trace_submit", StepID: "code.implement",
 		RepoRoot: t.TempDir(), RunDir: runDir, Issue: "submit through execgo",
-		Prompt: "make a tiny change",
+		Prompt: "make a tiny change", ContextPack: &ContextPack{},
 	})
 	if err != nil {
 		t.Fatal(err)

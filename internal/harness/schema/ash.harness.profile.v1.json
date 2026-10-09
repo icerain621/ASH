@@ -71,6 +71,11 @@
             "rpcEnabled": { "type": "boolean" },
             "jsonEventsEnabled": { "type": "boolean" }
           }
+        },
+        "components": {
+          "type": "array",
+          "items": { "type": "string", "minLength": 1 },
+          "description": "Approved in-process plugin component ids required before Activate"
         }
       }
     }

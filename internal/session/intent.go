@@ -342,6 +342,11 @@ func (s *Service) emitQueueEvent(view *View, phase, prompt string, queueLen int,
 		"prompt": prompt, "queueLen": queueLen,
 		"threadId": metaString(view.Meta, interaction.MetaThreadID),
 	}, events.WithVisibility(events.VisibilityUIOnly))
+	_, _ = s.events.Append(view.RunID, trace, "session.follow_up", "info", map[string]any{
+		"sessionId": view.ID, "action": IntentQueue, "phase": phase, "actorId": actor,
+		"prompt": prompt, "queueLen": queueLen,
+		"threadId": metaString(view.Meta, interaction.MetaThreadID),
+	}, events.WithVisibility(events.VisibilityUIOnly))
 }
 
 func readFollowUpQueue(meta map[string]any) []string {

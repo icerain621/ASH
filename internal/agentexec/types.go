@@ -9,19 +9,30 @@ var ErrBridgeUnavailable = errors.New("agent bridge unavailable")
 var ErrAgentTaskFailed = errors.New("agent task failed")
 var ErrAgentOutputInvalid = errors.New("agent output invalid")
 
+// ErrEffectGate rejects an external runtime that was not given a Context Pack.
+var ErrEffectGate = errors.New("runtime effect gate: context pack required")
+
+// ContextPack is the GSSC snapshot a runtime plugin must receive (v7 B06).
+type ContextPack struct {
+	Prefix     string
+	Refs       []string
+	MemoryRefs []string
+}
+
 // Request describes one external-agent step execution.
 type Request struct {
-	RunID     string
-	TraceID   string
-	StepID    string
-	Role      string
-	RepoRoot  string
-	RunDir    string
-	Issue     string
-	Prompt    string
-	Inputs    map[string]any
-	TimeoutMs int64
-	Metadata  map[string]any
+	RunID       string
+	TraceID     string
+	StepID      string
+	Role        string
+	RepoRoot    string
+	RunDir      string
+	Issue       string
+	Prompt      string
+	Inputs      map[string]any
+	TimeoutMs   int64
+	Metadata    map[string]any
+	ContextPack *ContextPack
 }
 
 // Result is the normalized outcome of an external agent task.

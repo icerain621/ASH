@@ -14,6 +14,7 @@ import (
 	"github.com/santhosh-tekuri/jsonschema/v6"
 	"gorm.io/gorm"
 
+	"github.com/ash-repwiki/ash/internal/plugins"
 	"github.com/ash-repwiki/ash/internal/store"
 )
 
@@ -72,6 +73,8 @@ type ProfileSpecBody struct {
 	SubRun        *SubRunSpec      `json:"subRun,omitempty"`
 	Skills        []string         `json:"skills,omitempty"`
 	Integration   *IntegrationSpec `json:"integration,omitempty"`
+	// Components lists production plugin ids that must be approved before Activate (B05).
+	Components []string `json:"components,omitempty"`
 }
 
 type ProfileDocument struct {
@@ -107,7 +110,8 @@ type UpdateRequest struct {
 }
 
 type Service struct {
-	db *store.DB
+	db   *store.DB
+	host *plugins.Host
 }
 
 func NewService(db *store.DB) *Service {
@@ -118,7 +122,24 @@ func (s *Service) WithContext(ctx context.Context) *Service {
 	if s == nil || ctx == nil {
 		return s
 	}
-	return &Service{db: s.db.BindContext(ctx)}
+	return &Service{db: s.db.BindContext(ctx), host: s.host}
+}
+
+// WithHost binds an in-process plugin host used on Promote.
+func (s *Service) WithHost(host *plugins.Host) *Service {
+	if s == nil {
+		return s
+	}
+	out := *s
+	out.host = host
+	return &out
+}
+
+func (s *Service) componentHost() *plugins.Host {
+	if s != nil && s.host != nil {
+		return s.host
+	}
+	return plugins.Global()
 }
 
 func DefaultSpec() ProfileSpecBody {
@@ -341,8 +362,17 @@ func (s *Service) Promote(id, actorID string) (*ProfileView, error) {
 	if row.Status != StatusInReview && row.Status != StatusPendingSecond {
 		return nil, fmt.Errorf("profile must be in_review or pending_second to promote")
 	}
+	view, err := toView(row)
+	if err != nil {
+		return nil, err
+	}
+	if comps := view.Spec.Components; len(comps) > 0 {
+		if err := s.componentHost().BindProduction(comps); err != nil {
+			return nil, fmt.Errorf("harness components: %w", err)
+		}
+	}
 	now := time.Now().UTC()
-	err := s.db.Transaction(func(tx *gorm.DB) error {
+	err = s.db.Transaction(func(tx *gorm.DB) error {
 		if err := tx.Model(&store.HarnessProfileVersion{}).
 			Where("space_id = ? AND name = ? AND status = ? AND id <> ?", row.SpaceID, row.Name, StatusActive, row.ID).
 			Updates(map[string]any{"status": StatusArchived, "updated_at": now}).Error; err != nil {

@@ -42,6 +42,9 @@ func (e *ACPExecutor) Plan(ctx context.Context, req Request) (*Result, error) {
 
 func (e *ACPExecutor) Execute(ctx context.Context, req Request) (*Result, error) {
 	start := time.Now()
+	if err := requireContextPack(req); err != nil {
+		return nil, err
+	}
 	if err := e.health(ctx); err != nil {
 		return nil, fmt.Errorf("%w: %v", ErrBridgeUnavailable, err)
 	}

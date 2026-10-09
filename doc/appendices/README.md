@@ -12,6 +12,7 @@
 - `C-MemorySchema(SQLite)+迁移.md`：DDL、评审流、迁移与兼容策略
 - `D-Observability-指标与告警.md`：插件配置 schema、指标清单、告警规则建议
 - `E-TR用例集与Doctor.md`：TR0~TR3 用例、`ash doctor` 输出格式与门禁
+- `E2-评审与质量用例.md`：v7 Doctor=`BOOT` vs `QUALITY` / 评审分工（中英）
 - `F-Artifacts规范与Digest.md`：Artifacts 类型、manifest、digest、保留/导出、回放一致性
 - `G-OpenAPI-端点清单(M0).md`：M0 必需 HTTP API 端点边界（Swagger/OpenAPI）
 - `H-Proto-服务定义(插件ABI)v0.1.md`：gRPC/Buf 插件 ABI 草案与目录结构

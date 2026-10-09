@@ -796,6 +796,38 @@ type HarnessProfileVersion struct {
 
 func (HarnessProfileVersion) TableName() string { return "harness_profile_versions" }
 
+// AgentTemplateVersion stores custom agent template candidates and approvals (v7 G01).
+type AgentTemplateVersion struct {
+	ID           string     `gorm:"primaryKey;size:64"`
+	SpaceID      string     `gorm:"index;size:64;not null;uniqueIndex:uidx_agent_tpl_space_id_ver"`
+	TemplateID   string     `gorm:"size:128;not null;uniqueIndex:uidx_agent_tpl_space_id_ver"`
+	Version      string     `gorm:"size:64;not null;uniqueIndex:uidx_agent_tpl_space_id_ver"`
+	Status       string     `gorm:"size:32;not null;index"` // candidate|approved|rejected
+	ManifestJSON string     `gorm:"type:text;not null"`
+	CreatedBy    string     `gorm:"size:128"`
+	ApprovedBy   string     `gorm:"size:128"`
+	CreatedAt    time.Time  `gorm:"not null"`
+	UpdatedAt    time.Time  `gorm:"not null"`
+	ApprovedAt   *time.Time `gorm:""`
+}
+
+func (AgentTemplateVersion) TableName() string { return "agent_templates" }
+
+// ReviewItemRow persists the v7 review queue (templates, harness, memory, artifacts, samples).
+type ReviewItemRow struct {
+	ID        string     `gorm:"primaryKey;size:64"`
+	SpaceID   string     `gorm:"index;size:64;not null"`
+	Kind      string     `gorm:"size:64;not null;index"`
+	TargetID  string     `gorm:"size:128;not null;index"`
+	Status    string     `gorm:"size:32;not null;index"` // pending|approved|rejected
+	Reason    string     `gorm:"type:text"`
+	DecidedBy string     `gorm:"size:128"`
+	CreatedAt time.Time  `gorm:"not null"`
+	DecidedAt *time.Time `gorm:""`
+}
+
+func (ReviewItemRow) TableName() string { return "review_items" }
+
 // ScenarioPatchDraft stores orchestration scenario DSL patch drafts (v2 DZ).
 type ScenarioPatchDraft struct {
 	ID           string     `gorm:"primaryKey;size:64"`

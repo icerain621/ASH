@@ -14,7 +14,7 @@ type QuotaStatus struct {
 }
 
 // BuildQuotaStatus joins BodyJSON quotas with an active-run count.
-// tokenBudgetProxyUsed stays 0 until token accounting ships (still expose the limit).
+// tokenBudgetProxyUsed stays 0 on this projection until runs report loop usage.
 func BuildQuotaStatus(spaceID string, bodyJSON string, activeConcurrent int) (QuotaStatus, error) {
 	q, err := QuotasFromBodyJSON(bodyJSON)
 	if err != nil {

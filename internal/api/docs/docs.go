@@ -20,6 +20,273 @@ const docTemplate = `{
     "host": "{{.Host}}",
     "basePath": "{{.BasePath}}",
     "paths": {
+        "/api/v1/agent-components": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "List in-process agent/memory plugin components",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.agentComponentListResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Register an in-process plugin component (defaults to candidate)",
+                "parameters": [
+                    {
+                        "description": "component",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.registerAgentComponentRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-components/{componentId}/approve": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Approve a candidate plugin component for production binding",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "component id",
+                        "name": "componentId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-reviews": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Enqueue an in-process review item (template/harness/memory/artifact/run)",
+                "parameters": [
+                    {
+                        "description": "review target",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.submitAgentReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-reviews/{reviewId}/decide": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Decide an in-process review item; template/component approvals side-effect",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "review id",
+                        "name": "reviewId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "decision",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.decideAgentReviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review.Item"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-templates": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "List built-in agent templates",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.ListResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-templates/candidates": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Submit a custom agent template as candidate",
+                "parameters": [
+                    {
+                        "description": "template manifest",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.submitAgentTemplateRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/agent-templates/{templateId}/approve": {
+            "post": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Approve a candidate agent template for production binding",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "template id",
+                        "name": "templateId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.approveAgentTemplateResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/agent-workspaces": {
             "get": {
                 "description": "List active agent.workspace audit documents for a space, newest updatedAt first.",
@@ -2240,6 +2507,45 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/context-pack/preview": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "agents"
+                ],
+                "summary": "Preview a Context Pack (issue + RAG + memory)",
+                "parameters": [
+                    {
+                        "description": "pack input",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.contextPackPreviewRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_contextpack.Pack"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/data-policy": {
             "get": {
                 "produces": [
@@ -4411,6 +4717,119 @@ const docTemplate = `{
                 }
             }
         },
+        "/api/v1/observability/lenses/agent": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Agent observation lens for one run",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "run id",
+                        "name": "runId",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.AgentView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/lenses/global": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Global observation lens snapshot",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "space id",
+                        "name": "spaceId",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.GlobalView"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/observability/lenses/memory": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "observability"
+                ],
+                "summary": "Memory lineage observation lens",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "memory id",
+                        "name": "id",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.MemoryLineageView"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/api/v1/observability/otel/status": {
             "get": {
                 "produces": [
@@ -4789,6 +5208,45 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/passk/run": {
+            "post": {
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Run Pass^k sampling for a frozen review check (not Doctor)",
+                "parameters": [
+                    {
+                        "description": "k and target",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.passKRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review_passk.Result"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
                         }
@@ -9149,6 +9607,81 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_agenttpl.Entry": {
+            "type": "object",
+            "properties": {
+                "manifest": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_agenttpl.ListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_agenttpl.Manifest": {
+            "type": "object",
+            "properties": {
+                "compaction": {
+                    "type": "string"
+                },
+                "hooks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "loop": {
+                    "type": "string"
+                },
+                "maxTurns": {
+                    "type": "integer"
+                },
+                "memory": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "planMemory": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sandbox": {
+                    "type": "string"
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "version": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_agentworkspace.AttachRequest": {
             "type": "object",
             "required": [
@@ -9636,6 +10169,51 @@ const docTemplate = `{
                 },
                 "memoryTtlReviewDays": {
                     "type": "integer"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_contextpack.Hit": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_contextpack.Pack": {
+            "type": "object",
+            "properties": {
+                "memoryRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "prefix": {
+                    "type": "string"
+                },
+                "refs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_contextpack.SkillCard": {
+            "type": "object",
+            "properties": {
+                "body": {
+                    "type": "string"
+                },
+                "description": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
                 }
             }
         },
@@ -10157,6 +10735,13 @@ const docTemplate = `{
             "properties": {
                 "compaction": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.CompactionSpec"
+                },
+                "components": {
+                    "description": "Components lists production plugin ids that must be approved before Activate (B05).",
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 },
                 "integration": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_harness.IntegrationSpec"
@@ -11009,6 +11594,9 @@ const docTemplate = `{
                 "text"
             ],
             "properties": {
+                "clearance": {
+                    "type": "string"
+                },
                 "layers": {
                     "type": "array",
                     "items": {
@@ -11629,6 +12217,152 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.AgentView": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent"
+                    }
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "traceId": {
+                    "type": "string"
+                },
+                "waterfall": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability.Waterfall"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.CountItem": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.GlobalView": {
+            "type": "object",
+            "properties": {
+                "doctorChip": {
+                    "type": "string"
+                },
+                "failedClusters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.CountItem"
+                    }
+                },
+                "gateRejects": {
+                    "type": "integer"
+                },
+                "generatedAt": {
+                    "type": "integer"
+                },
+                "reviewPending": {
+                    "type": "integer"
+                },
+                "runningRuns": {
+                    "type": "integer"
+                },
+                "templateUsage": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.CountItem"
+                    }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.Lens": {
+            "type": "string",
+            "enum": [
+                "global",
+                "agent",
+                "memory"
+            ],
+            "x-enum-varnames": [
+                "LensGlobal",
+                "LensAgent",
+                "LensMemory"
+            ]
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent": {
+            "type": "object",
+            "properties": {
+                "lens": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.Lens"
+                },
+                "payload": {
+                    "type": "object",
+                    "additionalProperties": {}
+                },
+                "redacted": {
+                    "type": "boolean"
+                },
+                "runId": {
+                    "type": "string"
+                },
+                "ts": {
+                    "type": "integer"
+                },
+                "type": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.MemoryLineageView": {
+            "type": "object",
+            "properties": {
+                "events": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent"
+                    }
+                },
+                "memoryId": {
+                    "type": "string"
+                },
+                "redacted": {
+                    "type": "boolean"
+                },
+                "stages": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.MemoryStage"
+                    }
+                },
+                "status": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_observability_lenses.MemoryStage": {
+            "type": "object",
+            "properties": {
+                "at": {
+                    "type": "integer"
+                },
+                "detail": {
+                    "type": "string"
+                },
+                "eventId": {
+                    "type": "string"
+                },
+                "stage": {
+                    "type": "string"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_observability_otel.Status": {
             "type": "object",
             "properties": {
@@ -11752,6 +12486,20 @@ const docTemplate = `{
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec"
                     }
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_plugins.Component": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -12363,6 +13111,83 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_review.Item": {
+            "type": "object",
+            "properties": {
+                "created": {
+                    "type": "integer"
+                },
+                "decided": {
+                    "type": "integer"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review.Kind"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "targetId": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_review.Kind": {
+            "type": "string",
+            "enum": [
+                "agent_template",
+                "harness_profile",
+                "memory_record",
+                "artifact",
+                "run_sample"
+            ],
+            "x-enum-varnames": [
+                "KindAgentTemplate",
+                "KindHarnessProfile",
+                "KindMemoryRecord",
+                "KindArtifact",
+                "KindRunSample"
+            ]
+        },
+        "github_com_ash-repwiki_ash_internal_review_passk.Cluster": {
+            "type": "object",
+            "properties": {
+                "count": {
+                    "type": "integer"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
+        "github_com_ash-repwiki_ash_internal_review_passk.Result": {
+            "type": "object",
+            "properties": {
+                "allPass": {
+                    "type": "boolean"
+                },
+                "failClusters": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review_passk.Cluster"
+                    }
+                },
+                "fails": {
+                    "type": "integer"
+                },
+                "k": {
+                    "type": "integer"
+                },
+                "passes": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_rules.AgentSpec": {
             "type": "object",
             "properties": {
@@ -12376,6 +13201,9 @@ const docTemplate = `{
                     }
                 },
                 "prompt": {
+                    "type": "string"
+                },
+                "templateId": {
                     "type": "string"
                 }
             }
@@ -13423,6 +14251,15 @@ const docTemplate = `{
                 "createdAt": {
                     "type": "integer"
                 },
+                "llmModel": {
+                    "type": "string"
+                },
+                "providerKind": {
+                    "type": "string"
+                },
+                "reasoningEffort": {
+                    "type": "string"
+                },
                 "source": {
                     "description": "\"echo\" | \"llm\" | adapter name",
                     "type": "string"
@@ -13577,7 +14414,7 @@ const docTemplate = `{
             "type": "object",
             "properties": {
                 "chatModel": {
-                    "description": "ASH_LLM chat model id when configured; omitted otherwise.",
+                    "description": "ASH_LLM model when configured",
                     "type": "string"
                 },
                 "items": {
@@ -16806,11 +17643,30 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.agentComponentListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component"
+                    }
+                }
+            }
+        },
         "internal_api.applyAuditRetentionRequest": {
             "type": "object",
             "properties": {
                 "dryRun": {
                     "type": "boolean"
+                }
+            }
+        },
+        "internal_api.approveAgentTemplateResponse": {
+            "type": "object",
+            "properties": {
+                "entry": {
+                    "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry"
                 }
             }
         },
@@ -16880,6 +17736,38 @@ const docTemplate = `{
                 },
                 "right": {
                     "type": "string"
+                }
+            }
+        },
+        "internal_api.contextPackPreviewRequest": {
+            "type": "object",
+            "properties": {
+                "issue": {
+                    "type": "string"
+                },
+                "memories": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_contextpack.Hit"
+                    }
+                },
+                "memory": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "ragRefs": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_contextpack.SkillCard"
+                    }
                 }
             }
         },
@@ -17148,6 +18036,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.decideAgentReviewRequest": {
+            "type": "object",
+            "properties": {
+                "decision": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.decideCIDiagnosisRequest": {
             "type": "object",
             "properties": {
@@ -17358,6 +18257,17 @@ const docTemplate = `{
                 }
             }
         },
+        "internal_api.passKRequest": {
+            "type": "object",
+            "properties": {
+                "k": {
+                    "type": "integer"
+                },
+                "target": {
+                    "type": "string"
+                }
+            }
+        },
         "internal_api.patchMCPToolRequest": {
             "type": "object",
             "properties": {
@@ -17444,6 +18354,20 @@ const docTemplate = `{
                 },
                 "ttlSeconds": {
                     "type": "integer"
+                }
+            }
+        },
+        "internal_api.registerAgentComponentRequest": {
+            "type": "object",
+            "properties": {
+                "id": {
+                    "type": "string"
+                },
+                "kind": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
                 }
             }
         },
@@ -17618,6 +18542,73 @@ const docTemplate = `{
                 },
                 "pack": {
                     "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.Pack"
+                }
+            }
+        },
+        "internal_api.submitAgentReviewRequest": {
+            "type": "object",
+            "properties": {
+                "kind": {
+                    "type": "string"
+                },
+                "reason": {
+                    "type": "string"
+                },
+                "targetId": {
+                    "type": "string"
+                }
+            }
+        },
+        "internal_api.submitAgentTemplateRequest": {
+            "type": "object",
+            "properties": {
+                "compaction": {
+                    "type": "string"
+                },
+                "hooks": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "loop": {
+                    "type": "string"
+                },
+                "maxTurns": {
+                    "type": "integer"
+                },
+                "memory": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "planMemory": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "sandbox": {
+                    "type": "string"
+                },
+                "skills": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "tools": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "version": {
+                    "type": "string"
                 }
             }
         },

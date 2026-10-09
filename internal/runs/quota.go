@@ -12,7 +12,7 @@ import (
 var ErrSpaceQuotaExceeded = errors.New("SPACE_QUOTA_EXCEEDED")
 
 // enforceSpaceQuotas fails closed when maxConcurrentRuns is set and active runs are at limit.
-// tokenBudgetProxy is parsed for DX68 projection; hard token accounting is not enforced here.
+// tokenBudgetProxy is still a projection on the quota API. The agent loop deducts TokenBudget.
 func (s *Service) enforceSpaceQuotas(spaceID string) error {
 	spaceID = firstNonEmpty(spaceID, "local")
 	var row store.SpacePolicyPack

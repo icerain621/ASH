@@ -1,8 +1,8 @@
 # ASH 文档归属索引
 
-> 更新：2026-09-23  
-> 代码水位：**v6.7 已冻结**（`main` `65308c4f`）。tag 人工，尚未打 `v6.*`。  
-> Watermark: **v6.7 frozen**. Tags are manual. No `v6.*` tag yet.
+> 更新：2026-10-08  
+> 代码水位：**v6.7 已冻结**（`main` `7b474964`）。冻结后已合入推理等级 / P02 无障碍等（不升代）。tag 人工，尚未打 `v6.*`。  
+> Watermark: **v6.7 frozen** at `7b474964`. Post-freeze thin work is on main (no new generation). Tags are manual. No `v6.*` tag yet.
 
 人读文档按软件交付的标准类别归类。门禁路径不搬。  
 Reader docs follow standard delivery classes. Gate paths stay put.
@@ -46,7 +46,7 @@ doc/
 
 | 文档 | 职责 | Owner 角色 |
 |------|------|------------|
-| [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结） | 项目经理/技术 |
+| [`PLAN-进度与里程碑.md`](plan/PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结 + 冻结后水位） | 项目经理/技术 |
 | [`GA-上线推进计划.md`](plan/GA-上线推进计划.md) | 打包上线六步（签字、云库、切换日） | 项目经理/发布 |
 | [`TODO.md`](plan/TODO.md) | 未完成短清单（P0–P3） | 全员更新 |
 | [`v4.x-program.md`](plan/v4.x-program.md) | **v4.x** 四代分冻（Auth → 企业 Agentic → Stage-1 → 生态） | 项目经理/架构 |

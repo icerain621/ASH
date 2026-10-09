@@ -68,7 +68,8 @@ func TestACPSmokeAgainstEnv(t *testing.T) {
 	e := NewACPExecutor()
 	res, err := e.Execute(ctx, Request{
 		RunID: "run_smoke", StepID: "s1", Prompt: "acp-smoke",
-		Metadata: map[string]any{"sessionId": "sess_smoke"},
+		Metadata:    map[string]any{"sessionId": "sess_smoke"},
+		ContextPack: &ContextPack{},
 	})
 	if err != nil {
 		t.Fatal(err)

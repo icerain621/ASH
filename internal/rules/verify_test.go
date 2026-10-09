@@ -23,7 +23,7 @@ scenario:
 	}
 }
 
-func TestParseAndValidate_featureDeliveryHasVerify(t *testing.T) {
+func TestParseAndValidate_featureDeliveryIsThinTemplates(t *testing.T) {
 	raw, err := os.ReadFile(filepath.Join("..", "..", "scenarios", "feature_delivery.yaml"))
 	if err != nil {
 		t.Fatal(err)
@@ -32,16 +32,23 @@ func TestParseAndValidate_featureDeliveryHasVerify(t *testing.T) {
 	if !res.OK {
 		t.Fatalf("%v", res.Issues)
 	}
-	found := false
+	want := map[string]string{
+		"plan.clarify":   "agent",
+		"code.implement": "agent",
+		"review.quality": "review",
+	}
+	got := map[string]string{}
 	for _, st := range res.Doc.Scenario.Steps {
-		if st.ID == "qa.verify" && st.Kind == "verify" {
-			found = true
-			if st.Verify == nil || len(st.Verify.Checks) == 0 || st.Verify.OnFail != "improve" {
-				t.Fatalf("%+v", st.Verify)
+		got[st.ID] = st.Kind
+		if st.Kind == "agent" || st.Kind == "review" {
+			if st.Agent == nil || st.Agent.TemplateID == "" {
+				t.Fatalf("step %s missing templateId", st.ID)
 			}
 		}
 	}
-	if !found {
-		t.Fatal("qa.verify missing")
+	for id, kind := range want {
+		if got[id] != kind {
+			t.Fatalf("step %s kind=%q want %q (got=%v)", id, got[id], kind, got)
+		}
 	}
 }

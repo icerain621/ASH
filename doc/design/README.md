@@ -7,6 +7,7 @@ This folder is the requirements spec and the design description.
 |------|------|
 | [`SRS-需求规格.md`](SRS-需求规格.md) | 需求：定位、场景、功能点、Out |
 | [`SDD-总体设计.md`](SDD-总体设计.md) | 设计：建构演进、吸收、前端原型、后端模块层级 |
+| [`ASH-Pi组件重构-改动清单.md`](ASH-Pi组件重构-改动清单.md) | 重构：Pi 形组件、薄 Workflow、Doctor/评审分离、三镜头观测、全量改动 ID |
 | [`../appendices/`](../appendices/README.md) | 设计附属：协议与 Schema（路径稳定） |
 
 计划与进度在 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。测试验收在 [`../checklists/`](../checklists/smoke-index.md)。发布证据在 [`../evidence/`](../evidence/README.md)。  

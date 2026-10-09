@@ -22,7 +22,10 @@ export function workModeFromPath(pathname: string): WorkMode | null {
     p.includes("/metrics/") ||
     p === "/observability" ||
     p.endsWith("/observability") ||
-    p.includes("/observability/")
+    p.includes("/observability/") ||
+    p === "/observe" ||
+    p.endsWith("/observe") ||
+    p.includes("/observe/")
   ) {
     return "review";
   }

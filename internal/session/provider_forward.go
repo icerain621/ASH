@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/contextpack"
 )
 
 // forwardTurnProvider best-effort runs the session provider executor and returns ledger metadata.
@@ -70,11 +71,26 @@ func (s *Service) forwardTurnProvider(view *View, turn Turn) map[string]any {
 	if strings.TrimSpace(view.ReasoningEffort) != "" {
 		meta["reasoningEffort"] = view.ReasoningEffort
 	}
+	built, packErr := contextpack.Build(contextpack.Input{
+		Issue:  turn.Prompt,
+		Memory: contextpack.LegacyReactMemory(),
+	})
+	if packErr != nil {
+		return map[string]any{
+			"providerForwarded": false,
+			"providerError":     packErr.Error(),
+			"providerKind":      kind,
+			"providerAdapter":   adapter,
+		}
+	}
 	res, err := exec.Execute(ctx, agentexec.Request{
 		RunID: view.RunID, TraceID: view.TraceID, StepID: turn.ID,
 		RepoRoot: view.RepoRoot, Prompt: turn.Prompt,
 		Metadata:  meta,
 		TimeoutMs: 30000,
+		ContextPack: &agentexec.ContextPack{
+			Prefix: built.Prefix, Refs: built.Refs, MemoryRefs: built.MemoryRefs,
+		},
 	})
 	if err != nil {
 		return map[string]any{

@@ -326,6 +326,14 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 	usedLLM := false
 	var providerPayload map[string]any
 
+	// C04: chat with no bound scenario/run stays on a one-template path.
+	if strings.TrimSpace(view.RunID) == "" {
+		if view.Meta == nil {
+			view.Meta = map[string]any{}
+		}
+		view.Meta["templateId"] = "tpl.react"
+	}
+
 	if llmchat.Configured() {
 		usedLLM = s.replyViaLLM(flightCtx, flight, view, turn, prompt, func(extra map[string]any) {
 			s.emitSessionTurn(view, turn, prompt, extra)
@@ -337,6 +345,12 @@ func (s *Service) PromptTurn(sessionID string, req TurnRequest) (*View, *Turn, e
 			s.emitAssistantReplyChunks(view, turn, "（已停止）", "echo", []string{"（已停止）"}, true)
 		} else {
 			providerPayload = s.forwardTurnProvider(view, turn)
+			if providerPayload == nil {
+				providerPayload = map[string]any{}
+			}
+			if strings.TrimSpace(view.RunID) == "" {
+				providerPayload["templateId"] = "tpl.react"
+			}
 			s.emitSessionTurn(view, turn, prompt, providerPayload)
 			replyText, replySource := resolveAssistantText(prompt, providerPayload)
 			if err := flightCtx.Err(); err != nil {

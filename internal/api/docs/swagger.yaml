@@ -13,6 +13,55 @@ definitions:
       ok:
         type: boolean
     type: object
+  github_com_ash-repwiki_ash_internal_agenttpl.Entry:
+    properties:
+      manifest:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest'
+      status:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_agenttpl.ListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest'
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_agenttpl.Manifest:
+    properties:
+      compaction:
+        type: string
+      hooks:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      loop:
+        type: string
+      maxTurns:
+        type: integer
+      memory:
+        items:
+          type: string
+        type: array
+      planMemory:
+        items:
+          type: string
+        type: array
+      sandbox:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      tools:
+        items:
+          type: string
+        type: array
+      version:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_agentworkspace.AttachRequest:
     properties:
       sessionId:
@@ -333,6 +382,35 @@ definitions:
         type: integer
       memoryTtlReviewDays:
         type: integer
+    type: object
+  github_com_ash-repwiki_ash_internal_contextpack.Hit:
+    properties:
+      id:
+        type: string
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_contextpack.Pack:
+    properties:
+      memoryRefs:
+        items:
+          type: string
+        type: array
+      prefix:
+        type: string
+      refs:
+        items:
+          type: string
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_contextpack.SkillCard:
+    properties:
+      body:
+        type: string
+      description:
+        type: string
+      name:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_diffparse.DiffLine:
     properties:
@@ -674,6 +752,12 @@ definitions:
     properties:
       compaction:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.CompactionSpec'
+      components:
+        description: Components lists production plugin ids that must be approved
+          before Activate (B05).
+        items:
+          type: string
+        type: array
       integration:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.IntegrationSpec'
       policyProfile:
@@ -1231,6 +1315,8 @@ definitions:
     type: object
   github_com_ash-repwiki_ash_internal_memory.QueryRequest:
     properties:
+      clearance:
+        type: string
       layers:
         items:
           type: string
@@ -1639,6 +1725,103 @@ definitions:
       traceId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.AgentView:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent'
+        type: array
+      runId:
+        type: string
+      traceId:
+        type: string
+      waterfall:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability.Waterfall'
+    type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.CountItem:
+    properties:
+      count:
+        type: integer
+      id:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.GlobalView:
+    properties:
+      doctorChip:
+        type: string
+      failedClusters:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.CountItem'
+        type: array
+      gateRejects:
+        type: integer
+      generatedAt:
+        type: integer
+      reviewPending:
+        type: integer
+      runningRuns:
+        type: integer
+      templateUsage:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.CountItem'
+        type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.Lens:
+    enum:
+    - global
+    - agent
+    - memory
+    type: string
+    x-enum-varnames:
+    - LensGlobal
+    - LensAgent
+    - LensMemory
+  github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent:
+    properties:
+      lens:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.Lens'
+      payload:
+        additionalProperties: {}
+        type: object
+      redacted:
+        type: boolean
+      runId:
+        type: string
+      ts:
+        type: integer
+      type:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.MemoryLineageView:
+    properties:
+      events:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent'
+        type: array
+      memoryId:
+        type: string
+      redacted:
+        type: boolean
+      stages:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.MemoryStage'
+        type: array
+      status:
+        type: string
+      title:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_observability_lenses.MemoryStage:
+    properties:
+      at:
+        type: integer
+      detail:
+        type: string
+      eventId:
+        type: string
+      stage:
+        type: string
+    type: object
   github_com_ash-repwiki_ash_internal_observability_otel.Status:
     properties:
       enabled:
@@ -1721,6 +1904,15 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.SpaceSpec'
         type: array
+    type: object
+  github_com_ash-repwiki_ash_internal_plugins.Component:
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+      status:
+        type: string
     type: object
   github_com_ash-repwiki_ash_internal_quest.BoardItem:
     properties:
@@ -2127,6 +2319,59 @@ definitions:
       spaceId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_review.Item:
+    properties:
+      created:
+        type: integer
+      decided:
+        type: integer
+      id:
+        type: string
+      kind:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review.Kind'
+      reason:
+        type: string
+      status:
+        type: string
+      targetId:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_review.Kind:
+    enum:
+    - agent_template
+    - harness_profile
+    - memory_record
+    - artifact
+    - run_sample
+    type: string
+    x-enum-varnames:
+    - KindAgentTemplate
+    - KindHarnessProfile
+    - KindMemoryRecord
+    - KindArtifact
+    - KindRunSample
+  github_com_ash-repwiki_ash_internal_review_passk.Cluster:
+    properties:
+      count:
+        type: integer
+      reason:
+        type: string
+    type: object
+  github_com_ash-repwiki_ash_internal_review_passk.Result:
+    properties:
+      allPass:
+        type: boolean
+      failClusters:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review_passk.Cluster'
+        type: array
+      fails:
+        type: integer
+      k:
+        type: integer
+      passes:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_rules.AgentSpec:
     properties:
       adapter:
@@ -2136,6 +2381,8 @@ definitions:
           type: string
         type: array
       prompt:
+        type: string
+      templateId:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_rules.ApprovalSpec:
@@ -2822,6 +3069,12 @@ definitions:
         type: array
       createdAt:
         type: integer
+      llmModel:
+        type: string
+      providerKind:
+        type: string
+      reasoningEffort:
+        type: string
       source:
         description: '"echo" | "llm" | adapter name'
         type: string
@@ -2923,7 +3176,7 @@ definitions:
   github_com_ash-repwiki_ash_internal_session.ModelsResponse:
     properties:
       chatModel:
-        description: ASH_LLM chat model id when configured; omitted otherwise.
+        description: ASH_LLM model when configured
         type: string
       items:
         items:
@@ -5048,10 +5301,22 @@ definitions:
         example: true
         type: boolean
     type: object
+  internal_api.agentComponentListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component'
+        type: array
+    type: object
   internal_api.applyAuditRetentionRequest:
     properties:
       dryRun:
         type: boolean
+    type: object
+  internal_api.approveAgentTemplateResponse:
+    properties:
+      entry:
+        $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry'
     type: object
   internal_api.approveGoalPlanRequest:
     properties:
@@ -5097,6 +5362,27 @@ definitions:
         type: string
       right:
         type: string
+    type: object
+  internal_api.contextPackPreviewRequest:
+    properties:
+      issue:
+        type: string
+      memories:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_contextpack.Hit'
+        type: array
+      memory:
+        items:
+          type: string
+        type: array
+      ragRefs:
+        items:
+          type: string
+        type: array
+      skills:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_contextpack.SkillCard'
+        type: array
     type: object
   internal_api.createDeviceSessionRequest:
     properties:
@@ -5273,6 +5559,13 @@ definitions:
       spaceId:
         type: string
     type: object
+  internal_api.decideAgentReviewRequest:
+    properties:
+      decision:
+        type: string
+      reason:
+        type: string
+    type: object
   internal_api.decideCIDiagnosisRequest:
     properties:
       reason:
@@ -5411,6 +5704,13 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_orgtemplates.Template'
         type: array
     type: object
+  internal_api.passKRequest:
+    properties:
+      k:
+        type: integer
+      target:
+        type: string
+    type: object
   internal_api.patchMCPToolRequest:
     properties:
       risk:
@@ -5467,6 +5767,15 @@ definitions:
         type: string
       ttlSeconds:
         type: integer
+    type: object
+  internal_api.registerAgentComponentRequest:
+    properties:
+      id:
+        type: string
+      kind:
+        type: string
+      status:
+        type: string
     type: object
   internal_api.registerMCPToolRequest:
     properties:
@@ -5582,6 +5891,50 @@ definitions:
       pack:
         $ref: '#/definitions/github_com_ash-repwiki_ash_internal_spacepolicy.Pack'
     type: object
+  internal_api.submitAgentReviewRequest:
+    properties:
+      kind:
+        type: string
+      reason:
+        type: string
+      targetId:
+        type: string
+    type: object
+  internal_api.submitAgentTemplateRequest:
+    properties:
+      compaction:
+        type: string
+      hooks:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      loop:
+        type: string
+      maxTurns:
+        type: integer
+      memory:
+        items:
+          type: string
+        type: array
+      planMemory:
+        items:
+          type: string
+        type: array
+      sandbox:
+        type: string
+      skills:
+        items:
+          type: string
+        type: array
+      tools:
+        items:
+          type: string
+        type: array
+      version:
+        type: string
+    type: object
   internal_api.toolRiskCatalogResponse:
     properties:
       docRef:
@@ -5652,6 +6005,178 @@ info:
   title: ASH Worker API
   version: "0.1"
 paths:
+  /api/v1/agent-components:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.agentComponentListResponse'
+      summary: List in-process agent/memory plugin components
+      tags:
+      - agents
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: component
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.registerAgentComponentRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Register an in-process plugin component (defaults to candidate)
+      tags:
+      - agents
+  /api/v1/agent-components/{componentId}/approve:
+    post:
+      parameters:
+      - description: component id
+        in: path
+        name: componentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Approve a candidate plugin component for production binding
+      tags:
+      - agents
+  /api/v1/agent-reviews:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: review target
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.submitAgentReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review.Item'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Enqueue an in-process review item (template/harness/memory/artifact/run)
+      tags:
+      - reviews
+  /api/v1/agent-reviews/{reviewId}/decide:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: review id
+        in: path
+        name: reviewId
+        required: true
+        type: string
+      - description: decision
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.decideAgentReviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review.Item'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Decide an in-process review item; template/component approvals side-effect
+      tags:
+      - reviews
+  /api/v1/agent-templates:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.ListResponse'
+      summary: List built-in agent templates
+      tags:
+      - agents
+  /api/v1/agent-templates/{templateId}/approve:
+    post:
+      parameters:
+      - description: template id
+        in: path
+        name: templateId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.approveAgentTemplateResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Approve a candidate agent template for production binding
+      tags:
+      - agents
+  /api/v1/agent-templates/candidates:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: template manifest
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.submitAgentTemplateRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Submit a custom agent template as candidate
+      tags:
+      - agents
   /api/v1/agent-workspaces:
     get:
       description: List active agent.workspace audit documents for a space, newest
@@ -7123,6 +7648,31 @@ paths:
       summary: Scan audit logs and run events for secret patterns
       tags:
       - compliance
+  /api/v1/context-pack/preview:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: pack input
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.contextPackPreviewRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_contextpack.Pack'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Preview a Context Pack (issue + RAG + memory)
+      tags:
+      - agents
   /api/v1/data-policy:
     get:
       produces:
@@ -8534,6 +9084,79 @@ paths:
       summary: Evaluate alert rules
       tags:
       - observability
+  /api/v1/observability/lenses/agent:
+    get:
+      parameters:
+      - description: run id
+        in: query
+        name: runId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.AgentView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Agent observation lens for one run
+      tags:
+      - observability
+  /api/v1/observability/lenses/global:
+    get:
+      parameters:
+      - description: space id
+        in: query
+        name: spaceId
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.GlobalView'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Global observation lens snapshot
+      tags:
+      - observability
+  /api/v1/observability/lenses/memory:
+    get:
+      parameters:
+      - description: memory id
+        in: query
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.MemoryLineageView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Memory lineage observation lens
+      tags:
+      - observability
   /api/v1/observability/otel/status:
     get:
       produces:
@@ -8784,6 +9407,31 @@ paths:
       summary: Create organization role
       tags:
       - orgs
+  /api/v1/passk/run:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: k and target
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.passKRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review_passk.Result'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Run Pass^k sampling for a frozen review check (not Doctor)
+      tags:
+      - reviews
   /api/v1/permissions/matrix:
     get:
       produces:

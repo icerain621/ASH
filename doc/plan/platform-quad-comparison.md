@@ -143,13 +143,13 @@
 | ID | 模式 | 最佳来源 | ASH 现状 | 决策 | 建议落点 |
 |----|------|----------|----------|------|----------|
 | P01 | Append-only 事件真相 + derive 投影 | DSH | v5 visibility / ConversationNode / FoldThread | **Partial** | 硬化「模型可见 ⟺ 已记录」；减少双写 |
-| P02 | UI 只发意图、只渲投影 | DSH | v5 薄交互 / Quest 去厚 | **Partial** | Agent Chat 对标收尾；禁止 FE 私算分 |
+| P02 | UI 只发意图、只渲投影 | DSH | v5 薄交互 / Quest 去厚；Composer/壳 APG·DSH + caption 投影（2026-10） | **Partial→近收口** | 残留：工作区列表键盘等；禁止 FE 私算分 |
 | P03 | Capability seams（fs/tools/sandbox 可替换） | DSH | ToolBus + Sandbox + Provider | **Partial** | 缝接口文档化；不引入 Cordis |
 | P04 | Profile → Bundle 组合 | DSH | Harness Profile | **Partial** | Profile 版本评审已有；不叠加 patch 热更 |
 | P05 | JSONL 会话树（fork/tree/clone） | Pi | Run replay；interaction threads | **Absorb** | Thread 分支元数据 + compare；非另起 TUI |
 | P06 | Compaction + spill 大结果 | Pi / DSH | compaction 事件 / spill 已有 | **Partial** | 对话面 `/compact` 语义 + 评审可回放摘要 |
 | P07 | Steering / follow-up 队列 | Pi | Session interrupt/queue 部分 | **Absorb** | 运行中 steer vs 完成后 queue 语义写进协议 |
-| P08 | 极简核心 + 扩展包 | Pi | gRPC Plugin + Skills | **Observe** | 保持 Go 边界；Skills 深化即可 |
+| P08 | 极简核心 + 扩展包 | Pi | gRPC Plugin + Skills；v7 进程内 `plugins.Host` + 模板候选门禁 | **Absorb→v7** | 见 [`v7.x-program.md`](v7.x-program.md) P5；Skills 深化、不引入 Cordis |
 | P09 | 统一 LLM Provider 层 | Pi (`pi-ai`) | Model Router + ASH_LLM | **Partial** | Provider 目录 + 健康探针进 Doctor |
 | P10 | RPC/JSONL 嵌入模式 | Pi / Codex | OpenAPI + SSE；ACP 已有 | **Absorb** | 可选 `ash session --mode rpc` 供 CI/嵌入 |
 | P11 | 跨平台 OS 沙箱 + execpolicy | Codex | Policy + sandbox POC / Landlock 路线 | **Absorb** | execpolicy 声明式 + Doctor 能力位 |
@@ -164,7 +164,7 @@
 | P20 | 可插拔 Memory Provider | Hermes | 内置 Memory Core | **Reject 替换** / **Observe 桥** | 不以外置 mem0 替换双核；可 MCP 旁路 |
 | P21 | 多终端 Backend（docker/ssh/…） | Hermes / DSH | Sandbox backends 路线 | **Partial** | 目录在 readyz/scale；Harness 列表与 active 回显同一组 ID（VX71）。不新开通厂商 |
 | P22 | Dashboard 本机运维八页 | Hermes | 三主题控制台更厚 | **Reject 复制** | 借「运维动作状态」卡片模式即可 |
-| P23 | Scenario DSL + Artifacts + Doctor | ASH | 已有 | **Keep** | 差异化护城河 |
+| P23 | Scenario DSL + Artifacts + Doctor | ASH | 已有；v7 Doctor=`BOOT`、质量归评审/`QUALITY` | **Keep→v7 收口** | 护城河保留；分工见 [`../appendices/E2-评审与质量用例.md`](../appendices/E2-评审与质量用例.md) |
 | P24 | Memory L0–L2 + 厚评审评分 | ASH v5 | 已有 | **Keep** | 继续 Harden，勿被外部「轻记忆」带回退 |
 
 **吸收优先级（移交 B / v6）：**
@@ -185,7 +185,7 @@
 | 入口 | Web 三主题、CLI、Webhook、ACP、Session | 无 Pi 级 RPC 模式；无 Hermes 级 IM | P10；P17 仅缝 |
 | Agent Core | Run、Harness、ToolBus、Sandbox POC、Skills | Hooks 缺失；execpolicy 弱于 Codex；工具广度弱 | P13、P11、P15 |
 | Memory Core | L0–L2、评审、RAG、hit_used | 无「外置记忆超市」——**应保持** | Keep P24 |
-| 治理 | DSL、Gates、Doctor、RLS、Releases | — | Keep P23 |
+| 治理 | DSL、Gates、Doctor(`BOOT`)+评审、RLS、Releases | — | Keep P23（v7 收口） |
 | 演进 | Feedback、Improve、评分、Workbench | 交互监控可再对齐 DSH Trajectory | P01/P02 硬化 |
 | 薄交互 | ConversationNode、意图 API、Agent Chat 对标中 | fork/tree、steer 语义未产品化 | P05、P07 |
 

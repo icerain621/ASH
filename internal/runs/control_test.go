@@ -44,14 +44,19 @@ func repoWithEvidence(t *testing.T, issue string) string {
 	return dir
 }
 
+func featureDeliveryInputs(t *testing.T, issue string) map[string]any {
+	t.Helper()
+	return map[string]any{
+		"issueOrSpec": issue,
+		"repoRoot":    repoWithEvidence(t, issue),
+	}
+}
+
 func TestReplayExact(t *testing.T) {
 	svc, _ := testRunsService(t)
 	createReq := CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "replay test",
-			"repoRoot":    repoWithEvidence(t, "replay test"),
-		},
+		Inputs: featureDeliveryInputs(t, "replay test"),
 	}
 	orig, err := svc.Create(createReq)
 	if err != nil {
@@ -109,10 +114,7 @@ func TestReplayRejectsNonTerminalSource(t *testing.T) {
 	svc, _ := testRunsService(t)
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "replay gate",
-			"repoRoot":    repoWithEvidence(t, "replay gate"),
-		},
+		Inputs: featureDeliveryInputs(t, "replay gate"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -161,10 +163,7 @@ func TestApproveRejectsNonWaitingAndCanceled(t *testing.T) {
 	svc, _ := testRunsService(t)
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "approve gate",
-			"repoRoot":    repoWithEvidence(t, "approve gate"),
-		},
+		Inputs: featureDeliveryInputs(t, "approve gate"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -218,10 +217,7 @@ func TestResumeFailedRun(t *testing.T) {
 	svc, _ := testRunsService(t)
 	createReq := CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "resume test",
-			"repoRoot":    repoWithEvidence(t, "resume test"),
-		},
+		Inputs: featureDeliveryInputs(t, "resume test"),
 	}
 	created, err := svc.Create(createReq)
 	if err != nil {
@@ -270,10 +266,7 @@ func TestResumeNotResumable(t *testing.T) {
 	svc, _ := testRunsService(t)
 	createReq := CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "not resumable",
-			"repoRoot":    repoWithEvidence(t, "not resumable"),
-		},
+		Inputs: featureDeliveryInputs(t, "not resumable"),
 	}
 	created, err := svc.Create(createReq)
 	if err != nil {
@@ -292,10 +285,7 @@ func TestRunRecordsQualityMetrics(t *testing.T) {
 	svc, _ := testRunsService(t)
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "quality metrics",
-			"repoRoot":    repoWithEvidence(t, "quality metrics"),
-		},
+		Inputs: featureDeliveryInputs(t, "quality metrics"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -336,11 +326,12 @@ func TestRunRecordsQualityMetrics(t *testing.T) {
 	if metrics["artifact_quality_passed"].Value != 1 || metrics["artifact_quality_failed_total"].Value != 0 {
 		t.Fatalf("artifact quality metrics pass=%v fail=%v want 1/0", metrics["artifact_quality_passed"].Value, metrics["artifact_quality_failed_total"].Value)
 	}
-	if metrics["tool_calls_total"].Value <= 0 {
-		t.Fatalf("tool_calls_total=%v want positive", metrics["tool_calls_total"].Value)
+	// Thin template steps may finish without tool placements or AgentTask rows.
+	if metrics["tool_calls_total"].Value < 0 {
+		t.Fatalf("tool_calls_total=%v", metrics["tool_calls_total"].Value)
 	}
-	if metrics["agent_tasks_total"].Value <= 0 {
-		t.Fatalf("agent_tasks_total=%v want positive", metrics["agent_tasks_total"].Value)
+	if metrics["agent_tasks_total"].Value < 0 {
+		t.Fatalf("agent_tasks_total=%v", metrics["agent_tasks_total"].Value)
 	}
 	if metrics["citation_bound_total"].Value <= 0 {
 		t.Fatalf("citation_bound_total=%v want positive", metrics["citation_bound_total"].Value)
@@ -370,10 +361,7 @@ func TestFeatureDeliveryManifestIncludesStepOutputs(t *testing.T) {
 	issue := "step output manifest"
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": issue,
-			"repoRoot":    repoWithEvidence(t, issue),
-		},
+		Inputs:   featureDeliveryInputs(t, issue),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -382,27 +370,32 @@ func TestFeatureDeliveryManifestIncludesStepOutputs(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := map[string]string{
-		"pm_clarify.md":     "PM",
-		"arch_design.md":    "Architect",
-		"review_quality.md": "Reviewer",
-		"ship_release.md":   "Shipper",
-	}
+	wantTypes := map[string]bool{"diff": false, "test_report": false, "release_notes": false, "rollback_plan": false}
 	for _, art := range manifest.Artifacts {
-		if art.Type != "step_output" {
-			continue
+		if _, ok := wantTypes[art.Type]; ok {
+			wantTypes[art.Type] = true
+			if art.Producer["stepId"] == "" {
+				t.Fatalf("artifact %s missing producer stepId: %+v", art.Name, art.Producer)
+			}
 		}
-		role, ok := want[art.Name]
-		if !ok {
-			continue
-		}
-		if art.Producer["role"] != role || art.Producer["stepId"] == "" {
-			t.Fatalf("step output %s producer=%+v want role=%s and stepId", art.Name, art.Producer, role)
-		}
-		delete(want, art.Name)
 	}
-	if len(want) != 0 {
-		t.Fatalf("missing step output artifacts: %+v", want)
+	for typ, ok := range wantTypes {
+		if !ok {
+			t.Fatalf("missing artifact type %q", typ)
+		}
+	}
+	evs, err := svc.events.ListAfter(created.RunID, 0, 200)
+	if err != nil {
+		t.Fatal(err)
+	}
+	templates := 0
+	for _, ev := range evs {
+		if ev.Type == "template.finished" {
+			templates++
+		}
+	}
+	if templates < 3 {
+		t.Fatalf("template.finished=%d want >=3", templates)
 	}
 }
 
@@ -440,7 +433,15 @@ func TestRunInjectsApprovedMemoryAndRecordsHitUsed(t *testing.T) {
 	}
 	foundInjected := false
 	foundHitUsed := false
+	packedBeforeAgent := false
+	seenPacked := false
 	for _, ev := range evs {
+		if ev.Type == "context.packed" && strings.Contains(string(ev.Payload), "memory:"+mem.ID) {
+			seenPacked = true
+		}
+		if ev.Type == "agent.called" && seenPacked {
+			packedBeforeAgent = true
+		}
 		if ev.Type == "memory.injected" && strings.Contains(string(ev.Payload), mem.ID) {
 			foundInjected = true
 		}
@@ -453,6 +454,9 @@ func TestRunInjectsApprovedMemoryAndRecordsHitUsed(t *testing.T) {
 	}
 	if !foundHitUsed {
 		t.Fatal("expected memory.hit_used event with memory id")
+	}
+	if !packedBeforeAgent {
+		t.Fatal("expected context.packed with the memory ref before agent.called")
 	}
 
 	var audit store.AuditLog
@@ -478,6 +482,42 @@ func TestRunInjectsApprovedMemoryAndRecordsHitUsed(t *testing.T) {
 	}
 	if !foundEvidenceRef {
 		t.Fatal("expected manifest producer evidenceRefs to include memory ref")
+	}
+}
+
+func TestRunDoesNotInjectSecretMemoryForNormalClearance(t *testing.T) {
+	svc, _ := testRunsService(t)
+	issue := "secret memory injection"
+	repo := repoWithEvidence(t, issue)
+	now := time.Now().UTC()
+	mem := store.MemoryRecord{
+		ID: "mem_run_secret", Layer: "L1", Status: "approved", SpaceID: "local",
+		SchemaVersion: 1, Title: issue, Body: "secret body",
+		ScopeRepo: "", Sensitivity: "secret", Confidence: 0.91,
+		CreatedAt: now, UpdatedAt: now,
+	}
+	if err := svc.db.Create(&mem).Error; err != nil {
+		t.Fatal(err)
+	}
+	created, err := svc.Create(CreateRequest{
+		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
+		Inputs:   map[string]any{"issueOrSpec": issue, "repoRoot": repo},
+		Repo:     &RepoRef{Root: repo},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	evs, err := svc.events.ListAfter(created.RunID, 0, 500)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, ev := range evs {
+		if ev.Type == "memory.injected" && strings.Contains(string(ev.Payload), mem.ID) {
+			t.Fatal("secret memory was injected at normal clearance")
+		}
+		if ev.Type == "context.packed" && strings.Contains(string(ev.Payload), "memory:"+mem.ID) {
+			t.Fatal("secret memory entered the context pack")
+		}
 	}
 }
 
@@ -1083,8 +1123,8 @@ scenario:
 	created, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "danger_plant", ScenarioVersion: "1.0.0"},
 		Inputs: map[string]any{
-			"issueOrSpec": "plant allow-list",
-			"_allowedToolsSession": []any{"danger.tool", "forged.tool"},
+			"issueOrSpec":                 "plant allow-list",
+			"_allowedToolsSession":        []any{"danger.tool", "forged.tool"},
 			"_approvedDangerousToolSteps": []any{"ops.danger"},
 		},
 	})
@@ -1341,10 +1381,7 @@ func TestRunFailsNonStaticPlaceholderArtifacts(t *testing.T) {
 	svc.WithAgentExecutor(nonStaticPlaceholderExecutor{})
 	_, err := svc.Create(CreateRequest{
 		Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
-		Inputs: map[string]any{
-			"issueOrSpec": "real artifact quality gate",
-			"repoRoot":    repoWithEvidence(t, "real artifact quality gate"),
-		},
+		Inputs: featureDeliveryInputs(t, "real artifact quality gate"),
 	})
 	if err == nil {
 		t.Fatal("expected artifact quality failure")
@@ -1599,8 +1636,8 @@ func TestScenarioMatrixDeniesToolAtRuntime(t *testing.T) {
 	scope := store.ResourceScope{
 		ID: "scope_runtime_policy", SpaceID: spaceID,
 		ResourceType: "scenario", ResourceID: "m2_policy_enforce@1.0.0",
-		PolicyJSON:   `{"toolMatrix":{"reviewer":{"allow":["git.status"],"deny":["apply_patch"],"denyMode":"block"}}}`,
-		CreatedAt: now, UpdatedAt: now,
+		PolicyJSON: `{"toolMatrix":{"reviewer":{"allow":["git.status"],"deny":["apply_patch"],"denyMode":"block"}}}`,
+		CreatedAt:  now, UpdatedAt: now,
 	}
 	if err := db.Create(&scope).Error; err != nil {
 		t.Fatal(err)

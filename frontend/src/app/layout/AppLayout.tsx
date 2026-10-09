@@ -17,7 +17,8 @@ const opsLinks = [
   { to: "/scale", label: "规模化" },
   { to: "/doctor", label: "诊断" },
   { to: "/metrics", label: "指标" },
-  { to: "/observability", label: "可观测" },
+  { to: "/observe", label: "观测", testId: "nav-settings-observe" },
+  { to: "/observability", label: "运维观测" },
 ] as const;
 
 export function AppLayout() {

@@ -147,7 +147,7 @@ func TestExecuteAgentStepPassesSessionReasoningEffort(t *testing.T) {
 		WithAgentExecutor(cap)
 
 	step := rules.Step{ID: "code.implement", Role: "Coder", Kind: "agent", TimeoutMs: 1000}
-	if _, err := svc.executeAgentStep("run_effort", "trace_effort", dir, ".", "issue", step, nil, cap, "sess_effort"); err != nil {
+	if _, err := svc.executeAgentStep("run_effort", "trace_effort", dir, ".", "issue", step, nil, nil, cap, "sess_effort"); err != nil {
 		t.Fatal(err)
 	}
 	if cap.last.Metadata["reasoningEffort"] != "max" {

@@ -109,8 +109,14 @@ vi.mock("@/modules/interactions/api/interactions.api", () => ({
   compareInteractionThreads: vi.fn(),
 }));
 
-vi.mock("@/pages/ObservabilityPage", () => ({
-  ObservabilityPage: () => <div data-testid="observability-page-stub">Observability stub (review_sla)</div>,
+vi.mock("@/modules/observability/components/LensPanel", () => ({
+  LensPanel: () => <div data-testid="lens-panel-stub">Lens stub</div>,
+}));
+vi.mock("@/modules/observability/api/lenses.api", () => ({
+  getGlobalLens: async () => ({
+    generatedAt: 1, runningRuns: 0, failedClusters: [], templateUsage: [],
+    gateRejects: 0, reviewPending: 0, doctorChip: "BOOT",
+  }),
 }));
 
 vi.mock("@/services/http/client", () => ({
@@ -285,7 +291,8 @@ describe("ReviewsPage", () => {
 
     fireEvent.click(screen.getByTestId("review-nav-observe"));
     expect(await screen.findByTestId("review-observe-panel")).toBeTruthy();
-    expect(screen.getByTestId("observability-page-stub")).toBeTruthy();
+    expect(screen.getByTestId("lens-panel-stub")).toBeTruthy();
+    expect(screen.getByTestId("review-open-observe")).toBeTruthy();
     expect(screen.getByTestId("review-open-metrics")).toHaveAttribute("data-to", "/metrics");
 
     fireEvent.click(screen.getByTestId("review-nav-orchestrate"));

@@ -2208,6 +2208,10 @@ components:
           type: array
           items: { type: string }
         integration: { $ref: "#/components/schemas/HarnessIntegrationSpec" }
+        components:
+          type: array
+          items: { type: string }
+          description: Approved in-process plugin component ids required before Activate
     HarnessProfileView:
       type: object
       properties:
@@ -2645,6 +2649,7 @@ components:
           additionalProperties: { type: string }
         runId: { type: string }
         traceId: { type: string }
+        clearance: { type: string, description: "normal | restricted | secret; default normal hides higher records" }
     MemoryQueryResponse:
       type: object
       properties:
@@ -6477,6 +6482,268 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/WikiPage" }
+
+  /api/v1/agent-templates:
+    get:
+      tags: [Agents]
+      summary: List built-in and custom agent templates and their component recipes
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        version: { type: string }
+                        tools:
+                          type: array
+                          items: { type: string }
+                        memory:
+                          type: array
+                          items: { type: string }
+                        maxTurns: { type: integer }
+
+  /api/v1/agent-templates/candidates:
+    post:
+      tags: [Agents]
+      summary: Submit a custom agent template as candidate (review before production bind)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, version, loop, tools, compaction, sandbox, maxTurns, memory]
+              properties:
+                id: { type: string }
+                version: { type: string }
+                loop: { type: string }
+                tools: { type: array, items: { type: string } }
+                compaction: { type: string }
+                sandbox: { type: string }
+                maxTurns: { type: integer }
+                memory: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: candidate stored
+        "400":
+          description: invalid manifest
+
+  /api/v1/agent-templates/{templateId}/approve:
+    post:
+      tags: [Agents]
+      summary: Approve a candidate agent template for production binding
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: approved
+        "400":
+          description: unknown or invalid template
+
+  /api/v1/agent-components:
+    get:
+      tags: [Agents]
+      summary: List in-process plugin components (tool/loop/compaction/reviewer/memory)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        kind: { type: string }
+                        status: { type: string }
+    post:
+      tags: [Agents]
+      summary: Register an in-process plugin component (defaults to candidate)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [id, kind]
+              properties:
+                id: { type: string }
+                kind: { type: string, enum: [memory, tool, loop_policy, compaction, reviewer] }
+                status: { type: string, enum: [candidate, approved] }
+      responses:
+        "200":
+          description: registered
+        "400":
+          description: invalid component
+
+  /api/v1/agent-components/{componentId}/approve:
+    post:
+      tags: [Agents]
+      summary: Approve a candidate plugin component for production binding
+      parameters:
+        - in: path
+          name: componentId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: approved
+        "400":
+          description: unknown component
+
+  /api/v1/agent-reviews:
+    post:
+      tags: [Reviews]
+      summary: Enqueue an in-process review item (template/harness/memory/artifact/run)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [kind, targetId]
+              properties:
+                kind: { type: string }
+                targetId: { type: string }
+                reason: { type: string }
+      responses:
+        "200":
+          description: queued
+        "400":
+          description: invalid
+
+  /api/v1/agent-reviews/{reviewId}/decide:
+    post:
+      tags: [Reviews]
+      summary: Decide an in-process review item
+      parameters:
+        - in: path
+          name: reviewId
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decision]
+              properties:
+                decision: { type: string, enum: [approve, reject] }
+                reason: { type: string }
+      responses:
+        "200":
+          description: decided
+        "400":
+          description: invalid
+
+  /api/v1/passk/run:
+    post:
+      tags: [Reviews]
+      summary: Run Pass^k sampling for a frozen review check (not Doctor)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [k]
+              properties:
+                k: { type: integer, minimum: 1 }
+                target: { type: string }
+      responses:
+        "200":
+          description: Pass^k report
+        "400":
+          description: invalid
+
+  /api/v1/observability/lenses/global:
+    get:
+      tags: [Observability]
+      summary: Global observation lens snapshot
+      parameters:
+        - in: query
+          name: spaceId
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+
+  /api/v1/observability/lenses/agent:
+    get:
+      tags: [Observability]
+      summary: Agent observation lens for one run
+      parameters:
+        - in: query
+          name: runId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: missing runId
+        "404":
+          description: run not found
+
+  /api/v1/observability/lenses/memory:
+    get:
+      tags: [Observability]
+      summary: Memory lineage observation lens
+      parameters:
+        - in: query
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+        "400":
+          description: missing id
+        "404":
+          description: memory not found
+
+  /api/v1/context-pack/preview:
+    post:
+      tags: [Agents]
+      summary: Preview a Context Pack (issue + RAG + memory)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                issue: { type: string }
+                ragRefs: { type: array, items: { type: string } }
+                memories:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      title: { type: string }
+                memory: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: pack preview
+        "400":
+          description: invalid
 
   /api/v1/skills:
     get:

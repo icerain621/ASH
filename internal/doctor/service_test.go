@@ -23,13 +23,13 @@ func TestTR0Suite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if rep.Summary.Fail > 0 {
+	if rep.Summary.Fail > 0 || rep.Summary.Pass != 5 {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {
 				t.Errorf("%s: %s", r.ID, r.Message)
 			}
 		}
-		t.Fatalf("TR0 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
+		t.Fatalf("TR0 failed: pass=%d fail=%d want pass=5", rep.Summary.Pass, rep.Summary.Fail)
 	}
 	var replay CaseResult
 	for _, r := range rep.Results {
@@ -98,15 +98,12 @@ func TestTR1Suite(t *testing.T) {
 		}
 		t.Fatalf("TR1 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 6 {
-		t.Fatalf("TR1 pass=%d want 6", rep.Summary.Pass)
+	if rep.Summary.Pass != 3 {
+		t.Fatalf("TR1 pass=%d want 3", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR1-01", "modelRouter")
-	assertCaseEvidence(t, rep, "TR1-02", "waterfallSpan")
-	assertCaseEvidence(t, rep, "TR1-03", "memoryEdge")
 	assertCaseEvidence(t, rep, "TR1-04", "mcpIsolation")
 	assertCaseEvidence(t, rep, "TR1-05", "rulesValidation")
-	assertCaseEvidence(t, rep, "TR1-06", "memoryTTL")
 }
 
 func TestTR2Suite(t *testing.T) {
@@ -149,14 +146,13 @@ func TestTR3Suite(t *testing.T) {
 		}
 		t.Fatalf("TR3 failed: pass=%d fail=%d", rep.Summary.Pass, rep.Summary.Fail)
 	}
-	if rep.Summary.Pass != 13 {
-		t.Fatalf("TR3 pass=%d want 13", rep.Summary.Pass)
+	if rep.Summary.Pass != 12 {
+		t.Fatalf("TR3 pass=%d want 12", rep.Summary.Pass)
 	}
 	assertCaseEvidence(t, rep, "TR3-01", "memorySchema")
 	assertCaseEvidence(t, rep, "TR3-02", "ragFallback")
 	assertCaseEvidence(t, rep, "TR3-06", "skipped")
 	assertCaseEvidence(t, rep, "TR3-03", "sloMetric")
-	assertCaseEvidence(t, rep, "TR3-04", "trace")
 	assertCaseEvidence(t, rep, "TR3-05", "metricsParity")
 	assertCaseEvidence(t, rep, "TR3-07", "pluginExport")
 	assertCaseEvidence(t, rep, "TR3-08", "skipped")
@@ -302,6 +298,46 @@ func TestM5Suite(t *testing.T) {
 	assertCaseEvidence(t, rep, "M5-EVO-04", "canaryCeiling")
 }
 
+func TestBOOTSuite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("BOOT")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 5
+	if rep.Summary.Pass != want {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("BOOT pass=%d fail=%d want pass=%d", rep.Summary.Pass, rep.Summary.Fail, want)
+	}
+	if len(rep.Results) != want {
+		t.Fatalf("results=%d want %d", len(rep.Results), want)
+	}
+}
+
+func TestQUALITYSuite(t *testing.T) {
+	svc := newTestDoctor(t)
+	rep, err := svc.RunSuite("QUALITY")
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := 7
+	if rep.Summary.Pass != want {
+		for _, r := range rep.Results {
+			if r.Status != "pass" {
+				t.Errorf("%s: %s", r.ID, r.Message)
+			}
+		}
+		t.Fatalf("QUALITY pass=%d fail=%d want pass=%d", rep.Summary.Pass, rep.Summary.Fail, want)
+	}
+	assertCaseEvidence(t, rep, "TR0-01", "artifact")
+	assertCaseEvidence(t, rep, "TR1-02", "waterfallSpan")
+	assertCaseEvidence(t, rep, "TR3-04", "trace")
+}
+
 func TestALLSuite(t *testing.T) {
 	if testing.Short() {
 		t.Skip("ALL suite is slow; run without -short")
@@ -312,7 +348,7 @@ func TestALLSuite(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := 63
+	want := 56
 	if rep.Summary.Pass != want {
 		for _, r := range rep.Results {
 			if r.Status != "pass" {

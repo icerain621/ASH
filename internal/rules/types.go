@@ -109,6 +109,7 @@ type ToolChainItem struct {
 
 type AgentSpec struct {
 	Adapter      string   `yaml:"adapter,omitempty" json:"adapter,omitempty"`
+	TemplateID   string   `yaml:"templateId,omitempty" json:"templateId,omitempty"`
 	Capabilities []string `yaml:"capabilities,omitempty" json:"capabilities,omitempty"`
 	Prompt       string   `yaml:"prompt,omitempty" json:"prompt,omitempty"`
 }

@@ -318,7 +318,11 @@ func TestIntent_queueWhileRunActiveEnqueuesAndDoesNotSteer(t *testing.T) {
 		t.Fatal(err)
 	}
 	saw := false
+	sawFollow := false
 	for _, item := range listed {
+		if item.Type == "session.follow_up" && strings.Contains(string(item.Payload), "after this") {
+			sawFollow = true
+		}
 		if item.Type != "session.queue" {
 			continue
 		}
@@ -327,8 +331,8 @@ func TestIntent_queueWhileRunActiveEnqueuesAndDoesNotSteer(t *testing.T) {
 			t.Fatalf("payload=%s", item.Payload)
 		}
 	}
-	if !saw {
-		t.Fatal("missing session.queue")
+	if !saw || !sawFollow {
+		t.Fatal("missing session.queue or session.follow_up")
 	}
 
 	_, err = svc.Intent(view.ID, session.IntentRequest{Action: "stop", ActorID: "actor1"})

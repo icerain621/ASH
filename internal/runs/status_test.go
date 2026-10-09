@@ -3,12 +3,17 @@ package runs
 import (
 	"context"
 	"errors"
+	"os"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/events"
+	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/store"
+	"github.com/ash-repwiki/ash/internal/toolbus"
 )
 
 func TestCanTransitionMatrix(t *testing.T) {
@@ -181,7 +186,39 @@ func TestObserveCanceled(t *testing.T) {
 }
 
 func TestMidLoopCancelStopsWithoutFinish(t *testing.T) {
-	svc, _ := testRunsService(t)
+	dir := t.TempDir()
+	db := store.OpenTest(t, dir)
+	scenariosDir := filepath.Join(dir, "scenarios")
+	if err := os.MkdirAll(scenariosDir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	scenario := `version: "ash.rules/v0.1"
+scenario:
+  name: "mid_loop_cancel"
+  scenarioVersion: "1.0.0"
+  policyProfile: "default"
+  roles: { Coder: { maxParallel: 1 } }
+  inputs:
+    required: [issueOrSpec, repoRoot]
+  artifacts:
+    required: []
+  steps:
+    - id: "code.implement"
+      role: "Coder"
+      kind: "agent"
+      timeoutMs: 120000
+      agent:
+        adapter: "static"
+        prompt: "hold for cancel"
+`
+	if err := os.WriteFile(filepath.Join(scenariosDir, "mid_loop_cancel.yaml"), []byte(scenario), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	loader := rules.NewLoader(scenariosDir)
+	if err := loader.LoadDir(); err != nil {
+		t.Fatal(err)
+	}
+	svc := NewService(db, events.NewService(db), loader, toolbus.DefaultBus())
 	hold := &holdAgentExecutor{
 		started: make(chan struct{}),
 		release: make(chan struct{}),
@@ -195,7 +232,7 @@ func TestMidLoopCancelStopsWithoutFinish(t *testing.T) {
 	done := make(chan result, 1)
 	go func() {
 		resp, err := svc.Create(CreateRequest{
-			Scenario: ScenarioRef{Name: "feature_delivery", ScenarioVersion: "1.0.0"},
+			Scenario: ScenarioRef{Name: "mid_loop_cancel", ScenarioVersion: "1.0.0"},
 			Inputs: map[string]any{
 				"issueOrSpec": "mid-loop cancel",
 				"repoRoot":    repoWithEvidence(t, "mid-loop cancel"),

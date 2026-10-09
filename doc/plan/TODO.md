@@ -1,9 +1,28 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-09-19  
+> 更新：2026-10-08  
 > **计划与进度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。需求 [`../design/SRS-需求规格.md`](../design/SRS-需求规格.md)，设计 [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md)。  
-> 归属：[`plan/`](README.md)  
+> 归属：[`plan/`](README.md) · 水位：**v6.7 已冻结**；冻结后 P02/推理等级已合入 `main`（`7b474964`）  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
+
+## 进行中 / 下一步（冻结后 · 无新代）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| PF-NEXT | 薄 P02 残留（可选） | 工作区列表键盘 / Timeline 滤镜组 label 等；禁止 FE 私算分 | ⏸ 可选 |
+| GA | 云 RDS + 真人签字 + 可选 `v6.7.0` tag | 见 [`GA-上线推进计划.md`](GA-上线推进计划.md) | ⏸ |
+| VNEXT | 新开代际（v6.8 或其它） | 须先写 release-scope；**禁止自动发明** | ⏸ 待产品拍板 |
+
+## 已完成 · 冻结后薄交付（2026-09-23 → 2026-10-08）
+
+| # | 项 | 验收 | 状态 |
+|---|-----|------|------|
+| PF01 | 会话推理等级 → Chat/Quest/ACP/ExecGo | `cfd5261d` + session tests | ✅ |
+| PF02 | assistant 事件投影 provider·model·effort | `d604285f` | ✅ |
+| PF03 | Composer/壳 APG·DSH 无障碍（P02） | `7b474964` + vitest | ✅ |
+| PF04 | 控制台空态 / 错误 / 路由别名 | `a919fd34` | ✅ |
+| PF05 | Vitest coverage 门禁 · Playwright E2E | `15a7de96` | ✅ |
+| PF06 | 文档分类入口 + PLAN 重建 | `da29289d` + 本轮 docs | ✅ |
 
 ## 已完成 · PostToolUse（EW111+）
 
@@ -136,7 +155,7 @@
 
 ---
 
-## v2 — 双核心 / Harness（现行开发）
+## v2 — 双核心 / Harness（已收口；历史板）
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|

@@ -300,6 +300,7 @@ func (s *Service) QueryForSpace(spaceID string, req QueryRequest) (*QueryRespons
 	if err != nil {
 		return nil, err
 	}
+	rows = FilterBySensitivity(rows, req.Clearance)
 	items, err := s.attachEvidence(rows)
 	if err != nil {
 		return nil, err

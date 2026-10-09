@@ -13,7 +13,7 @@ var (
 		"per_step": {}, "per_tool": {}, "manual": {},
 	}
 	validStepKinds = map[string]struct{}{
-		"llm": {}, "agent": {}, "tool_chain": {}, "human": {}, "verify": {},
+		"llm": {}, "agent": {}, "tool_chain": {}, "human": {}, "verify": {}, "review": {},
 	}
 	validHookPolicies = map[string]struct{}{
 		"enforce": {}, "observe": {},
@@ -92,7 +92,7 @@ func Validate(doc *Document) ValidationResult {
 			res = fail(res, p+".role", "REQUIRED", "step role is required")
 		}
 		if _, ok := validStepKinds[st.Kind]; !ok {
-			res = fail(res, p+".kind", "INVALID_ENUM", fmt.Sprintf("step kind must be llm|agent|tool_chain|human|verify, got %q", st.Kind))
+			res = fail(res, p+".kind", "INVALID_ENUM", fmt.Sprintf("step kind must be llm|agent|tool_chain|human|verify|review, got %q", st.Kind))
 		}
 		if st.Kind == "verify" {
 			if st.Verify == nil || len(st.Verify.Checks) == 0 {
@@ -107,8 +107,12 @@ func Validate(doc *Document) ValidationResult {
 					res = fail(res, p+".promptRef", "REQUIRED", "llm step requires promptRef")
 				}
 			case "agent":
-				if st.Agent == nil || st.Agent.Adapter == "" {
-					res = fail(res, p+".agent.adapter", "REQUIRED", "agent step requires agent.adapter")
+				if st.Agent == nil || (st.Agent.Adapter == "" && st.Agent.TemplateID == "") {
+					res = fail(res, p+".agent", "REQUIRED", "agent step requires agent.adapter or agent.templateId")
+				}
+			case "review":
+				if st.Agent == nil || st.Agent.TemplateID == "" {
+					res = fail(res, p+".agent.templateId", "REQUIRED", "review step requires agent.templateId")
 				}
 			case "tool_chain":
 				if len(st.Chain) == 0 {

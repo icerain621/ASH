@@ -103,6 +103,8 @@ func migrationEntities() []migrationEntity {
 		{table: "plugin_registry", model: &PluginRegistry{}, pk: "id", incremental: true},
 		{table: "improve_proposals", model: &ImproveProposal{}, pk: "id", incremental: true},
 		{table: "harness_profile_versions", model: &HarnessProfileVersion{}, pk: "id", incremental: true},
+		{table: "agent_templates", model: &AgentTemplateVersion{}, pk: "id", incremental: true},
+		{table: "review_items", model: &ReviewItemRow{}, pk: "id", incremental: true},
 		{table: "scenario_patch_drafts", model: &ScenarioPatchDraft{}, pk: "id", incremental: true},
 		{table: "goal_plans", model: &GoalPlan{}, pk: "id", incremental: true},
 		{table: "diff_review_comments", model: &DiffReviewComment{}, pk: "id", incremental: true},

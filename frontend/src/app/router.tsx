@@ -7,6 +7,7 @@ import { FeedbackPage } from "../pages/FeedbackPage";
 import { MemoryPage } from "../pages/MemoryPage";
 import { MetricsPage } from "../pages/MetricsPage";
 import { ObservabilityPage } from "../pages/ObservabilityPage";
+import { ObservePage } from "../pages/ObservePage";
 import { QuestPage } from "../pages/QuestPage";
 import { KnowledgePage } from "../pages/KnowledgePage";
 import { ReleasesPage } from "../pages/ReleasesPage";
@@ -107,6 +108,17 @@ const observabilityRoute = createRoute({
 	component: ObservabilityPage,
 });
 
+const observeRoute = createRoute({
+	getParentRoute: () => rootRoute,
+	path: "/observe",
+	component: ObservePage,
+	validateSearch: (search: Record<string, unknown>) => ({
+		lens: typeof search.lens === "string" ? search.lens : "global",
+		run: typeof search.run === "string" ? search.run : undefined,
+		id: typeof search.id === "string" ? search.id : undefined,
+	}),
+});
+
 const releasesRoute = createRoute({
 	getParentRoute: () => rootRoute,
 	path: "/releases",
@@ -154,7 +166,8 @@ function aliasRedirect(
     | "/runs"
     | "/quest"
     | "/m/reviews"
-    | "/observability",
+    | "/observability"
+    | "/observe",
 ) {
   return createRoute({
     getParentRoute: () => rootRoute,
@@ -200,6 +213,7 @@ const routeTree = rootRoute.addChildren([
   ciRoute,
   metricsRoute,
   observabilityRoute,
+  observeRoute,
   releasesRoute,
   spaceRoute,
   loginRoute,

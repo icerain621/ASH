@@ -15,12 +15,16 @@ import (
 	"github.com/ash-repwiki/ash/internal/agentexec"
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
+	"github.com/ash-repwiki/ash/internal/contextpack"
 	"github.com/ash-repwiki/ash/internal/harness/loop"
 	"github.com/ash-repwiki/ash/internal/hooks"
+	"github.com/ash-repwiki/ash/internal/memory"
 	"github.com/ash-repwiki/ash/internal/modelrouter"
 	"github.com/ash-repwiki/ash/internal/observability"
+	"github.com/ash-repwiki/ash/internal/observability/lenses"
 	ashotel "github.com/ash-repwiki/ash/internal/observability/otel"
 	"github.com/ash-repwiki/ash/internal/pluginhealth"
+	"github.com/ash-repwiki/ash/internal/plugins"
 	"github.com/ash-repwiki/ash/internal/rag"
 	"github.com/ash-repwiki/ash/internal/rules"
 	"github.com/ash-repwiki/ash/internal/sandbox"
@@ -181,6 +185,21 @@ func (s *Service) CreateWithOptions(req CreateRequest, opts createOptions) (*Cre
 	return s.createAndExecute(req, opts)
 }
 
+// artifactQualityStrict is false for static adapters and for runs that only used
+// template_loop steps (thin workflow placeholders until ExecGo is reattached).
+func (s *Service) artifactQualityStrict(runID string) bool {
+	if s.AgentAdapter() == "static" {
+		return false
+	}
+	var total, foreign int64
+	_ = s.gdb().Model(&store.AgentTask{}).Where("run_id = ?", runID).Count(&total).Error
+	if total == 0 {
+		return true
+	}
+	_ = s.gdb().Model(&store.AgentTask{}).Where("run_id = ? AND adapter <> ?", runID, "template_loop").Count(&foreign).Error
+	return foreign > 0
+}
+
 func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, req CreateRequest, doc *rules.Document, eng *rules.Engine, started time.Time) error {
 	if execCtx == nil {
 		execCtx = context.Background()
@@ -195,12 +214,20 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		TraceID:  traceID,
 		RepoRoot: repoRoot,
 		RunDir:   runDir,
+		SpaceID:  rec.SpaceID,
 		Inputs:   req.Inputs,
+		RAGQuery: s.bindRAGQuerier(rec.SpaceID, repoRoot),
+	}
+
+	for _, dep := range rules.AdaptLegacy(doc) {
+		_, _ = s.eventsFor().Append(runID, traceID, "scenario.step_deprecated", "warn", map[string]any{
+			"stepId": dep.StepID, "fromKind": dep.FromKind, "templateId": dep.TemplateID,
+		})
 	}
 
 	_ = s.loopFor().OnTurnStart(runID, traceID)
 
-	lastToolStep := struct{ id, role string }{"ship.release", "Shipper"}
+	lastToolStep := struct{ id, role string }{"review.quality", "Reviewer"}
 	agentTaskID := ""
 	issue := inputString(req.Inputs, "issueOrSpec")
 	evidenceRefs := s.prepareExecutionContext(runID, traceID, rec.SpaceID, repoRoot, issue, doc.Scenario.Skills)
@@ -283,17 +310,31 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		}
 
 		switch step.Kind {
-		case "agent":
+		case "agent", "review":
 			lastToolStep.id = step.ID
 			lastToolStep.role = step.Role
-			res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs, providerSel.Executor, agentSessionID)
-			if res != nil {
-				agentTaskID = firstNonEmpty(res.ExecGoTaskID, res.TaskID, res.ActionID)
-			}
-			if err != nil {
-				code := agentErrorCode(err)
-				s.finishStep(stepRow, "failed", stepStart, code, err.Error())
-				_, ferr := s.failRun(rec, runID, traceID, started, code, err.Error())
+			if step.Agent != nil && strings.TrimSpace(step.Agent.TemplateID) != "" {
+				if err := s.executeTemplateStep(stepCtx, runID, traceID, runDir, repoRoot, issue, rec.SpaceID, step, evidenceRefs, toolCtx); err != nil {
+					code := agentErrorCode(err)
+					s.finishStep(stepRow, "failed", stepStart, code, err.Error())
+					_, ferr := s.failRun(rec, runID, traceID, started, code, err.Error())
+					return ferr
+				}
+			} else if step.Kind == "agent" {
+				res, err := s.executeAgentStep(runID, traceID, runDir, repoRoot, issue, step, req.Inputs, evidenceRefs, providerSel.Executor, agentSessionID)
+				if res != nil {
+					agentTaskID = firstNonEmpty(res.ExecGoTaskID, res.TaskID, res.ActionID)
+				}
+				if err != nil {
+					code := agentErrorCode(err)
+					s.finishStep(stepRow, "failed", stepStart, code, err.Error())
+					_, ferr := s.failRun(rec, runID, traceID, started, code, err.Error())
+					return ferr
+				}
+			} else {
+				msg := "review step requires agent.templateId"
+				s.finishStep(stepRow, "failed", stepStart, "TEMPLATE_REQUIRED", msg)
+				_, ferr := s.failRun(rec, runID, traceID, started, "TEMPLATE_REQUIRED", msg)
 				return ferr
 			}
 			if err := s.observeCanceled(rec); err != nil {
@@ -483,7 +524,7 @@ func (s *Service) executeSteps(execCtx context.Context, rec *store.RunRecord, re
 		_, ferr := s.failRun(rec, runID, traceID, started, "ARTIFACT_WRITE_FAILED", err.Error())
 		return ferr
 	}
-	if err := artifacts.ValidateQuality(runDir, manifest, s.AgentAdapter() != "static"); err != nil {
+	if err := artifacts.ValidateQuality(runDir, manifest, s.artifactQualityStrict(runID)); err != nil {
 		_, _ = s.eventsFor().Append(runID, traceID, "artifact.quality_failed", "error", map[string]any{
 			"error": err.Error(),
 		})
@@ -663,6 +704,9 @@ func (s *Service) queryExecutionMemory(spaceID, repoRoot, issue string, limit in
 		if duplicated[row.ID] || runMemoryExpired(row, now) || row.Confidence < minQueryableConfidence {
 			continue
 		}
+		if !memory.Visible(row.Sensitivity, memory.ClearanceNormal) {
+			continue
+		}
 		out = append(out, row)
 		if len(out) >= limit {
 			break
@@ -746,7 +790,7 @@ func (s *Service) finishStep(row *store.RunStep, status string, started time.Tim
 	_ = s.gdb().Save(row).Error
 }
 
-func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any, exec agentexec.Executor, agentSessionID string) (*agentexec.Result, error) {
+func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue string, step rules.Step, inputs map[string]any, evidenceRefs []string, exec agentexec.Executor, agentSessionID string) (*agentexec.Result, error) {
 	if exec == nil {
 		exec = s.agent
 	}
@@ -772,10 +816,32 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 			meta["reasoningEffort"] = effort
 		}
 	}
+	decl := contextpack.LegacyReactMemory()
+	if err := plugins.NewBuiltinHost().BindProduction(decl); err != nil {
+		return nil, err
+	}
+	if !lenses.Admit("context.packed", lenses.LensAgent) {
+		return nil, fmt.Errorf("context.packed is not registered on the agent lens")
+	}
+	built, err := contextpack.Build(contextpack.Input{
+		Issue:    issue,
+		RAGRefs:  evidenceWithoutMemory(evidenceRefs),
+		Memories: memoryHitsFromRefs(evidenceRefs),
+		Memory:   decl,
+	})
+	if err != nil {
+		return nil, err
+	}
+	if err := packWithinEvidence(built.Refs, evidenceRefs); err != nil {
+		return nil, err
+	}
 	req := agentexec.Request{
 		RunID: runID, TraceID: traceID, StepID: step.ID, Role: step.Role,
 		RepoRoot: repoRoot, RunDir: runDir, Issue: issue, Prompt: prompt,
 		Inputs: inputs, TimeoutMs: timeout, Metadata: meta,
+		ContextPack: &agentexec.ContextPack{
+			Prefix: built.Prefix, Refs: built.Refs, MemoryRefs: built.MemoryRefs,
+		},
 	}
 	now := time.Now().UTC()
 	agentID := "ash-" + adapter
@@ -786,6 +852,10 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		TimeoutMs: timeout, CreatedAt: now, StartedAt: &now,
 	}
 	_ = s.gdb().Create(&task).Error
+	_, _ = s.eventsFor().Append(runID, traceID, "context.packed", "info", map[string]any{
+		"stepId": step.ID, "refs": built.Refs, "memoryRefs": built.MemoryRefs,
+		"prefixBytes": len(built.Prefix),
+	})
 	_, _ = s.eventsFor().Append(runID, traceID, "agent.called", "info", map[string]any{
 		"stepId": step.ID, "adapter": adapter, "timeoutMs": timeout,
 	})

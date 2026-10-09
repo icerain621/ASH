@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/ash-repwiki/ash/internal/artifacts"
+	"github.com/ash-repwiki/ash/internal/harness/compact"
 )
 
 const defaultContextTokenBudget = 32000
@@ -105,12 +106,19 @@ func (s *Service) maybeCompact(runID, traceID, stepID string, t *compactionTrack
 		return
 	}
 	t.compactedOnce = true
+	summary, chunks := compact.Summarize(string(sample), 64)
+	if chunks == 0 {
+		t.compactedOnce = false
+		return
+	}
 	_, _ = s.eventsFor().Append(runID, traceID, "harness.compaction", "info", map[string]any{
-		"stepId":           stepID,
+		"stepId":            stepID,
 		"triggerTokenRatio": t.triggerRatio,
-		"estimatedTokens":  t.usedTokens,
-		"budgetTokens":     t.budgetTokens,
-		"ratio":            ratio,
-		"summary":          "lossy compaction stub: prior tool outputs spilled or truncated for context budget",
+		"estimatedTokens":   t.usedTokens,
+		"budgetTokens":      t.budgetTokens,
+		"ratio":             ratio,
+		"mode":              "extractive",
+		"chunks":            chunks,
+		"summary":           summary,
 	})
 }

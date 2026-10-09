@@ -24,12 +24,17 @@ type ToolRiskEntry struct {
 }
 
 // Context carries run-scoped execution state for tools.
+// RAGQuerier runs one rag.query against the bound retrieval service.
+type RAGQuerier func(text string, topK int) (map[string]any, error)
+
 type Context struct {
 	RunID    string
 	TraceID  string
 	RepoRoot string
 	RunDir   string
+	SpaceID  string
 	Inputs   map[string]any
+	RAGQuery RAGQuerier
 }
 
 // CallRequest is a single tool invocation.

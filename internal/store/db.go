@@ -211,6 +211,8 @@ func (db *DB) migrate() error {
 		&PluginRegistry{},
 		&ImproveProposal{},
 		&HarnessProfileVersion{},
+		&AgentTemplateVersion{},
+		&ReviewItemRow{},
 		&ScenarioPatchDraft{},
 		&GoalPlan{},
 		&DiffReviewComment{},

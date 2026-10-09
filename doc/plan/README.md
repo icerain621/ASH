@@ -4,7 +4,7 @@
 
 | 文件 | 用途 | 更新频率 |
 |------|------|----------|
-| [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结；标准类别：计划） | 里程碑变更时 |
+| [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md) | **计划与进度**（v6.7 已冻结；下一功能代 v7 方向已立；标准类别：计划） | 里程碑变更时 |
 | [`GA-上线推进计划.md`](GA-上线推进计划.md) | **打包上线**（G0–G5；不新开功能代） | 上线窗口变更时 |
 | [`TODO.md`](TODO.md) | 未完成短清单 | 任务完成即删条目 |
 | [`mvp-release-scope.md`](mvp-release-scope.md) | MVP 范围冻结（`scope-freeze-gate`） | 冻结变更评审 |
@@ -30,6 +30,12 @@
 | [`v5-governance-program.md`](v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互 | 空间管控 / 评分 / Workbench / 薄交互 |
 | [`v5.0-release-scope.md`](v5.0-release-scope.md) | **v5.0** 范围（**已冻结**；GV06） | 冻结已落地的薄交互 + 管控/厚评审水位 |
 | [`v6.x-program.md`](v6.x-program.md) | **v6.x** 程序（可审计执行面；分冻 v6.0 / v6.3+） | Hooks / 会话语义 / 吸收收口 |
+| [`v7.x-program.md`](v7.x-program.md) | **v7** 程序（P0–P4 测试绿，待签字） | 组件化 Agent / 可插拔记忆 / 三镜头观测 |
+| [`v7.0-release-scope.md`](v7.0-release-scope.md) | **v7.0** 范围（P0 已冻结，测试绿） | Context Pack 进 Agent / 记忆引用门 |
+| [`v7.1-release-scope.md`](v7.1-release-scope.md) | **v7.1** 范围（P1 已冻结，测试绿） | 有上限工具循环 / 五个内置模板 |
+| [`v7.2-release-scope.md`](v7.2-release-scope.md) | **v7.2** 范围（P2 已冻结，测试绿） | 真压缩 / 技能披露 / token 扣减 |
+| [`v7.3-release-scope.md`](v7.3-release-scope.md) | **v7.3** 范围（P3 已冻结，测试绿） | 薄 Workflow / rag.query / 旧 kind 兼容 |
+| [`v7.4-release-scope.md`](v7.4-release-scope.md) | **v7.4** 范围（P4 已冻结，测试绿） | 记忆巩固 / BOOT / review·passk |
 | [`v6.0-release-scope.md`](v6.0-release-scope.md) | **v6.0** 范围（**已冻结**；EW130） | EW W0–W12 吸收水位冻结 |
 | [`v6.3-release-scope.md`](v6.3-release-scope.md) | **v6.3** 范围（**已冻结**；VX31–VX36） | RPC 烟测 · Notifier 缝 · Backend 枚举 |
 | [`v6.4-release-scope.md`](v6.4-release-scope.md) | **v6.4** 范围（**已冻结**；VX41–VX46） | Ingress 缝 · Provider 目录 · 组织 Skills Hub |

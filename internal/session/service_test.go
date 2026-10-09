@@ -95,6 +95,9 @@ func TestBlankPromptTurnSynthesizesAssistantStream(t *testing.T) {
 	if view.Replies[0].Source != "echo" || view.Replies[0].Text != "已收到：ping" {
 		t.Fatalf("reply=%+v", view.Replies[0])
 	}
+	if view.Meta["templateId"] != "tpl.react" {
+		t.Fatalf("meta=%+v want templateId tpl.react", view.Meta)
+	}
 	if n := len(view.Replies[0].Chunks); n < 2 || n > 4 {
 		t.Fatalf("chunks=%d want 2–4", n)
 	}
