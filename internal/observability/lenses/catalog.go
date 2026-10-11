@@ -32,6 +32,8 @@ func Catalog() []Signal {
 		{Component: "mem.retrieve", EventType: "memory.query_failed", Lens: LensMemory},
 		{Component: "mem.consolidate", EventType: "memory.consolidate_proposed", Lens: LensMemory},
 		{Component: "mem.forget", EventType: "memory.forget_proposed", Lens: LensMemory},
+		{Component: "harness", EventType: "harness.replan_proposed", Lens: LensAgent},
+		{Component: "harness", EventType: "harness.replan_exhausted", Lens: LensAgent},
 	}
 }
 

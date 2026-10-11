@@ -62,7 +62,7 @@ func ApproveTemplate(id string) (Entry, error) {
 }
 
 // GetProduction returns a built-in or approved custom template.
-// Candidate customs are rejected (H05).
+// Candidate customs are rejected (H05). Durable approved rows are consulted via SetApprovedLoader.
 func GetProduction(id string) (Manifest, error) {
 	if m, err := Get(id); err == nil {
 		return m, nil
@@ -70,27 +70,58 @@ func GetProduction(id string) (Manifest, error) {
 	catalogMu.RLock()
 	entry, ok := catalog[id]
 	catalogMu.RUnlock()
-	if !ok {
-		return Manifest{}, fmt.Errorf("unknown template %s", id)
+	if ok {
+		if entry.Status != StatusApproved {
+			return Manifest{}, fmt.Errorf("template %s is not approved for production", id)
+		}
+		return entry.Manifest, nil
 	}
-	if entry.Status != StatusApproved {
-		return Manifest{}, fmt.Errorf("template %s is not approved for production", id)
+	if m, ok := loadApprovedPersistent(id); ok {
+		return m, nil
 	}
-	return entry.Manifest, nil
+	return Manifest{}, fmt.Errorf("unknown template %s", id)
 }
 
-// ListAll returns built-ins plus custom catalog entries.
+// EntryListResponse is the catalog with review status (G03).
+type EntryListResponse struct {
+	Items []Entry `json:"items"`
+}
+
+// ListAll returns built-ins plus custom catalog entries (manifests only).
 func ListAll() (ListResponse, error) {
-	base, err := List()
+	entries, err := ListEntries()
 	if err != nil {
 		return ListResponse{}, err
+	}
+	out := ListResponse{Items: make([]Manifest, 0, len(entries.Items))}
+	for _, entry := range entries.Items {
+		out.Items = append(out.Items, entry.Manifest)
+	}
+	return out, nil
+}
+
+// ListEntries returns built-ins (approved) plus custom catalog entries with status.
+func ListEntries() (EntryListResponse, error) {
+	base, err := List()
+	if err != nil {
+		return EntryListResponse{}, err
+	}
+	items := make([]Entry, 0, len(base.Items)+8)
+	for _, m := range base.Items {
+		items = append(items, Entry{Manifest: m, Status: StatusApproved})
 	}
 	catalogMu.RLock()
 	defer catalogMu.RUnlock()
 	for _, entry := range catalog {
-		base.Items = append(base.Items, entry.Manifest)
+		items = append(items, entry)
 	}
-	return base, nil
+	return EntryListResponse{Items: items}, nil
+}
+
+// IsBindable reports whether a template id may be bound to a production run.
+func IsBindable(id string) bool {
+	_, err := GetProduction(id)
+	return err == nil
 }
 
 // ResetCatalogForTest clears custom templates (tests only).

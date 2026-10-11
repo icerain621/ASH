@@ -17,6 +17,15 @@ export function workModeFromPath(pathname: string): WorkMode | null {
     p.endsWith("/reviews") ||
     p.includes("/reviews/") ||
     p.includes("/m/reviews") ||
+    p === "/agent-templates" ||
+    p.endsWith("/agent-templates") ||
+    p.includes("/agent-templates/") ||
+    p === "/agent-components" ||
+    p.endsWith("/agent-components") ||
+    p.includes("/agent-components/") ||
+    p === "/doctor" ||
+    p.endsWith("/doctor") ||
+    p.includes("/doctor/") ||
     p === "/metrics" ||
     p.endsWith("/metrics") ||
     p.includes("/metrics/") ||

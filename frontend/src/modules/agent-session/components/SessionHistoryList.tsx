@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import type { KeyboardEvent } from "react";
 import type { AgentMode } from "../agentModeLabels";
 import type { AgentSessionView } from "../api/session.api";
 import type { AgentWorkspaceView } from "../api/workspace.api";
@@ -56,6 +57,35 @@ function sessionTitle(session: AgentSessionView): string {
   const turn = session.turns?.[session.turns.length - 1]?.prompt?.trim();
   if (turn) return turn.length > 48 ? `${turn.slice(0, 48)}…` : turn;
   return shortId(session.id);
+}
+
+const HISTORY_NAV = "data-history-nav";
+
+/** Move focus among workspace toggles and session rows (ArrowUp/Down/Home/End). */
+function focusHistoryNav(current: HTMLElement, key: string): boolean {
+  if (key !== "ArrowDown" && key !== "ArrowUp" && key !== "Home" && key !== "End") {
+    return false;
+  }
+  const root = current.closest("[data-testid='agent-workspace-list']");
+  if (!root) return false;
+  const items = Array.from(root.querySelectorAll<HTMLElement>(`[${HISTORY_NAV}]`));
+  if (!items.length) return false;
+  const idx = items.indexOf(current);
+  if (idx < 0) return false;
+  let next = idx;
+  if (key === "Home") next = 0;
+  else if (key === "End") next = items.length - 1;
+  else if (key === "ArrowDown") next = Math.min(items.length - 1, idx + 1);
+  else next = Math.max(0, idx - 1);
+  if (next === idx) return true;
+  items[next]?.focus();
+  return true;
+}
+
+function onHistoryNavKeyDown(e: KeyboardEvent<HTMLElement>) {
+  if (focusHistoryNav(e.currentTarget, e.key)) {
+    e.preventDefault();
+  }
 }
 
 /** Left sidebar: sessions grouped under agent workspaces. */
@@ -245,6 +275,8 @@ export function SessionHistoryList({
               type="button"
               className={active ? "agent-history-item active" : "agent-history-item"}
               onClick={() => onSelect(item)}
+              onKeyDown={onHistoryNavKeyDown}
+              data-history-nav=""
               data-testid={`agent-history-item-${item.id}`}
               aria-current={active ? "true" : undefined}
             >
@@ -369,7 +401,12 @@ export function SessionHistoryList({
           显示已关闭
         </label>
       ) : null}
-      <div className="agent-workspace-list" data-testid="agent-workspace-list">
+      <div
+        className="agent-workspace-list"
+        data-testid="agent-workspace-list"
+        role="navigation"
+        aria-label="工作区与会话"
+      >
         {groups.map((group) => {
           const key = group.workspace?.id ?? "unassigned";
           const wsId = group.workspace?.id ?? null;
@@ -438,6 +475,12 @@ export function SessionHistoryList({
                       type="button"
                       className="agent-workspace-toggle"
                       aria-expanded={isOpen}
+                      data-history-nav=""
+                      data-testid={
+                        group.workspace
+                          ? `agent-workspace-toggle-${group.workspace.id}`
+                          : "agent-workspace-toggle-unassigned"
+                      }
                       title={
                         isOpen
                           ? `折叠「${group.workspace?.title ?? "未分组"}」`
@@ -447,6 +490,7 @@ export function SessionHistoryList({
                         toggleGroup(key);
                         onSelectWorkspace(group.workspace?.id ?? null);
                       }}
+                      onKeyDown={onHistoryNavKeyDown}
                     >
                       <span className="agent-workspace-chevron">{isOpen ? "▾" : "▸"}</span>
                       <strong>{group.workspace?.title ?? "未分组"}</strong>

@@ -5,10 +5,10 @@ import { DoctorReportView } from "@/components/DoctorReportView";
 import { getDoctorReport, runDoctor, type DoctorReport, type DoctorSuite } from "@/modules/doctor/api/doctor.api";
 import { Link } from "@tanstack/react-router";
 
-const SUITES = ["TR0", "TR1", "TR2", "TR3", "M2", "M3", "ALL"] as const;
+const SUITES = ["BOOT", "TR0", "TR1", "TR2", "TR3", "M2", "M3", "ALL"] as const;
 
 export function DoctorPage() {
-  const [suite, setSuite] = useState<DoctorSuite>("TR0");
+  const [suite, setSuite] = useState<DoctorSuite>("BOOT");
   const [report, setReport] = useState<DoctorReport | null>(null);
   const [errorText, setErrorText] = useState("");
 
@@ -28,7 +28,7 @@ export function DoctorPage() {
   });
 
   return (
-    <section className="panel active">
+    <section className="panel active" data-testid="doctor-page">
       <div className="page-kicker">
         <HeartPulse size={17} strokeWidth={1.8} />
         健康诊断
@@ -36,7 +36,14 @@ export function DoctorPage() {
       <div className="page-heading">
         <div>
           <h1>诊断</h1>
-          <p>运行 TR 检查套件，并以表格查看每项用例与证据。</p>
+          <p>运行时健康套件（BOOT / TR* / M*）。质量抽样与组件批准在评审管控，不在本页。</p>
+          <p className="muted-line" data-testid="doctor-quality-redirect">
+            Pass^k 与模板/组件批准请前往{" "}
+            <Link to="/reviews" className="inline-link">
+              评审管控 → 组件闸
+            </Link>
+            。
+          </p>
           {suite === "TR2" && (
             <p className="muted-line">
               TR2 侧重身份/隔离/存储/插件 ABI，也可在{" "}

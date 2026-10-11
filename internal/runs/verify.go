@@ -77,11 +77,19 @@ func (s *Service) executeVerifyStep(
 	if onFail == "" {
 		onFail = "fail"
 	}
-	s.finishStep(stepRow, "failed", stepStart, "VERIFY_FAILED", lastErr)
-	_, err := s.failRun(rec, runID, traceID, runStarted, "VERIFY_FAILED", lastErr)
-	if onFail == "improve" {
+	code := "VERIFY_FAILED"
+	msg := lastErr
+	switch onFail {
+	case "improve":
 		s.maybeDraftImprove(rec, runID, step.ID, lastErr)
+	case "replan":
+		if s.maybeProposeReplan(rec, runID, step, lastErr) {
+			code = "REPLAN_EXHAUSTED"
+			msg = fmt.Sprintf("replan budget exhausted for step %s: %s", step.ID, lastErr)
+		}
 	}
+	s.finishStep(stepRow, "failed", stepStart, code, msg)
+	_, err := s.failRun(rec, runID, traceID, runStarted, code, msg)
 	return err
 }
 

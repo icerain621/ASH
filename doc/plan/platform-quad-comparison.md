@@ -143,7 +143,7 @@
 | ID | 模式 | 最佳来源 | ASH 现状 | 决策 | 建议落点 |
 |----|------|----------|----------|------|----------|
 | P01 | Append-only 事件真相 + derive 投影 | DSH | v5 visibility / ConversationNode / FoldThread | **Partial** | 硬化「模型可见 ⟺ 已记录」；减少双写 |
-| P02 | UI 只发意图、只渲投影 | DSH | v5 薄交互 / Quest 去厚；Composer/壳 APG·DSH + caption 投影（2026-10） | **Partial→近收口** | 残留：工作区列表键盘等；禁止 FE 私算分 |
+| P02 | UI 只发意图、只渲投影 | DSH | v5 薄交互 / Quest 去厚；Composer/壳 APG·DSH + caption 投影；工作区键盘 / Timeline 滤镜组（2026-10） | **Absorb→近收口** | 禁止 FE 私算分 |
 | P03 | Capability seams（fs/tools/sandbox 可替换） | DSH | ToolBus + Sandbox + Provider | **Partial** | 缝接口文档化；不引入 Cordis |
 | P04 | Profile → Bundle 组合 | DSH | Harness Profile | **Partial** | Profile 版本评审已有；不叠加 patch 热更 |
 | P05 | JSONL 会话树（fork/tree/clone） | Pi | Run replay；interaction threads | **Absorb** | Thread 分支元数据 + compare；非另起 TUI |

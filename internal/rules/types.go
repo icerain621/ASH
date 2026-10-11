@@ -90,7 +90,8 @@ type Step struct {
 // VerifySpec defines kind:verify checks (test/lint/status style tool calls).
 type VerifySpec struct {
 	Checks []ToolChainItem `yaml:"checks" json:"checks"`
-	OnFail string          `yaml:"onFail,omitempty" json:"onFail,omitempty"` // fail|improve
+	OnFail         string `yaml:"onFail,omitempty" json:"onFail,omitempty"` // fail|improve|replan
+	MaxReplanTurns int    `yaml:"maxReplanTurns,omitempty" json:"maxReplanTurns,omitempty"`
 }
 
 type RAGSpec struct {

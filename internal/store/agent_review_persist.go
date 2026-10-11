@@ -111,6 +111,36 @@ func (db *DB) CreateReviewItem(spaceID, kind, targetID, reason string) (*ReviewI
 	return &row, nil
 }
 
+// ListPendingReviewItems returns pending review rows, optionally filtered by kind.
+func (db *DB) ListPendingReviewItems(spaceID, kind string) ([]ReviewItemRow, error) {
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		spaceID = "local"
+	}
+	q := db.Where("space_id = ? AND status = ?", spaceID, "pending")
+	if k := strings.TrimSpace(kind); k != "" {
+		q = q.Where("kind = ?", k)
+	}
+	var rows []ReviewItemRow
+	if err := q.Order("created_at asc").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
+// ListAgentTemplateVersions returns custom template version rows for a space.
+func (db *DB) ListAgentTemplateVersions(spaceID string) ([]AgentTemplateVersion, error) {
+	spaceID = strings.TrimSpace(spaceID)
+	if spaceID == "" {
+		spaceID = "local"
+	}
+	var rows []AgentTemplateVersion
+	if err := db.Where("space_id = ?", spaceID).Order("updated_at desc").Find(&rows).Error; err != nil {
+		return nil, err
+	}
+	return rows, nil
+}
+
 // DecideReviewItem approves or rejects a pending review row.
 func (db *DB) DecideReviewItem(id, decision, actor, reason string) (*ReviewItemRow, error) {
 	var row ReviewItemRow

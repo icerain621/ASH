@@ -86,7 +86,13 @@ export function ThreadTimeline({ runId, highlightSeq, onSelectSeq }: Props) {
           {foldQuery.data?.digest ? ` · ${foldQuery.data.digest.slice(0, 12)}` : ""}
         </span>
       </div>
-      <div className="toolbar" data-testid="thread-timeline-filters" style={{ marginBottom: "0.5rem", gap: "0.35rem" }}>
+      <div
+        className="toolbar"
+        data-testid="thread-timeline-filters"
+        role="group"
+        aria-label="时间线筛选"
+        style={{ marginBottom: "0.5rem", gap: "0.35rem" }}
+      >
         {FILTERS.map((item) => (
           <button
             key={item.id}

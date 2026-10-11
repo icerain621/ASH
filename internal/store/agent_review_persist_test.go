@@ -34,8 +34,20 @@ func TestAgentTemplateAndReviewItemPersist(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	pending, err := db.ListPendingReviewItems("local", "agent_template")
+	if err != nil || len(pending) != 1 || pending[0].ID != item.ID {
+		t.Fatalf("pending=%+v err=%v", pending, err)
+	}
+	versions, err := db.ListAgentTemplateVersions("local")
+	if err != nil || len(versions) < 1 {
+		t.Fatalf("versions=%+v err=%v", versions, err)
+	}
 	decided, err := db.DecideReviewItem(item.ID, "approve", "reviewer", "ok")
 	if err != nil || decided.Status != "approved" {
 		t.Fatalf("decided=%+v err=%v", decided, err)
+	}
+	after, err := db.ListPendingReviewItems("local", "")
+	if err != nil || len(after) != 0 {
+		t.Fatalf("after decide pending=%+v err=%v", after, err)
 	}
 }

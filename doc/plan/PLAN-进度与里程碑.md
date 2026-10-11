@@ -1,10 +1,10 @@
 # ASH 项目计划与进度 / Plan & Progress
 
-> **状态 / Status**：现行排期真相源（2026-10-09）  
-> **代码水位 / Watermark**：`main` `7b474964` · **v6.7 已冻结**（VX72；`make v6.7-signoff`）  
-> **Tag**：`v0.1.0-mvp` 已打；`v2.*`–`v6.*` **均未自动打 tag**（人工 + 签字）  
-> **Doctor / Schema**：ALL **63/63** · M4 **13/13** · TR3 **13/13** · SQL rev **32** · RLS **56**  
-> **归属**：[`plan/`](README.md) · 短待办 [`TODO.md`](TODO.md) · 已冻程序 [`v6.x-program.md`](v6.x-program.md) · **下一功能代** [`v7.x-program.md`](v7.x-program.md)  
+> **状态 / Status**：现行排期真相源（2026-10-10）  
+> **代码水位 / Watermark**：`main` · **v6.7 已冻结**；**v7 P0–P10 验收测试已绿、待签字**  
+> **Tag**：`v0.1.0-mvp` 已打；`v2.*`–`v7.*` **均未自动打 tag**（人工 + 签字）  
+> **Doctor / Schema（v7）**：ALL **56** · QUALITY **7** · BOOT **5** · SQL rev **40** · 见 [`v7.7-release-scope.md`](v7.7-release-scope.md)  
+> **归属**：[`plan/`](README.md) · 短待办 [`TODO.md`](TODO.md) · [`v6.x-program.md`](v6.x-program.md) · [`v7.x-program.md`](v7.x-program.md)  
 > **发布勾选**：[`../progress/`](../progress/README.md) · [`../checklists/`](../checklists/smoke-index.md)
 
 ---
@@ -14,8 +14,8 @@
 **功能代际已冻到 v6.7**（Harness 回显沙箱目录）。冻结后主线上又落地了一批 **不升代** 的薄交付：会话推理等级投影、助手 `provider · model · effort` 账本字段、Composer/壳 APG·DSH 无障碍（P02）、控制台空态与测试门禁。  
 **v6.7 is frozen.** Post-freeze work on `main` stays **version-neutral**: reasoning-effort projection, assistant caption fields, Composer/shell APG·DSH a11y (P02), console empty states, and test gates.
 
-下一功能代定为 **v7**。P0 至 P4 验收测试已绿。范围见 [`v7.0-release-scope.md`](v7.0-release-scope.md) … [`v7.4-release-scope.md`](v7.4-release-scope.md)。不开 **v6.8**。P5 未开工。GA 与 v6 人工 tag 仍并行。  
-The next feature generation is **v7**. P0 through P4 acceptance tests are green. There is no v6.8. P5 has not started. GA and optional v6 tags stay in parallel.
+下一功能代 **v7** 的 P0–P10 验收测试已绿（最新 [`v7.10-release-scope.md`](v7.10-release-scope.md)），待真人签字。不开 **v6.8**。GA 与 v6 人工 tag 仍并行。  
+**v7** P0–P10 acceptance tests are green (latest [`v7.10-release-scope.md`](v7.10-release-scope.md)); human sign-off is still open. There is no v6.8. GA and optional v6 tags stay in parallel.
 
 ---
 
@@ -31,7 +31,7 @@ The next feature generation is **v7**. P0 through P4 acceptance tests are green.
 | v6.3–v6.6 | RPC · Notifier · Ingress · Webhook | ✅ 已冻结 |
 | **v6.7** | Harness `sandboxBackends` 回显 | ✅ **已冻结**（VX71–VX72） |
 | 冻结后（不升代） | 推理等级 · P02 投影/无障碍 · 空态 · 测试 | ✅ 已合入 `main`（见 §3） |
-| **v7** | 组件化 Agent × 可插拔记忆 × 三镜头观测 | ✅ **P0–P4 测试绿**；P5 未开工 |
+| **v7** | 组件化 Agent × 可插拔记忆 × 三镜头观测 | ✅ **P0–P10 测试绿**；待签字 |
 
 详情：[`v6.7-release-scope.md`](v6.7-release-scope.md) · [`v6.x-program.md`](v6.x-program.md)。
 
@@ -41,8 +41,8 @@ The next feature generation is **v7**. P0 through P4 acceptance tests are green.
 
 | 轨 | 内容 | 状态 |
 |----|------|------|
-| **A · 功能代** | v6.7 冻结。**v7 P0–P4 测试绿**（[`v7.4-release-scope.md`](v7.4-release-scope.md)；不开 v6.8） | P5 未开工 |
-| **B · P02 薄交互** | UI 只发意图、只渲投影；Composer/壳对齐 DSH/APG | **本轮已大幅收口**；残留见 §4 |
+| **A · 功能代** | v6.7 冻结。**v7 P0–P13 测试绿**（`make v7-signoff`；不开 v6.8） | 待签字 |
+| **B · P02 薄交互** | UI 只发意图、只渲投影；Composer/壳对齐 DSH/APG | **已收口**（含工作区键盘 / Timeline 滤镜组） |
 | **C · GA / 上线** | 云 RDS、真人签字、可选 `v6.*.0` tag | ⏸ 需环境与人工 |
 | **D · 质量门禁** | Vitest coverage · Playwright · 后端包覆盖补强 | ✅ 已合入；持续维护 |
 
@@ -69,14 +69,14 @@ Version-neutral. Facts live in CHANGELOG and commits below.
 
 ### 4.1 产品未决议前（默认）
 
-1. **继续薄 P02 残留**（可选）：工作区列表键盘、ThreadTimeline 滤镜组标签、审批气泡 status 等——仍禁止 FE 私算分、不开新代。  
-2. **GA 准备**：填 `cloud-rds.env` → `make cloud-acceptance`；四人真人签字；按需打 `v6.7.0`（须 `make v6.7-signoff` 绿）。  
-3. **质量**：`make regression-short && make web-gate`；保持 Doctor ALL 63。
+1. **GA 准备**：填 `cloud-rds.env` → `make cloud-acceptance`；四人真人签字；按需打 `v6.7.0`（须 `make v6.7-signoff` 绿）。  
+2. **v7 签字**：`make v7-signoff-prep` → 四人填 `doc/evidence/v7-signatures-latest.md`（见 TODO `V7-SIGN`）。  
+3. **质量**：`make regression-short && make web-gate`；保持 Doctor 套件计数与卡片一致。
 
-### 4.2 下一功能代 v7（P2 测试绿）
+### 4.2 下一功能代 v7（P0–P13 测试绿，待签字）
 
-- 程序与全部功能点：[`v7.x-program.md`](v7.x-program.md)。P0–P4 范围见 `v7.0`…`v7.4-release-scope.md`。设计总表：[`../design/ASH-Pi组件重构-改动清单.md`](../design/ASH-Pi组件重构-改动清单.md)。  
-- 优先级：P0…P4（测试绿）→ P5 自定义插件 → P6 三镜头观测。
+- 程序与全部功能点：[`v7.x-program.md`](v7.x-program.md)。范围见 `v7.0`…`v7.13-release-scope.md`。设计总表：[`../design/ASH-Pi组件重构-改动清单.md`](../design/ASH-Pi组件重构-改动清单.md)。  
+- 门禁：`make v7-signoff`；真人签字 / 可选 tag 见 TODO `V7-SIGN`。
 
 ### 4.3 明确不做
 
@@ -107,6 +107,7 @@ Version-neutral. Facts live in CHANGELOG and commits below.
 make openapi-check
 make regression-short && make web-gate
 make v6.7-signoff          # 打 v6.7.0 前
+make v7-signoff            # 打 v7.0.0 前（不自动 tag）
 # 云（需 cloud-rds.env）
 bash scripts/source-cloud-rds-env.sh && make cloud-acceptance
 ```

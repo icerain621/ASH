@@ -30,7 +30,16 @@
 | [`v5-governance-program.md`](v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互 | 空间管控 / 评分 / Workbench / 薄交互 |
 | [`v5.0-release-scope.md`](v5.0-release-scope.md) | **v5.0** 范围（**已冻结**；GV06） | 冻结已落地的薄交互 + 管控/厚评审水位 |
 | [`v6.x-program.md`](v6.x-program.md) | **v6.x** 程序（可审计执行面；分冻 v6.0 / v6.3+） | Hooks / 会话语义 / 吸收收口 |
-| [`v7.x-program.md`](v7.x-program.md) | **v7** 程序（P0–P4 测试绿，待签字） | 组件化 Agent / 可插拔记忆 / 三镜头观测 |
+| [`v7.x-program.md`](v7.x-program.md) | **v7** 程序（P0–P13 测试绿，待签字；`make v7-signoff`） | 组件化 Agent / 可插拔记忆 / 三镜头观测 |
+| [`v7.9-release-scope.md`](v7.9-release-scope.md) | **v7.9** 范围（P9 已冻结，测试绿） | CLI ash review / G01 写穿 |
+| [`v7.10-release-scope.md`](v7.10-release-scope.md) | **v7.10** 范围（P10 已冻结，测试绿） | 记忆三计数 / B03 文档 |
+| [`v7.11-release-scope.md`](v7.11-release-scope.md) | **v7.11** 范围（P11 已冻结，测试绿） | F06 有上限再规划 |
+| [`v7.12-release-scope.md`](v7.12-release-scope.md) | **v7.12** 范围（P12 已冻结，测试绿） | F06 场景样例 / Admit / E2 |
+| [`v7.13-release-scope.md`](v7.13-release-scope.md) | **v7.13** 范围（P13 已冻结，测试绿） | `make v7-signoff` 门禁 |
+| [`v7.5-release-scope.md`](v7.5-release-scope.md) | **v7.5** 范围（P5 已冻结，测试绿） | 插件门禁 / 模板 HTTP |
+| [`v7.6-release-scope.md`](v7.6-release-scope.md) | **v7.6** 范围（P6 已冻结，测试绿） | 三镜头观测 |
+| [`v7.7-release-scope.md`](v7.7-release-scope.md) | **v7.7** 范围（P7 已冻结，测试绿） | SQL40 / QUALITY / 对照 |
+| [`v7.8-release-scope.md`](v7.8-release-scope.md) | **v7.8** 范围（P8 已冻结，测试绿） | 控制台 IA：模板 / 组件 / 评审 / 诊断 |
 | [`v7.0-release-scope.md`](v7.0-release-scope.md) | **v7.0** 范围（P0 已冻结，测试绿） | Context Pack 进 Agent / 记忆引用门 |
 | [`v7.1-release-scope.md`](v7.1-release-scope.md) | **v7.1** 范围（P1 已冻结，测试绿） | 有上限工具循环 / 五个内置模板 |
 | [`v7.2-release-scope.md`](v7.2-release-scope.md) | **v7.2** 范围（P2 已冻结，测试绿） | 真压缩 / 技能披露 / token 扣减 |

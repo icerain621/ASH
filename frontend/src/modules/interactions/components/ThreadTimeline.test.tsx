@@ -71,6 +71,9 @@ describe("ThreadTimeline", () => {
       </QueryClientProvider>,
     );
     await waitFor(() => expect(screen.getAllByTestId("thread-timeline-node")).toHaveLength(3));
+    const filters = screen.getByTestId("thread-timeline-filters");
+    expect(filters).toHaveAttribute("role", "group");
+    expect(filters).toHaveAttribute("aria-label", "时间线筛选");
     fireEvent.click(screen.getByTestId("thread-timeline-filter-model_visible"));
     const visible = screen.getAllByTestId("thread-timeline-node");
     expect(visible).toHaveLength(2);

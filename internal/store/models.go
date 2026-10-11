@@ -51,48 +51,48 @@ func (RunStep) TableName() string { return "run_steps" }
 
 // ToolCall persists native ToolBus calls with audit-friendly metadata.
 type ToolCall struct {
-	ID          string `gorm:"primaryKey;size:64"`
-	RunID       string `gorm:"index;size:64;not null"`
-	TraceID     string `gorm:"index;size:64"`
-	StepID      string `gorm:"index;size:128"`
-	Tool        string `gorm:"size:128;not null;index"`
-	Risk        string `gorm:"size:32;not null"`
-	Status      string `gorm:"size:32;not null;index"`
-	ArgsDigest  string `gorm:"size:128"`
-	OutputJSON  string `gorm:"type:text;not null;default:'{}'"`
-	Error       string `gorm:"type:text"`
-	DurationMs  int64
-	Attempt     int `gorm:"not null;default:1"`
-	TimeoutMs   int64
-	CreatedAt   time.Time
-	CompletedAt *time.Time
+	ID          string     `gorm:"primaryKey;size:64" json:"id"`
+	RunID       string     `gorm:"index;size:64;not null" json:"runId"`
+	TraceID     string     `gorm:"index;size:64" json:"traceId,omitempty"`
+	StepID      string     `gorm:"index;size:128" json:"stepId,omitempty"`
+	Tool        string     `gorm:"size:128;not null;index" json:"tool"`
+	Risk        string     `gorm:"size:32;not null" json:"risk"`
+	Status      string     `gorm:"size:32;not null;index" json:"status"`
+	ArgsDigest  string     `gorm:"size:128" json:"argsDigest,omitempty"`
+	OutputJSON  string     `gorm:"type:text;not null;default:'{}'" json:"outputJSON"`
+	Error       string     `gorm:"type:text" json:"error,omitempty"`
+	DurationMs  int64      `json:"durationMs"`
+	Attempt     int        `gorm:"not null;default:1" json:"attempt"`
+	TimeoutMs   int64      `json:"timeoutMs,omitempty"`
+	CreatedAt   time.Time  `json:"createdAt"`
+	CompletedAt *time.Time `json:"completedAt,omitempty"`
 }
 
 func (ToolCall) TableName() string { return "tool_calls" }
 
 // AgentTask tracks external agent execution through ExecGo/Codex.
 type AgentTask struct {
-	ID            string `gorm:"primaryKey;size:64"`
-	RunID         string `gorm:"index;size:64;not null"`
-	TraceID       string `gorm:"index;size:64"`
-	StepID        string `gorm:"index;size:128"`
-	Adapter       string `gorm:"size:64;not null"`
-	AgentID       string `gorm:"size:128"`
-	SessionID     string `gorm:"size:128"`
-	ActionID      string `gorm:"size:128;index"`
-	ExecGoTaskID  string `gorm:"size:128;index"`
-	Status        string `gorm:"size:32;not null;index"`
-	PromptDigest  string `gorm:"size:128"`
-	StdoutSummary string `gorm:"type:text"`
-	StderrSummary string `gorm:"type:text"`
-	ExitCode      *int
-	ErrorCode     string `gorm:"size:64"`
-	ErrorMessage  string `gorm:"type:text"`
-	DurationMs    int64
-	TimeoutMs     int64
-	CreatedAt     time.Time
-	StartedAt     *time.Time
-	CompletedAt   *time.Time
+	ID            string     `gorm:"primaryKey;size:64" json:"id"`
+	RunID         string     `gorm:"index;size:64;not null" json:"runId"`
+	TraceID       string     `gorm:"index;size:64" json:"traceId,omitempty"`
+	StepID        string     `gorm:"index;size:128" json:"stepId,omitempty"`
+	Adapter       string     `gorm:"size:64;not null" json:"adapter"`
+	AgentID       string     `gorm:"size:128" json:"agentID,omitempty"`
+	SessionID     string     `gorm:"size:128" json:"sessionID,omitempty"`
+	ActionID      string     `gorm:"size:128;index" json:"actionID,omitempty"`
+	ExecGoTaskID  string     `gorm:"size:128;index" json:"execGoTaskID,omitempty"`
+	Status        string     `gorm:"size:32;not null;index" json:"status"`
+	PromptDigest  string     `gorm:"size:128" json:"promptDigest,omitempty"`
+	StdoutSummary string     `gorm:"type:text" json:"stdoutSummary,omitempty"`
+	StderrSummary string     `gorm:"type:text" json:"stderrSummary,omitempty"`
+	ExitCode      *int       `json:"exitCode,omitempty"`
+	ErrorCode     string     `gorm:"size:64" json:"errorCode,omitempty"`
+	ErrorMessage  string     `gorm:"type:text" json:"errorMessage,omitempty"`
+	DurationMs    int64      `json:"durationMs"`
+	TimeoutMs     int64      `json:"timeoutMs,omitempty"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	StartedAt     *time.Time `json:"startedAt,omitempty"`
+	CompletedAt   *time.Time `json:"completedAt,omitempty"`
 }
 
 func (AgentTask) TableName() string { return "agent_tasks" }
@@ -344,13 +344,13 @@ func (ModelUsage) TableName() string { return "model_usage" }
 
 // QualityMetric records M1 quality baseline values.
 type QualityMetric struct {
-	ID        string `gorm:"primaryKey;size:64"`
-	RunID     string `gorm:"index;size:64"`
-	SpaceID   string `gorm:"size:64;not null;default:local;index"`
-	Name      string `gorm:"size:128;not null;index"`
-	Value     float64
-	Unit      string `gorm:"size:32"`
-	CreatedAt time.Time
+	ID        string    `gorm:"primaryKey;size:64" json:"id"`
+	RunID     string    `gorm:"index;size:64" json:"runId,omitempty"`
+	SpaceID   string    `gorm:"size:64;not null;default:local;index" json:"spaceId"`
+	Name      string    `gorm:"size:128;not null;index" json:"name"`
+	Value     float64   `json:"value"`
+	Unit      string    `gorm:"size:32" json:"unit,omitempty"`
+	CreatedAt time.Time `json:"createdAt"`
 }
 
 func (QualityMetric) TableName() string { return "quality_metrics" }

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"encoding/json"
 	"net/http"
 	"strings"
 
@@ -79,6 +80,7 @@ func (h *Handler) submitAgentTemplateCandidate(c *gin.Context) {
 		return
 	}
 	_, _ = processReview.Submit(review.KindAgentTemplate, entry.Manifest.ID, "candidate submitted")
+	h.persistTemplateCandidate(c, entry)
 	c.JSON(http.StatusOK, entry)
 }
 
@@ -96,6 +98,12 @@ func (h *Handler) approveAgentTemplate(c *gin.Context) {
 	if err != nil {
 		c.JSON(http.StatusBadRequest, errorBody("AGENT_TEMPLATE_APPROVE_FAILED", err.Error()))
 		return
+	}
+	if h.db != nil {
+		if _, err := h.db.ApproveAgentTemplate(currentSpace(c), id, firstNonEmptyAPI(currentActor(c), "api")); err != nil {
+			// In-process approve already succeeded; durable row may be missing in pure unit tests.
+			_ = err
+		}
 	}
 	c.JSON(http.StatusOK, approveAgentTemplateResponse{Entry: entry})
 }
@@ -152,6 +160,41 @@ func (h *Handler) approveAgentComponent(c *gin.Context) {
 	c.JSON(http.StatusOK, got)
 }
 
+type agentReviewListResponse struct {
+	Items []review.Item `json:"items"`
+}
+
+// ListAgentReviews godoc
+// @Summary List pending in-process agent/template/component review items
+// @Tags reviews
+// @Produce json
+// @Param kind query string false "optional kind filter"
+// @Success 200 {object} agentReviewListResponse
+// @Router /api/v1/agent-reviews [get]
+func (h *Handler) listAgentReviews(c *gin.Context) {
+	kind := review.Kind(strings.TrimSpace(c.Query("kind")))
+	items := processReview.List(kind)
+	if h.db != nil {
+		rows, err := h.db.ListPendingReviewItems(currentSpace(c), string(kind))
+		if err == nil {
+			seen := map[string]struct{}{}
+			for _, item := range items {
+				seen[item.ID] = struct{}{}
+			}
+			for _, row := range rows {
+				if _, ok := seen[row.ID]; ok {
+					continue
+				}
+				items = append(items, review.Item{
+					ID: row.ID, Kind: review.Kind(row.Kind), TargetID: row.TargetID,
+					Status: row.Status, Reason: row.Reason, Created: row.CreatedAt.Unix(),
+				})
+			}
+		}
+	}
+	c.JSON(http.StatusOK, agentReviewListResponse{Items: items})
+}
+
 // SubmitAgentReview godoc
 // @Summary Enqueue an in-process review item (template/harness/memory/artifact/run)
 // @Tags reviews
@@ -172,6 +215,12 @@ func (h *Handler) submitAgentReview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("AGENT_REVIEW_SUBMIT_FAILED", err.Error()))
 		return
 	}
+	if h.db != nil {
+		if row, err := h.db.CreateReviewItem(currentSpace(c), string(item.Kind), item.TargetID, item.Reason); err == nil {
+			item.ID = row.ID
+			item.Created = row.CreatedAt.Unix()
+		}
+	}
 	c.JSON(http.StatusOK, item)
 }
 
@@ -191,15 +240,86 @@ func (h *Handler) decideAgentReview(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
 		return
 	}
-	item, err := processReview.Decide(c.Param("reviewId"), req.Decision, req.Reason)
+	reviewID := c.Param("reviewId")
+	item, err := processReview.Decide(reviewID, req.Decision, req.Reason)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorBody("AGENT_REVIEW_DECIDE_FAILED", err.Error()))
-		return
+		if h.db == nil {
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_REVIEW_DECIDE_FAILED", err.Error()))
+			return
+		}
+		row, derr := h.db.DecideReviewItem(reviewID, req.Decision, firstNonEmptyAPI(currentActor(c), "api"), req.Reason)
+		if derr != nil {
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_REVIEW_DECIDE_FAILED", derr.Error()))
+			return
+		}
+		item = review.Item{
+			ID: row.ID, Kind: review.Kind(row.Kind), TargetID: row.TargetID,
+			Status: row.Status, Reason: row.Reason,
+		}
+		if row.DecidedAt != nil {
+			item.Decided = row.DecidedAt.Unix()
+		}
+	} else if h.db != nil {
+		_, _ = h.db.DecideReviewItem(reviewID, req.Decision, firstNonEmptyAPI(currentActor(c), "api"), req.Reason)
 	}
 	if item.Status == review.StatusApproved && item.Kind == review.KindAgentTemplate {
 		_, _ = agenttpl.ApproveTemplate(item.TargetID)
+		if h.db != nil {
+			_, _ = h.db.ApproveAgentTemplate(currentSpace(c), item.TargetID, firstNonEmptyAPI(currentActor(c), "api"))
+		}
 	}
 	c.JSON(http.StatusOK, item)
+}
+
+func (h *Handler) persistTemplateCandidate(c *gin.Context, entry agenttpl.Entry) {
+	if h.db == nil {
+		return
+	}
+	raw, err := json.Marshal(entry.Manifest)
+	if err != nil {
+		return
+	}
+	space := currentSpace(c)
+	actor := firstNonEmptyAPI(currentActor(c), "api")
+	_, _ = h.db.SaveAgentTemplateCandidate(space, entry.Manifest.ID, entry.Manifest.Version, string(raw), actor)
+	_, _ = h.db.CreateReviewItem(space, string(review.KindAgentTemplate), entry.Manifest.ID, "candidate submitted")
+}
+
+func (h *Handler) installAgentTemplateLoader() {
+	if h == nil || h.db == nil {
+		return
+	}
+	db := h.db
+	agenttpl.SetApprovedLoader(func(id string) (agenttpl.Manifest, bool) {
+		row, err := db.GetApprovedAgentTemplate("local", id)
+		if err != nil || row == nil {
+			return agenttpl.Manifest{}, false
+		}
+		m, err := agenttpl.ManifestFromJSON(row.ManifestJSON)
+		if err != nil {
+			return agenttpl.Manifest{}, false
+		}
+		return m, true
+	})
+}
+
+// GetMemoryEvalCounts godoc
+// @Summary Memory evaluation counters (remembered / used correctly / wrong update)
+// @Tags reviews
+// @Produce json
+// @Success 200 {object} review.EvalCounts
+// @Router /api/v1/memory-eval [get]
+func (h *Handler) getMemoryEvalCounts(c *gin.Context) {
+	if h.db == nil {
+		c.JSON(http.StatusOK, review.EvalCounts{})
+		return
+	}
+	counts, err := review.LoadMemoryEvalCounts(h.db, currentSpace(c), 5000)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, errorBody("MEMORY_EVAL_FAILED", err.Error()))
+		return
+	}
+	c.JSON(http.StatusOK, counts)
 }
 
 // RunPassK godoc

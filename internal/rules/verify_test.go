@@ -6,6 +6,30 @@ import (
 	"testing"
 )
 
+func TestParseAndValidate_verifyReplanScenario(t *testing.T) {
+	raw, err := os.ReadFile(filepath.Join("..", "..", "scenarios", "verify_replan.yaml"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	res := ParseAndValidate(raw)
+	if !res.OK {
+		t.Fatalf("%v", res.Issues)
+	}
+	var found bool
+	for _, st := range res.Doc.Scenario.Steps {
+		if st.ID != "qa.verify" {
+			continue
+		}
+		found = true
+		if st.Verify == nil || st.Verify.OnFail != "replan" || st.Verify.MaxReplanTurns != 2 {
+			t.Fatalf("verify=%+v", st.Verify)
+		}
+	}
+	if !found {
+		t.Fatal("qa.verify missing")
+	}
+}
+
 func TestValidate_verifyStepRequiresChecks(t *testing.T) {
 	raw := []byte(`
 version: "ash.rules/v0.1"

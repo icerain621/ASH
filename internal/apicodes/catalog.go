@@ -293,6 +293,21 @@ var Catalog = map[string]Entry{
 	"PLUGIN_EXPORT_REPORT_FAILED": {Domain: "plugins", Summary: "Failed to record plugin export report"},
 	"PLUGIN_HEALTH_FAILED":        {Domain: "plugins", Summary: "Failed to load plugin export health"},
 
+	// v7 agents / review / observe
+	"AGENT_TEMPLATE_LIST_FAILED":      {Domain: "agents", Summary: "Failed to list agent templates"},
+	"AGENT_TEMPLATE_CANDIDATE_FAILED": {Domain: "agents", Summary: "Failed to submit agent template candidate"},
+	"AGENT_TEMPLATE_APPROVE_FAILED":   {Domain: "agents", Summary: "Failed to approve agent template"},
+	"AGENT_COMPONENT_REGISTER_FAILED": {Domain: "agents", Summary: "Failed to register agent/harness/memory component"},
+	"AGENT_COMPONENT_APPROVE_FAILED":  {Domain: "agents", Summary: "Failed to approve plugin component"},
+	"AGENT_REVIEW_SUBMIT_FAILED":      {Domain: "review", Summary: "Failed to enqueue agent review item"},
+	"AGENT_REVIEW_DECIDE_FAILED":      {Domain: "review", Summary: "Failed to decide agent review item"},
+	"CONTEXT_PACK_PREVIEW_FAILED":     {Domain: "agents", Summary: "Failed to preview Context Pack"},
+	"MEMORY_EVAL_FAILED":              {Domain: "review", Summary: "Failed to load memory evaluation counters"},
+	"PASSK_FAILED":                    {Domain: "review", Summary: "Pass^k sampling failed"},
+	"OBSERVE_GLOBAL_FAILED":           {Domain: "observability", Summary: "Failed to load global observation lens"},
+	"OBSERVE_AGENT_FAILED":            {Domain: "observability", Summary: "Failed to load agent observation lens"},
+	"OBSERVE_MEMORY_FAILED":           {Domain: "observability", Summary: "Failed to load memory observation lens"},
+
 	// secrets
 	"SECRET_LIST_FAILED":    {Domain: "secrets", Summary: "Failed to list secrets"},
 	"INVALID_SECRET_NAME":   {Domain: "secrets", Summary: "Secret name format invalid"},

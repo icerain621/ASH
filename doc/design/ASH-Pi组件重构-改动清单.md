@@ -1,6 +1,6 @@
 # ASH × Pi 组件重构 · 改动清单 / Change catalog
 
-**状态 / Status**：v7 P0 至 P4 验收测试已绿（[`../plan/v7.4-release-scope.md`](../plan/v7.4-release-scope.md)）。本文件仍是全量改动总表；P5 及以后未改运行时。  
+**状态 / Status**：v7 P0 至 P10 验收测试已绿（最新 [`../plan/v7.10-release-scope.md`](../plan/v7.10-release-scope.md)）。本文件仍是全量改动总表。  
 v7 P0 through P2 acceptance tests are green. This file remains the full change catalog. Later waves are not in the runtime yet.
 
 **依据 / Basis**

@@ -185,8 +185,13 @@
         },
         "onFail": {
           "type": "string",
-          "enum": ["fail", "improve"],
-          "description": "fail blocks the run; improve also creates an improve proposal draft"
+          "enum": ["fail", "improve", "replan"],
+          "description": "fail blocks; improve drafts improve proposal; replan drafts bounded harness correction for review"
+        },
+        "maxReplanTurns": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "max harness.replan_proposed events per run+step when onFail=replan; 0 or omit uses default 3"
         }
       }
     },

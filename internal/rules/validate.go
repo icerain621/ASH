@@ -97,8 +97,10 @@ func Validate(doc *Document) ValidationResult {
 		if st.Kind == "verify" {
 			if st.Verify == nil || len(st.Verify.Checks) == 0 {
 				res = fail(res, p+".verify.checks", "REQUIRED", "verify steps require verify.checks")
-			} else if st.Verify.OnFail != "" && st.Verify.OnFail != "fail" && st.Verify.OnFail != "improve" {
-				res = fail(res, p+".verify.onFail", "INVALID_ENUM", "verify.onFail must be fail|improve")
+			} else if st.Verify.OnFail != "" && st.Verify.OnFail != "fail" && st.Verify.OnFail != "improve" && st.Verify.OnFail != "replan" {
+				res = fail(res, p+".verify.onFail", "INVALID_ENUM", "verify.onFail must be fail|improve|replan")
+			} else if st.Verify.MaxReplanTurns < 0 {
+				res = fail(res, p+".verify.maxReplanTurns", "INVALID_VALUE", "verify.maxReplanTurns must be >= 0")
 			}
 		} else {
 			switch st.Kind {

@@ -43,6 +43,8 @@ func main() {
 		runCancel(os.Args[2:])
 	case "doctor":
 		runDoctor(os.Args[2:])
+	case "review":
+		runReview(os.Args[2:])
 	case "migrate":
 		runMigrate(os.Args[2:])
 	case "plugin-sign":
@@ -58,7 +60,7 @@ func main() {
 }
 
 func usage() {
-	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n  skill-pack build|sign --dir path [--publisher local] [--version 1.0.0] [--out pack.zip] [--key env|literal]\n  rag rebuild [--repo .] [--space local]  (Hybrid path/symbol index rebuild)\n")
+	fmt.Fprintf(os.Stderr, "Usage: ash <command>\n\nCommands:\n  run --issue text [--repo .] [--scenario feature_delivery] [--version 1.0.0] [--agent execgo_codex|static]\n  quest \"goal text\" [--repo .] [--yes] [--agent execgo_codex|static]  (Goal→Plan→Run)\n  session rpc [--agent execgo_codex|static]  (LF-JSON: session.start / turn.prompt → event)\n  replay <runId> [--mode exact|latest_memory] [--agent execgo_codex|static]\n  cancel <runId> [--agent execgo_codex|static]\n  doctor --suite BOOT|TR0|TR1|TR2|TR3|M2|M3|M4|M5|ALL [--format json|md] [--require M3-04,M3-06] [--out path] [--agent execgo_codex|static]\n  review list|decide|passk|templates|eval  (quality / template gates; not doctor)\n  migrate plan|copy|verify|sync|dual-write ...  (sqlite→postgres migration)\n  plugin-sign --name n --version v --endpoint host:port [--key env|literal]  (HMAC plugin signature)\n  skill-pack build|sign --dir path [--publisher local] [--version 1.0.0] [--out pack.zip] [--key env|literal]\n  rag rebuild [--repo .] [--space local]  (Hybrid path/symbol index rebuild)\n")
 }
 
 func runPluginSign(args []string) {
@@ -273,12 +275,16 @@ func runCancel(args []string) {
 
 func runDoctor(args []string) {
 	fs := flag.NewFlagSet("doctor", flag.ExitOnError)
-	suite := fs.String("suite", "TR0", "validation suite: TR0|TR1|TR2|TR3|M2|ALL")
+	suite := fs.String("suite", "TR0", "validation suite: BOOT|TR0|TR1|TR2|TR3|M2|ALL (QUALITY → ash review)")
 	format := fs.String("format", "json", "output format: json|md")
 	out := fs.String("out", "", "write report to file")
 	agent := fs.String("agent", "execgo_codex", "agent executor: execgo_codex|static")
 	require := fs.String("require", "", "comma-separated case IDs that must pass without skip evidence")
 	_ = fs.Parse(args)
+
+	if msg, migrated := doctorQualityMigrated(*suite); migrated {
+		log.Fatal(msg)
+	}
 
 	cfg := config.Load()
 	dbURL := strings.TrimSpace(os.Getenv("ASH_DATABASE_URL"))

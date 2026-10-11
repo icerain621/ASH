@@ -111,6 +111,31 @@ const docTemplate = `{
             }
         },
         "/api/v1/agent-reviews": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "List pending in-process agent/template/component review items",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "optional kind filter",
+                        "name": "kind",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/internal_api.agentReviewListResponse"
+                        }
+                    }
+                }
+            },
             "post": {
                 "consumes": [
                     "application/json"
@@ -203,12 +228,12 @@ const docTemplate = `{
                 "tags": [
                     "agents"
                 ],
-                "summary": "List built-in agent templates",
+                "summary": "List built-in and custom agent templates with review status",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.ListResponse"
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.EntryListResponse"
                         }
                     }
                 }
@@ -3911,6 +3936,25 @@ const docTemplate = `{
                         "description": "Internal Server Error",
                         "schema": {
                             "$ref": "#/definitions/internal_api.APIErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/api/v1/memory-eval": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "reviews"
+                ],
+                "summary": "Memory evaluation counters (remembered / used correctly / wrong update)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review.EvalCounts"
                         }
                     }
                 }
@@ -9618,13 +9662,13 @@ const docTemplate = `{
                 }
             }
         },
-        "github_com_ash-repwiki_ash_internal_agenttpl.ListResponse": {
+        "github_com_ash-repwiki_ash_internal_agenttpl.EntryListResponse": {
             "type": "object",
             "properties": {
                 "items": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest"
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry"
                     }
                 }
             }
@@ -13111,6 +13155,20 @@ const docTemplate = `{
                 }
             }
         },
+        "github_com_ash-repwiki_ash_internal_review.EvalCounts": {
+            "type": "object",
+            "properties": {
+                "remembered": {
+                    "type": "integer"
+                },
+                "usedCorrectly": {
+                    "type": "integer"
+                },
+                "wrongUpdate": {
+                    "type": "integer"
+                }
+            }
+        },
         "github_com_ash-repwiki_ash_internal_review.Item": {
             "type": "object",
             "properties": {
@@ -13616,8 +13674,11 @@ const docTemplate = `{
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_rules.ToolChainItem"
                     }
                 },
+                "maxReplanTurns": {
+                    "type": "integer"
+                },
                 "onFail": {
-                    "description": "fail|improve",
+                    "description": "fail|improve|replan",
                     "type": "string"
                 }
             }
@@ -14972,7 +15033,7 @@ const docTemplate = `{
                 "promptDigest": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
                 "sessionID": {
@@ -14990,13 +15051,13 @@ const docTemplate = `{
                 "stdoutSummary": {
                     "type": "string"
                 },
-                "stepID": {
+                "stepId": {
                     "type": "string"
                 },
                 "timeoutMs": {
                     "type": "integer"
                 },
-                "traceID": {
+                "traceId": {
                     "type": "string"
                 }
             }
@@ -15563,10 +15624,10 @@ const docTemplate = `{
                 "name": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
-                "spaceID": {
+                "spaceId": {
                     "type": "string"
                 },
                 "unit": {
@@ -15939,13 +16000,13 @@ const docTemplate = `{
                 "risk": {
                     "type": "string"
                 },
-                "runID": {
+                "runId": {
                     "type": "string"
                 },
                 "status": {
                     "type": "string"
                 },
-                "stepID": {
+                "stepId": {
                     "type": "string"
                 },
                 "timeoutMs": {
@@ -15954,7 +16015,7 @@ const docTemplate = `{
                 "tool": {
                     "type": "string"
                 },
-                "traceID": {
+                "traceId": {
                     "type": "string"
                 }
             }
@@ -17650,6 +17711,17 @@ const docTemplate = `{
                     "type": "array",
                     "items": {
                         "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component"
+                    }
+                }
+            }
+        },
+        "internal_api.agentReviewListResponse": {
+            "type": "object",
+            "properties": {
+                "items": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/github_com_ash-repwiki_ash_internal_review.Item"
                     }
                 }
             }

@@ -1,0 +1,23 @@
+version: "ash.rules/v0.1"
+
+scenario:
+  name: "verify_replan"
+  scenarioVersion: "1.0.0"
+  description: "F06 demo: verify failure proposes bounded harness replan for review (no auto-restart)"
+  policyProfile: "default"
+  roles:
+    QA: { maxParallel: 1 }
+  inputs:
+    required: [issueOrSpec, repoRoot]
+  artifacts:
+    required:
+      - { type: "test_report" }
+  steps:
+    - id: "qa.verify"
+      role: "QA"
+      kind: "verify"
+      verify:
+        checks:
+          - { tool: "git.status" }
+        onFail: replan
+        maxReplanTurns: 2

@@ -513,7 +513,7 @@ components:
       description: plugin_registry row (list, health summary, and registration responses).
       properties:
         id: { type: string }
-        spaceID: { type: string }
+        spaceId: { type: string }
         name: { type: string }
         version: { type: string }
         protocol: { type: string }
@@ -1382,9 +1382,9 @@ components:
       type: object
       properties:
         id: { type: string }
-        runID: { type: string }
-        stepID: { type: string }
-        traceID: { type: string }
+        runId: { type: string }
+        stepId: { type: string }
+        traceId: { type: string }
         tool: { type: string }
         risk: { type: string }
         status: { type: string }
@@ -1407,9 +1407,9 @@ components:
       type: object
       properties:
         id: { type: string }
-        runID: { type: string }
-        stepID: { type: string }
-        traceID: { type: string }
+        runId: { type: string }
+        stepId: { type: string }
+        traceId: { type: string }
         agentID: { type: string }
         actionID: { type: string }
         adapter: { type: string }
@@ -1438,8 +1438,8 @@ components:
       type: object
       properties:
         id: { type: string }
-        runID: { type: string }
-        spaceID: { type: string }
+        runId: { type: string }
+        spaceId: { type: string }
         name: { type: string }
         value: { type: number }
         unit: { type: string }
@@ -1990,17 +1990,17 @@ components:
       type: object
       properties:
         id: { type: string }
-        spaceID: { type: string }
+        spaceId: { type: string }
         targetType: { type: string }
-        targetID: { type: string }
-        runID: { type: string }
+        targetId: { type: string }
+        runId: { type: string }
         rating: { type: integer }
         category: { type: string }
         status: { type: string }
         severity: { type: string }
         source: { type: string }
         comment: { type: string }
-        actorID: { type: string }
+        actorId: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
     FeedbackListResponse:
@@ -2330,12 +2330,12 @@ components:
       type: object
       properties:
         id: { type: string }
-        spaceID: { type: string }
+        spaceId: { type: string }
         name: { type: string }
         server: { type: string }
         risk: { type: string }
         status: { type: string }
-        schemaJSON: { type: string }
+        schemaJson: { type: string }
         lastError: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -2924,10 +2924,10 @@ components:
       type: object
       properties:
         id: { type: string }
-        orgID: { type: string }
-        spaceID: { type: string }
-        userID: { type: string }
-        roleID: { type: string }
+        orgId: { type: string }
+        spaceId: { type: string }
+        userId: { type: string }
+        roleId: { type: string }
         status: { type: string }
         createdAt: { type: string, format: date-time }
         updatedAt: { type: string, format: date-time }
@@ -2952,7 +2952,7 @@ components:
       type: object
       properties:
         id: { type: string }
-        orgID: { type: string }
+        orgId: { type: string }
         name: { type: string }
         permissions: { type: string }
         createdAt: { type: string, format: date-time }
@@ -3266,10 +3266,10 @@ components:
       type: object
       properties:
         id: { type: string }
-        spaceID: { type: string }
-        runID: { type: string }
-        stepID: { type: string }
-        traceID: { type: string }
+        spaceId: { type: string }
+        runId: { type: string }
+        stepId: { type: string }
+        traceId: { type: string }
         gate: { type: string }
         risk: { type: string }
         status: { type: string }
@@ -3277,7 +3277,7 @@ components:
         requestedBy: { type: string }
         decidedBy: { type: string }
         decisionReason: { type: string }
-        evidenceJSON: { type: string }
+        evidenceJson: { type: string }
         createdAt: { type: string, format: date-time }
         decidedAt: { type: string, format: date-time, nullable: true }
         updatedAt: { type: string, format: date-time }
@@ -3345,10 +3345,10 @@ components:
       type: object
       properties:
         id: { type: string }
-        spaceID: { type: string }
-        runID: { type: string }
-        traceID: { type: string }
-        actorID: { type: string }
+        spaceId: { type: string }
+        runId: { type: string }
+        traceId: { type: string }
+        actorId: { type: string }
         eventType: { type: string }
         payloadJSON: { type: string }
         createdAt: { type: string, format: date-time }
@@ -3362,7 +3362,7 @@ components:
     AuditPolicyItem:
       type: object
       properties:
-        spaceID: { type: string }
+        spaceId: { type: string }
         retentionDays: { type: integer }
         redactPayload: { type: boolean }
         locked: { type: boolean }
@@ -3688,8 +3688,8 @@ components:
       type: object
       properties:
         id: { type: string }
-        runID: { type: string }
-        stepID: { type: string }
+        runId: { type: string }
+        stepId: { type: string }
         strategy: { type: string }
         uri: { type: string }
         storeKey: { type: string }
@@ -6486,7 +6486,7 @@ paths:
   /api/v1/agent-templates:
     get:
       tags: [Agents]
-      summary: List built-in and custom agent templates and their component recipes
+      summary: List built-in and custom agent templates with review status
       responses:
         "200":
           description: ok
@@ -6500,15 +6500,19 @@ paths:
                     items:
                       type: object
                       properties:
-                        id: { type: string }
-                        version: { type: string }
-                        tools:
-                          type: array
-                          items: { type: string }
-                        memory:
-                          type: array
-                          items: { type: string }
-                        maxTurns: { type: integer }
+                        status: { type: string, enum: [approved, candidate] }
+                        manifest:
+                          type: object
+                          properties:
+                            id: { type: string }
+                            version: { type: string }
+                            tools:
+                              type: array
+                              items: { type: string }
+                            memory:
+                              type: array
+                              items: { type: string }
+                            maxTurns: { type: integer }
 
   /api/v1/agent-templates/candidates:
     post:
@@ -6607,6 +6611,32 @@ paths:
           description: unknown component
 
   /api/v1/agent-reviews:
+    get:
+      tags: [Reviews]
+      summary: List pending in-process agent/template/component review items
+      parameters:
+        - in: query
+          name: kind
+          required: false
+          schema: { type: string }
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string }
+                        kind: { type: string }
+                        targetId: { type: string }
+                        status: { type: string }
+                        reason: { type: string }
     post:
       tags: [Reviews]
       summary: Enqueue an in-process review item (template/harness/memory/artifact/run)
@@ -6651,6 +6681,22 @@ paths:
           description: decided
         "400":
           description: invalid
+
+  /api/v1/memory-eval:
+    get:
+      tags: [Reviews]
+      summary: Memory evaluation counters (remembered / used correctly / wrong update)
+      responses:
+        "200":
+          description: ok
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  remembered: { type: integer }
+                  usedCorrectly: { type: integer }
+                  wrongUpdate: { type: integer }
 
   /api/v1/passk/run:
     post:

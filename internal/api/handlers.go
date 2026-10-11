@@ -140,6 +140,7 @@ func NewHandler(db *store.DB, scenarios *rules.Loader) *Handler {
 		h.waker = h.waker.WithDoctorRunner(adapter)
 		waker.SetDefaultDoctorRunner(adapter)
 	}
+	h.installAgentTemplateLoader()
 	return h
 }
 
@@ -196,9 +197,11 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/agent-components", h.listAgentComponents)
 		v1.POST("/agent-components", h.registerAgentComponent)
 		v1.POST("/agent-components/:componentId/approve", h.approveAgentComponent)
+		v1.GET("/agent-reviews", h.listAgentReviews)
 		v1.POST("/agent-reviews", h.submitAgentReview)
 		v1.POST("/agent-reviews/:reviewId/decide", h.decideAgentReview)
 		v1.POST("/passk/run", h.runPassK)
+		v1.GET("/memory-eval", h.getMemoryEvalCounts)
 		v1.POST("/context-pack/preview", h.previewContextPack)
 		v1.GET("/agents/sessions/:sessionId", h.getAgentSession)
 		v1.PATCH("/agents/sessions/:sessionId", h.patchAgentSession)

@@ -112,6 +112,9 @@ vi.mock("@/modules/interactions/api/interactions.api", () => ({
 vi.mock("@/modules/observability/components/LensPanel", () => ({
   LensPanel: () => <div data-testid="lens-panel-stub">Lens stub</div>,
 }));
+vi.mock("@/modules/agent-catalog/components/AgentGatesPanel", () => ({
+  AgentGatesPanel: () => <div data-testid="agent-gates-panel">Gates stub</div>,
+}));
 vi.mock("@/modules/observability/api/lenses.api", () => ({
   getGlobalLens: async () => ({
     generatedAt: 1, runningRuns: 0, failedClusters: [], templateUsage: [],
@@ -269,6 +272,7 @@ describe("ReviewsPage", () => {
     expect(await screen.findByTestId("reviews-page")).toBeTruthy();
     expect(screen.getByTestId("review-pillar-nav")).toBeTruthy();
     expect(screen.getByTestId("review-nav-queue")).toHaveAttribute("aria-selected", "true");
+    expect(screen.getByTestId("review-nav-gates")).toBeTruthy();
     expect(screen.getByTestId("review-nav-assets")).toBeTruthy();
     expect(screen.getByTestId("review-nav-observe")).toBeTruthy();
     expect(screen.getByTestId("review-nav-orchestrate")).toBeTruthy();
@@ -281,6 +285,10 @@ describe("ReviewsPage", () => {
   it("switches to assets, observe, and orchestrate panels", async () => {
     renderReviews();
     expect(await screen.findByTestId("review-pillar-nav")).toBeTruthy();
+
+    fireEvent.click(screen.getByTestId("review-nav-gates"));
+    expect(await screen.findByTestId("agent-gates-panel")).toBeTruthy();
+    expect(screen.queryByTestId("reviews-workbench")).toBeNull();
 
     fireEvent.click(screen.getByTestId("review-nav-assets"));
     expect(await screen.findByTestId("review-assets-panel")).toBeTruthy();

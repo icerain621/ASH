@@ -14,7 +14,7 @@ export type DoctorCaseResult = {
   evidence?: DoctorEvidence[];
 };
 
-export type DoctorSuite = "TR0" | "TR1" | "TR2" | "TR3" | "M2" | "M3" | "ALL";
+export type DoctorSuite = "BOOT" | "TR0" | "TR1" | "TR2" | "TR3" | "M2" | "M3" | "ALL";
 
 export type DoctorReport = {
   suite: string;

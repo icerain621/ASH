@@ -20,6 +20,7 @@ import { MemoryLinkPanel } from "@/modules/interactions/components/MemoryLinkPan
 import { ThreadComparePanel } from "@/modules/interactions/components/ThreadComparePanel";
 import { ThreadTimeline } from "@/modules/interactions/components/ThreadTimeline";
 import { LensPanel } from "@/modules/observability/components/LensPanel";
+import { AgentGatesPanel } from "@/modules/agent-catalog/components/AgentGatesPanel";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 type RubricForm = {
@@ -29,12 +30,13 @@ type RubricForm = {
   efficiency: number;
 };
 
-type ReviewPillar = "queue" | "assets" | "observe" | "orchestrate";
+type ReviewPillar = "queue" | "gates" | "assets" | "observe" | "orchestrate";
 
 const defaultRubric: RubricForm = { correctness: 4, safety: 4, citable: 4, efficiency: 4 };
 
 const PILLAR_TABS: { id: ReviewPillar; label: string; testId: string }[] = [
   { id: "queue", label: "队列评审", testId: "review-nav-queue" },
+  { id: "gates", label: "组件闸", testId: "review-nav-gates" },
   { id: "assets", label: "启停登记", testId: "review-nav-assets" },
   { id: "observe", label: "监控观测", testId: "review-nav-observe" },
   { id: "orchestrate", label: "编排流程", testId: "review-nav-orchestrate" },
@@ -241,11 +243,13 @@ export function ReviewsPage() {
           <p>
             {pillar === "queue"
               ? "Workbench：左队列 / 中时间线占位 / 右打分决定。"
-              : pillar === "assets"
-                ? "Agent / Memory 资产启停与生效策略摘要。"
-                : pillar === "observe"
-                  ? "监控观测（含 review_sla）与指标入口。"
-                  : "编排与自动化流程的薄管控入口。"}{" "}
+              : pillar === "gates"
+                ? "模板与插件组件评审闸；Pass^k 抽样不在诊断页。"
+                : pillar === "assets"
+                  ? "Agent / Memory 资产启停与生效策略摘要。"
+                  : pillar === "observe"
+                    ? "监控观测（含 review_sla）与指标入口。"
+                    : "编排与自动化流程的薄管控入口。"}{" "}
             {pillar === "queue" ? (
               <a href="/ui/m/reviews" data-testid="reviews-mobile-link">
                 移动审阅
@@ -346,6 +350,8 @@ export function ReviewsPage() {
           </p>
         </div>
       ) : null}
+
+      {pillar === "gates" ? <AgentGatesPanel /> : null}
 
       {pillar === "observe" ? (
         <div data-testid="review-observe-panel">

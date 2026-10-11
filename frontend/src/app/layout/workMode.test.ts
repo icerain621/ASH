@@ -21,6 +21,9 @@ describe("workModeFromPath", () => {
   it("maps reviews and observability paths to review", () => {
     expect(workModeFromPath("/reviews")).toBe("review");
     expect(workModeFromPath("/m/reviews")).toBe("review");
+    expect(workModeFromPath("/agent-templates")).toBe("review");
+    expect(workModeFromPath("/agent-components")).toBe("review");
+    expect(workModeFromPath("/doctor")).toBe("review");
     expect(workModeFromPath("/metrics")).toBe("review");
     expect(workModeFromPath("/observability")).toBe("review");
     expect(workModeFromPath("/observe")).toBe("review");

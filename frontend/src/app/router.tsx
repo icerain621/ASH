@@ -18,6 +18,8 @@ import { CompliancePage } from "../pages/CompliancePage";
 import { ScalePage } from "../pages/ScalePage";
 import { LoginPage } from "../pages/LoginPage";
 import { SpacePage } from "../pages/SpacePage";
+import { AgentTemplatesPage } from "../pages/AgentTemplatesPage";
+import { AgentComponentsPage } from "../pages/AgentComponentsPage";
 import { NotFoundPage } from "../pages/NotFoundPage";
 import { shouldRedirectToLoginNow } from "../modules/platform/auth/consoleGate";
 
@@ -143,6 +145,18 @@ const doctorRoute = createRoute({
   component: DoctorPage,
 });
 
+const agentTemplatesRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/agent-templates",
+  component: AgentTemplatesPage,
+});
+
+const agentComponentsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: "/agent-components",
+  component: AgentComponentsPage,
+});
+
 const complianceRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: "/compliance",
@@ -220,6 +234,8 @@ const routeTree = rootRoute.addChildren([
   complianceRoute,
   scaleRoute,
   doctorRoute,
+  agentTemplatesRoute,
+  agentComponentsRoute,
   improveAliasRoute,
   improvesAliasRoute,
   skillsAliasRoute,

@@ -20,11 +20,11 @@ definitions:
       status:
         type: string
     type: object
-  github_com_ash-repwiki_ash_internal_agenttpl.ListResponse:
+  github_com_ash-repwiki_ash_internal_agenttpl.EntryListResponse:
     properties:
       items:
         items:
-          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest'
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Entry'
         type: array
     type: object
   github_com_ash-repwiki_ash_internal_agenttpl.Manifest:
@@ -2319,6 +2319,15 @@ definitions:
       spaceId:
         type: string
     type: object
+  github_com_ash-repwiki_ash_internal_review.EvalCounts:
+    properties:
+      remembered:
+        type: integer
+      usedCorrectly:
+        type: integer
+      wrongUpdate:
+        type: integer
+    type: object
   github_com_ash-repwiki_ash_internal_review.Item:
     properties:
       created:
@@ -2651,8 +2660,10 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_rules.ToolChainItem'
         type: array
+      maxReplanTurns:
+        type: integer
       onFail:
-        description: fail|improve
+        description: fail|improve|replan
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_runs.ApproveRequest:
@@ -3543,7 +3554,7 @@ definitions:
         type: string
       promptDigest:
         type: string
-      runID:
+      runId:
         type: string
       sessionID:
         type: string
@@ -3555,11 +3566,11 @@ definitions:
         type: string
       stdoutSummary:
         type: string
-      stepID:
+      stepId:
         type: string
       timeoutMs:
         type: integer
-      traceID:
+      traceId:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_store.AlertEvent:
@@ -3932,9 +3943,9 @@ definitions:
         type: string
       name:
         type: string
-      runID:
+      runId:
         type: string
-      spaceID:
+      spaceId:
         type: string
       unit:
         type: string
@@ -4180,17 +4191,17 @@ definitions:
         type: string
       risk:
         type: string
-      runID:
+      runId:
         type: string
       status:
         type: string
-      stepID:
+      stepId:
         type: string
       timeoutMs:
         type: integer
       tool:
         type: string
-      traceID:
+      traceId:
         type: string
     type: object
   github_com_ash-repwiki_ash_internal_toolbus.Risk:
@@ -5308,6 +5319,13 @@ definitions:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component'
         type: array
     type: object
+  internal_api.agentReviewListResponse:
+    properties:
+      items:
+        items:
+          $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review.Item'
+        type: array
+    type: object
   internal_api.applyAuditRetentionRequest:
     properties:
       dryRun:
@@ -6064,6 +6082,22 @@ paths:
       tags:
       - agents
   /api/v1/agent-reviews:
+    get:
+      parameters:
+      - description: optional kind filter
+        in: query
+        name: kind
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.agentReviewListResponse'
+      summary: List pending in-process agent/template/component review items
+      tags:
+      - reviews
     post:
       consumes:
       - application/json
@@ -6126,8 +6160,8 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.ListResponse'
-      summary: List built-in agent templates
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.EntryListResponse'
+      summary: List built-in and custom agent templates with review status
       tags:
       - agents
   /api/v1/agent-templates/{templateId}/approve:
@@ -8564,6 +8598,18 @@ paths:
       summary: Execute a registered MCP tool via toolbus mcp.call
       tags:
       - mcp
+  /api/v1/memory-eval:
+    get:
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_review.EvalCounts'
+      summary: Memory evaluation counters (remembered / used correctly / wrong update)
+      tags:
+      - reviews
   /api/v1/memory/assets:
     get:
       parameters:
