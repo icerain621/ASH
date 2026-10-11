@@ -17,7 +17,7 @@ Ship frozen watermarks to manual tags, cloud acceptance, and human sign-off — 
 | G1 | 范围冻结确认 | 各 `*-release-scope.md` + `make *-signoff` | ✅ v2–v6.7 已冻；**v7** 用 `make v7-signoff`（P0–P13 测试绿） |
 | G2 | 云 RDS 验收 | `config/cloud-rds.env` → `make cloud-acceptance` | ⏸ 待真实 RDS |
 | G3 | 切换日 runbook | `doc/checklists/` 发布窗口 + rollback drill | ⏸ 生产日 |
-| G4 | 四人真人签字 | MVP：`signoff.env` + `make signoff-gate`；**v7**：`make v7-signoff-prep` → 填 [`../evidence/v7-signatures-latest.md`](../evidence/v7-signatures-template.md)（由 prep 生成） | ⚠️ MVP dry-run 已过；v7 待真人 |
+| G4 | 四人真人签字 | MVP：`signoff.env` + `make signoff-gate`；**v7**：`make v7-signoff-prep` → `make v7-signoff-apply`（同 `signoff.env` 四人字段） | ⚠️ MVP dry-run 已过；v7 待填 `signoff.env` |
 | G5 | 人工 tag | 例：`v6.7.0` / `v7.0.0`（须对应 signoff 绿；脚本不自动 tag） | ⏸ 可选 |
 
 ## 当前建议顺序 / Suggested order

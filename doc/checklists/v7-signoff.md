@@ -12,7 +12,8 @@
 | 1 | 程序水位 | `doc/plan/v7.x-program.md` | 标明 P0–P12（或更新后的）验收已绿 |
 | 2 | 各波 scope | `doc/plan/v7.0`…`v7.13-release-scope.md` | §1–§5；状态含「已绿」或「已冻结」 |
 | 3 | v7 门禁 | `make v7-signoff` | 烟测绿；**不**自动打 tag |
-| 4 | 证据准备 | `make v7-signoff-prep` | 写出 `doc/evidence/v7-signatures-latest.md`（机器字段）；四人仍人工签 |
+| 4 | 证据准备 | `make v7-signoff-prep` | 写出 `doc/evidence/v7-signatures-latest.md`（机器字段） |
+| 5 | 回填签字 | `config/signoff.env` + `make v7-signoff-apply` | 四人姓名/日期写入 latest（勿把含真名的 `.env` 推进公开仓） |
 
 ## 自动门禁（`make v7-signoff`）
 

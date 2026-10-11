@@ -9,7 +9,7 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| V7-SIGN | v7 真人签字 / 可选 tag | `make v7-signoff-prep` → 填 [`../evidence/v7-signatures-latest.md`](../evidence/v7-signatures-template.md) | ⏸ 人工（机器字段可 prep） |
+| V7-SIGN | v7 真人签字 / 可选 tag | `cp config/signoff.env.example config/signoff.env` → 填四人 → `make v7-signoff-prep && make v7-signoff-apply` | ⏸ 人工（缺 `signoff.env`） |
 | GA | 云 RDS + 真人签字 + 可选 `v6.7.0` tag | 见 [`GA-上线推进计划.md`](GA-上线推进计划.md) | ⏸ |
 | VNEXT | 新开代际（**禁止 v6.8 承载 v7**） | 须先写 release-scope；**禁止自动发明** | ⏸ |
 

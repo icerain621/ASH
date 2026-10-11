@@ -16,7 +16,7 @@ This project follows a Keep a Changelog style. Version numbers can be attached w
 
 ### Added
 
-- **v7 签字准备**：`make v7-signoff-prep` 跑门禁并写出 [`doc/evidence/v7-signatures-latest.md`](doc/evidence/v7-signatures-template.md)（填 Git SHA 与抽检勾选；四人签字仍人工）；GA G1/G4 挂接 v7。 / Prep script fills machine fields for v7 signatures; GA plan links v7 gates.
+- **v7 签字准备**：`make v7-signoff-prep` / `make v7-signoff-apply`：门禁证据 + 从 `signoff.env` 回填四人签字（不自动 tag）；GA G1/G4 挂接 v7。 / Prep + apply scripts for v7 signatures from signoff.env; no automatic tag.
 - **v7.13 / P13**：`make v7-signoff`（`scripts/v7-signoff-gate.sh`）+ 签字清单/模板；补齐 v7 OpenAPI 契约、`apicodes` 与 `ToolCall`/`AgentTask`/`QualityMetric` JSON 标签，门禁绿且不自动打 tag。 / v7 sign-off gate ships; OpenAPI and error-code catalog catch up to v7 routes; no automatic tag.
 - **P02 残留（PF07）**：工作区/会话列表支持 ↑↓ Home/End 焦点导航（`role=navigation`）；Thread 时间线筛选条 `role=group` + `aria-label`。 / Workspace/session list keyboard focus navigation; Thread timeline filter group labeled.
 - **v7.12 / P12（F06 样例）**：`scenarios/verify_replan.yaml`；Agent 镜头 Admit 覆盖 `harness.replan_*`；E2 附录标明再规划进 `run_sample`。见 [`doc/plan/v7.12-release-scope.md`](doc/plan/v7.12-release-scope.md)。 / Demo scenario and lens/appendix coverage for bounded replan.
