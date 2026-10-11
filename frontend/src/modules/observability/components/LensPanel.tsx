@@ -1,6 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { getAgentLens, getGlobalLens, getMemoryLens, type ObserveLens } from "../api/lenses.api";
+import {
+  getAgentLens,
+  getGlobalLens,
+  getMemoryLens,
+  packAccessLabel,
+  type ObserveLens,
+} from "../api/lenses.api";
 import { getCurrentSpaceId } from "@/services/http/client";
 
 type Props = {
@@ -58,6 +64,13 @@ export function LensPanel({ lens, runId, memoryId, compact }: Props) {
               <p>
                 Run <code data-testid="lens-agent-run">{agentQ.data.runId}</code> · Trace{" "}
                 <code data-testid="lens-agent-trace">{agentQ.data.traceId}</code>
+                {" · "}
+                <span
+                  data-testid="lens-agent-pack"
+                  data-pack-access={agentQ.data.packAccess ?? "missing"}
+                >
+                  {packAccessLabel(agentQ.data.packAccess)}
+                </span>
               </p>
               <p className="muted-line">承认事件 {agentQ.data.events?.length ?? 0} · spans {agentQ.data.waterfall?.spans?.length ?? 0}</p>
               <ul>

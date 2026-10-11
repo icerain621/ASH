@@ -56,6 +56,9 @@ func TestLensGlobalAndAgentAndMemoryLineage(t *testing.T) {
 	if agent.RunID != run.ID || agent.Waterfall == nil {
 		t.Fatalf("agent=%+v", agent)
 	}
+	if agent.PackAccess != PackAccessReady {
+		t.Fatalf("expected ready packAccess, got %q", agent.PackAccess)
+	}
 	for _, ev := range agent.Events {
 		if ev.Type == "noise.event" {
 			t.Fatal("noise must not enter agent lens")
@@ -85,6 +88,54 @@ func TestLensGlobalAndAgentAndMemoryLineage(t *testing.T) {
 		if body, ok := ev.Payload["body"]; ok && body != "[redacted]" {
 			t.Fatalf("body not redacted: %v", body)
 		}
+	}
+}
+
+func TestBuildAgentPackAccess(t *testing.T) {
+	db := store.OpenTest(t, t.TempDir())
+	now := time.Now().UTC()
+	withPack := store.RunRecord{
+		ID: "run_pack_ready", TraceID: "tr_ready", SpaceID: "local",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		Status: "running", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	missing := store.RunRecord{
+		ID: "run_pack_missing", TraceID: "tr_missing", SpaceID: "local",
+		ScenarioName: "feature_delivery", ScenarioVersion: "1.0.0",
+		Status: "running", StartedAt: now, CreatedAt: now, UpdatedAt: now,
+	}
+	for _, run := range []store.RunRecord{withPack, missing} {
+		if err := db.Create(&run).Error; err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := db.Create(&store.RunEvent{
+		ID: "ev_packed", RunID: withPack.ID, Seq: 1, Type: "context.packed",
+		TS: now.UnixMilli(), PayloadJSON: `{}`, CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+	if err := db.Create(&store.RunEvent{
+		ID: "ev_turn", RunID: missing.ID, Seq: 1, Type: "agent.turn",
+		TS: now.UnixMilli(), PayloadJSON: `{}`, CreatedAt: now,
+	}).Error; err != nil {
+		t.Fatal(err)
+	}
+
+	ready, err := BuildAgent(db, withPack.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if ready.PackAccess != PackAccessReady {
+		t.Fatalf("ready=%q", ready.PackAccess)
+	}
+
+	absent, err := BuildAgent(db, missing.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if absent.PackAccess != PackAccessMissing {
+		t.Fatalf("missing=%q want %q", absent.PackAccess, PackAccessMissing)
 	}
 }
 

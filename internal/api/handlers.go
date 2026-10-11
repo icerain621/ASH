@@ -12,6 +12,7 @@ import (
 	"github.com/gin-gonic/gin"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/agenttpl"
 	"github.com/ash-repwiki/ash/internal/agentworkspace"
 	"github.com/ash-repwiki/ash/internal/alerts"
 	"github.com/ash-repwiki/ash/internal/ci"
@@ -30,6 +31,7 @@ import (
 	"github.com/ash-repwiki/ash/internal/memory"
 	metricssvc "github.com/ash-repwiki/ash/internal/metrics"
 	"github.com/ash-repwiki/ash/internal/opsenv"
+	"github.com/ash-repwiki/ash/internal/plugins"
 	"github.com/ash-repwiki/ash/internal/quest"
 	"github.com/ash-repwiki/ash/internal/registry"
 	"github.com/ash-repwiki/ash/internal/releases"
@@ -192,9 +194,12 @@ func (h *Handler) Register(r *gin.Engine, webDir string) {
 		v1.GET("/agents/commands", h.listAgentCommands)
 		v1.GET("/agents/models", h.listAgentModels)
 		v1.GET("/agent-templates", h.listAgentTemplates)
+		v1.GET("/agent-templates/:templateId/production", h.getProductionAgentTemplate)
 		v1.POST("/agent-templates/candidates", h.submitAgentTemplateCandidate)
 		v1.POST("/agent-templates/:templateId/approve", h.approveAgentTemplate)
 		v1.GET("/agent-components", h.listAgentComponents)
+		v1.POST("/agent-components/bind-check", h.bindCheckAgentComponents)
+		v1.GET("/agent-components/:componentId/production", h.getProductionAgentComponent)
 		v1.POST("/agent-components", h.registerAgentComponent)
 		v1.POST("/agent-components/:componentId/approve", h.approveAgentComponent)
 		v1.GET("/agent-reviews", h.listAgentReviews)
@@ -515,6 +520,8 @@ func (h *Handler) readyzResponse(status, errMsg string) HealthResponse {
 // @Header 201 {string} X-Run-Id "created run id"
 // @Header 201 {string} X-Trace-Id "trace id"
 // @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
 // @Failure 500 {object} APIErrorResponse
 // @Router /api/v1/runs [post]
 func (h *Handler) createRun(c *gin.Context) {
@@ -538,6 +545,26 @@ func (h *Handler) createRun(c *gin.Context) {
 	if resp == nil {
 		if err != nil && errors.Is(err, runs.ErrSpaceQuotaExceeded) {
 			c.JSON(http.StatusConflict, errorBody("SPACE_QUOTA_EXCEEDED", err.Error()))
+			return
+		}
+		if err != nil && errors.Is(err, agenttpl.ErrNotApproved) {
+			c.JSON(http.StatusForbidden, errorBody("AGENT_TEMPLATE_NOT_APPROVED", err.Error()))
+			return
+		}
+		if err != nil && errors.Is(err, agenttpl.ErrUnknown) {
+			c.JSON(http.StatusNotFound, errorBody("AGENT_TEMPLATE_UNKNOWN", err.Error()))
+			return
+		}
+		if err != nil && errors.Is(err, plugins.ErrNotApproved) {
+			c.JSON(http.StatusForbidden, errorBody("AGENT_COMPONENT_NOT_APPROVED", err.Error()))
+			return
+		}
+		if err != nil && errors.Is(err, plugins.ErrUnknown) {
+			c.JSON(http.StatusNotFound, errorBody("AGENT_COMPONENT_UNKNOWN", err.Error()))
+			return
+		}
+		if err != nil && errors.Is(err, plugins.ErrInvalidBind) {
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_COMPONENT_BIND_INVALID", err.Error()))
 			return
 		}
 		c.JSON(http.StatusInternalServerError, errorBody("RUN_CREATE_FAILED", err.Error()))

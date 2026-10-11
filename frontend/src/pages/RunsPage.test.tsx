@@ -476,6 +476,50 @@ describe("RunsPage", () => {
     confirmSpy.mockRestore();
   });
 
+  it("projects AGENT_TEMPLATE_NOT_APPROVED on create failure (P20)", async () => {
+    window.history.replaceState({}, "", "/ui/runs");
+    vi.mocked(createRun).mockReset().mockRejectedValue(
+      new ApiError("AGENT_TEMPLATE_NOT_APPROVED", "template tpl.custom is not approved for production"),
+    );
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderPage(<RunsPage />);
+    const create = await screen.findByTestId("runs-create");
+    await waitFor(() => {
+      expect(create).toHaveAttribute("title", "按所选场景新建运行（需确认）");
+      expect(create).not.toBeDisabled();
+    });
+    fireEvent.click(create);
+    await waitFor(() => {
+      expect(createRun).toHaveBeenCalled();
+      expect(
+        screen.getByText(/AGENT_TEMPLATE_NOT_APPROVED: template tpl\.custom is not approved for production/),
+      ).toBeInTheDocument();
+    });
+    confirmSpy.mockRestore();
+  });
+
+  it("projects AGENT_COMPONENT_BIND_INVALID on create failure (P20)", async () => {
+    window.history.replaceState({}, "", "/ui/runs");
+    vi.mocked(createRun).mockReset().mockRejectedValue(
+      new ApiError("AGENT_COMPONENT_BIND_INVALID", "mem.inject requires mem.retrieve"),
+    );
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    renderPage(<RunsPage />);
+    const create = await screen.findByTestId("runs-create");
+    await waitFor(() => {
+      expect(create).toHaveAttribute("title", "按所选场景新建运行（需确认）");
+      expect(create).not.toBeDisabled();
+    });
+    fireEvent.click(create);
+    await waitFor(() => {
+      expect(createRun).toHaveBeenCalled();
+      expect(
+        screen.getByText(/AGENT_COMPONENT_BIND_INVALID: mem\.inject requires mem\.retrieve/),
+      ).toBeInTheDocument();
+    });
+    confirmSpy.mockRestore();
+  });
+
   it("requires confirm before approving a quest plan", async () => {
     window.history.replaceState({}, "", "/ui/runs");
     vi.mocked(createRunFromGoal).mockResolvedValue({

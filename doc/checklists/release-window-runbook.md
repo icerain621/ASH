@@ -1,14 +1,17 @@
 # 发布窗口运行手册（MVP §8）
 
-> 模板：发布前填写值班表并归档至 `doc/evidence/release-window-YYYY-MM-DD.md`。
+> 模板：发布前填写值班表并归档至 `doc/evidence/release-window-YYYY-MM-DD.md`。  
+> Template: fill the roster before cutover and archive to `doc/evidence/release-window-YYYY-MM-DD.md`.  
+> **G3 本地 dry-run（2026-10-11）**：`make rollback-drill` + `make release-window-gate` 已绿；证据 [`../evidence/release-window-2026-10-11.md`](../evidence/release-window-2026-10-11.md)。生产切流仍待云 RDS（G2）。  
+> **G3 local dry-run (2026-10-11):** rollback-drill + release-window-gate green; production cutover still waits on cloud RDS (G2).
 
 ## 1. 发布窗口
 
 | 项 | 值 |
 |----|-----|
-| 窗口开始（UTC+8） | 2026-07-10 02:00 |
-| 窗口结束 | ____-__-__ __:__ |
-| 维护类型 | Postgres 切换 / 应用滚动 / 配置变更 |
+| 窗口开始（UTC+8） | 2026-10-11（本地 dry-run；非生产切流日） |
+| 窗口结束 | — |
+| 维护类型 | 发布窗口门禁 dry-run / rollback drill（Postgres 切流待 G2） |
 
 ## 2. 值班 roster
 
@@ -32,10 +35,10 @@ make cloud-acceptance          # H-01~H-02
 
 | 门禁 | 负责人 | 结果 | 证据路径 |
 |------|--------|------|----------|
-| mvp-signoff | | ☐ | `doc/evidence/mvp-signoff-latest.md` |
-| release-window-gate | | ☐ | `doc/evidence/release-window-latest.md` |
-| cloud-acceptance | | ☐ | `doc/evidence/cloud-h01-h03-latest.md` |
-| rollback-drill | | ☐ | `doc/evidence/rollback-drill-latest.md` |
+| mvp-signoff | | ⏸（本波未强制 INCLUDE_MVP） | `doc/evidence/mvp-signoff-latest.md` |
+| release-window-gate | | ✅ 2026-10-11 | `doc/evidence/release-window-latest.md` |
+| cloud-acceptance | | ⏸ 待环境 | `doc/evidence/cloud-h01-h03-latest.md` |
+| rollback-drill | | ✅ 2026-10-11 | `doc/evidence/rollback-drill-latest.md` |
 
 ## 4. 切换当日步骤（Postgres）
 
@@ -48,7 +51,7 @@ make cloud-acceptance          # H-01~H-02
 
 ## 5. 回滚触发与动作
 
-见 [`postgres-rds-e2e.md`](checklists/postgres-rds-e2e.md) §8。
+见 [`postgres-rds-e2e.md`](postgres-rds-e2e.md) §8。
 
 ## 6. T+1 观察（24h）
 
@@ -68,5 +71,5 @@ make t1-metrics-gate
 
 | 角色 | 姓名 | 日期 |
 |------|------|------|
-| 发布负责人 | 发布负责人（占位） | 2026-07-07 |
-| 值班 SRE | 技术 on-call（占位） | 2026-07-07 |
+| 发布负责人 | 发布负责人（占位） | 2026-10-11（dry-run） |
+| 值班 SRE | 技术 on-call（占位） | 2026-10-11（dry-run） |

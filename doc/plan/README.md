@@ -30,12 +30,19 @@
 | [`v5-governance-program.md`](v5-governance-program.md) | **v5** 双核管控 × 厚评审 × 薄交互 | 空间管控 / 评分 / Workbench / 薄交互 |
 | [`v5.0-release-scope.md`](v5.0-release-scope.md) | **v5.0** 范围（**已冻结**；GV06） | 冻结已落地的薄交互 + 管控/厚评审水位 |
 | [`v6.x-program.md`](v6.x-program.md) | **v6.x** 程序（可审计执行面；分冻 v6.0 / v6.3+） | Hooks / 会话语义 / 吸收收口 |
-| [`v7.x-program.md`](v7.x-program.md) | **v7** 程序（P0–P13 测试绿，待签字；`make v7-signoff`） | 组件化 Agent / 可插拔记忆 / 三镜头观测 |
+| [`v7.x-program.md`](v7.x-program.md) | **v7** 程序（P0–P20 测试绿；P13 签字可跳过；`make v7-signoff`） | 组件化 Agent / 可插拔记忆 / 三镜头观测 |
 | [`v7.9-release-scope.md`](v7.9-release-scope.md) | **v7.9** 范围（P9 已冻结，测试绿） | CLI ash review / G01 写穿 |
 | [`v7.10-release-scope.md`](v7.10-release-scope.md) | **v7.10** 范围（P10 已冻结，测试绿） | 记忆三计数 / B03 文档 |
 | [`v7.11-release-scope.md`](v7.11-release-scope.md) | **v7.11** 范围（P11 已冻结，测试绿） | F06 有上限再规划 |
 | [`v7.12-release-scope.md`](v7.12-release-scope.md) | **v7.12** 范围（P12 已冻结，测试绿） | F06 场景样例 / Admit / E2 |
 | [`v7.13-release-scope.md`](v7.13-release-scope.md) | **v7.13** 范围（P13 已冻结，测试绿） | `make v7-signoff` 门禁 |
+| [`v7.14-release-scope.md`](v7.14-release-scope.md) | **v7.14** 范围（P14 已冻结，测试绿） | I03 pack「未接入」标记 |
+| [`v7.15-release-scope.md`](v7.15-release-scope.md) | **v7.15** 范围（P15 已冻结，测试绿） | H05 403 / 业务码明确 |
+| [`v7.16-release-scope.md`](v7.16-release-scope.md) | **v7.16** 范围（P16 已冻结，测试绿） | D08 组件绑定拒绝码 |
+| [`v7.17-release-scope.md`](v7.17-release-scope.md) | **v7.17** 范围（P17 已冻结，测试绿） | B05 Promote 拒绝码映射 |
+| [`v7.18-release-scope.md`](v7.18-release-scope.md) | **v7.18** 范围（P18 已冻结，测试绿） | Create 模板预扫 |
+| [`v7.19-release-scope.md`](v7.19-release-scope.md) | **v7.19** 范围（P19 已冻结，测试绿） | Create memory 组件预扫 |
+| [`v7.20-release-scope.md`](v7.20-release-scope.md) | **v7.20** 范围（P20 已冻结，测试绿） | Runs Create 错误码投影 |
 | [`v7.5-release-scope.md`](v7.5-release-scope.md) | **v7.5** 范围（P5 已冻结，测试绿） | 插件门禁 / 模板 HTTP |
 | [`v7.6-release-scope.md`](v7.6-release-scope.md) | **v7.6** 范围（P6 已冻结，测试绿） | 三镜头观测 |
 | [`v7.7-release-scope.md`](v7.7-release-scope.md) | **v7.7** 范围（P7 已冻结，测试绿） | SQL40 / QUALITY / 对照 |

@@ -41,7 +41,7 @@ func Load(m Manifest) (Manifest, error) {
 	if err := validateTools(m.Tools); err != nil {
 		return Manifest{}, fmt.Errorf("template %s: %w", m.ID, err)
 	}
-	host := plugins.NewBuiltinHost()
+	host := plugins.Global()
 	if err := host.BindProduction(m.Memory); err != nil {
 		return Manifest{}, fmt.Errorf("template %s: %w", m.ID, err)
 	}

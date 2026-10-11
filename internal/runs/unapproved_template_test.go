@@ -1,10 +1,11 @@
 package runs
 
 import (
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/ash-repwiki/ash/internal/agenttpl"
+	"github.com/ash-repwiki/ash/internal/plugins"
 )
 
 func TestUnapprovedTemplateRejectedOnBind(t *testing.T) {
@@ -20,13 +21,22 @@ func TestUnapprovedTemplateRejectedOnBind(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err := agenttpl.GetProduction(m.ID)
-	if err == nil || !strings.Contains(err.Error(), "not approved") {
+	if err == nil || !errors.Is(err, agenttpl.ErrNotApproved) {
 		t.Fatalf("err=%v", err)
 	}
+	if code := agentErrorCode(err); code != "AGENT_TEMPLATE_NOT_APPROVED" {
+		t.Fatalf("code=%s", code)
+	}
+	if code := agentErrorCode(agenttpl.ErrUnknown); code != "AGENT_TEMPLATE_UNKNOWN" {
+		t.Fatalf("unknown code=%s", code)
+	}
+	if code := agentErrorCode(plugins.ErrNotApproved); code != "AGENT_COMPONENT_NOT_APPROVED" {
+		t.Fatalf("component code=%s", code)
+	}
+	if code := agentErrorCode(plugins.ErrInvalidBind); code != "AGENT_COMPONENT_BIND_INVALID" {
+		t.Fatalf("bind invalid code=%s", code)
+	}
 
-	svc, _ := testRunsService(t)
-	// Direct executeTemplateStep path: Create with a scenario that names the custom template
-	// is heavier; the production gate is GetProduction which template_step uses.
 	if _, err := agenttpl.ApproveTemplate(m.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -34,5 +44,4 @@ func TestUnapprovedTemplateRejectedOnBind(t *testing.T) {
 	if err != nil || got.ID != m.ID {
 		t.Fatalf("got=%+v err=%v", got, err)
 	}
-	_ = svc
 }

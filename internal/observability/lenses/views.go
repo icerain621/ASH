@@ -38,12 +38,19 @@ type GlobalView struct {
 	DoctorChip     string      `json:"doctorChip"`
 }
 
+// Pack access markers for Agent lens (I03 design: missing pack → 未接入).
+const (
+	PackAccessReady   = "ready"
+	PackAccessMissing = "missing"
+)
+
 // AgentView is the agent waterfall lens (I03).
 type AgentView struct {
-	RunID     string                   `json:"runId"`
-	TraceID   string                   `json:"traceId"`
-	Events    []LensEvent              `json:"events"`
-	Waterfall *observability.Waterfall `json:"waterfall,omitempty"`
+	RunID      string                   `json:"runId"`
+	TraceID    string                   `json:"traceId"`
+	PackAccess string                   `json:"packAccess"` // ready | missing
+	Events     []LensEvent              `json:"events"`
+	Waterfall  *observability.Waterfall `json:"waterfall,omitempty"`
 }
 
 // MemoryStage is one step on the memory lineage.
@@ -143,7 +150,18 @@ func BuildAgent(db *store.DB, runID string) (AgentView, error) {
 	if err := db.Where("run_id = ?", runID).Order("ts asc").Limit(500).Find(&events).Error; err != nil {
 		return AgentView{}, err
 	}
-	out := AgentView{RunID: runID, TraceID: wf.TraceID, Waterfall: wf}
+	out := AgentView{
+		RunID: runID, TraceID: wf.TraceID, Waterfall: wf,
+		PackAccess: PackAccessMissing,
+	}
+	var packed store.RunEvent
+	q := db.Select("id").Where("run_id = ? AND type = ?", runID, "context.packed").Limit(1).Find(&packed)
+	if q.Error != nil {
+		return AgentView{}, q.Error
+	}
+	if packed.ID != "" {
+		out.PackAccess = PackAccessReady
+	}
 	for _, ev := range events {
 		if !Admit(ev.Type, LensAgent) {
 			continue

@@ -10,8 +10,57 @@ import (
 	"slices"
 
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/plugins"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 )
+
+func TestPromoteHarnessProfileComponentNotApproved(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	plugins.ResetGlobalForTest()
+	t.Cleanup(plugins.ResetGlobalForTest)
+	if err := plugins.Global().Register(plugins.Component{
+		ID: "tool.custom.b05", Kind: plugins.KindTool, Status: plugins.StatusCandidate,
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	r, _ := newPlatformTestRouter(t)
+	spec := harness.DefaultSpec()
+	spec.Components = []string{"tool.custom.b05"}
+	body, _ := json.Marshal(harness.CreateRequest{Name: "gated-b05", Spec: spec})
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/harness/profiles", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", w.Code, w.Body.String())
+	}
+	var created harness.ProfileView
+	if err := json.Unmarshal(w.Body.Bytes(), &created); err != nil {
+		t.Fatal(err)
+	}
+
+	wRev := httptest.NewRecorder()
+	reqRev := httptest.NewRequest(http.MethodPost, "/api/v1/harness/profiles/"+created.ID+"/submit-review", nil)
+	r.ServeHTTP(wRev, reqRev)
+	if wRev.Code != http.StatusOK {
+		t.Fatalf("submit-review status=%d body=%s", wRev.Code, wRev.Body.String())
+	}
+
+	wPromo := httptest.NewRecorder()
+	reqPromo := httptest.NewRequest(http.MethodPost, "/api/v1/harness/profiles/"+created.ID+"/promote", nil)
+	r.ServeHTTP(wPromo, reqPromo)
+	if wPromo.Code != http.StatusForbidden {
+		t.Fatalf("promote status=%d body=%s", wPromo.Code, wPromo.Body.String())
+	}
+	var denied APIErrorResponse
+	if err := json.Unmarshal(wPromo.Body.Bytes(), &denied); err != nil {
+		t.Fatal(err)
+	}
+	if denied.Error.Code != "AGENT_COMPONENT_NOT_APPROVED" {
+		t.Fatalf("code=%s", denied.Error.Code)
+	}
+}
 
 func TestHarnessProfileAPILifecycle(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")

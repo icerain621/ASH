@@ -16,16 +16,17 @@ Ship frozen watermarks to manual tags, cloud acceptance, and human sign-off — 
 | G0 | 本地门禁绿 | `make local-readiness-gate` / `regression-short` + `web-gate` | ✅ 可重复跑 |
 | G1 | 范围冻结确认 | 各 `*-release-scope.md` + `make *-signoff` | ✅ v2–v6.7 已冻；**v7** 用 `make v7-signoff`（P0–P13 测试绿） |
 | G2 | 云 RDS 验收 | `config/cloud-rds.env` → `make cloud-acceptance` | ⏸ 待真实 RDS |
-| G3 | 切换日 runbook | `doc/checklists/` 发布窗口 + rollback drill | ⏸ 生产日 |
+| G3 | 切换日 runbook | `doc/checklists/` 发布窗口 + rollback drill | ✅ 本地自动化 dry-run（2026-10-11；生产切流仍待 G2） |
 | G4 | 四人真人签字 | MVP：`signoff.env` + `make signoff-gate`；**v7**：`make v7-signoff-prep` → `make v7-signoff-apply`（同 `signoff.env` 四人字段） | ⚠️ MVP dry-run 已过；v7 待填 `signoff.env` |
 | G5 | 人工 tag | 例：`v6.7.0` / `v7.0.0`（须对应 signoff 绿；脚本不自动 tag） | ⏸ 可选 |
 
 ## 当前建议顺序 / Suggested order
 
 1. 保持 `main` 门禁绿（含 v7：`make v7-signoff` / `openapi-check`）。  
-2. v7 签字准备：`make v7-signoff-prep` → 四人填 [`../evidence/v7-signatures-latest.md`](../evidence/v7-signatures-template.md)。  
-3. 准备 `cloud-rds.env` 跑 G2。  
-4. 需要对外版本号时再打 **单个** 代际 tag（`v6.7.0` 或 `v7.0.0`），勿批量虚构中间号。
+2. **G3 本地已绿**：`make rollback-drill` + `make release-window-gate`（证据 `doc/evidence/release-window-2026-10-11.md`）。生产切流仍待 G2。  
+3. 准备 `cloud-rds.env` 跑 G2，再在真实窗口执行 runbook §4。  
+4. v7 签字准备：`make v7-signoff-prep` → 四人填 [`../evidence/v7-signatures-latest.md`](../evidence/v7-signatures-template.md)。  
+5. 需要对外版本号时再打 **单个** 代际 tag（本波不创建版本号）。
 
 ## 不做 / Out
 

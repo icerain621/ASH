@@ -3,8 +3,8 @@
 **本目录是发布勾选（标准类别：发布证据）。计划与完成度在 [`../plan/PLAN-进度与里程碑.md`](../plan/PLAN-进度与里程碑.md)。**  
 **This folder holds release checklists. Plan narrative lives in PLAN.**
 
-> 快照 2026-10-11：功能代 **v6.7 已冻结**；**v7 P0–P13 测试绿**（`make v7-signoff`）。发布侧：v7 待真人签字（`make v7-signoff-prep`）；云 RDS 仍待（见 [`../plan/GA-上线推进计划.md`](../plan/GA-上线推进计划.md)）。  
-> Snapshot 2026-10-11: **v6.7 frozen**; **v7 P0–P13 green** (`make v7-signoff`). Release: v7 awaits human signatures (`make v7-signoff-prep`); cloud RDS still pending.
+> 快照 2026-10-11：功能代 **v6.7 已冻结**；**v7 P0–P23 测试绿**（签字可跳过；`make v7-signoff`）。发布侧：G3 本地 dry-run ✅；云 RDS（G2）仍待（见 [`../plan/GA-上线推进计划.md`](../plan/GA-上线推进计划.md)）。  
+> Snapshot 2026-10-11: **v6.7 frozen**; **v7 P0–P23 green** (sign-off skippable; `make v7-signoff`). Release: G3 local dry-run green; cloud RDS (G2) still pending.
 
 | 路径 | 用途 |
 |------|------|

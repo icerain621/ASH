@@ -5315,6 +5315,12 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/HarnessProfileView" }
+        "400":
+          description: promote failed or illegal component bind
+        "403":
+          description: harness components not approved for production
+        "404":
+          description: unknown harness component
 
   /api/v1/harness/profiles/{profileId}/submit-review:
     post:
@@ -6366,7 +6372,17 @@ paths:
             application/json:
               schema: { $ref: "#/components/schemas/RunCreateResponse" }
         "400":
-          description: bad request
+          description: bad request or illegal template memory component bind
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "403":
+          description: scenario template or memory component not approved
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ApiErrorResponse" }
+        "404":
+          description: scenario template or memory component unknown
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ApiErrorResponse" }
@@ -6540,6 +6556,23 @@ paths:
         "400":
           description: invalid manifest
 
+  /api/v1/agent-templates/{templateId}/production:
+    get:
+      tags: [Agents]
+      summary: Get a production-bindable agent template (H05)
+      parameters:
+        - in: path
+          name: templateId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: production template manifest
+        "403":
+          description: template not approved for production
+        "404":
+          description: unknown template
+
   /api/v1/agent-templates/{templateId}/approve:
     post:
       tags: [Agents]
@@ -6594,6 +6627,46 @@ paths:
           description: registered
         "400":
           description: invalid component
+
+  /api/v1/agent-components/bind-check:
+    post:
+      tags: [Agents]
+      summary: Validate a production component bind set (D08)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids]
+              properties:
+                ids: { type: array, items: { type: string } }
+      responses:
+        "200":
+          description: bind set is valid
+        "400":
+          description: illegal combination
+        "403":
+          description: component not approved
+        "404":
+          description: unknown component
+
+  /api/v1/agent-components/{componentId}/production:
+    get:
+      tags: [Agents]
+      summary: Get a production-bindable plugin component (D08)
+      parameters:
+        - in: path
+          name: componentId
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: production component
+        "403":
+          description: component not approved for production
+        "404":
+          description: unknown component
 
   /api/v1/agent-components/{componentId}/approve:
     post:

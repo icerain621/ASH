@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"errors"
 	"net/http"
 	"strings"
 
@@ -84,6 +85,36 @@ func (h *Handler) submitAgentTemplateCandidate(c *gin.Context) {
 	c.JSON(http.StatusOK, entry)
 }
 
+// GetProductionAgentTemplate godoc
+// @Summary Get a production-bindable agent template (H05)
+// @Tags agents
+// @Produce json
+// @Param templateId path string true "template id"
+// @Success 200 {object} agenttpl.Manifest
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agent-templates/{templateId}/production [get]
+func (h *Handler) getProductionAgentTemplate(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("templateId"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "templateId is required"))
+		return
+	}
+	m, err := agenttpl.GetProduction(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, agenttpl.ErrNotApproved):
+			c.JSON(http.StatusForbidden, errorBody("AGENT_TEMPLATE_NOT_APPROVED", err.Error()))
+		case errors.Is(err, agenttpl.ErrUnknown):
+			c.JSON(http.StatusNotFound, errorBody("AGENT_TEMPLATE_UNKNOWN", err.Error()))
+		default:
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_TEMPLATE_UNKNOWN", err.Error()))
+		}
+		return
+	}
+	c.JSON(http.StatusOK, m)
+}
+
 // ApproveAgentTemplate godoc
 // @Summary Approve a candidate agent template for production binding
 // @Tags agents
@@ -140,6 +171,77 @@ func (h *Handler) registerAgentComponent(c *gin.Context) {
 	}
 	got, _ := plugins.Global().Get(req.ID)
 	c.JSON(http.StatusOK, got)
+}
+
+type bindCheckAgentComponentsRequest struct {
+	IDs []string `json:"ids"`
+}
+
+type bindCheckAgentComponentsResponse struct {
+	OK bool `json:"ok"`
+}
+
+// BindCheckAgentComponents godoc
+// @Summary Validate a production component bind set (D08)
+// @Tags agents
+// @Accept json
+// @Produce json
+// @Param body body bindCheckAgentComponentsRequest true "component ids"
+// @Success 200 {object} bindCheckAgentComponentsResponse
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agent-components/bind-check [post]
+func (h *Handler) bindCheckAgentComponents(c *gin.Context) {
+	var req bindCheckAgentComponentsRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", err.Error()))
+		return
+	}
+	if err := plugins.Global().BindProduction(req.IDs); err != nil {
+		switch {
+		case errors.Is(err, plugins.ErrNotApproved):
+			c.JSON(http.StatusForbidden, errorBody("AGENT_COMPONENT_NOT_APPROVED", err.Error()))
+		case errors.Is(err, plugins.ErrUnknown):
+			c.JSON(http.StatusNotFound, errorBody("AGENT_COMPONENT_UNKNOWN", err.Error()))
+		case errors.Is(err, plugins.ErrInvalidBind):
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_COMPONENT_BIND_INVALID", err.Error()))
+		default:
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_COMPONENT_BIND_INVALID", err.Error()))
+		}
+		return
+	}
+	c.JSON(http.StatusOK, bindCheckAgentComponentsResponse{OK: true})
+}
+
+// GetProductionAgentComponent godoc
+// @Summary Get a production-bindable plugin component (D08)
+// @Tags agents
+// @Produce json
+// @Param componentId path string true "component id"
+// @Success 200 {object} plugins.Component
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
+// @Router /api/v1/agent-components/{componentId}/production [get]
+func (h *Handler) getProductionAgentComponent(c *gin.Context) {
+	id := strings.TrimSpace(c.Param("componentId"))
+	if id == "" {
+		c.JSON(http.StatusBadRequest, errorBody("INVALID_REQUEST", "componentId is required"))
+		return
+	}
+	comp, err := plugins.Global().GetProduction(id)
+	if err != nil {
+		switch {
+		case errors.Is(err, plugins.ErrNotApproved):
+			c.JSON(http.StatusForbidden, errorBody("AGENT_COMPONENT_NOT_APPROVED", err.Error()))
+		case errors.Is(err, plugins.ErrUnknown):
+			c.JSON(http.StatusNotFound, errorBody("AGENT_COMPONENT_UNKNOWN", err.Error()))
+		default:
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_COMPONENT_UNKNOWN", err.Error()))
+		}
+		return
+	}
+	c.JSON(http.StatusOK, comp)
 }
 
 // ApproveAgentComponent godoc

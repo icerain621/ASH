@@ -1,7 +1,7 @@
 package harness_test
 
 import (
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/ash-repwiki/ash/internal/harness"
@@ -27,7 +27,7 @@ func TestHarnessComponentRejectsCandidateOnPromote(t *testing.T) {
 		t.Fatal(err)
 	}
 	_, err = svc.Promote(created.ID, "tester")
-	if err == nil || !strings.Contains(err.Error(), "not approved") {
+	if err == nil || !errors.Is(err, plugins.ErrNotApproved) {
 		t.Fatalf("err=%v", err)
 	}
 	if err := host.Approve("tool.custom.p5"); err != nil {

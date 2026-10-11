@@ -223,17 +223,25 @@ function isTerminalStatus(status?: string) {
   return status === "finished" || status === "failed" || status === "canceled" || status === "cancelled";
 }
 
+const CONTROL_ERROR_CODES = new Set([
+  "RUN_NOT_RESUMABLE",
+  "RUN_NOT_APPROVABLE",
+  "RUN_NOT_REPLAYABLE",
+  "RUN_CANCELED",
+  "ILLEGAL_STATUS_TRANSITION",
+  "RUN_META_MISSING",
+  "SPACE_QUOTA_EXCEEDED",
+  "AGENT_TEMPLATE_NOT_APPROVED",
+  "AGENT_TEMPLATE_UNKNOWN",
+  "AGENT_COMPONENT_NOT_APPROVED",
+  "AGENT_COMPONENT_UNKNOWN",
+  "AGENT_COMPONENT_BIND_INVALID",
+]);
+
 function formatControlError(err: unknown): string | null {
   if (!err) return null;
   if (err instanceof ApiError) {
-    const known =
-      err.code === "RUN_NOT_RESUMABLE" ||
-      err.code === "RUN_NOT_APPROVABLE" ||
-      err.code === "RUN_NOT_REPLAYABLE" ||
-      err.code === "RUN_CANCELED" ||
-      err.code === "ILLEGAL_STATUS_TRANSITION" ||
-      err.code === "RUN_META_MISSING";
-    if (known) {
+    if (CONTROL_ERROR_CODES.has(err.code)) {
       return `${err.code}: ${err.message}`;
     }
     return err.message || err.code;

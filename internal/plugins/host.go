@@ -59,6 +59,18 @@ func ResetGlobalForTest() {
 	globalMu.Unlock()
 }
 
+// SetGlobalForTest installs h as the process-wide host (tests only).
+func SetGlobalForTest(h *Host) {
+	globalMu.Lock()
+	global = h
+	globalMu.Unlock()
+}
+
+// NewEmptyHost returns a host with no registered components.
+func NewEmptyHost() *Host {
+	return &Host{byID: map[string]Component{}}
+}
+
 // NewBuiltinHost registers the built-in memory and agent slot components as approved.
 func NewBuiltinHost() *Host {
 	h := &Host{byID: map[string]Component{}}
@@ -141,21 +153,30 @@ func (h *Host) Get(id string) (Component, bool) {
 	return c, ok
 }
 
+// GetProduction returns an approved component or a typed bind error (D08).
+func (h *Host) GetProduction(id string) (Component, error) {
+	c, ok := h.Get(id)
+	if !ok {
+		return Component{}, fmt.Errorf("%w: %s", ErrUnknown, id)
+	}
+	if c.Status != StatusApproved {
+		return Component{}, fmt.Errorf("%w: %s", ErrNotApproved, id)
+	}
+	return c, nil
+}
+
 // BindProduction rejects unknown, candidate, or illegal memory combinations.
 func (h *Host) BindProduction(ids []string) error {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
 	seen := map[string]struct{}{}
 	for _, id := range ids {
-		c, ok := h.byID[id]
-		if !ok || c.Status != StatusApproved {
-			return fmt.Errorf("component %s is not approved for production", id)
+		if _, err := h.GetProduction(id); err != nil {
+			return err
 		}
 		seen[id] = struct{}{}
 	}
 	if _, inject := seen[MemInject]; inject {
 		if _, retrieve := seen[MemRetrieve]; !retrieve {
-			return fmt.Errorf("mem.inject requires mem.retrieve")
+			return fmt.Errorf("%w: mem.inject requires mem.retrieve", ErrInvalidBind)
 		}
 	}
 	return nil

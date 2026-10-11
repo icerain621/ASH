@@ -33,6 +33,7 @@ mkdir -p "$(dirname "$REPORT")"
   echo "# 回滚演练证据（自动化）"
   echo
   echo "- 时间（UTC）：$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+  echo "- Git：$(git rev-parse --short HEAD 2>/dev/null || echo unknown) @ $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo unknown)"
   echo "- 耗时（ms）：${DURATION_MS}"
   echo "- SLA 上限（ms）：${MAX_MS}（\`ASH_ROLLBACK_DRILL_MAX_MS\`）"
   echo "- 证据目录：\`$EVIDENCE\`"

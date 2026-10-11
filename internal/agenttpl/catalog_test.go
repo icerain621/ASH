@@ -1,8 +1,10 @@
 package agenttpl
 
 import (
-	"strings"
+	"errors"
 	"testing"
+
+	"github.com/ash-repwiki/ash/internal/plugins"
 )
 
 func TestGetProductionUsesApprovedLoader(t *testing.T) {
@@ -74,7 +76,7 @@ func TestCustomTemplateRequiresApproval(t *testing.T) {
 	if entry.Status != StatusCandidate {
 		t.Fatalf("%+v", entry)
 	}
-	if _, err := GetProduction(m.ID); err == nil || !strings.Contains(err.Error(), "not approved") {
+	if _, err := GetProduction(m.ID); err == nil || !errors.Is(err, ErrNotApproved) {
 		t.Fatalf("err=%v", err)
 	}
 	if _, err := ApproveTemplate(m.ID); err != nil {
@@ -86,5 +88,27 @@ func TestCustomTemplateRequiresApproval(t *testing.T) {
 	}
 	if _, err := SubmitCandidate(m); err == nil {
 		t.Fatal("must not demote approved template via SubmitCandidate")
+	}
+}
+
+func TestBindTemplateMemoryNilUsesGlobal(t *testing.T) {
+	plugins.ResetGlobalForTest()
+	t.Cleanup(plugins.ResetGlobalForTest)
+
+	const customID = "mem.custom.bind-nil"
+	if err := plugins.Global().Register(plugins.Component{
+		ID: customID, Kind: plugins.KindMemory,
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := plugins.Global().Approve(customID); err != nil {
+		t.Fatal(err)
+	}
+	m := Manifest{
+		ID: "tpl.bind-nil", Version: Version, MaxTurns: 2, Tools: []string{"read"},
+		Memory: []string{customID},
+	}
+	if err := BindTemplateMemory(m, nil); err != nil {
+		t.Fatalf("nil host should use Global: %v", err)
 	}
 }

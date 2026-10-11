@@ -72,14 +72,14 @@ func GetProduction(id string) (Manifest, error) {
 	catalogMu.RUnlock()
 	if ok {
 		if entry.Status != StatusApproved {
-			return Manifest{}, fmt.Errorf("template %s is not approved for production", id)
+			return Manifest{}, fmt.Errorf("%w: %s", ErrNotApproved, id)
 		}
 		return entry.Manifest, nil
 	}
 	if m, ok := loadApprovedPersistent(id); ok {
 		return m, nil
 	}
-	return Manifest{}, fmt.Errorf("unknown template %s", id)
+	return Manifest{}, fmt.Errorf("%w: %s", ErrUnknown, id)
 }
 
 // EntryListResponse is the catalog with review status (G03).
@@ -143,7 +143,7 @@ func isBuiltinID(id string) bool {
 // BindTemplateMemory checks memory components against the plugin host.
 func BindTemplateMemory(m Manifest, host *plugins.Host) error {
 	if host == nil {
-		host = plugins.NewBuiltinHost()
+		host = plugins.Global()
 	}
 	if err := host.BindProduction(m.Memory); err != nil {
 		return err

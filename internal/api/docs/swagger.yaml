@@ -1731,6 +1731,9 @@ definitions:
         items:
           $ref: '#/definitions/github_com_ash-repwiki_ash_internal_observability_lenses.LensEvent'
         type: array
+      packAccess:
+        description: ready | missing
+        type: string
       runId:
         type: string
       traceId:
@@ -5364,6 +5367,18 @@ definitions:
           $ref: '#/definitions/internal_api.AuthGatewaySession'
         type: array
     type: object
+  internal_api.bindCheckAgentComponentsRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        type: array
+    type: object
+  internal_api.bindCheckAgentComponentsResponse:
+    properties:
+      ok:
+        type: boolean
+    type: object
   internal_api.changePasswordRequest:
     properties:
       currentPassword:
@@ -6081,6 +6096,65 @@ paths:
       summary: Approve a candidate plugin component for production binding
       tags:
       - agents
+  /api/v1/agent-components/{componentId}/production:
+    get:
+      parameters:
+      - description: component id
+        in: path
+        name: componentId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_plugins.Component'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get a production-bindable plugin component (D08)
+      tags:
+      - agents
+  /api/v1/agent-components/bind-check:
+    post:
+      consumes:
+      - application/json
+      parameters:
+      - description: component ids
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/internal_api.bindCheckAgentComponentsRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/internal_api.bindCheckAgentComponentsResponse'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Validate a production component bind set (D08)
+      tags:
+      - agents
   /api/v1/agent-reviews:
     get:
       parameters:
@@ -6184,6 +6258,32 @@ paths:
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Approve a candidate agent template for production binding
+      tags:
+      - agents
+  /api/v1/agent-templates/{templateId}/production:
+    get:
+      parameters:
+      - description: template id
+        in: path
+        name: templateId
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_ash-repwiki_ash_internal_agenttpl.Manifest'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+      summary: Get a production-bindable agent template (H05)
       tags:
       - agents
   /api/v1/agent-templates/candidates:
@@ -8021,6 +8121,18 @@ paths:
           description: OK
           schema:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_harness.ProfileView'
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
       summary: Promote harness profile to active
       tags:
       - harness
@@ -10287,6 +10399,14 @@ paths:
             $ref: '#/definitions/github_com_ash-repwiki_ash_internal_runs.CreateResponse'
         "400":
           description: Bad Request
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "403":
+          description: Forbidden
+          schema:
+            $ref: '#/definitions/internal_api.APIErrorResponse'
+        "404":
+          description: Not Found
           schema:
             $ref: '#/definitions/internal_api.APIErrorResponse'
         "500":

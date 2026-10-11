@@ -1,9 +1,9 @@
 # ASH 项目计划与进度 / Plan & Progress
 
 > **状态 / Status**：现行排期真相源（2026-10-10）  
-> **代码水位 / Watermark**：`main` · **v6.7 已冻结**；**v7 P0–P10 验收测试已绿、待签字**  
+> **代码水位 / Watermark**：`main` · **v6.7 已冻结**；**v7 P0–P23 验收测试已绿**（签字可跳过）  
 > **Tag**：`v0.1.0-mvp` 已打；`v2.*`–`v7.*` **均未自动打 tag**（人工 + 签字）  
-> **Doctor / Schema（v7）**：ALL **56** · QUALITY **7** · BOOT **5** · SQL rev **40** · 见 [`v7.7-release-scope.md`](v7.7-release-scope.md)  
+> **Doctor / Schema（v7）**：ALL **56** · QUALITY **7** · BOOT **5** · SQL rev **40** · RLS **58** · 见 [`v7.7-release-scope.md`](v7.7-release-scope.md)  
 > **归属**：[`plan/`](README.md) · 短待办 [`TODO.md`](TODO.md) · [`v6.x-program.md`](v6.x-program.md) · [`v7.x-program.md`](v7.x-program.md)  
 > **发布勾选**：[`../progress/`](../progress/README.md) · [`../checklists/`](../checklists/smoke-index.md)
 
@@ -41,9 +41,9 @@
 
 | 轨 | 内容 | 状态 |
 |----|------|------|
-| **A · 功能代** | v6.7 冻结。**v7 P0–P13 测试绿**（`make v7-signoff`；不开 v6.8） | 待签字 |
+| **A · 功能代** | v6.7 冻结。**v7 P0–P20 测试绿**（签字可跳过；`make v7-signoff`；不开 v6.8） | P20 已绿；签字⏸ |
 | **B · P02 薄交互** | UI 只发意图、只渲投影；Composer/壳对齐 DSH/APG | **已收口**（含工作区键盘 / Timeline 滤镜组） |
-| **C · GA / 上线** | 云 RDS、真人签字、可选 `v6.*.0` tag | ⏸ 需环境与人工 |
+| **C · GA / 上线** | 云 RDS、真人签字、可选 tag | G3 本地 dry-run ✅；G2/G4 ⏸ |
 | **D · 质量门禁** | Vitest coverage · Playwright · 后端包覆盖补强 | ✅ 已合入；持续维护 |
 
 ---
@@ -69,14 +69,16 @@ Version-neutral. Facts live in CHANGELOG and commits below.
 
 ### 4.1 产品未决议前（默认）
 
-1. **GA 准备**：填 `cloud-rds.env` → `make cloud-acceptance`；四人真人签字；按需打 `v6.7.0`（须 `make v6.7-signoff` 绿）。  
-2. **v7 签字**：`make v7-signoff-prep` → 四人填 `doc/evidence/v7-signatures-latest.md`（见 TODO `V7-SIGN`）。  
-3. **质量**：`make regression-short && make web-gate`；保持 Doctor 套件计数与卡片一致。
+1. **G3**：本地 `make rollback-drill` + `make release-window-gate` 已绿（2026-10-11）；生产切流仍待 G2。  
+2. **GA 准备**：填 `cloud-rds.env` → `make cloud-acceptance`；四人真人签字；需要时再人工打 tag（本波不创建版本号）。  
+3. **v7 签字**：`make v7-signoff-prep` → 四人填 `doc/evidence/v7-signatures-latest.md`（见 TODO `V7-SIGN`）。  
+4. **质量**：`make regression-short && make web-gate`；保持 Doctor 套件计数与卡片一致。
 
-### 4.2 下一功能代 v7（P0–P13 测试绿，待签字）
+### 4.2 下一功能代 v7（P0–P23 测试绿；签字可跳过）
 
-- 程序与全部功能点：[`v7.x-program.md`](v7.x-program.md)。范围见 `v7.0`…`v7.13-release-scope.md`。设计总表：[`../design/ASH-Pi组件重构-改动清单.md`](../design/ASH-Pi组件重构-改动清单.md)。  
-- 门禁：`make v7-signoff`；真人签字 / 可选 tag 见 TODO `V7-SIGN`。
+- 程序与全部功能点：[`v7.x-program.md`](v7.x-program.md)。范围见 `v7.0`…`v7.23-release-scope.md`。设计总表：[`../design/ASH-Pi组件重构-改动清单.md`](../design/ASH-Pi组件重构-改动清单.md)。  
+- 门禁：`make v7-signoff`（P0–P13）；真人签字 / 可选 tag 见 TODO `V7-SIGN`（本波跳过）。  
+- 目录缺口下一刀候选：目录对照后薄收口 / 观测缝等（须先写 release-scope；禁止自动发明）。
 
 ### 4.3 明确不做
 

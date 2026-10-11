@@ -67,10 +67,19 @@ func (s *Service) executeTemplateStep(
 	}
 	manifest, err := agenttpl.GetProduction(tplID)
 	if err != nil {
+		code := agentErrorCode(err)
+		_, _ = s.eventsFor().Append(runID, traceID, "agent.gate_rejected", "warn", map[string]any{
+			"templateId": tplID, "stepId": step.ID, "errorCode": code, "reason": err.Error(),
+		})
 		return err
 	}
 	decl := append([]string(nil), manifest.Memory...)
 	if err := plugins.Global().BindProduction(decl); err != nil {
+		code := agentErrorCode(err)
+		_, _ = s.eventsFor().Append(runID, traceID, "agent.gate_rejected", "warn", map[string]any{
+			"templateId": tplID, "stepId": step.ID, "errorCode": code, "reason": err.Error(),
+			"memory": decl,
+		})
 		return err
 	}
 	if !lenses.Admit("context.packed", lenses.LensAgent) {

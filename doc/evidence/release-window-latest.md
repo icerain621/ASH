@@ -1,10 +1,10 @@
-# 发布窗口记录（2026-08-08）
+# 发布窗口记录（2026-10-11）
 
-- 生成时间（UTC）：2026-08-08T14:34:42Z
-- Git：1a0237b @ main
+- 生成时间（UTC）：2026-10-11T14:47:35Z
+- Git：c543d729 @ main
 - 门禁命令：`make release-window-gate`
 - 自动化步骤通过：**12**
-- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/release-window-20260808T143223Z`（本地，未入库）
+- 证据目录：`/c/Go_Work/src/ash/.ash/evidence/release-window-20261011T144536Z`（本地，未入库）
 - 手册：[`release-window-runbook.md`](../checklists/release-window-runbook.md)
 
 ## 门禁快照
@@ -18,7 +18,7 @@
 | 数据备份 | `make data-backup` | ✅ |
 | 迁移前 | `make pre-migrate-gate` | ✅ |
 | 回滚演练 | `make rollback-drill` | ✅ |
-| MVP 签字 | `make mvp-signoff` | ✅（prior mvp-signoff） |
+| MVP 签字 | `make mvp-signoff` | ⏸ `make mvp-signoff` |
 | Live Worker | `make worker-local-gate` | ⏸ |
 | JWT Worker | `make worker-production-gate` | ⏸ |
 | 云 RDS | `make cloud-acceptance` | ⏸ 待环境 |

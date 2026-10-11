@@ -23,12 +23,20 @@ export type LensEvent = {
   redacted?: boolean;
 };
 
+/** I03: ready when context.packed exists; missing → console「未接入」. */
+export type PackAccess = "ready" | "missing";
+
 export type AgentLensView = {
   runId: string;
   traceId: string;
+  packAccess: PackAccess;
   events: LensEvent[];
   waterfall?: { runId: string; spans?: unknown[] };
 };
+
+export function packAccessLabel(access: PackAccess | undefined): string {
+  return access === "ready" ? "已接入" : "未接入";
+}
 
 export type MemoryStage = { stage: string; at?: number; detail?: string; eventId?: string };
 

@@ -9,6 +9,7 @@ import (
 	"gorm.io/gorm"
 
 	"github.com/ash-repwiki/ash/internal/harness"
+	"github.com/ash-repwiki/ash/internal/plugins"
 	"github.com/ash-repwiki/ash/internal/sandbox"
 )
 
@@ -163,6 +164,9 @@ func (h *Handler) submitHarnessProfileReview(c *gin.Context) {
 // @Produce json
 // @Param profileId path string true "profile id"
 // @Success 200 {object} harness.ProfileView
+// @Failure 400 {object} APIErrorResponse
+// @Failure 403 {object} APIErrorResponse
+// @Failure 404 {object} APIErrorResponse
 // @Router /api/v1/harness/profiles/{profileId}/promote [post]
 func (h *Handler) promoteHarnessProfile(c *gin.Context) {
 	view, err := h.harnessFor(c).Get(c.Param("profileId"))
@@ -179,7 +183,16 @@ func (h *Handler) promoteHarnessProfile(c *gin.Context) {
 	}
 	out, err := h.harnessFor(c).Promote(c.Param("profileId"), currentActor(c))
 	if err != nil {
-		c.JSON(http.StatusBadRequest, errorBody("HARNESS_PROMOTE_FAILED", err.Error()))
+		switch {
+		case errors.Is(err, plugins.ErrNotApproved):
+			c.JSON(http.StatusForbidden, errorBody("AGENT_COMPONENT_NOT_APPROVED", err.Error()))
+		case errors.Is(err, plugins.ErrUnknown):
+			c.JSON(http.StatusNotFound, errorBody("AGENT_COMPONENT_UNKNOWN", err.Error()))
+		case errors.Is(err, plugins.ErrInvalidBind):
+			c.JSON(http.StatusBadRequest, errorBody("AGENT_COMPONENT_BIND_INVALID", err.Error()))
+		default:
+			c.JSON(http.StatusBadRequest, errorBody("HARNESS_PROMOTE_FAILED", err.Error()))
+		}
 		return
 	}
 	c.JSON(http.StatusOK, out)

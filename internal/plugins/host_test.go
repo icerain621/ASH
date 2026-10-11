@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"errors"
 	"strings"
 	"testing"
 )
@@ -10,14 +11,27 @@ func TestRegisterToolAndApprove(t *testing.T) {
 	if err := h.Register(Component{ID: "tool.custom", Kind: KindTool, Status: StatusCandidate}); err != nil {
 		t.Fatal(err)
 	}
-	if err := h.BindProduction([]string{"tool.custom"}); err == nil {
-		t.Fatal("candidate must not bind")
+	if err := h.BindProduction([]string{"tool.custom"}); err == nil || !errors.Is(err, ErrNotApproved) {
+		t.Fatalf("candidate must not bind: %v", err)
+	}
+	if _, err := h.GetProduction("tool.custom"); err == nil || !errors.Is(err, ErrNotApproved) {
+		t.Fatalf("GetProduction candidate: %v", err)
+	}
+	if _, err := h.GetProduction("tool.missing.xyz"); err == nil || !errors.Is(err, ErrUnknown) {
+		t.Fatalf("GetProduction unknown: %v", err)
 	}
 	if err := h.Approve("tool.custom"); err != nil {
 		t.Fatal(err)
 	}
 	if err := h.BindProduction([]string{"tool.custom"}); err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestBindProductionInjectRequiresRetrieve(t *testing.T) {
+	h := NewBuiltinHost()
+	if err := h.BindProduction([]string{MemInject}); err == nil || !errors.Is(err, ErrInvalidBind) {
+		t.Fatalf("err=%v", err)
 	}
 }
 

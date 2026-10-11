@@ -209,6 +209,50 @@ func TestListAgentReviewsAPI(t *testing.T) {
 	}
 }
 
+func TestGetProductionTemplateAPI_NotApprovedForbidden(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	agenttpl.ResetCatalogForTest()
+	t.Cleanup(agenttpl.ResetCatalogForTest)
+
+	r, _ := newPlatformTestRouter(t)
+	body := []byte(`{"id":"tpl.custom.h05","version":"1.0.0","loop":"react","tools":["read"],"compaction":"threshold","sandbox":"workspace-write","maxTurns":2,"memory":["mem.retrieve","mem.inject"]}`)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agent-templates/candidates", bytes.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("candidate status=%d body=%s", w.Code, w.Body.String())
+	}
+
+	wDenied := httptest.NewRecorder()
+	reqDenied := httptest.NewRequest(http.MethodGet, "/api/v1/agent-templates/tpl.custom.h05/production", nil)
+	r.ServeHTTP(wDenied, reqDenied)
+	if wDenied.Code != http.StatusForbidden {
+		t.Fatalf("production status=%d body=%s", wDenied.Code, wDenied.Body.String())
+	}
+	var denied APIErrorResponse
+	if err := json.Unmarshal(wDenied.Body.Bytes(), &denied); err != nil {
+		t.Fatal(err)
+	}
+	if denied.Error.Code != "AGENT_TEMPLATE_NOT_APPROVED" {
+		t.Fatalf("code=%s body=%s", denied.Error.Code, wDenied.Body.String())
+	}
+
+	wUnknown := httptest.NewRecorder()
+	reqUnknown := httptest.NewRequest(http.MethodGet, "/api/v1/agent-templates/tpl.missing.h05/production", nil)
+	r.ServeHTTP(wUnknown, reqUnknown)
+	if wUnknown.Code != http.StatusNotFound {
+		t.Fatalf("unknown status=%d body=%s", wUnknown.Code, wUnknown.Body.String())
+	}
+
+	wOK := httptest.NewRecorder()
+	reqOK := httptest.NewRequest(http.MethodGet, "/api/v1/agent-templates/tpl.react/production", nil)
+	r.ServeHTTP(wOK, reqOK)
+	if wOK.Code != http.StatusOK {
+		t.Fatalf("builtin status=%d body=%s", wOK.Code, wOK.Body.String())
+	}
+}
+
 func TestPluginComponentRegisterApproveAPI(t *testing.T) {
 	t.Setenv("ASH_AUTH_MODE", "dev")
 	plugins.ResetGlobalForTest()
@@ -235,5 +279,84 @@ func TestPluginComponentRegisterApproveAPI(t *testing.T) {
 	r.ServeHTTP(w3, req3)
 	if w3.Code != http.StatusOK {
 		t.Fatalf("list status=%d", w3.Code)
+	}
+}
+
+func TestBindCheckAgentComponentsAPI_InvalidCombo(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	plugins.ResetGlobalForTest()
+	t.Cleanup(plugins.ResetGlobalForTest)
+
+	r, _ := newPlatformTestRouter(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agent-components/bind-check", bytes.NewReader([]byte(
+		`{"ids":["mem.inject"]}`,
+	)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusBadRequest {
+		t.Fatalf("status=%d body=%s", w.Code, w.Body.String())
+	}
+	var body APIErrorResponse
+	if err := json.Unmarshal(w.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if body.Error.Code != "AGENT_COMPONENT_BIND_INVALID" {
+		t.Fatalf("code=%s", body.Error.Code)
+	}
+
+	wOK := httptest.NewRecorder()
+	reqOK := httptest.NewRequest(http.MethodPost, "/api/v1/agent-components/bind-check", bytes.NewReader([]byte(
+		`{"ids":["mem.retrieve","mem.inject"]}`,
+	)))
+	reqOK.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(wOK, reqOK)
+	if wOK.Code != http.StatusOK {
+		t.Fatalf("ok status=%d body=%s", wOK.Code, wOK.Body.String())
+	}
+}
+
+func TestGetProductionComponentAPI_NotApprovedForbidden(t *testing.T) {
+	t.Setenv("ASH_AUTH_MODE", "dev")
+	plugins.ResetGlobalForTest()
+	t.Cleanup(plugins.ResetGlobalForTest)
+
+	r, _ := newPlatformTestRouter(t)
+	w := httptest.NewRecorder()
+	req := httptest.NewRequest(http.MethodPost, "/api/v1/agent-components", bytes.NewReader([]byte(
+		`{"id":"mem.custom.d08","kind":"memory","status":"candidate"}`,
+	)))
+	req.Header.Set("Content-Type", "application/json")
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatalf("register status=%d body=%s", w.Code, w.Body.String())
+	}
+
+	wDenied := httptest.NewRecorder()
+	reqDenied := httptest.NewRequest(http.MethodGet, "/api/v1/agent-components/mem.custom.d08/production", nil)
+	r.ServeHTTP(wDenied, reqDenied)
+	if wDenied.Code != http.StatusForbidden {
+		t.Fatalf("production status=%d body=%s", wDenied.Code, wDenied.Body.String())
+	}
+	var denied APIErrorResponse
+	if err := json.Unmarshal(wDenied.Body.Bytes(), &denied); err != nil {
+		t.Fatal(err)
+	}
+	if denied.Error.Code != "AGENT_COMPONENT_NOT_APPROVED" {
+		t.Fatalf("code=%s", denied.Error.Code)
+	}
+
+	wUnknown := httptest.NewRecorder()
+	reqUnknown := httptest.NewRequest(http.MethodGet, "/api/v1/agent-components/mem.missing.d08/production", nil)
+	r.ServeHTTP(wUnknown, reqUnknown)
+	if wUnknown.Code != http.StatusNotFound {
+		t.Fatalf("unknown status=%d body=%s", wUnknown.Code, wUnknown.Body.String())
+	}
+
+	wOK := httptest.NewRecorder()
+	reqOK := httptest.NewRequest(http.MethodGet, "/api/v1/agent-components/mem.retrieve/production", nil)
+	r.ServeHTTP(wOK, reqOK)
+	if wOK.Code != http.StatusOK {
+		t.Fatalf("builtin status=%d body=%s", wOK.Code, wOK.Body.String())
 	}
 }

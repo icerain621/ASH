@@ -1,15 +1,16 @@
 # ASH 待办 / 技术债（短清单）
 
-> 更新：2026-10-10  
+> 更新：2026-10-11  
 > **计划与进度**见 [`PLAN-进度与里程碑.md`](PLAN-进度与里程碑.md)。需求 [`../design/SRS-需求规格.md`](../design/SRS-需求规格.md)，设计 [`../design/SDD-总体设计.md`](../design/SDD-总体设计.md)。  
-> 归属：[`plan/`](README.md) · 水位：**v6.7 已冻结**；**v7 P0–P13 验收测试已绿、待签字**（`make v7-signoff`；见 [`v7.x-program.md`](v7.x-program.md)）  
+> 归属：[`plan/`](README.md) · 水位：**v6.7 已冻结**；**v7 P0–P23 验收测试已绿**（P13 签字⏸；见 [`v7.x-program.md`](v7.x-program.md)）  
 > 完成项请写入 `CHANGELOG.md` 并从本文件删除；历史 Sprint AY–CE 细节以 CHANGELOG 为准。
 
 ## 进行中 / 下一步
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
-| V7-SIGN | v7 真人签字 / 可选 tag | `cp config/signoff.env.example config/signoff.env` → 填四人 → `make v7-signoff-prep && make v7-signoff-apply` | ⏸ 人工（缺 `signoff.env`） |
+| G3 | 切换日 runbook dry-run | `make rollback-drill` + `make release-window-gate`；`release-window-2026-10-11` | ✅ |
+| V7-SIGN | v7 真人签字 / 可选 tag | `cp config/signoff.env.example config/signoff.env` → 填四人 → `make v7-signoff-prep && make v7-signoff-apply` | ⏸ 人工（本波跳过） |
 | GA | 云 RDS + 真人签字 + 可选 `v6.7.0` tag | 见 [`GA-上线推进计划.md`](GA-上线推进计划.md) | ⏸ |
 | VNEXT | 新开代际（**禁止 v6.8 承载 v7**） | 须先写 release-scope；**禁止自动发明** | ⏸ |
 
@@ -17,6 +18,16 @@
 
 | # | 项 | 验收 | 状态 |
 |---|-----|------|------|
+| P23 | 无模板 Bind 门禁事件 | `agent.gate_rejected` + errorCode；`v7.23-release-scope` | ✅ |
+| P22 | execute Bind→Global | `execute.go` `plugins.Global().BindProduction`；`v7.22-release-scope` | ✅ |
+| P21 | Load 共用 Global | `Load`/`BindTemplateMemory(nil)` → `plugins.Global()`；`v7.21-release-scope` | ✅ |
+| P20 | Runs Create 错误码 UI | `formatControlError` 投影绑定码；`v7.20-release-scope` | ✅ |
+| P19 | Create memory 预扫 | `BindTemplateMemory` + `AGENT_COMPONENT_*`；`v7.19-release-scope` | ✅ |
+| P18 | Create 模板预扫 | 落库前 `GetProduction`；403/404；`v7.18-release-scope` | ✅ |
+| P17 | B05 Promote 拒绝码 | Promote → `AGENT_COMPONENT_NOT_APPROVED` 403；`v7.17-release-scope` | ✅ |
+| P16 | D08 组件拒绝码 | `AGENT_COMPONENT_*` + production/bind-check；`v7.16-release-scope` | ✅ |
+| P15 | H05 403 / 业务码 | `AGENT_TEMPLATE_NOT_APPROVED` + `GET …/production`；`v7.15-release-scope` | ✅ |
+| P14 | I03 pack「未接入」 | `AgentView.packAccess` + 观测芯片；`v7.14-release-scope` | ✅ |
 | PF01 | 会话推理等级 → Chat/Quest/ACP/ExecGo | `cfd5261d` + session tests | ✅ |
 | PF02 | assistant 事件投影 provider·model·effort | `d604285f` | ✅ |
 | PF03 | Composer/壳 APG·DSH 无障碍（P02） | `7b474964` + vitest | ✅ |
@@ -151,7 +162,7 @@
 |----|-----|
 | Tag | `v0.1.0-mvp` |
 | Doctor | ALL **63/63** · M3 11/11 · M4 **13/13** · M5 4/4 · TR3 **13/13** |
-| Schema | SQL rev **32**（+users oidc link）· RLS **56** |
+| Schema | SQL rev **32**（+users oidc link）· RLS **58** |
 | 结论 | v1 自动化门禁达 MVP；**v2.9–v4.0 已冻结**（v4.0 待人工 tag）；**DX61–DX66 ✅**；见 [`v4.0-release-scope.md`](v4.0-release-scope.md) |
 
 ---

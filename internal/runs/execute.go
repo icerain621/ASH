@@ -13,6 +13,7 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/ash-repwiki/ash/internal/agentexec"
+	"github.com/ash-repwiki/ash/internal/agenttpl"
 	"github.com/ash-repwiki/ash/internal/artifacts"
 	"github.com/ash-repwiki/ash/internal/authz"
 	"github.com/ash-repwiki/ash/internal/contextpack"
@@ -54,6 +55,9 @@ func (s *Service) createAndExecute(req CreateRequest, opts createOptions) (*Crea
 		if _, ok := req.Inputs[key]; !ok {
 			return nil, fmt.Errorf("missing required input %q", key)
 		}
+	}
+	if err := validateProductionTemplates(doc); err != nil {
+		return nil, err
 	}
 
 	runID := "run_" + uuid.NewString()
@@ -817,7 +821,12 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 		}
 	}
 	decl := contextpack.LegacyReactMemory()
-	if err := plugins.NewBuiltinHost().BindProduction(decl); err != nil {
+	if err := plugins.Global().BindProduction(decl); err != nil {
+		code := agentErrorCode(err)
+		_, _ = s.eventsFor().Append(runID, traceID, "agent.gate_rejected", "warn", map[string]any{
+			"stepId": step.ID, "errorCode": code, "reason": err.Error(),
+			"memory": decl,
+		})
 		return nil, err
 	}
 	if !lenses.Admit("context.packed", lenses.LensAgent) {
@@ -896,6 +905,16 @@ func (s *Service) executeAgentStep(runID, traceID, runDir, repoRoot, issue strin
 
 func agentErrorCode(err error) string {
 	switch {
+	case errors.Is(err, agenttpl.ErrNotApproved):
+		return "AGENT_TEMPLATE_NOT_APPROVED"
+	case errors.Is(err, agenttpl.ErrUnknown):
+		return "AGENT_TEMPLATE_UNKNOWN"
+	case errors.Is(err, plugins.ErrNotApproved):
+		return "AGENT_COMPONENT_NOT_APPROVED"
+	case errors.Is(err, plugins.ErrUnknown):
+		return "AGENT_COMPONENT_UNKNOWN"
+	case errors.Is(err, plugins.ErrInvalidBind):
+		return "AGENT_COMPONENT_BIND_INVALID"
 	case errors.Is(err, agentexec.ErrBridgeUnavailable):
 		return "AGENT_BRIDGE_UNAVAILABLE"
 	case errors.Is(err, agentexec.ErrAgentOutputInvalid):
