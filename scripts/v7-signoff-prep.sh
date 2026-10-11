@@ -27,8 +27,9 @@ fi
 SHA="$(git rev-parse HEAD 2>/dev/null || echo unknown)"
 DATE_UTC="$(date -u +%Y-%m-%d)"
 DIRTY=""
-if [[ -n "$(git status --porcelain 2>/dev/null || true)" ]]; then
-  DIRTY="（工作区有未提交改动；签字前请先提交） / dirty working tree — commit before final sign-off"
+# Ignore untracked noise (.agents/, .cursor/, …); only tracked dirty blocks clean sign-off.
+if [[ -n "$(git status --porcelain --untracked-files=no 2>/dev/null || true)" ]]; then
+  DIRTY="（有未提交的已跟踪改动；签字前请先提交） / tracked files dirty — commit before final sign-off"
   echo "WARN $DIRTY" >&2
 fi
 

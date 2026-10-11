@@ -6,8 +6,8 @@
 
 | 项 | 值 |
 |----|-----|
-| Git SHA | `1c0ed0fadc96e6ca2e688d07e79f89ae547ebf37` （工作区有未提交改动；签字前请先提交） / dirty working tree — commit before final sign-off |
-| `make v7-signoff` | ☑ 绿（prep 时已跑） |
+| Git SHA | `060e41468e202176d259abdaa121e561e48f7982` （有未提交的已跟踪改动；签字前请先提交） / tracked files dirty — commit before final sign-off |
+| `make v7-signoff` | ☐ 跳过（ASH_V7_SIGNOFF_SKIP_GATE=1）；签字前请 `make v7-signoff` |
 | P0–P13 scope 已绿 | ✅ |
 | Doctor BOOT / QUALITY 抽检 | ☑ |
 | F06 replan + verify_replan | ☑ |
